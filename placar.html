@@ -342,11 +342,12 @@ document.querySelectorAll('input.val').forEach(el=>el.addEventListener('input',a
 
 function verificarPremiacao(){
   const ma=METAS_AVAL[unidadeAtual]||{};
-  const bateuFat=val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0;
-  const bateuG=ival('google')>=ma.google&&ma.google>0;
-  const bateuI=ival('ifood')>=ma.ifood&&ma.ifood>0;
+  const bateuFat=val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0&&filled('fat');
+  const bateuG=ival('google')>=ma.google&&ma.google>0&&filled('google');
+  const bateuI=ival('ifood')>=ma.ifood&&ma.ifood>0&&filled('ifood');
   const bateuC=ival('chamados')===0&&filled('chamados');
-  if(bateuFat&&bateuG&&bateuI&&bateuC&&!document.getElementById('celebracaoOverlay'))setTimeout(mostrarCelebracao,300);
+  const bateuCancel=ival('cancel')===0&&filled('cancel');
+  if(bateuFat&&bateuG&&bateuI&&bateuC&&bateuCancel&&!document.getElementById('celebracaoOverlay'))setTimeout(mostrarCelebracao,300);
 }
 
 function mostrarCelebracao(){
