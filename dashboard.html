@@ -296,7 +296,7 @@ function carregarDados(url) {
     else renderDashboard(gerarDadosDemo(), true);
   };
 
-  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
+  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&diaInicio=16&callback=' + callbackName;
   script.onerror = () => {
     clearTimeout(timeout);
     delete window[callbackName];
