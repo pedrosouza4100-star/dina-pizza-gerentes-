@@ -276,22 +276,33 @@ window.addEventListener('load', () => {
   }
 });
 
-// ── Carregar dados via GET ──
-async function carregarDados(url) {
+// ── Carregar dados via JSONP ──
+function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
-  try {
-    // Usa JSONP/no-cors ou dados simulados se CORS bloquear
-    const resp = await fetch(url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual, { method: 'GET' });
-    const json = await resp.json();
-    if (json && json.dados) {
-      renderDashboard(json.dados);
-    } else {
-      renderDashboard(gerarDadosDemo());
-    }
-  } catch(e) {
-    // Se CORS bloquear, usa dados de demonstração com aviso
+
+  const callbackName = 'dinaCb_' + Date.now();
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    delete window[callbackName];
+    document.body.removeChild(script);
     renderDashboard(gerarDadosDemo(), true);
-  }
+  }, 10000);
+
+  window[callbackName] = function(json) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    document.body.removeChild(script);
+    if (json && json.dados) renderDashboard(json.dados);
+    else renderDashboard(gerarDadosDemo(), true);
+  };
+
+  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
+  script.onerror = () => {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    renderDashboard(gerarDadosDemo(), true);
+  };
+  document.body.appendChild(script);
 }
 
 // ── Dados demo ──
