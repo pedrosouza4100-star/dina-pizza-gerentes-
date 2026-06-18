@@ -292,7 +292,7 @@ function carregarDados(url) {
     clearTimeout(timeout);
     delete window[callbackName];
     document.body.removeChild(script);
-    if (json && json.dados) renderDashboard(json.dados);
+    if (json && json.dados) renderDashboard(json.dados, false);
     else renderDashboard(gerarDadosDemo(), true);
   };
 
