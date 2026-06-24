@@ -200,6 +200,14 @@
         <span class="tag" id="cancelTag"></span>
       </div>
 
+      <!-- Motoboys (só para lojas com entrega própria) -->
+      <div class="card card-full" id="cardMotoboys" style="display:none">
+        <div class="card-label">Motoboys em Serviço</div>
+        <div class="card-meta" id="metaMotoboysDisplay"></div>
+        <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0"><span class="suffix">mb.</span></div>
+        <span class="tag" id="motoboysTag"></span>
+      </div>
+
     </div>
 
     <!-- Observações -->
@@ -225,6 +233,23 @@
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxabXp74pNJz15V87l_AgrOALznMSesTOwd3c9xxsFdncDDdZmEF6P3r-Psy0smKK9G/exec';
 const UNIDADES=["Isaac","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 let METAS_FAT={},METAS_AVAL={},PREMIO=100,unidadeAtual=null;
+
+// Metas de motoboys por dia da semana (0=dom,1=seg,2=ter,3=qua,4=qui,5=sex,6=sab)
+// null = sem indicador para essa loja
+const METAS_MOTOBOYS = {
+  "Expressa":        { 1:3, 2:3, 3:3, 4:3, 5:5, 6:6, 0:5 },
+  "Capão Raso":      { 1:2, 2:2, 3:2, 4:3, 5:3, 6:4, 0:3 },
+  "Água Verde":      { 1:3, 2:3, 3:3, 4:3, 5:5, 6:5, 0:4 },
+  "Uberaba":         { 1:3, 2:3, 3:3, 4:3, 5:4, 6:4, 0:3 },
+  "Colombo":         { 1:2, 2:2, 3:2, 4:3, 5:5, 6:5, 0:4 },
+  "Fazenda Rio Grande": { 1:2, 2:2, 3:2, 4:2, 5:4, 6:4, 0:3 },
+};
+
+function metaMotoboysHoje(u) {
+  const m = METAS_MOTOBOYS[u];
+  if (!m) return null;
+  return m[new Date().getDay()] || null;
+}
 
 const FAT_DEF={"Isaac":{semana:19000,fds:44000},"Água Verde":{semana:6600,fds:11500},"Uberaba":{semana:5400,fds:8900},"Campo Largo":{semana:4000,fds:7000},"Capão Raso":{semana:4500,fds:7100},"São José dos Pinhais":{semana:4800,fds:8800},"Expressa":{semana:8500,fds:11500},"Fazenda Rio Grande":{semana:12100,fds:21900},"Colombo":{semana:7500,fds:12100},"Araucária":{semana:9000,fds:14000}};
 const AVAL_DEF={"Isaac":{google:40,ifood:40},"Água Verde":{google:15,ifood:15},"Uberaba":{google:15,ifood:15},"Campo Largo":{google:15,ifood:15},"Capão Raso":{google:5,ifood:5},"São José dos Pinhais":{google:15,ifood:15},"Expressa":{google:5,ifood:5},"Fazenda Rio Grande":{google:20,ifood:20},"Colombo":{google:20,ifood:20},"Araucária":{google:20,ifood:20}};
@@ -311,6 +336,16 @@ function atualizarMetas(){
   document.getElementById('periodoDisplay').textContent=`Período: ${periodo}`;
   document.getElementById('metaGoogleDisplay').textContent=ma.google?`Meta: ${ma.google}/dia`:'';
   document.getElementById('metaIfoodDisplay').textContent=ma.ifood?`Meta: ${ma.ifood}/dia`:'';
+
+  // Motoboys — só mostra para lojas com entrega própria
+  const metaMb = metaMotoboysHoje(unidadeAtual);
+  const cardMb = document.getElementById('cardMotoboys');
+  if(metaMb !== null) {
+    cardMb.style.display='flex';
+    document.getElementById('metaMotoboysDisplay').textContent=`Meta mínima: ${metaMb} motoboys hoje`;
+  } else {
+    cardMb.style.display='none';
+  }
 }
 
 function setStatus(cId,tId,cls,lbl){
@@ -331,7 +366,14 @@ function avaliar(){
   const f=ival('ifood');if(f>0&&ma.ifood>0){if(f>=ma.ifood)setStatus('cardIfood','ifoodTag','ok','No alvo');else if(f>=ma.ifood*0.7){setStatus('cardIfood','ifoodTag','warn','Atenção');prob++;}else{setStatus('cardIfood','ifoodTag','bad','Abaixo');prob++;}}
   const ch=ival('chamados');if(filled('chamados')){if(ch===0)setStatus('cardChamados','chamadosTag','ok','Zerado');else if(ch===1){setStatus('cardChamados','chamadosTag','warn','Atenção');prob++;}else{setStatus('cardChamados','chamadosTag','bad','Alto');prob++;}}
   const ca=ival('cancel');if(filled('cancel')){if(ca===0)setStatus('cardCancel','cancelTag','ok','Zerado');else if(ca<=3){setStatus('cardCancel','cancelTag','warn','Atenção');prob++;}else{setStatus('cardCancel','cancelTag','bad','Alto');prob++;}}
-  const r=document.getElementById('resumo');
+  const metaMb=metaMotoboysHoje(unidadeAtual);
+  if(metaMb!==null&&filled('motoboys')){
+    const mb=ival('motoboys');
+    const cardMb=document.getElementById('cardMotoboys');
+    if(mb>=metaMb){cardMb.className='card card-full ok';const t=document.getElementById('motoboysTag');t.className='tag ok';t.textContent='No alvo';}
+    else if(mb>=metaMb-1){cardMb.className='card card-full warn';const t=document.getElementById('motoboysTag');t.className='tag warn';t.textContent='Atenção';prob++;}
+    else{cardMb.className='card card-full bad';const t=document.getElementById('motoboysTag');t.className='tag bad';t.textContent='Abaixo';prob++;}
+  }  const r=document.getElementById('resumo');
   if(prob===0){r.textContent='✓ Todos os indicadores no alvo';r.style.color='var(--green)';}
   else if(prob===1){r.textContent='⚠ 1 indicador precisa de atenção';r.style.color='var(--yellow)';}
   else{r.textContent=`⚠ ${prob} indicadores fora da meta`;r.style.color='var(--danger)';}
@@ -392,6 +434,7 @@ async function registrar(){
     faturamento:val('fat'),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
+    motoboys:ival('motoboys'),metaMotoboys:metaMotoboysHoje(unidadeAtual)||0,
     observacoes:document.getElementById('obs').value
   };
   try{
@@ -412,7 +455,9 @@ function limpar(){
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel'].forEach(id=>{
     document.getElementById(id).className='card'+(id==='cardFat'?' card-full':'');
   });
-  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag'].forEach(id=>{const el=document.getElementById(id);el.textContent='';el.className='tag';});
+  const cardMb=document.getElementById('cardMotoboys');
+  if(cardMb) cardMb.className='card card-full'+(cardMb.style.display==='none'?'':' ');
+  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','motoboysTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
   const r=document.getElementById('resumo');r.textContent='Preencha os dados acima';r.style.color='';
 }
 </script>
