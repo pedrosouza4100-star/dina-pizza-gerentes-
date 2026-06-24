@@ -331,6 +331,8 @@ function renderDashboard(dados, isDemo = false) {
   const totalIfood = dados.reduce((s,d) => s + d.ifood, 0);
   const totalCancel = dados.reduce((s,d) => s + d.cancelamentos, 0);
   const totalChamados = dados.reduce((s,d) => s + (d.chamados||0), 0);
+  const totalMotoboys = dados.reduce((s,d) => s + (d.motoboys||0), 0);
+  const totalStartDina = dados.reduce((s,d) => s + (d.startDina||0), 0);
   const pctGeral = totalFat / totalMetaFat;
 
   const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0});
@@ -345,7 +347,7 @@ function renderDashboard(dados, isDemo = false) {
     <!-- KPIs -->
     <div>
       <div class="section-title">Visão Geral da Rede — ${MESES[mesAtual]} ${anoAtual}</div>
-      <div class="kpi-strip" style="grid-template-columns:repeat(5,1fr)">
+      <div class="kpi-strip" style="grid-template-columns:repeat(6,1fr)">
         <div class="kpi gold">
           <div class="kpi-label">Faturamento Total</div>
           <div class="kpi-value">${fmt(totalFat)}</div>
@@ -372,6 +374,11 @@ function renderDashboard(dados, isDemo = false) {
           <div class="kpi-value" style="color:${totalCancel === 0 ? 'var(--green)' : totalCancel <= 10 ? 'var(--yellow)' : 'var(--danger)'}">${totalCancel}</div>
           <div class="kpi-sub">Soma de todas as unidades</div>
         </div>
+        <div class="kpi ${totalStartDina >= dados.length ? 'green' : totalStartDina > 0 ? 'yellow' : ''}">
+          <div class="kpi-label">⭐ Start Dina</div>
+          <div class="kpi-value" style="color:${totalStartDina >= dados.length ? 'var(--green)' : totalStartDina > 0 ? 'var(--yellow)' : 'var(--danger)'}">${totalStartDina}</div>
+          <div class="kpi-sub">Reuniões registradas hoje</div>
+        </div>
       </div>
     </div>
 
@@ -392,19 +399,27 @@ function renderDashboard(dados, isDemo = false) {
 
     <!-- Mini cards cancelamentos -->
     <div>
-      <div class="section-title">Cancelamentos + Chamados por Unidade</div>
-      <div class="mini-row">
+      <div class="section-title">Cancelamentos + Chamados + Motoboys + Start Dina por Unidade</div>
+      <div class="mini-row" style="grid-template-columns:repeat(5,1fr)">
         ${dados.map(d => `
           <div class="mini-card">
-            <div class="mini-label">${d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda')}</div>
-            <div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px">
+            <div class="mini-label">${d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso').replace('Isaac Manhã','Isaac M.').replace('Isaac Noite','Isaac N.')}</div>
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-top:4px;flex-wrap:wrap">
               <div>
-                <div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Cancel.</div>
-                <div class="mini-value" style="color:${d.cancelamentos === 0 ? 'var(--green)' : d.cancelamentos <= 3 ? 'var(--yellow)' : 'var(--danger)'}">${d.cancelamentos}</div>
+                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Cancel.</div>
+                <div class="mini-value" style="color:${d.cancelamentos===0?'var(--green)':d.cancelamentos<=3?'var(--yellow)':'var(--danger)'}">${d.cancelamentos}</div>
               </div>
               <div>
-                <div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Chamados</div>
-                <div class="mini-value" style="color:${d.chamados === 0 ? 'var(--green)' : d.chamados === 1 ? 'var(--yellow)' : 'var(--danger)'}">${d.chamados}</div>
+                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Chamados</div>
+                <div class="mini-value" style="color:${d.chamados===0?'var(--green)':d.chamados===1?'var(--yellow)':'var(--danger)'}">${d.chamados||0}</div>
+              </div>
+              ${d.motoboys>0?`<div>
+                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Motos</div>
+                <div class="mini-value" style="color:var(--text)">${d.motoboys}</div>
+              </div>`:''}
+              <div>
+                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Start</div>
+                <div class="mini-value" style="color:${(d.startDina||0)>=1?'var(--green)':'var(--danger)'}">${d.startDina||0}</div>
               </div>
             </div>
           </div>
