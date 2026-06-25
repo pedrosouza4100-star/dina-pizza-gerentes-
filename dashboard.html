@@ -1,562 +1,286 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Mensal — Dina Pizza</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@600;700&display=swap');
+// ============================================================
+// DINA PIZZA — Apps Script v3
+// Cole em Extensões > Apps Script e reimplante
+// ============================================================
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --red: #C0392B;
-    --red2: #E74C3C;
-    --gold: #D4A017;
-    --dark: #0E0E0E;
-    --bg: #141414;
-    --card: #1E1E1E;
-    --border: #2A2A2A;
-    --text: #F2F2F2;
-    --muted: #666;
-    --green: #2ECC71;
-    --yellow: #F1C40F;
-    --danger: #E74C3C;
-  }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ── */
-  header {
-    background: var(--dark);
-    border-bottom: 3px solid var(--red);
-    padding: 0 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
-
-  .brand { font-family: 'Oswald', sans-serif; font-size: 1.5rem; letter-spacing: 0.1em; color: #fff; }
-  .brand span { color: var(--gold); }
-
-  .header-controls { display: flex; align-items: center; gap: 16px; }
-
-  select, input[type=text] {
-    background: #1a1a1a;
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.82rem;
-    padding: 6px 12px;
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-  }
-
-  select:focus, input[type=text]:focus { border-color: var(--red); }
-
-  .btn {
-    background: var(--red);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 7px 18px;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn:hover { background: #a93226; }
-  .btn.outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-  .btn.outline:hover { border-color: var(--red); color: var(--text); }
-
-  /* ── LAYOUT ── */
-  .page { padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 28px; }
-
-  /* ── KPI STRIP ── */
-  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-
-  .kpi {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .kpi::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--red);
-  }
-
-  .kpi.gold::after { background: var(--gold); }
-  .kpi.green::after { background: var(--green); }
-  .kpi.yellow::after { background: var(--yellow); }
-
-  .kpi-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 8px; }
-  .kpi-value { font-family: 'Oswald', sans-serif; font-size: 2rem; color: var(--text); line-height: 1; }
-  .kpi-sub { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
-  .kpi-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.68rem; font-weight: 700; margin-top: 4px; }
-  .badge-ok { background: rgba(46,204,113,0.15); color: var(--green); }
-  .badge-warn { background: rgba(241,196,15,0.15); color: var(--yellow); }
-  .badge-bad { background: rgba(231,76,60,0.15); color: var(--danger); }
-
-  /* ── SECTION TITLE ── */
-  .section-title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
-  }
-
-  /* ── CHARTS ROW ── */
-  .charts-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
-  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
-  .chart-card canvas { max-height: 280px; }
-
-  /* ── RANKING TABLE ── */
-  .ranking-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #181818; }
-  th { padding: 12px 16px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); text-align: left; border-bottom: 1px solid var(--border); }
-  td { padding: 13px 16px; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.02); }
-
-  .rank-num { font-family: 'Oswald', sans-serif; font-size: 1.1rem; color: var(--muted); }
-  .rank-num.gold { color: var(--gold); }
-  .rank-num.silver { color: #aaa; }
-  .rank-num.bronze { color: #cd7f32; }
-
-  .unit-name { font-weight: 600; }
-
-  .progress-cell { min-width: 140px; }
-  .progress-bar-bg { background: #2a2a2a; border-radius: 3px; height: 6px; overflow: hidden; }
-  .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-  .fill-ok { background: var(--green); }
-  .fill-warn { background: var(--yellow); }
-  .fill-bad { background: var(--danger); }
-
-  .pct-label { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
-
-  /* ── MODAL ── */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 200; }
-  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 36px 40px; width: 500px; display: flex; flex-direction: column; gap: 14px; }
-  .modal h2 { font-family: 'Oswald', sans-serif; font-size: 1.3rem; color: var(--gold); }
-  .modal p { font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
-  .modal label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 4px; }
-  .modal input[type=text] { width: 100%; font-size: 0.85rem; padding: 10px 14px; }
-
-  /* ── LOADING ── */
-  .loading { display: flex; align-items: center; justify-content: center; height: 300px; flex-direction: column; gap: 12px; color: var(--muted); font-size: 0.85rem; }
-  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .empty { color: var(--muted); font-size: 0.82rem; text-align: center; padding: 40px; }
-
-  /* ── MINI CARDS ROW ── */
-  .mini-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-  .mini-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
-  .mini-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
-  .mini-value { font-family: 'Oswald', sans-serif; font-size: 1.3rem; }
-  .mini-sub { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
-</style>
-</head>
-<body>
-
-<!-- Modal config -->
-<div class="modal-bg" id="modalConfig">
-  <div class="modal">
-    <h2>Conectar ao Google Sheets</h2>
-    <p>Cole a URL do Web App do Apps Script para carregar os dados reais da rede.<br>
-    É a mesma URL usada no Placar Diário.</p>
-    <div>
-      <label>URL do Apps Script</label>
-      <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/...">
-    </div>
-    <div>
-      <label>Mês de referência</label>
-      <select id="mesRef" style="width:100%;padding:10px 14px;font-size:0.85rem">
-        <option value="0">Janeiro</option><option value="1">Fevereiro</option>
-        <option value="2">Março</option><option value="3">Abril</option>
-        <option value="4">Maio</option><option value="5">Junho</option>
-        <option value="6">Julho</option><option value="7">Agosto</option>
-        <option value="8">Setembro</option><option value="9">Outubro</option>
-        <option value="10">Novembro</option><option value="11">Dezembro</option>
-      </select>
-    </div>
-    <div>
-      <label>Ano</label>
-      <input type="text" id="anoRef" placeholder="2026" style="width:100%;padding:10px 14px;font-size:0.85rem">
-    </div>
-    <button class="btn" onclick="salvarConfig()">Carregar Dashboard</button>
-  </div>
-</div>
-
-<header>
-  <div class="brand">DINA <span>PIZZA</span> <span style="font-size:0.85rem;color:var(--muted);font-weight:400;letter-spacing:0.05em">— Dashboard Mensal</span></div>
-  <div class="header-controls">
-    <span id="mesLabel" style="font-size:0.8rem;color:var(--muted)"></span>
-    <button class="btn outline" onclick="reconfigurar()">↺ Atualizar</button>
-  </div>
-</header>
-
-<div class="page" id="pageContent">
-  <div class="loading"><div class="spinner"></div>Aguardando configuração...</div>
-</div>
-
-<script>
-const METAS_FAT = {
-  "Isaac":25000,"Água Verde":9000,"Uberaba":6000,"Campo Largo":7000,
-  "Capão Raso":6000,"São José dos Pinhais":5000,"Expressa":10000,
-  "Fazenda Rio Grande":13000,"Colombo":9000,"Araucária":9000
+const METAS_FAT_DEFAULT = {
+  "Isaac Manhã":     { semana: 3900,  fds: 6000  },
+  "Isaac Noite":     { semana: 15800, fds: 38000 },
+  "Água Verde":      { semana: 6600,  fds: 11500 },
+  "Uberaba":         { semana: 5400,  fds: 8900  },
+  "Campo Largo":     { semana: 4000,  fds: 7000  },
+  "Capão Raso":      { semana: 4500,  fds: 7100  },
+  "São José dos Pinhais": { semana: 4800, fds: 8800 },
+  "Expressa":        { semana: 8500,  fds: 11500 },
+  "Fazenda Rio Grande": { semana: 12100, fds: 21900 },
+  "Colombo":         { semana: 7500,  fds: 12100 },
+  "Araucária":       { semana: 9000,  fds: 14000 }
 };
-const METAS_AVAL = {
-  "Isaac":40,"Colombo":20,"Água Verde":15,"Uberaba":15,"Campo Largo":15,
-  "Capão Raso":5,"São José dos Pinhais":15,"Expressa":5,"Fazenda Rio Grande":20,"Araucária":20
+
+const METAS_AVAL_DEFAULT = {
+  "Isaac Manhã":     { google: 10, ifood: 10, cancelamentos: 0, chamados: 0 },
+  "Isaac Noite":     { google: 30, ifood: 30, cancelamentos: 0, chamados: 0 },
+  "Água Verde":      { google: 15, ifood: 15, cancelamentos: 0, chamados: 0 },
+  "Uberaba":         { google: 15, ifood: 15, cancelamentos: 0, chamados: 0 },
+  "Campo Largo":     { google: 15, ifood: 15, cancelamentos: 0, chamados: 0 },
+  "Capão Raso":      { google: 5,  ifood: 5,  cancelamentos: 0, chamados: 0 },
+  "São José dos Pinhais": { google: 15, ifood: 15, cancelamentos: 0, chamados: 0 },
+  "Expressa":        { google: 5,  ifood: 5,  cancelamentos: 0, chamados: 0 },
+  "Fazenda Rio Grande": { google: 20, ifood: 20, cancelamentos: 0, chamados: 0 },
+  "Colombo":         { google: 20, ifood: 20, cancelamentos: 0, chamados: 0 },
+  "Araucária":       { google: 20, ifood: 20, cancelamentos: 0, chamados: 0 }
 };
-const UNIDADES = Object.keys(METAS_FAT);
-const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-let mesAtual = new Date().getMonth();
-let anoAtual = new Date().getFullYear();
+const METAS_MOTOBOYS_DEFAULT = {
+  "Expressa":           { semana: 3, fds: 6 },
+  "Capão Raso":         { semana: 2, fds: 4 },
+  "Água Verde":         { semana: 3, fds: 5 },
+  "Uberaba":            { semana: 3, fds: 4 },
+  "Colombo":            { semana: 2, fds: 5 },
+  "Fazenda Rio Grande": { semana: 2, fds: 4 }
+};
 
-// ── Config ──
-function salvarConfig() {
-  const url = document.getElementById('scriptUrl').value.trim();
-  if (!url.startsWith('https://script.google.com')) { alert('URL inválida.'); return; }
-  mesAtual = parseInt(document.getElementById('mesRef').value);
-  anoAtual = parseInt(document.getElementById('anoRef').value) || new Date().getFullYear();
-  localStorage.setItem('dina_script_url', url);
-  document.getElementById('modalConfig').style.display = 'none';
-  document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
-  carregarDados(url);
-}
+const METAS_TEMPO_DEFAULT = [30, 50, 30];
 
-function reconfigurar() {
-  const url = localStorage.getItem('dina_script_url') || '';
-  document.getElementById('scriptUrl').value = url;
-  document.getElementById('mesRef').value = mesAtual;
-  document.getElementById('anoRef').value = anoAtual;
-  document.getElementById('modalConfig').style.display = 'flex';
-}
+// ── GET: dashboard + metas ──
+function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const action = e.parameter.action || 'getDashboard';
 
-window.addEventListener('load', () => {
-  const now = new Date();
-  mesAtual = now.getMonth();
-  anoAtual = now.getFullYear();
-  document.getElementById('mesRef').value = mesAtual;
-  document.getElementById('anoRef').value = anoAtual;
-  const url = localStorage.getItem('dina_script_url');
-  if (url) {
-    document.getElementById('scriptUrl').value = url;
-    document.getElementById('modalConfig').style.display = 'none';
-    document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
-    carregarDados(url);
+  const callback = e.parameter.callback;
+
+  // Retorna apenas as metas (para placar e admin)
+  if (action === 'getMetas') {
+    const metasFat  = getMetas(ss, 'metas_fat',  METAS_FAT_DEFAULT);
+    const metasAval = getMetas(ss, 'metas_aval', METAS_AVAL_DEFAULT);
+    const premio    = getConfig(ss, 'premio', '100');
+    const metasMotoboys = getMetas(ss, 'metas_motoboys', METAS_MOTOBOYS_DEFAULT);
+    const metasTempo    = getMetas(ss, 'metas_tempo',    METAS_TEMPO_DEFAULT);
+    const data = { status: 'ok', metasFat, metasAval, premio: parseFloat(premio), metasMotoboys, metasTempo };
+    if (callback) return ContentService.createTextOutput(callback + '(' + JSON.stringify(data) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+    return jsonResponse(data);
   }
-});
 
-// ── Carregar dados via JSONP ──
-function carregarDados(url) {
-  document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
+  // Dashboard
+  const mes = parseInt(e.parameter.mes);
+  const ano = parseInt(e.parameter.ano);
+  const metasFat = getMetas(ss, 'metas_fat', METAS_FAT_DEFAULT);
+  const unidades = Object.keys(METAS_FAT_DEFAULT);
 
-  const callbackName = 'dinaCb_' + Date.now();
-  const script = document.createElement('script');
-  const timeout = setTimeout(() => {
-    delete window[callbackName];
-    document.body.removeChild(script);
-    renderDashboard(gerarDadosDemo(), true);
-  }, 10000);
+  const diaInicio = parseInt(e.parameter.diaInicio) || 1;
 
-  window[callbackName] = function(json) {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    document.body.removeChild(script);
-    if (json && json.dados) renderDashboard(json.dados, false);
-    else renderDashboard(gerarDadosDemo(), true);
-  };
-
-  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
-  script.onerror = () => {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    renderDashboard(gerarDadosDemo(), true);
-  };
-  document.body.appendChild(script);
-}
-
-// ── Dados demo ──
-function gerarDadosDemo() {
-  return UNIDADES.map(u => ({
-    unidade: u,
-    faturamento: Math.round(METAS_FAT[u] * (0.7 + Math.random() * 0.6) * 22),
-    metaMensal: METAS_FAT[u] * 30,
-    google: Math.round(METAS_AVAL[u] * (0.5 + Math.random() * 0.8) * 22),
-    ifood: Math.round(METAS_AVAL[u] * (0.4 + Math.random() * 0.9) * 22),
-    metaAval: METAS_AVAL[u] * 30,
-    cancelamentos: Math.round(Math.random() * 15),
-    chamados: Math.round(Math.random() * 3),
-    dias: Math.round(15 + Math.random() * 10)
-  }));
-}
-
-// ── Render ──
-function renderDashboard(dados, isDemo = false) {
-  // Ordenar por % meta faturamento desc
-  dados.sort((a,b) => (b.faturamento/b.metaMensal) - (a.faturamento/a.metaMensal));
-
-  const totalFat = dados.reduce((s,d) => s + d.faturamento, 0);
-  const totalMetaFat = dados.reduce((s,d) => s + d.metaMensal, 0);
-  const totalGoogle = dados.reduce((s,d) => s + d.google, 0);
-  const totalIfood = dados.reduce((s,d) => s + d.ifood, 0);
-  const totalCancel = dados.reduce((s,d) => s + d.cancelamentos, 0);
-  const totalChamados = dados.reduce((s,d) => s + (d.chamados||0), 0);
-  const totalMotoboys = dados.reduce((s,d) => s + (d.motoboys||0), 0);
-  const totalStartDina = dados.reduce((s,d) => s + (d.startDina||0), 0);
-  const pctGeral = totalFat / totalMetaFat;
-
-  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0});
-  const pctFmt = v => (v*100).toFixed(1) + '%';
-
-  const badgeGeral = pctGeral >= 1 ? 'badge-ok' : pctGeral >= 0.8 ? 'badge-warn' : 'badge-bad';
-  const labelGeral = pctGeral >= 1 ? '✓ Meta atingida' : pctGeral >= 0.8 ? '⚠ Atenção' : '✗ Abaixo da meta';
-
-  document.getElementById('pageContent').innerHTML = `
-    ${isDemo ? '<div style="background:#3a2000;border:1px solid #7a4000;border-radius:6px;padding:10px 16px;font-size:0.78rem;color:#F39C12">⚠ Modo demonstração — dados simulados. Configure a URL do Apps Script para carregar dados reais.</div>' : ''}
-
-    <!-- KPIs -->
-    <div>
-      <div class="section-title">Visão Geral da Rede — ${MESES[mesAtual]} ${anoAtual}</div>
-      <div class="kpi-strip" style="grid-template-columns:repeat(6,1fr)">
-        <div class="kpi gold">
-          <div class="kpi-label">Faturamento Total</div>
-          <div class="kpi-value">${fmt(totalFat)}</div>
-          <div class="kpi-sub">Meta: ${fmt(totalMetaFat)}</div>
-          <div class="kpi-badge ${badgeGeral}">${labelGeral} — ${pctFmt(pctGeral)}</div>
-        </div>
-        <div class="kpi green">
-          <div class="kpi-label">Avaliações Google</div>
-          <div class="kpi-value">${totalGoogle.toLocaleString('pt-BR')}</div>
-          <div class="kpi-sub">Total acumulado no mês</div>
-        </div>
-        <div class="kpi green">
-          <div class="kpi-label">Avaliações iFood</div>
-          <div class="kpi-value">${totalIfood.toLocaleString('pt-BR')}</div>
-          <div class="kpi-sub">Total acumulado no mês</div>
-        </div>
-        <div class="kpi ${totalChamados === 0 ? 'green' : totalChamados <= 5 ? 'yellow' : ''}">
-          <div class="kpi-label">Chamados</div>
-          <div class="kpi-value" style="color:${totalChamados === 0 ? 'var(--green)' : totalChamados <= 5 ? 'var(--yellow)' : 'var(--danger)'}">${totalChamados}</div>
-          <div class="kpi-sub">Soma de todas as unidades</div>
-        </div>
-        <div class="kpi ${totalCancel === 0 ? 'green' : totalCancel > 20 ? '' : 'yellow'}">
-          <div class="kpi-label">Cancelamentos</div>
-          <div class="kpi-value" style="color:${totalCancel === 0 ? 'var(--green)' : totalCancel <= 10 ? 'var(--yellow)' : 'var(--danger)'}">${totalCancel}</div>
-          <div class="kpi-sub">Soma de todas as unidades</div>
-        </div>
-        <div class="kpi ${totalStartDina >= dados.length ? 'green' : totalStartDina > 0 ? 'yellow' : ''}">
-          <div class="kpi-label">⭐ Start Dina</div>
-          <div class="kpi-value" style="color:${totalStartDina >= dados.length ? 'var(--green)' : totalStartDina > 0 ? 'var(--yellow)' : 'var(--danger)'}">${totalStartDina}</div>
-          <div class="kpi-sub">Reuniões registradas hoje</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Gráficos -->
-    <div>
-      <div class="section-title">Comparativo entre Unidades</div>
-      <div class="charts-row">
-        <div class="chart-card">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.1em">Faturamento Real vs Meta (R$)</div>
-          <canvas id="chartFat"></canvas>
-        </div>
-        <div class="chart-card">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.1em">Avaliações Google + iFood</div>
-          <canvas id="chartAval"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Mini cards cancelamentos -->
-    <div>
-      <div class="section-title">Cancelamentos + Chamados + Motoboys + Start Dina por Unidade</div>
-      <div class="mini-row" style="grid-template-columns:repeat(5,1fr)">
-        ${dados.map(d => `
-          <div class="mini-card">
-            <div class="mini-label">${d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso').replace('Isaac Manhã','Isaac M.').replace('Isaac Noite','Isaac N.')}</div>
-            <div style="display:flex;gap:10px;align-items:flex-end;margin-top:4px;flex-wrap:wrap">
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Cancel.</div>
-                <div class="mini-value" style="color:${d.cancelamentos===0?'var(--green)':d.cancelamentos<=3?'var(--yellow)':'var(--danger)'}">${d.cancelamentos}</div>
-              </div>
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Chamados</div>
-                <div class="mini-value" style="color:${d.chamados===0?'var(--green)':d.chamados===1?'var(--yellow)':'var(--danger)'}">${d.chamados||0}</div>
-              </div>
-              ${d.motoboys>0?`<div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Motos</div>
-                <div class="mini-value" style="color:var(--text)">${d.motoboys}</div>
-              </div>`:''}
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Start</div>
-                <div class="mini-value" style="color:${(d.startDina||0)>=1?'var(--green)':'var(--danger)'}">${d.startDina||0}</div>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <!-- Premio do Mês -->
-    <div>
-      <div class="section-title">🏆 Premiação Mensal — Desempenho por Loja</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
-        ${dados.map(d => {
-          const pctFat  = d.metaMensal > 0 ? d.faturamento / d.metaMensal : 0;
-          const metaGoogleMes = (METAS_AVAL[d.unidade]||0) * d.dias;
-          const metaIfoodMes  = (METAS_AVAL[d.unidade]||0) * d.dias;
-          const bateuFat    = pctFat >= 1;
-          const bateuGoogle = metaGoogleMes > 0 && d.google >= metaGoogleMes;
-          const bateuIfood  = metaIfoodMes > 0  && d.ifood  >= metaIfoodMes;
-          const semChamados = d.chamados === 0;
-          const pts = [bateuFat, bateuGoogle, bateuIfood, semChamados].filter(Boolean).length;
-          const bateuTudo = pts === 4;
-          const cor = bateuTudo ? '#D4A017' : pts >= 3 ? '#27AE60' : pts >= 2 ? '#F39C12' : 'var(--muted)';
-          const icone = bateuTudo ? '🏆' : pts >= 3 ? '✅' : pts >= 2 ? '⚠️' : '❌';
-          const nomeAbrev = d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso');
-          return `
-          <div style="background:${bateuTudo ? 'rgba(212,160,23,0.08)' : 'var(--card)'};border:1px solid ${bateuTudo ? 'rgba(212,160,23,0.4)' : 'var(--border)'};border-radius:8px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center">
-            <div style="font-size:1.6rem">${icone}</div>
-            <div style="font-size:0.72rem;font-weight:700;color:${cor}">${nomeAbrev}</div>
-            <div style="font-size:1rem;font-weight:700;font-family:'Oswald',sans-serif;color:${cor}">${pts}/4</div>
-            <div style="font-size:0.62rem;color:var(--muted);line-height:1.6;text-align:left;width:100%">
-              <div>${bateuFat    ? '✓' : '✗'} Faturamento</div>
-              <div>${bateuGoogle ? '✓' : '✗'} Google</div>
-              <div>${bateuIfood  ? '✓' : '✗'} iFood</div>
-              <div>${semChamados ? '✓' : '✗'} Chamados (${d.chamados})</div>
-            </div>
-            ${bateuTudo ? '<div style="font-size:0.7rem;font-weight:700;color:#D4A017;background:rgba(212,160,23,0.1);padding:4px 10px;border-radius:3px">R$ 100,00 ✓</div>' : ''}
-          </div>`;
-        }).join('')}
-      </div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:10px">* Baseado nos dias registrados no mês. Faturamento e avaliações comparados com meta acumulada × dias registrados. Chamados = total do mês deve ser zero.</div>
-    </div>
-
-    <!-- Ranking -->
-    <div>
-      <div class="section-title">Ranking de Faturamento</div>
-      <div class="ranking-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Unidade</th>
-              <th>Faturamento</th>
-              <th>Meta Mensal</th>
-              <th style="min-width:180px">% da Meta</th>
-              <th>Google</th>
-              <th>iFood</th>
-              <th>Dias</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dados.map((d, i) => {
-              const pct = d.faturamento / d.metaMensal;
-              const fillClass = pct >= 1 ? 'fill-ok' : pct >= 0.8 ? 'fill-warn' : 'fill-bad';
-              const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-              return `<tr>
-                <td><span class="rank-num ${rankClass}">${i+1}</span></td>
-                <td><span class="unit-name">${d.unidade}</span></td>
-                <td>${fmt(d.faturamento)}</td>
-                <td style="color:var(--muted)">${fmt(d.metaMensal)}</td>
-                <td class="progress-cell">
-                  <div class="progress-bar-bg"><div class="progress-bar-fill ${fillClass}" style="width:${Math.min(pct*100,100)}%"></div></div>
-                  <div class="pct-label">${pctFmt(pct)}</div>
-                </td>
-                <td>${d.google}</td>
-                <td>${d.ifood}</td>
-                <td style="color:var(--muted)">${d.dias}d</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // ── Gráfico faturamento ──
-  const nomes = dados.map(d => d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C. Raso'));
-  new Chart(document.getElementById('chartFat'), {
-    type: 'bar',
-    data: {
-      labels: nomes,
-      datasets: [
-        {
-          label: 'Faturamento',
-          data: dados.map(d => d.faturamento),
-          backgroundColor: dados.map(d => d.faturamento/d.metaMensal >= 1 ? 'rgba(46,204,113,0.7)' : d.faturamento/d.metaMensal >= 0.8 ? 'rgba(241,196,15,0.7)' : 'rgba(231,76,60,0.7)'),
-          borderRadius: 4,
-        },
-        {
-          label: 'Meta',
-          data: dados.map(d => d.metaMensal),
-          backgroundColor: 'rgba(255,255,255,0.07)',
-          borderColor: 'rgba(255,255,255,0.15)',
-          borderWidth: 1,
-          borderRadius: 4,
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { labels: { color: '#888', font: { family: 'Inter', size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } },
-        y: { ticks: { color: '#666', font: { size: 10 }, callback: v => 'R$' + (v/1000).toFixed(0)+'k' }, grid: { color: '#222' } }
+  const resultado = unidades.map(unidade => {
+    const sheet = ss.getSheetByName(unidade);
+    if (!sheet || sheet.getLastRow() < 2) return {
+      unidade,
+      faturamento: 0, metaMensal: (metasFat[unidade]?.semana||0) * 22,
+      google: 0, ifood: 0, cancelamentos: 0, chamados: 0, dias: 0
+    };
+    const dados = sheet.getRange(2, 1, sheet.getLastRow()-1, 12).getValues();
+    const doMes = dados.filter(r => {
+      if (!r[0]) return false;
+      const dateStr = String(r[0]);
+      // Suporta DD/MM/YYYY e objetos Date
+      let dia, mes2, ano2;
+      if (dateStr.includes('/')) {
+        const p = dateStr.split('/');
+        if (p.length < 3) return false;
+        dia = parseInt(p[0]); mes2 = parseInt(p[1])-1; ano2 = parseInt(p[2]);
+      } else {
+        const d = new Date(r[0]);
+        if (isNaN(d)) return false;
+        dia = d.getDate(); mes2 = d.getMonth(); ano2 = d.getFullYear();
       }
-    }
+      return mes2 === mes && ano2 === ano && dia >= diaInicio;
+    });
+    const metaSemana = metasFat[unidade]?.semana || 0;
+    const metaFds    = metasFat[unidade]?.fds    || 0;
+    const metaMensal = (metaSemana * 17) + (metaFds * 13);
+    return {
+      unidade,
+      faturamento:   doMes.reduce((s,r) => s + (parseFloat(r[1])||0), 0),
+      metaMensal,
+      google:        doMes.reduce((s,r) => s + (parseInt(r[3])||0), 0),
+      ifood:         doMes.reduce((s,r) => s + (parseInt(r[4])||0), 0),
+      cancelamentos: doMes.reduce((s,r) => s + (parseInt(r[6])||0), 0),
+      chamados:      doMes.reduce((s,r) => s + (parseInt(r[7])||0), 0),
+      motoboys:      doMes.reduce((s,r) => s + (parseInt(r[8])||0), 0),
+      startDina:     doMes.reduce((s,r) => s + (parseInt(r[9])||0), 0),
+      dias:          doMes.length
+    };
   });
 
-  // ── Gráfico avaliações ──
-  new Chart(document.getElementById('chartAval'), {
-    type: 'bar',
-    data: {
-      labels: nomes,
-      datasets: [
-        { label: 'Google', data: dados.map(d => d.google), backgroundColor: 'rgba(192,57,43,0.8)', borderRadius: 3 },
-        { label: 'iFood', data: dados.map(d => d.ifood), backgroundColor: 'rgba(212,160,23,0.8)', borderRadius: 3 },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { labels: { color: '#888', font: { family: 'Inter', size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } },
-        y: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#222' } }
-      }
-    }
-  });
+  const responseData = { status: 'ok', dados: resultado };
+  if (callback) return ContentService.createTextOutput(callback + '(' + JSON.stringify(responseData) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return jsonResponse(responseData);
 }
-</script>
-</body>
-</html>
+
+// ── POST: registrar placar ou salvar metas ──
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Salvar metas (do Admin)
+    if (data.action === 'saveMetas') {
+      if (data.metasFat)      salvarMetas(ss, 'metas_fat',      data.metasFat);
+      if (data.metasAval)     salvarMetas(ss, 'metas_aval',     data.metasAval);
+      if (data.metasMotoboys) salvarMetas(ss, 'metas_motoboys', data.metasMotoboys);
+      if (data.metasTempo)    salvarMetas(ss, 'metas_tempo',    data.metasTempo);
+      if (data.premio !== undefined) salvarConfig(ss, 'premio', String(data.premio));
+      return jsonResponse({ status: 'ok' });
+    }
+
+    // Registrar placar diário
+    const unidade = data.unidade;
+    let sheet = ss.getSheetByName(unidade);
+    if (!sheet) sheet = criarAbaUnidade(ss, unidade);
+
+    const metasFat  = getMetas(ss, 'metas_fat',  METAS_FAT_DEFAULT);
+    const metasAval = getMetas(ss, 'metas_aval', METAS_AVAL_DEFAULT);
+
+    sheet.appendRow([
+      data.data,
+      data.faturamento,
+      data.periodo === 'fds' ? (metasFat[unidade]?.fds||0) : (metasFat[unidade]?.semana||0),
+      data.avaliacoesGoogle,
+      data.avaliacoesIfood,
+      metasAval[unidade]?.google || 0,
+      data.cancelamentos,
+      data.chamados || 0,
+      data.motoboys || 0,
+      data.startDina || 0,
+      data.observacoes,
+      new Date()
+    ]);
+
+    // Salva foto do Start Dina no Drive se houver
+    if (data.fotoStartDina) {
+      try {
+        const blob = Utilities.newBlob(Utilities.base64Decode(data.fotoStartDina), 'image/jpeg', `StartDina_${unidade}_${data.data.replace(/\//g,'-')}.jpg`);
+        const pasta = obterOuCriarPasta('Dina Pizza — Start Dina');
+        pasta.createFile(blob);
+      } catch(err) {}
+    }
+
+    atualizarConsolidado(ss, metasFat);
+    return jsonResponse({ status: 'ok' });
+
+  } catch(err) {
+    return jsonResponse({ status: 'erro', msg: err.message });
+  }
+}
+
+// ── Helpers: metas na planilha ──
+function getMetas(ss, chave, padrao) {
+  let sheet = ss.getSheetByName('__config__');
+  if (!sheet) return padrao;
+  const dados = sheet.getDataRange().getValues();
+  for (const row of dados) {
+    if (row[0] === chave && row[1]) {
+      try { return JSON.parse(row[1]); } catch(e) {}
+    }
+  }
+  return padrao;
+}
+
+function salvarMetas(ss, chave, valor) {
+  let sheet = ss.getSheetByName('__config__');
+  if (!sheet) { sheet = ss.insertSheet('__config__'); sheet.hideSheet(); }
+  const dados = sheet.getDataRange().getValues();
+  for (let i = 0; i < dados.length; i++) {
+    if (dados[i][0] === chave) { sheet.getRange(i+1, 2).setValue(JSON.stringify(valor)); return; }
+  }
+  sheet.appendRow([chave, JSON.stringify(valor)]);
+}
+
+function getConfig(ss, chave, padrao) {
+  let sheet = ss.getSheetByName('__config__');
+  if (!sheet) return padrao;
+  const dados = sheet.getDataRange().getValues();
+  for (const row of dados) { if (row[0] === chave) return row[1] || padrao; }
+  return padrao;
+}
+
+function salvarConfig(ss, chave, valor) {
+  salvarMetas(ss, chave, valor);
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Estrutura das abas ──
+function criarAbaUnidade(ss, nome) {
+  const sheet = ss.insertSheet(nome);
+  const cab = ["Data","Faturamento","Meta Fat.","Aval. Google","Aval. iFood","Meta Aval.","Cancelamentos","Chamados","Motoboys","Start Dina","Observações","Registrado em"];
+  sheet.appendRow(cab);
+  const h = sheet.getRange(1,1,1,cab.length);
+  h.setBackground("#C0392B").setFontColor("#FFFFFF").setFontWeight("bold").setFontFamily("Arial");
+  [110,130,110,120,110,110,120,110,110,100,280,160].forEach((w,i) => sheet.setColumnWidth(i+1,w));
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function obterOuCriarPasta(nome) {
+  const pastas = DriveApp.getFoldersByName(nome);
+  if (pastas.hasNext()) return pastas.next();
+  return DriveApp.createFolder(nome);
+}
+
+function atualizarConsolidado(ss, metasFat) {
+  let cons = ss.getSheetByName("📊 Consolidado");
+  if (!cons) cons = ss.insertSheet("📊 Consolidado", 0);
+  cons.clearContents();
+  const unidades = Object.keys(METAS_FAT_DEFAULT);
+  const mes = new Date().getMonth(), ano = new Date().getFullYear();
+  const nomeMes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][mes];
+
+  cons.getRange(1,1).setValue("DINA PIZZA — CONSOLIDADO MENSAL");
+  cons.getRange(1,1,1,9).merge().setBackground("#C0392B").setFontColor("#FFFFFF").setFontWeight("bold").setFontSize(13).setFontFamily("Arial");
+  cons.getRange(2,1).setValue(`Mês: ${nomeMes} / ${ano}`);
+  cons.getRange(2,1,1,9).merge().setFontColor("#888").setFontSize(10).setFontFamily("Arial");
+
+  const cabs = ["Unidade","Fat. Acumulado","Meta Mensal","% Meta","Google","iFood","Cancelamentos","Chamados","Dias"];
+  cons.getRange(4,1,1,cabs.length).setValues([cabs]).setBackground("#1A1A1A").setFontColor("#FFF").setFontWeight("bold").setFontFamily("Arial");
+
+  let row = 5;
+  for (const u of unidades) {
+    const sheet = ss.getSheetByName(u);
+    const metaSemana = metasFat[u]?.semana || 0;
+    const metaFds    = metasFat[u]?.fds    || 0;
+    const metaMensal = (metaSemana * 17) + (metaFds * 13);
+    if (!sheet || sheet.getLastRow() < 2) {
+      cons.getRange(row,1,1,9).setValues([[u,0,metaMensal,"0%",0,0,0,0,0]]); row++; continue;
+    }
+    const dados = sheet.getRange(2,1,sheet.getLastRow()-1,10).getValues();
+    const doMes = dados.filter(r => { if(!r[0]) return false; const p=String(r[0]).split('/'); return p.length>=3&&parseInt(p[1])-1===mes&&parseInt(p[2])===ano; });
+    const fatTotal = doMes.reduce((s,r)=>s+(parseFloat(r[1])||0),0);
+    const pct = metaMensal>0 ? ((fatTotal/metaMensal)*100).toFixed(1)+"%" : "0%";
+    cons.getRange(row,1,1,9).setValues([[u, fatTotal, metaMensal, pct,
+      doMes.reduce((s,r)=>s+(parseInt(r[3])||0),0),
+      doMes.reduce((s,r)=>s+(parseInt(r[4])||0),0),
+      doMes.reduce((s,r)=>s+(parseInt(r[6])||0),0),
+      doMes.reduce((s,r)=>s+(parseInt(r[7])||0),0),
+      doMes.length
+    ]]);
+    const pNum = parseFloat(pct);
+    const c = cons.getRange(row,4);
+    if(pNum>=100) c.setBackground("#d4edda").setFontColor("#155724");
+    else if(pNum>=80) c.setBackground("#fff3cd").setFontColor("#856404");
+    else c.setBackground("#f8d7da").setFontColor("#721c24");
+    row++;
+  }
+  cons.getRange(4,1,row-4,9).setFontFamily("Arial").setFontSize(10);
+  [160,140,160,110,110,110,120,110,120].forEach((w,i)=>cons.setColumnWidth(i+1,w));
+  cons.setFrozenRows(4);
+}
+
+function configurarPlanilha() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  Object.keys(METAS_FAT_DEFAULT).forEach(u => { if(!ss.getSheetByName(u)) criarAbaUnidade(ss,u); });
+  atualizarConsolidado(ss, METAS_FAT_DEFAULT);
+  SpreadsheetApp.getUi().alert("✅ Planilha configurada com sucesso!");
+}
