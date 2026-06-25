@@ -198,6 +198,27 @@
       </div>
     </div>
 
+    <!-- Tempo de Entrega (só lojas com entrega própria) -->
+    <div class="card card-full" id="cardTempo" style="display:none">
+      <div class="card-label">🕐 Tempo de Entrega</div>
+      <div class="card-meta" id="tempoRegistroInfo">Meta: 3 registros por noite</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="tempoInputArea">
+        <div>
+          <div class="card-label" style="margin-bottom:4px">App Próprio (min)</div>
+          <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
+        </div>
+        <div>
+          <div class="card-label" style="margin-bottom:4px">iFood (min)</div>
+          <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
+        </div>
+      </div>
+      <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:8px">
+        ⏱ Registrar tempo agora
+      </button>
+      <span class="tag" id="tempoTag"></span>
+    </div>
+
     <!-- Start Dina -->
     <div class="card card-full" id="cardStartDina">
       <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
@@ -262,6 +283,62 @@ const METAS_MOTOBOYS={
   "Colombo":{1:2,2:2,3:2,4:3,5:5,6:5,0:4},
   "Fazenda Rio Grande":{1:2,2:2,3:2,4:2,5:4,6:4,0:3},
 };
+
+// Lojas com entrega própria (motoboys + tempo de entrega)
+const LOJAS_ENTREGA=["Expressa","Capão Raso","Água Verde","Uberaba","Colombo","Fazenda Rio Grande"];
+
+// Metas de tempo de entrega por registro (1º, 2º, 3º)
+const METAS_TEMPO=[30,50,30];
+
+// Registros de tempo do dia (em memória)
+let tempoRegistros=[];
+
+function temLoja(u){return LOJAS_ENTREGA.includes(u);}
+
+function salvarTempoEntrega(){
+  if(tempoRegistros.length>=3){
+    alert('Você já registrou os 3 tempos de entrega do dia.');return;
+  }
+  const app=parseInt(document.getElementById('tempoApp').value)||0;
+  const ifoodT=parseInt(document.getElementById('tempoIfood').value)||0;
+  if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
+  const idx=tempoRegistros.length;
+  const metaTempo=METAS_TEMPO[idx];
+  const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  tempoRegistros.push({app,ifood:ifoodT,horario,idx});
+  document.getElementById('tempoApp').value='';
+  document.getElementById('tempoIfood').value='';
+  renderTempoRegistros();
+  avaliar();
+}
+
+function renderTempoRegistros(){
+  const container=document.getElementById('tempoRegistros');
+  const nomes=['1º — Início da noite','2º — Meio da noite','3º — Final da noite'];
+  container.innerHTML=tempoRegistros.map((r,i)=>{
+    const metaT=METAS_TEMPO[i];
+    const okApp=r.app<=metaT||r.app===0;
+    const okIf=r.ifood<=metaT||r.ifood===0;
+    return `<div style="background:var(--surface);border-radius:6px;padding:8px 12px;font-size:0.78rem;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--muted)">${nomes[i]} <span style="color:var(--text);font-size:0.65rem">(${r.horario})</span></span>
+      <span>App: <strong style="color:${okApp?'var(--green)':'var(--danger)'}">${r.app}min</strong> &nbsp; iFood: <strong style="color:${okIf?'var(--green)':'var(--danger)'}">${r.ifood}min</strong></span>
+    </div>`;
+  }).join('');
+  const info=document.getElementById('tempoRegistroInfo');
+  const restam=3-tempoRegistros.length;
+  if(tempoRegistros.length===3){
+    info.textContent='✓ 3 registros completos';info.style.color='var(--green)';
+    document.getElementById('tempoInputArea').style.display='none';
+    document.getElementById('btnSalvarTempo').style.display='none';
+  } else {
+    info.textContent=`Meta: 3 registros — faltam ${restam}`;info.style.color='var(--gold)';
+    document.getElementById('tempoInputArea').style.display='grid';
+    document.getElementById('btnSalvarTempo').style.display='flex';
+    const proxMeta=METAS_TEMPO[tempoRegistros.length];
+    document.getElementById('tempoApp').placeholder=`Meta ≤${proxMeta}`;
+    document.getElementById('tempoIfood').placeholder=`Meta ≤${proxMeta}`;
+  }
+}
 
 function metaMotoboysHoje(u){const m=METAS_MOTOBOYS[u];if(!m)return null;return m[new Date().getDay()]||null;}
 function isFds(){const d=new Date().getDay();return d===0||d===5||d===6;}
@@ -367,6 +444,11 @@ function atualizarMetas(){
   const cardMb=document.getElementById('cardMotoboys');
   if(metaMb!==null){cardMb.style.display='flex';document.getElementById('metaMotoboysDisplay').textContent=`Meta mínima: ${metaMb} motoboys hoje`;}
   else cardMb.style.display='none';
+
+  // Tempo de entrega — só lojas com entrega própria
+  const cardTempo=document.getElementById('cardTempo');
+  if(temLoja(unidadeAtual)){cardTempo.style.display='flex';renderTempoRegistros();}
+  else cardTempo.style.display='none';
 }
 
 // ── Camera / Start Dina ──
@@ -412,6 +494,13 @@ function avaliar(){
     if(mb>=metaMb)setStatus('cardMotoboys','motoboysTag','ok','No alvo');
     else if(mb>=metaMb-1){setStatus('cardMotoboys','motoboysTag','warn','Atenção');prob++;}
     else{setStatus('cardMotoboys','motoboysTag','bad','Abaixo');prob++;}
+  }
+  // Tempo de entrega
+  if(temLoja(unidadeAtual)){
+    const tag=document.getElementById('tempoTag');
+    if(tempoRegistros.length===3){tag.className='tag ok';tag.textContent='3/3 Completo';}
+    else if(tempoRegistros.length>0){tag.className='tag warn';tag.textContent=`${tempoRegistros.length}/3 registros`;prob++;}
+    else{tag.className='tag bad';tag.textContent='Sem registros';prob++;}
   }
   const r=document.getElementById('resumo');
   if(prob===0){r.textContent='✓ Todos os indicadores no alvo';r.style.color='var(--green)';}
@@ -488,6 +577,7 @@ async function registrar(){
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
     motoboys:ival('motoboys'),metaMotoboys:metaMotoboysHoje(unidadeAtual)||0,
     startDina:fotoBase64?1:0,fotoStartDina:fotoEnvio,
+    tempoEntrega:tempoRegistros,
     observacoes:document.getElementById('obs').value
   };
   try{
@@ -502,7 +592,7 @@ function showMsg(id){const el=document.getElementById(id);el.style.display='bloc
 function limpar(){
   document.querySelectorAll('input.val').forEach(el=>el.value='');
   document.getElementById('obs').value='';
-  fotoBase64=null;
+  fotoBase64=null;tempoRegistros=[];
   document.getElementById('fotoPreview').style.display='none';
   document.getElementById('fotoPreview').src='';
   document.getElementById('cameraBtnStart').className='camera-btn';
@@ -515,7 +605,8 @@ function limpar(){
   });
   const cardMb=document.getElementById('cardMotoboys');
   if(cardMb.style.display!=='none')cardMb.className='card card-full';
-  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','motoboysTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
+  if(temLoja(unidadeAtual))renderTempoRegistros();
+  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
   const r=document.getElementById('resumo');r.textContent='Preencha os dados acima';r.style.color='';
 }
 </script>
