@@ -252,7 +252,7 @@
 </div>
 
 <script>
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxSmo3gu8yYofqOdpHeRPmL3LYqhEXb0n0-VWWiV_RWjFnThSN41lo6JLqhfvswH_FM/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby10Ycm7G9gTBRkCYlfJVPX1gSFSpnBKkcwnXQ7HsOLBfGv9h-L4E4MDEvUUUgEEU0T/exec';
 
 const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 
@@ -287,8 +287,8 @@ const METAS_MOTOBOYS={
 // Lojas com entrega própria (motoboys + tempo de entrega)
 const LOJAS_ENTREGA=["Expressa","Capão Raso","Água Verde","Uberaba","Colombo","Fazenda Rio Grande"];
 
-// Metas de tempo de entrega por registro (1º, 2º, 3º)
-const METAS_TEMPO=[30,50,30];
+// Metas de tempo de entrega por registro (1º, 2º, 3º) — atualizadas do servidor
+let METAS_TEMPO=[30,50,30];
 
 // Registros de tempo do dia (em memória)
 let tempoRegistros=[];
@@ -346,8 +346,19 @@ function metaFat(u){const m=METAS_FAT[u]||FAT_DEF[u];if(!m)return 0;return isFds
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 
 async function carregarMetas(){
-  try{const r=await fetch(SCRIPT_URL+'?action=getMetas');const d=await r.json();METAS_FAT=d.metasFat||FAT_DEF;METAS_AVAL=d.metasAval||AVAL_DEF;PREMIO=d.premio||100;}
-  catch(e){METAS_FAT=JSON.parse(JSON.stringify(FAT_DEF));METAS_AVAL=JSON.parse(JSON.stringify(AVAL_DEF));}
+  try{
+    const r=await fetch(SCRIPT_URL+'?action=getMetas');
+    const d=await r.json();
+    METAS_FAT=d.metasFat||FAT_DEF;
+    METAS_AVAL=d.metasAval||AVAL_DEF;
+    PREMIO=d.premio||100;
+    if(d.metasMotoboys) Object.assign(METAS_MOTOBOYS,d.metasMotoboys);
+    if(d.metasTempo&&d.metasTempo.length===3) METAS_TEMPO.splice(0,3,...d.metasTempo);
+  }
+  catch(e){
+    METAS_FAT=JSON.parse(JSON.stringify(FAT_DEF));
+    METAS_AVAL=JSON.parse(JSON.stringify(AVAL_DEF));
+  }
 }
 
 function mostrar(tela){

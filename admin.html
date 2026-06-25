@@ -148,6 +148,50 @@
           <button class="save-metas-btn" onclick="salvarMetasAval()">Salvar Avaliações e Operacional</button>
         </div>
       </div>
+      <div>
+        <div class="section-title">Metas de Motoboys por Loja</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unidade</th><th>Seg – Qui (motoboys)</th><th>Sex – Dom (motoboys)</th></tr></thead>
+            <tbody id="tabelaMotoboys"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px">
+          <button class="save-metas-btn" onclick="salvarMetasMotoboys()">Salvar Motoboys</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Metas de Tempo de Entrega (Global)</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="font-size:0.78rem;color:var(--muted)">Válido para todas as lojas com entrega própria. O gerente registra 3 vezes por noite.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div>
+              <div class="section-title" style="font-size:0.72rem;margin-bottom:8px">1º Registro — Início</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input class="meta-input" type="number" id="tempo1" style="width:80px">
+                <span style="font-size:0.75rem;color:var(--muted)">min</span>
+              </div>
+            </div>
+            <div>
+              <div class="section-title" style="font-size:0.72rem;margin-bottom:8px">2º Registro — Meio</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input class="meta-input" type="number" id="tempo2" style="width:80px">
+                <span style="font-size:0.75rem;color:var(--muted)">min</span>
+              </div>
+            </div>
+            <div>
+              <div class="section-title" style="font-size:0.72rem;margin-bottom:8px">3º Registro — Final</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input class="meta-input" type="number" id="tempo3" style="width:80px">
+                <span style="font-size:0.75rem;color:var(--muted)">min</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <button class="save-metas-btn" onclick="salvarMetasTempo()">Salvar Tempos de Entrega</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PREMIAÇÃO -->
@@ -202,14 +246,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxSmo3gu8yYofqOdpHeRPmL3LYqhEXb0n0-VWWiV_RWjFnThSN41lo6JLqhfvswH_FM/exec';
+  const SCRIPT_URL='https://script.google.com/macros/s/AKfycby10Ycm7G9gTBRkCYlfJVPX1gSFSpnBKkcwnXQ7HsOLBfGv9h-L4E4MDEvUUUgEEU0T/exec';
   const UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
   const ADMIN_KEY='dina_admin_senha';
 
-  const FAT_PADRAO={"Isaac":{semana:19000,fds:44000},"Água Verde":{semana:6600,fds:11500},"Uberaba":{semana:5400,fds:8900},"Campo Largo":{semana:4000,fds:7000},"Capão Raso":{semana:4500,fds:7100},"São José dos Pinhais":{semana:4800,fds:8800},"Expressa":{semana:8500,fds:11500},"Fazenda Rio Grande":{semana:12100,fds:21900},"Colombo":{semana:7500,fds:12100},"Araucária":{semana:9000,fds:14000}};
-  const AVAL_PADRAO={"Isaac":{google:40,ifood:40,cancelamentos:0,chamados:0},"Água Verde":{google:15,ifood:15,cancelamentos:0,chamados:0},"Uberaba":{google:15,ifood:15,cancelamentos:0,chamados:0},"Campo Largo":{google:15,ifood:15,cancelamentos:0,chamados:0},"Capão Raso":{google:5,ifood:5,cancelamentos:0,chamados:0},"São José dos Pinhais":{google:15,ifood:15,cancelamentos:0,chamados:0},"Expressa":{google:5,ifood:5,cancelamentos:0,chamados:0},"Fazenda Rio Grande":{google:20,ifood:20,cancelamentos:0,chamados:0},"Colombo":{google:20,ifood:20,cancelamentos:0,chamados:0},"Araucária":{google:20,ifood:20,cancelamentos:0,chamados:0}};
+  const FAT_PADRAO={"Isaac Manhã":{semana:3900,fds:6000},"Isaac Noite":{semana:15800,fds:38000},"Água Verde":{semana:6600,fds:11500},"Uberaba":{semana:5400,fds:8900},"Campo Largo":{semana:4000,fds:7000},"Capão Raso":{semana:4500,fds:7100},"São José dos Pinhais":{semana:4800,fds:8800},"Expressa":{semana:8500,fds:11500},"Fazenda Rio Grande":{semana:12100,fds:21900},"Colombo":{semana:7500,fds:12100},"Araucária":{semana:9000,fds:14000}};
+  const AVAL_PADRAO={"Isaac Manhã":{google:10,ifood:10,cancelamentos:0,chamados:0},"Isaac Noite":{google:30,ifood:30,cancelamentos:0,chamados:0},"Água Verde":{google:15,ifood:15,cancelamentos:0,chamados:0},"Uberaba":{google:15,ifood:15,cancelamentos:0,chamados:0},"Campo Largo":{google:15,ifood:15,cancelamentos:0,chamados:0},"Capão Raso":{google:5,ifood:5,cancelamentos:0,chamados:0},"São José dos Pinhais":{google:15,ifood:15,cancelamentos:0,chamados:0},"Expressa":{google:5,ifood:5,cancelamentos:0,chamados:0},"Fazenda Rio Grande":{google:20,ifood:20,cancelamentos:0,chamados:0},"Colombo":{google:20,ifood:20,cancelamentos:0,chamados:0},"Araucária":{google:20,ifood:20,cancelamentos:0,chamados:0}};
+  const LOJAS_ENTREGA=["Expressa","Capão Raso","Água Verde","Uberaba","Colombo","Fazenda Rio Grande"];
+  const MOTOBOYS_PADRAO={"Expressa":{semana:3,fds:6},"Capão Raso":{semana:2,fds:4},"Água Verde":{semana:3,fds:5},"Uberaba":{semana:3,fds:4},"Colombo":{semana:2,fds:5},"Fazenda Rio Grande":{semana:2,fds:4}};
+  const TEMPO_PADRAO=[30,50,30];
 
-  let metasFat={}, metasAval={}, premio=100;
+  let metasFat={}, metasAval={}, metasMotoboys={}, metasTempo=[], premio=100;
 
   function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 
@@ -219,8 +266,15 @@
       const d=await r.json();
       metasFat=d.metasFat||FAT_PADRAO;
       metasAval=d.metasAval||AVAL_PADRAO;
+      metasMotoboys=d.metasMotoboys||JSON.parse(JSON.stringify(MOTOBOYS_PADRAO));
+      metasTempo=d.metasTempo||[...TEMPO_PADRAO];
       premio=d.premio||100;
-    }catch(e){metasFat=JSON.parse(JSON.stringify(FAT_PADRAO));metasAval=JSON.parse(JSON.stringify(AVAL_PADRAO));}
+    }catch(e){
+      metasFat=JSON.parse(JSON.stringify(FAT_PADRAO));
+      metasAval=JSON.parse(JSON.stringify(AVAL_PADRAO));
+      metasMotoboys=JSON.parse(JSON.stringify(MOTOBOYS_PADRAO));
+      metasTempo=[...TEMPO_PADRAO];
+    }
   }
 
   async function enviarMetas(payload){
@@ -240,7 +294,7 @@
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('adminWrap').style.display='flex';
     await carregarMetas();
-    renderTabela();renderFat();renderAval();
+    renderTabela();renderFat();renderAval();renderMotoboys();renderTempo();
     document.getElementById('valorPremio').value=premio;
   }
 
@@ -309,6 +363,44 @@
     const ok=await enviarMetas({metasAval:ma});
     if(ok){metasAval=ma;registrarLog('Metas de avaliações e operacional salvas.','ok');showToast('Metas salvas!','ok');}
     else showToast('Erro ao salvar. Verifique a conexão.','warn');
+  }
+
+  // ── Motoboys ──
+  function renderMotoboys(){
+    const tbody=document.getElementById('tabelaMotoboys');tbody.innerHTML='';
+    LOJAS_ENTREGA.forEach(u=>{
+      const m=metasMotoboys[u]||{semana:2,fds:4};const k=u.replace(/\s/g,'_');
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="font-weight:600">${u}</td><td><input class="meta-input" type="number" id="mb_s_${k}" value="${m.semana}" style="width:80px"></td><td><input class="meta-input" type="number" id="mb_f_${k}" value="${m.fds}" style="width:80px"></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function salvarMetasMotoboys(){
+    const mb={};
+    LOJAS_ENTREGA.forEach(u=>{const k=u.replace(/\s/g,'_');mb[u]={semana:parseInt(document.getElementById('mb_s_'+k).value)||0,fds:parseInt(document.getElementById('mb_f_'+k).value)||0};});
+    const ok=await enviarMetas({metasMotoboys:mb});
+    if(ok){metasMotoboys=mb;registrarLog('Metas de motoboys salvas.','ok');showToast('Metas de motoboys salvas!','ok');}
+    else showToast('Erro ao salvar.','warn');
+  }
+
+  // ── Tempo de Entrega ──
+  function renderTempo(){
+    const t=metasTempo.length===3?metasTempo:[...TEMPO_PADRAO];
+    document.getElementById('tempo1').value=t[0];
+    document.getElementById('tempo2').value=t[1];
+    document.getElementById('tempo3').value=t[2];
+  }
+
+  async function salvarMetasTempo(){
+    const t=[
+      parseInt(document.getElementById('tempo1').value)||30,
+      parseInt(document.getElementById('tempo2').value)||50,
+      parseInt(document.getElementById('tempo3').value)||30
+    ];
+    const ok=await enviarMetas({metasTempo:t});
+    if(ok){metasTempo=t;registrarLog(`Tempos de entrega salvos: ${t[0]}/${t[1]}/${t[2]} min.`,'ok');showToast('Tempos de entrega salvos!','ok');}
+    else showToast('Erro ao salvar.','warn');
   }
 
   // ── Premiação ──
