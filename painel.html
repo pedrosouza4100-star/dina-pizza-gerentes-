@@ -401,10 +401,14 @@ function renderDashboard(dados, isDemo = false) {
     <div>
       <div class="section-title">Cancelamentos + Chamados + Motoboys + Start Dina por Unidade</div>
       <div class="mini-row" style="grid-template-columns:repeat(5,1fr)">
-        ${dados.map(d => `
+        ${dados.map(d => {
+          const pct = d.pctMeta || 0;
+          const pctColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--danger)';
+          const ultimoLabel = d.ultimoRegistro || '—';
+          return `
           <div class="mini-card">
             <div class="mini-label">${d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso').replace('Isaac Manhã','Isaac M.').replace('Isaac Noite','Isaac N.')}</div>
-            <div style="display:flex;gap:10px;align-items:flex-end;margin-top:4px;flex-wrap:wrap">
+            <div style="display:flex;gap:8px;align-items:flex-end;margin-top:4px;flex-wrap:wrap">
               <div>
                 <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Cancel.</div>
                 <div class="mini-value" style="color:${d.cancelamentos===0?'var(--green)':d.cancelamentos<=3?'var(--yellow)':'var(--danger)'}">${d.cancelamentos}</div>
@@ -422,8 +426,13 @@ function renderDashboard(dados, isDemo = false) {
                 <div class="mini-value" style="color:${(d.startDina||0)>=1?'var(--green)':'var(--danger)'}">${d.startDina||0}</div>
               </div>
             </div>
-          </div>
-        `).join('')}
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:0.65rem;color:var(--muted)">${d.dias||0} dias preenchidos</div>
+              <div style="font-size:0.72rem;font-weight:700;color:${pctColor}">${pct}% metas</div>
+            </div>
+            <div style="font-size:0.6rem;color:var(--muted);margin-top:2px">Último: ${ultimoLabel}</div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
 
