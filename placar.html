@@ -521,13 +521,18 @@ function mostrarAvisoAtraso(){
 
 function mostrarBloqueio(dias){
   document.getElementById('appWrap').style.display = 'none';
+  const isPendencia = dias === 1 && verificarPendenciaOntem();
+  const titulo = isPendencia ? 'PLACAR BLOQUEADO' : 'PLACAR BLOQUEADO';
+  const msg = isPendencia
+    ? `Ontem você não completou o <strong style="color:#FF3B3B">Start Dina</strong> e/ou os <strong style="color:#FF3B3B">Tempos de Entrega</strong>.<br><br>Conforme avisado, hoje seu placar está bloqueado.<br>Entre em contato com o gestor para desbloquear.`
+    : `Você ficou <strong style="color:#FF3B3B">${dias} dias</strong> sem preencher o placar diário.<br>O preenchimento é obrigatório todos os dias.<br><br>Entre em contato com o gestor para desbloquear.`;
   const bloqueio = document.createElement('div');
   bloqueio.style.cssText = 'position:fixed;inset:0;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;z-index:9999;';
   bloqueio.innerHTML = `
     <div style="background:#1E1E1E;border:2px solid #FF3B3B;border-radius:16px;padding:32px 24px;text-align:center;max-width:380px;width:100%;display:flex;flex-direction:column;gap:16px;align-items:center">
       <div style="font-size:3rem">🔒</div>
-      <div style="font-family:'Oswald',sans-serif;font-size:1.6rem;color:#FF3B3B;letter-spacing:0.06em">PLACAR BLOQUEADO</div>
-      <div style="font-size:0.85rem;color:#AAAAAA;line-height:1.7">Você ficou <strong style="color:#FF3B3B">${dias} dias</strong> sem preencher o placar diário.<br>O preenchimento é obrigatório todos os dias.<br><br>Entre em contato com o gestor para desbloquear.</div>
+      <div style="font-family:'Oswald',sans-serif;font-size:1.6rem;color:#FF3B3B;letter-spacing:0.06em">${titulo}</div>
+      <div style="font-size:0.85rem;color:#AAAAAA;line-height:1.7">${msg}</div>
       <div style="background:#C0392B;border-radius:8px;padding:12px 24px;font-size:0.82rem;color:#fff">📞 Contate: Robson Pontes</div>
     </div>`;
   document.body.appendChild(bloqueio);
@@ -540,9 +545,13 @@ function iniciarApp(u){
   document.getElementById('appWrap').style.display='flex';
   document.getElementById('unitBadge').textContent=u;
   atualizarMetas();updateDate();limpar();
-  // Carrega dados salvos do dia
   carregarStartDinaLocal();
   if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}
+  // Verifica se teve pendência ontem — bloqueia o placar
+  if(verificarPendenciaOntem()){
+    mostrarBloqueio(1);
+    return;
+  }
   verificarCumprimento();
 }
 
@@ -663,37 +672,69 @@ function avaliar(){
 function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
   if(!btn||!unidadeAtual) return;
-  const pendencias=[];
+  const pendenciasObrig=[];
+  const pendenciasAviso=[];
 
-  // Campos obrigatórios sempre
-  if(!filled('fat')) pendencias.push('Faturamento');
-  if(!filled('google')) pendencias.push('Google');
-  if(!filled('ifood')) pendencias.push('iFood');
-  if(!filled('chamados')) pendencias.push('Chamados');
-  if(!filled('cancel')) pendencias.push('Cancelamentos');
+  // Campos obrigatórios SEMPRE (bloqueiam o botão)
+  if(!filled('fat')) pendenciasObrig.push('Faturamento');
+  if(!filled('google')) pendenciasObrig.push('Google');
+  if(!filled('ifood')) pendenciasObrig.push('iFood');
+  if(!filled('chamados')) pendenciasObrig.push('Chamados');
+  if(!filled('cancel')) pendenciasObrig.push('Cancelamentos');
+  if(temLoja(unidadeAtual)&&!filled('motoboys')) pendenciasObrig.push('Motoboys');
 
-  // Start Dina obrigatório para todas as lojas
-  if(!fotoBase64) pendencias.push('Foto Start Dina');
+  // Itens que geram AVISO mas não bloqueiam (Start Dina e Tempo)
+  if(!fotoBase64) pendenciasAviso.push('Start Dina');
+  if(temLoja(unidadeAtual)&&tempoRegistros.length<3) pendenciasAviso.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
 
-  // Motoboys e Tempo obrigatórios para lojas com entrega própria
-  if(temLoja(unidadeAtual)){
-    if(!filled('motoboys')) pendencias.push('Motoboys');
-    if(tempoRegistros.length < 3) pendencias.push(`Tempo (${tempoRegistros.length}/3)`);
-  }
-
-  if(pendencias.length === 0){
-    btn.disabled=false;
-    btn.style.opacity='1';
-    btn.style.cursor='pointer';
-    btn.title='';
-    btn.textContent='Registrar Placar';
-  } else {
+  if(pendenciasObrig.length>0){
     btn.disabled=true;
     btn.style.opacity='0.45';
     btn.style.cursor='not-allowed';
-    btn.title=`Pendente: ${pendencias.join(', ')}`;
-    btn.textContent=`Pendente: ${pendencias.length} ${pendencias.length===1?'item':'itens'}`;
+    btn.textContent=`Pendente: ${pendenciasObrig.length} ${pendenciasObrig.length===1?'item':'itens'}`;
+    btn.title=pendenciasObrig.join(', ');
+    btn.onclick=null;
+  } else {
+    btn.disabled=false;
+    btn.style.opacity='1';
+    btn.style.cursor='pointer';
+    btn.textContent='Registrar Placar';
+    // Se há pendências de aviso, confirma antes de enviar
+    if(pendenciasAviso.length>0){
+      btn.onclick=()=>confirmarEnvioComAviso(pendenciasAviso);
+      btn.title='Clique para enviar com aviso';
+    } else {
+      btn.onclick=registrar;
+      btn.title='';
+    }
   }
+}
+
+function confirmarEnvioComAviso(pendencias){
+  const itens=pendencias.join(' e ');
+  const msg=`⚠️ ATENÇÃO!\n\nVocê não completou: ${itens}.\n\nSe não cumprir essas regras amanhã, você NÃO conseguirá enviar o placar.\n\nDeseja enviar mesmo assim?`;
+  if(confirm(msg)){
+    // Salva flag de pendência no localStorage para verificar amanhã
+    const chave=`dina_${unidadeAtual}_pendencia_${hoje()}`;
+    localStorage.setItem(chave, pendencias.join(','));
+    registrar();
+  }
+}
+
+function hoje(){
+  const d=new Date();
+  return `${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
+}
+
+function ontem(){
+  const d=new Date();d.setDate(d.getDate()-1);
+  return `${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
+}
+
+function verificarPendenciaOntem(){
+  if(!unidadeAtual) return false;
+  const chave=`dina_${unidadeAtual}_pendencia_${ontem()}`;
+  return !!localStorage.getItem(chave);
 }
 
 document.querySelectorAll('input.val').forEach(el=>el.addEventListener('input',avaliar));
