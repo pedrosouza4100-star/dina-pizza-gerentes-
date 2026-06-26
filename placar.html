@@ -488,30 +488,27 @@ function sair(){
 }
 
 async function verificarCumprimento(){
-  // Busca último registro da unidade via Apps Script
   try {
     const hoje = new Date();
     const mes = hoje.getMonth();
     const ano = hoje.getFullYear();
     const url = `${SCRIPT_URL}?action=getDashboard&mes=${mes}&ano=${ano}&diaInicio=1`;
-    const r = await fetch(url);
+    const r = await fetch(url, {signal: AbortSignal.timeout(5000)});
+    if(!r.ok) return;
     const d = await r.json();
-    if (!d.dados) return;
+    if (!d || !d.dados) return;
     const loja = d.dados.find(x => x.unidade === unidadeAtual);
     if (!loja || !loja.ultimoRegistro) return;
-
-    // Calcula dias sem preencher
     const [dia, mesU, anoU] = loja.ultimoRegistro.split('/').map(Number);
     const ultimoDate = new Date(anoU, mesU-1, dia);
-    const diffMs = hoje.setHours(0,0,0,0) - ultimoDate.setHours(0,0,0,0);
-    const diffDias = Math.floor(diffMs / (1000*60*60*24));
-
-    if (diffDias >= 2) {
-      mostrarBloqueio(diffDias);
-    } else if (diffDias === 1) {
-      mostrarAvisoAtraso();
-    }
-  } catch(e) {}
+    const hojeZero = new Date(); hojeZero.setHours(0,0,0,0);
+    const ultZero = new Date(ultimoDate); ultZero.setHours(0,0,0,0);
+    const diffDias = Math.round((hojeZero - ultZero) / (1000*60*60*24));
+    if (diffDias >= 2) mostrarBloqueio(diffDias);
+    else if (diffDias === 1) mostrarAvisoAtraso();
+  } catch(e) {
+    // Silencioso — não bloqueia o app se o servidor não responder
+  }
 }
 
 function mostrarAvisoAtraso(){
@@ -663,12 +660,13 @@ function avaliar(){
 
 function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
+  if(!btn||!unidadeAtual) return;
   const pendencias=[];
 
   // Campos obrigatórios sempre
   if(!filled('fat')) pendencias.push('Faturamento');
-  if(!filled('google')) pendencias.push('Avaliações Google');
-  if(!filled('ifood')) pendencias.push('Avaliações iFood');
+  if(!filled('google')) pendencias.push('Google');
+  if(!filled('ifood')) pendencias.push('iFood');
   if(!filled('chamados')) pendencias.push('Chamados');
   if(!filled('cancel')) pendencias.push('Cancelamentos');
 
@@ -678,7 +676,7 @@ function verificarBotaoRegistrar(){
   // Motoboys e Tempo obrigatórios para lojas com entrega própria
   if(temLoja(unidadeAtual)){
     if(!filled('motoboys')) pendencias.push('Motoboys');
-    if(tempoRegistros.length < 3) pendencias.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
+    if(tempoRegistros.length < 3) pendencias.push(`Tempo (${tempoRegistros.length}/3)`);
   }
 
   if(pendencias.length === 0){
