@@ -354,6 +354,7 @@ function salvarTempoEntrega(){
   document.getElementById('tempoIfood').value='';
   renderTempoRegistros();
   avaliar();
+  verificarBotaoRegistrar();
 }
 
 function renderTempoRegistros(){
@@ -592,6 +593,7 @@ function processarFoto(input){
     localStorage.setItem(chaveHoje('startdina_hora'), new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     mostrarFotoStartDina();
     avaliar();
+    verificarBotaoRegistrar();
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -610,6 +612,7 @@ function mostrarFotoStartDina(){
 function carregarStartDinaLocal(){
   const foto=localStorage.getItem(chaveHoje('startdina_foto'));
   if(foto){fotoBase64=foto;mostrarFotoStartDina();}
+  verificarBotaoRegistrar();
 }
 
 function carregarTempoLocal(){
@@ -655,6 +658,42 @@ function avaliar(){
   else if(prob===1){r.textContent='⚠ 1 indicador precisa de atenção';r.style.color='var(--yellow)';}
   else{r.textContent=`⚠ ${prob} indicadores fora da meta`;r.style.color='var(--danger)';}
   verificarPremiacao();
+  verificarBotaoRegistrar();
+}
+
+function verificarBotaoRegistrar(){
+  const btn=document.getElementById('saveBtn');
+  const pendencias=[];
+
+  // Campos obrigatórios sempre
+  if(!filled('fat')) pendencias.push('Faturamento');
+  if(!filled('google')) pendencias.push('Avaliações Google');
+  if(!filled('ifood')) pendencias.push('Avaliações iFood');
+  if(!filled('chamados')) pendencias.push('Chamados');
+  if(!filled('cancel')) pendencias.push('Cancelamentos');
+
+  // Start Dina obrigatório para todas as lojas
+  if(!fotoBase64) pendencias.push('Foto Start Dina');
+
+  // Motoboys e Tempo obrigatórios para lojas com entrega própria
+  if(temLoja(unidadeAtual)){
+    if(!filled('motoboys')) pendencias.push('Motoboys');
+    if(tempoRegistros.length < 3) pendencias.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
+  }
+
+  if(pendencias.length === 0){
+    btn.disabled=false;
+    btn.style.opacity='1';
+    btn.style.cursor='pointer';
+    btn.title='';
+    btn.textContent='Registrar Placar';
+  } else {
+    btn.disabled=true;
+    btn.style.opacity='0.45';
+    btn.style.cursor='not-allowed';
+    btn.title=`Pendente: ${pendencias.join(', ')}`;
+    btn.textContent=`Pendente: ${pendencias.length} ${pendencias.length===1?'item':'itens'}`;
+  }
 }
 
 document.querySelectorAll('input.val').forEach(el=>el.addEventListener('input',avaliar));
