@@ -217,6 +217,7 @@
       <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:8px">
         ⏱ Registrar tempo agora
       </button>
+      <div id="statusTempo" style="font-size:0.75rem;color:var(--muted);text-align:center;padding:8px;display:none"></div>
       <span class="tag" id="tempoTag"></span>
     </div>
 
@@ -291,22 +292,64 @@ const LOJAS_ENTREGA=["Expressa","Capão Raso","Água Verde","Uberaba","Colombo",
 // Metas de tempo de entrega por registro (1º, 2º, 3º) — atualizadas do servidor
 let METAS_TEMPO=[30,50,30];
 
-// Registros de tempo do dia (em memória)
+// Registros de tempo do dia (em memória + localStorage)
 let tempoRegistros=[];
+
+// Janelas de horário para cada registro de tempo
+const JANELAS_TEMPO=[
+  {inicio:'18:00', fim:'20:00', label:'18h às 20h'},
+  {inicio:'20:00', fim:'21:30', label:'20h às 21h30'},
+  {inicio:'21:30', fim:'23:00', label:'21h30 às 23h'},
+];
 
 function temLoja(u){return LOJAS_ENTREGA.includes(u);}
 
+// Chave do localStorage por unidade e data
+function chaveHoje(sufixo){
+  const d=new Date();
+  const data=`${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
+  return `dina_${unidadeAtual}_${data}_${sufixo}`;
+}
+
+// Verifica se o horário atual está dentro da janela permitida
+function dentroJanela(janela){
+  const agora=new Date();
+  const [hI,mI]=janela.inicio.split(':').map(Number);
+  const [hF,mF]=janela.fim.split(':').map(Number);
+  const minAgora=agora.getHours()*60+agora.getMinutes();
+  const minI=hI*60+mI;
+  const minF=hF*60+mF;
+  return minAgora>=minI&&minAgora<minF;
+}
+
+// Qual registro está disponível agora
+function registroDisponivel(){
+  // Já fez todos
+  if(tempoRegistros.length>=3) return -1;
+  const idx=tempoRegistros.length;
+  if(dentroJanela(JANELAS_TEMPO[idx])) return idx;
+  // Verifica se já passou a janela do atual sem registrar
+  const agora=new Date();
+  const [hF,mF]=JANELAS_TEMPO[idx].fim.split(':').map(Number);
+  const minAgora=agora.getHours()*60+agora.getMinutes();
+  const minF=hF*60+mF;
+  if(minAgora>=minF) return -2; // Perdeu a janela
+  return -3; // Ainda não chegou a hora
+}
+
 function salvarTempoEntrega(){
-  if(tempoRegistros.length>=3){
-    alert('Você já registrou os 3 tempos de entrega do dia.');return;
+  const idx=tempoRegistros.length;
+  if(idx>=3){alert('Você já registrou os 3 tempos de entrega do dia.');return;}
+  if(!dentroJanela(JANELAS_TEMPO[idx])){
+    alert(`Fora do horário! O ${idx+1}º registro deve ser feito ${JANELAS_TEMPO[idx].label}.`);return;
   }
   const app=parseInt(document.getElementById('tempoApp').value)||0;
   const ifoodT=parseInt(document.getElementById('tempoIfood').value)||0;
   if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
-  const idx=tempoRegistros.length;
-  const metaTempo=METAS_TEMPO[idx];
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   tempoRegistros.push({app,ifood:ifoodT,horario,idx});
+  // Salva no localStorage para persistir entre sessões
+  localStorage.setItem(chaveHoje('tempo'), JSON.stringify(tempoRegistros));
   document.getElementById('tempoApp').value='';
   document.getElementById('tempoIfood').value='';
   renderTempoRegistros();
@@ -326,18 +369,39 @@ function renderTempoRegistros(){
     </div>`;
   }).join('');
   const info=document.getElementById('tempoRegistroInfo');
-  const restam=3-tempoRegistros.length;
+  const inputArea=document.getElementById('tempoInputArea');
+  const btnSalvar=document.getElementById('btnSalvarTempo');
+  const statusTempo=document.getElementById('statusTempo');
+
   if(tempoRegistros.length===3){
     info.textContent='✓ 3 registros completos';info.style.color='var(--green)';
-    document.getElementById('tempoInputArea').style.display='none';
-    document.getElementById('btnSalvarTempo').style.display='none';
+    inputArea.style.display='none';btnSalvar.style.display='none';
+    if(statusTempo)statusTempo.style.display='none';
   } else {
-    info.textContent=`Meta: 3 registros — faltam ${restam}`;info.style.color='var(--gold)';
-    document.getElementById('tempoInputArea').style.display='grid';
-    document.getElementById('btnSalvarTempo').style.display='flex';
-    const proxMeta=METAS_TEMPO[tempoRegistros.length];
-    document.getElementById('tempoApp').placeholder=`Meta ≤${proxMeta}`;
-    document.getElementById('tempoIfood').placeholder=`Meta ≤${proxMeta}`;
+    const idx=tempoRegistros.length;
+    const disp=registroDisponivel();
+    if(disp===idx){
+      // Janela aberta
+      info.textContent=`${idx+1}º registro — disponível até ${JANELAS_TEMPO[idx].fim}`;
+      info.style.color='var(--gold)';
+      inputArea.style.display='grid';btnSalvar.style.display='flex';
+      if(statusTempo)statusTempo.style.display='none';
+      const proxMeta=METAS_TEMPO[idx];
+      document.getElementById('tempoApp').placeholder=`Meta ≤${proxMeta} min`;
+      document.getElementById('tempoIfood').placeholder=`Meta ≤${proxMeta} min`;
+    } else if(disp===-3){
+      // Ainda não chegou a hora
+      info.textContent=`${idx+1}º registro disponível a partir das ${JANELAS_TEMPO[idx].inicio}`;
+      info.style.color='var(--muted)';
+      inputArea.style.display='none';btnSalvar.style.display='none';
+      if(statusTempo){statusTempo.style.display='block';statusTempo.textContent=`⏳ Aguarde — próximo registro disponível às ${JANELAS_TEMPO[idx].inicio}`;}
+    } else if(disp===-2){
+      // Perdeu a janela
+      info.textContent=`⚠ Janela do ${idx+1}º registro encerrada`;
+      info.style.color='var(--danger)';
+      inputArea.style.display='none';btnSalvar.style.display='none';
+      if(statusTempo){statusTempo.style.display='block';statusTempo.textContent=`⚠ Janela encerrada. Próximo: ${idx+1<3?JANELAS_TEMPO[idx+1].label:'—'}`;}
+    }
   }
 }
 
@@ -428,6 +492,9 @@ function iniciarApp(u){
   document.getElementById('appWrap').style.display='flex';
   document.getElementById('unitBadge').textContent=u;
   atualizarMetas();updateDate();limpar();
+  // Carrega dados salvos do dia
+  carregarStartDinaLocal();
+  if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}
 }
 
 window.addEventListener('load',async()=>{
@@ -471,15 +538,35 @@ function processarFoto(input){
   const reader=new FileReader();
   reader.onload=e=>{
     fotoBase64=e.target.result;
-    const preview=document.getElementById('fotoPreview');
-    preview.src=fotoBase64;preview.style.display='block';
-    const btn=document.getElementById('cameraBtnStart');
-    btn.className='camera-btn captured';btn.textContent='✓ Foto registrada — toque para refazer';
-    const tag=document.getElementById('startDinaTag');
-    tag.className='tag ok';tag.textContent='Registrado';
+    // Salva foto no localStorage para persistir entre sessões do dia
+    localStorage.setItem(chaveHoje('startdina_foto'), fotoBase64);
+    localStorage.setItem(chaveHoje('startdina_hora'), new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    mostrarFotoStartDina();
     avaliar();
   };
   reader.readAsDataURL(input.files[0]);
+}
+
+function mostrarFotoStartDina(){
+  const preview=document.getElementById('fotoPreview');
+  const btn=document.getElementById('cameraBtnStart');
+  const hora=localStorage.getItem(chaveHoje('startdina_hora'))||'';
+  preview.src=fotoBase64;preview.style.display='block';
+  btn.className='camera-btn captured';
+  btn.textContent=`✓ Foto registrada às ${hora} — toque para refazer`;
+  const tag=document.getElementById('startDinaTag');
+  tag.className='tag ok';tag.textContent='Registrado';
+}
+
+function carregarStartDinaLocal(){
+  const foto=localStorage.getItem(chaveHoje('startdina_foto'));
+  if(foto){fotoBase64=foto;mostrarFotoStartDina();}
+}
+
+function carregarTempoLocal(){
+  const t=localStorage.getItem(chaveHoje('tempo'));
+  if(t){try{tempoRegistros=JSON.parse(t);}catch(e){tempoRegistros=[];}}
+  else tempoRegistros=[];
 }
 
 function setStatus(cId,tId,cls,lbl){
@@ -594,6 +681,10 @@ async function registrar(){
   };
   try{
     await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    // Limpa dados temporários do dia após envio
+    localStorage.removeItem(chaveHoje('startdina_foto'));
+    localStorage.removeItem(chaveHoje('startdina_hora'));
+    localStorage.removeItem(chaveHoje('tempo'));
     showMsg('savedMsg');limpar();
   }catch(e){showMsg('errorMsg');}
   btn.disabled=false;btn.textContent='Registrar Placar';
