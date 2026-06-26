@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dina Pizza — Checklist Operacional</title>
+<style>
+  :root {
+    --red: #C00000;
+    --red-dark: #8B0000;
+    --red-light: #e53333;
+    --bg: #111111;
+    --bg2: #1a1a1a;
+    --bg3: #222222;
+    --card: #1e1e1e;
+    --border: #2e2e2e;
+    --text: #f0f0f0;
+    --muted: #888;
+    --green: #2ecc71;
+    --yellow: #f1c40f;
+    --orange: #e67e22;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: Arial, sans-serif; min-height: 100vh; }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: linear-gradient(135deg, var(--red-dark), var(--red));
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 14px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  }
+  .logo-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: var(--red); font-size: 18px; flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .header-text p  { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+
+  /* ─── TELA DE SELEÇÃO ─── */
+  #tela-selecao {
+    max-width: 480px; margin: 40px auto; padding: 0 16px;
+  }
+  .sel-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 24px;
+  }
+  .sel-card h2 { font-size: 16px; color: var(--red-light); margin-bottom: 20px; text-align: center; }
+  .field-group { margin-bottom: 18px; }
+  .field-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field-group select, .field-group input {
+    width: 100%; padding: 12px 14px; border-radius: 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); font-size: 15px; outline: none;
+    appearance: none;
+  }
+  .field-group select:focus, .field-group input:focus { border-color: var(--red); }
+  #turno-group { display: none; }
+  .btn-primary {
+    width: 100%; padding: 14px; border-radius: 8px;
+    background: var(--red); border: none; color: #fff;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: background 0.2s; margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .btn-primary:hover { background: var(--red-light); }
+  .btn-primary:disabled { background: #444; cursor: not-allowed; }
+
+  /* ─── CHECKLIST ─── */
+  #tela-checklist, #tela-placar, #tela-fechamento { display: none; }
+
+  .cl-header {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .cl-loja { font-weight: 700; font-size: 15px; }
+  .cl-tipo {
+    background: var(--red); color: #fff; font-size: 11px;
+    padding: 3px 10px; border-radius: 20px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .cl-tipo.fechamento { background: #1a4a6e; }
+
+  /* Barra de progresso */
+  .progress-bar-wrap {
+    padding: 12px 16px 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .progress-track { height: 6px; background: var(--border); border-radius: 3px; }
+  .progress-fill { height: 6px; background: var(--green); border-radius: 3px; transition: width 0.3s; }
+
+  /* Seções */
+  .secao {
+    margin: 16px 12px 0;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden;
+  }
+  .secao-header {
+    padding: 12px 16px; background: var(--bg3);
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .secao-icon { font-size: 18px; }
+  .secao-titulo { font-size: 14px; font-weight: 700; flex: 1; }
+  .secao-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    background: var(--border); color: var(--muted);
+  }
+  .secao-badge.completo { background: #1a3a1a; color: var(--green); }
+  .secao-chevron { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .secao.aberta .secao-chevron { transform: rotate(180deg); }
+  .secao-body { display: none; padding: 8px 0; border-top: 1px solid var(--border); }
+  .secao.aberta .secao-body { display: block; }
+
+  /* Itens */
+  .item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 16px; border-bottom: 1px solid #1c1c1c;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .item:last-child { border-bottom: none; }
+  .item:hover { background: rgba(255,255,255,0.03); }
+  .item-check {
+    width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0; margin-top: 1px;
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 13px; transition: all 0.2s;
+  }
+  .item.ok .item-check { background: var(--green); border-color: var(--green); }
+  .item.nok .item-check { background: var(--red); border-color: var(--red); }
+  .item-label { font-size: 14px; line-height: 1.4; flex: 1; }
+  .item-obs { display: none; }
+  .item.nok .item-obs {
+    display: block; margin-top: 6px;
+    padding: 8px 10px; background: rgba(192,0,0,0.1);
+    border-left: 3px solid var(--red); border-radius: 0 4px 4px 0;
+  }
+  .item-obs input {
+    width: 100%; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13px;
+  }
+  .item-obs input::placeholder { color: var(--muted); }
+
+  /* Botões OK / NOK */
+  .item-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .btn-ok, .btn-nok {
+    padding: 4px 12px; border-radius: 5px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 700; transition: opacity 0.2s;
+  }
+  .btn-ok { background: #1a3a1a; color: var(--green); }
+  .btn-nok { background: #3a1a1a; color: #e57373; }
+  .item.ok .btn-ok { background: var(--green); color: #000; }
+  .item.nok .btn-nok { background: var(--red); color: #fff; }
+
+  /* Upload de foto */
+  .foto-zona {
+    margin: 12px 12px 0;
+    background: var(--card); border: 1px dashed var(--red);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .foto-zona h4 { font-size: 13px; color: var(--red-light); margin-bottom: 6px; }
+  .foto-zona p  { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .foto-destaque {
+    font-size: 13px; font-weight: 700; color: var(--yellow);
+    background: rgba(241,196,15,0.1); border: 1px solid rgba(241,196,15,0.3);
+    border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;
+  }
+  .btn-foto {
+    display: inline-block; padding: 10px 20px; background: var(--red);
+    border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 700;
+    color: #fff; border: none;
+  }
+  #foto-input { display: none; }
+  .foto-preview { margin-top: 10px; }
+  .foto-preview img { max-width: 100%; border-radius: 8px; border: 2px solid var(--green); }
+  .foto-nome { font-size: 12px; color: var(--green); margin-top: 4px; }
+
+  /* Botão finalizar */
+  .btn-wrap { padding: 20px 12px 32px; }
+  .btn-finalizar {
+    width: 100%; padding: 16px; border-radius: 10px;
+    background: var(--red); border: none; color: #fff;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: background 0.2s; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .btn-finalizar:hover { background: var(--red-light); }
+  .btn-finalizar:disabled { background: #333; color: #555; cursor: not-allowed; }
+
+  /* PLACAR */
+  #tela-placar { padding-bottom: 32px; }
+  .placar-banner {
+    background: linear-gradient(135deg, #0a2a0a, #1a4a1a);
+    border-bottom: 2px solid var(--green);
+    padding: 14px 16px; text-align: center;
+  }
+  .placar-banner h2 { color: var(--green); font-size: 16px; }
+  .placar-banner p  { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px; }
+  .placar-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    padding: 16px 12px 0;
+  }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px; color: var(--text);
+    font-size: 18px; font-weight: 700; text-align: center; outline: none;
+  }
+  .kpi-input:focus { border-color: var(--red); }
+  .kpi-card.full { grid-column: 1 / -1; }
+
+  /* TELA BLOQUEADA */
+  .tela-bloqueada {
+    text-align: center; padding: 60px 24px;
+  }
+  .lock-icon { font-size: 52px; margin-bottom: 16px; }
+  .tela-bloqueada h3 { font-size: 18px; color: var(--muted); margin-bottom: 8px; }
+  .tela-bloqueada p  { font-size: 13px; color: #555; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #222; border: 1px solid var(--green); color: var(--green);
+    padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 700;
+    z-index: 999; opacity: 0; transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .toast.erro { border-color: var(--red); color: var(--red); }
+
+  /* Tabs placar */
+  .tabs {
+    display: flex; background: var(--bg2); border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1; padding: 12px; text-align: center; font-size: 13px;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.2s; color: var(--muted);
+  }
+  .tab.ativa { color: var(--red-light); border-bottom-color: var(--red); }
+
+  @media (max-width: 360px) {
+    .placar-grid { grid-template-columns: 1fr; }
+    .kpi-card.full { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-circle">D</div>
+  <div class="header-text">
+    <h1>DINA PIZZA</h1>
+    <p id="header-sub">Painel Operacional</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TELA 1 — SELEÇÃO DE LOJA
+═══════════════════════════════════════ -->
+<div id="tela-selecao">
+  <div class="sel-card">
+    <h2>📍 Selecione sua loja</h2>
+
+    <div class="field-group">
+      <label>Gerente</label>
+      <input type="text" id="nome-gerente" placeholder="Seu nome completo"/>
+    </div>
+
+    <div class="field-group">
+      <label>Loja</label>
+      <select id="select-loja">
+        <option value="">-- Escolha a loja --</option>
+        <option value="agua-verde">Água Verde</option>
+        <option value="uberaba">Uberaba</option>
+        <option value="colombo">Colombo</option>
+        <option value="campo-largo">Campo Largo</option>
+        <option value="capao-raso">Capão Raso</option>
+        <option value="sao-jose">São José dos Pinhais</option>
+        <option value="fazenda">Fazenda Rio Grande</option>
+        <option value="araucaria">Araucária</option>
+        <option value="expressa">Expressa</option>
+        <option value="isaac">Isaac</option>
+      </select>
+    </div>
+
+    <div class="field-group" id="turno-group">
+      <label>Turno (Isaac)</label>
+      <select id="select-turno">
+        <option value="A">Turno A — Abertura</option>
+        <option value="B">Turno B — Tarde/Noite</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Tipo de checklist</label>
+      <select id="select-tipo">
+        <option value="abertura">Abertura</option>
+        <option value="fechamento">Fechamento</option>
+      </select>
+    </div>
+
+    <button class="btn-primary" id="btn-iniciar" disabled>Iniciar Checklist</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TELA 2 — CHECKLIST
+═══════════════════════════════════════ -->
+<div id="tela-checklist">
+  <div class="cl-header">
+    <span class="cl-loja" id="cl-loja-nome">—</span>
+    <span class="cl-tipo" id="cl-tipo-badge">ABERTURA</span>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-info">
+      <span id="prog-texto">0 de 0 itens verificados</span>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="cl-secoes"></div>
+
+  <!-- FOTO DO DIA -->
+  <div class="foto-zona" id="zona-foto">
+    <h4>📸 Foto do dia</h4>
+    <div class="foto-destaque" id="foto-destaque-label">Carregando item do dia...</div>
+    <p>Faça uma foto do item em destaque acima para registrar a conformidade</p>
+    <input type="file" id="foto-input" accept="image/*" capture="environment"/>
+    <button class="btn-foto" onclick="document.getElementById('foto-input').click()">📷 Tirar / Selecionar foto</button>
+    <div class="foto-preview" id="foto-preview"></div>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn-finalizar" id="btn-finalizar-checklist" disabled>
+      Finalizar Checklist e Abrir Placar →
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TELA 3 — PLACAR DIÁRIO
+═══════════════════════════════════════ -->
+<div id="tela-placar">
+  <div class="placar-banner">
+    <h2>✅ Checklist de abertura concluído!</h2>
+    <p>Preencha os KPIs do dia abaixo</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab ativa" onclick="abaTab('kpis',this)">KPIs do Dia</div>
+    <div class="tab" onclick="abaTab('observacoes',this)">Observações</div>
+  </div>
+
+  <div id="aba-kpis" class="placar-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">🍕 Faturamento (R$)</div>
+      <input class="kpi-input" type="number" id="k-faturamento" placeholder="0"/>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">📦 Pedidos</div>
+      <input class="kpi-input" type="number" id="k-pedidos" placeholder="0"/>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">🛵 Motoboys presentes</div>
+      <input class="kpi-input" type="number" id="k-motoboys" placeholder="0"/>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">⏱ Tempo médio entrega (min)</div>
+      <input class="kpi-input" type="number" id="k-tempo" placeholder="0"/>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">🌟 Nota iFood</div>
+      <input class="kpi-input" type="number" id="k-nota" placeholder="0.0" step="0.1"/>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">📸 Start Dina (foto câmera)</div>
+      <input class="kpi-input" type="text" id="k-startdina" placeholder="OK / NOK"/>
+    </div>
+    <div class="kpi-card full">
+      <div class="kpi-label">💬 Destaque do dia</div>
+      <input class="kpi-input" type="text" id="k-destaque" placeholder="Ex: reclamação, elogio, ocorrência"/>
+    </div>
+  </div>
+
+  <div id="aba-observacoes" style="display:none; padding: 16px 12px;">
+    <textarea id="k-obs" style="width:100%;height:160px;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:8px;color:#f0f0f0;font-size:14px;padding:12px;outline:none;" placeholder="Observações gerais do turno..."></textarea>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn-finalizar" id="btn-ir-fechamento">
+      Iniciar Checklist de Fechamento →
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TELA 4 — CHECKLIST FECHAMENTO
+═══════════════════════════════════════ -->
+<div id="tela-fechamento">
+  <div class="cl-header">
+    <span class="cl-loja" id="fe-loja-nome">—</span>
+    <span class="cl-tipo fechamento" id="fe-tipo-badge">FECHAMENTO</span>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-info">
+      <span id="fe-prog-texto">0 de 0 itens verificados</span>
+      <span id="fe-prog-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="fe-prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="fe-secoes"></div>
+
+  <div class="btn-wrap">
+    <button class="btn-finalizar" id="btn-enviar-final" disabled>
+      ✅ Enviar Relatório Final ao Drive
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONFIGURAÇÃO DAS LOJAS
+// ════════════════════════════════════════════════
+const LOJAS = {
+  'agua-verde': { nome: 'Água Verde',         saloes: 1, fliperama: true,  balcao: false, salaEspera: false },
+  'uberaba':    { nome: 'Uberaba',             saloes: 2, fliperama: true,  balcao: false, salaEspera: false },
+  'colombo':    { nome: 'Colombo',             saloes: 2, fliperama: true,  balcao: false, salaEspera: false },
+  'campo-largo':{ nome: 'Campo Largo',         saloes: 1, fliperama: true,  balcao: false, salaEspera: false },
+  'capao-raso': { nome: 'Capão Raso',          saloes: 0, fliperama: false, balcao: true,  salaEspera: true  },
+  'sao-jose':   { nome: 'São José dos Pinhais',saloes: 2, fliperama: true,  balcao: false, salaEspera: false },
+  'fazenda':    { nome: 'Fazenda Rio Grande',  saloes: 3, fliperama: true,  balcao: false, salaEspera: false },
+  'araucaria':  { nome: 'Araucária',           saloes: 3, fliperama: true,  balcao: false, salaEspera: false },
+  'expressa':   { nome: 'Expressa',            saloes: 0, fliperama: false, balcao: true,  salaEspera: false },
+  'isaac':      { nome: 'Isaac',               saloes: 4, fliperama: true,  balcao: false, salaEspera: false },
+};
+
+// ════════════════════════════════════════════════
+// ITENS ROTATIVOS PARA FOTO
+// ════════════════════════════════════════════════
+const ITENS_FOTO_POOL = [
+  'Geladeiras do caixa', 'Televisores ligados', 'Balcão/Buffet', 'Banheiros',
+  'Fachada da loja', 'Piscina de bolinhas', 'Playground', 'Fritadeiras',
+  'Luminárias', 'Estoque geral', 'Banho-maria do buffet', 'Sorvetes organizados',
+  'Piso do salão', 'Vidros da loja', 'Talheres abastecidos'
+];
+
+function getItemFotoDia(lojaId) {
+  const d = new Date();
+  const seed = d.getDate() + d.getMonth() * 31;
+  const loja = LOJAS[lojaId];
+  let pool = [...ITENS_FOTO_POOL];
+  if (!loja.fliperama) pool = pool.filter(i => !['Piscina de bolinhas','Playground'].includes(i));
+  if (loja.balcao)     pool = pool.filter(i => !['Piso do salão','Vidros da loja','Televisores ligados'].includes(i));
+  return pool[seed % pool.length];
+}
+
+// ════════════════════════════════════════════════
+// GERAÇÃO DO CHECKLIST
+// ════════════════════════════════════════════════
+function gerarSecoes(lojaId, tipo) {
+  const loja = LOJAS[lojaId];
+  const secoes = [];
+
+  // FACHADA
+  const itensFachada = [
+    { id: 'fachada-limpeza', label: 'Fachada limpa — sem papéis, bitucas e sujeira' },
+    { id: 'fachada-iluminacao', label: 'Iluminação externa acesa e sem lâmpadas queimadas' },
+  ];
+  if (tipo === 'abertura') itensFachada.splice(1, 1); // iluminação só no fechamento
+  secoes.push({ id: 'fachada', icon: '🏠', titulo: 'Fachada', itens: itensFachada });
+
+  // SALÕES
+  if (loja.saloes > 0) {
+    for (let s = 1; s <= loja.saloes; s++) {
+      const label = loja.saloes === 1 ? 'Salão' : `Salão ${s}`;
+      secoes.push({
+        id: `salao-${s}`,
+        icon: '🍽️',
+        titulo: label,
+        itens: [
+          { id: `s${s}-mesas`,    label: 'Mesas limpas e organizadas' },
+          { id: `s${s}-cadeiras`, label: 'Cadeiras limpas e organizadas' },
+          { id: `s${s}-buffet`,   label: 'Balcão/Buffet limpo' },
+          { id: `s${s}-vidros`,   label: 'Vidros da loja limpos' },
+          { id: `s${s}-chao`,     label: 'Piso limpo' },
+          { id: `s${s}-banheiros`,label: 'Banheiros limpos e abastecidos' },
+          { id: `s${s}-tv`,       label: tipo === 'abertura' ? 'Televisores ligados' : 'Televisores desligados' },
+          { id: `s${s}-som`,      label: tipo === 'abertura' ? 'Som ligado' : 'Som desligado' },
+          { id: `s${s}-lum`,      label: 'Luminárias limpas e sem lâmpadas queimadas' },
+          { id: `s${s}-togas`,    label: 'Togas sem poeira e organizadas' },
+        ]
+      });
+    }
+  }
+
+  // BALCÃO (Expressa / Capão Raso)
+  if (loja.balcao) {
+    secoes.push({
+      id: 'balcao', icon: '🏪', titulo: 'Balcão de Atendimento',
+      itens: [
+        { id: 'bal-limpo',  label: 'Balcão limpo e organizado' },
+        { id: 'bal-tv',     label: tipo === 'abertura' ? 'Televisor ligado' : 'Televisor desligado' },
+        { id: 'bal-chao',   label: 'Piso limpo' },
+        { id: 'bal-lum',    label: 'Luminárias limpas e funcionando' },
+      ]
+    });
+  }
+
+  // SALA DE ESPERA (Capão Raso)
+  if (loja.salaEspera) {
+    secoes.push({
+      id: 'sala-espera', icon: '🛋️', titulo: 'Sala de Espera',
+      itens: [
+        { id: 'se-cadeiras', label: 'Cadeiras limpas e organizadas' },
+        { id: 'se-chao',     label: 'Piso limpo' },
+        { id: 'se-lum',      label: 'Luminárias funcionando' },
+      ]
+    });
+  }
+
+  // FLIPERAMA / PLAYGROUND
+  if (loja.fliperama) {
+    secoes.push({
+      id: 'entretenimento', icon: '🎮', titulo: 'Fliperama & Playground',
+      itens: [
+        { id: 'flip-maquinas', label: tipo === 'abertura' ? 'Máquinas de fliperama ligadas, limpas e organizadas' : 'Máquinas de fliperama desligadas e organizadas' },
+        { id: 'flip-play',     label: 'Playground limpo e organizado' },
+        { id: 'flip-bolinhas', label: 'Piscina de bolinhas — sem bolinhas amassadas ou sujas' },
+      ]
+    });
+  }
+
+  // CAIXA / OPERAÇÃO
+  secoes.push({
+    id: 'caixa', icon: '💻', titulo: 'Caixa & Operação',
+    itens: [
+      { id: 'cx-sistema',  label: tipo === 'abertura' ? 'Sistema PV aberto e funcionando' : 'Caixa fechado e conferido' },
+      { id: 'cx-ifood-ab', label: 'iFood — plataforma aberta' },
+      { id: 'cx-ifood-pa', label: 'iFood — sem produtos pausados' },
+      { id: 'cx-ifood-te', label: 'iFood — tempos de entrega atualizados' },
+      { id: 'cx-troco',    label: tipo === 'abertura' ? 'Troco conferido e separado' : 'Sangria e fechamento de caixa realizados' },
+      { id: 'cx-gelad',    label: tipo === 'abertura' ? '10 geladeiras do caixa completas e limpas' : 'Geladeiras organizadas para o próximo turno' },
+    ]
+  });
+
+  // BUFFET
+  if (loja.saloes > 0 || loja.balcao) {
+    secoes.push({
+      id: 'buffet', icon: '🍦', titulo: 'Buffet & Abastecimento',
+      itens: [
+        { id: 'bf-bufetes',  label: tipo === 'abertura' ? 'Bufetes ligados' : 'Bufetes desligados e limpos' },
+        { id: 'bf-agua',     label: 'Água suficiente para banho-maria (não vapor)' },
+        { id: 'bf-sorvetes', label: 'Sorvetes organizados e abastecidos' },
+        { id: 'bf-gelo',     label: 'Estoque de gelo verificado' },
+        { id: 'bf-talheres', label: 'Talheres abastecidos e organizados' },
+      ]
+    });
+  }
+
+  // COZINHA
+  secoes.push({
+    id: 'cozinha', icon: '👨‍🍳', titulo: 'Cozinha',
+    itens: tipo === 'abertura' ? [
+      { id: 'cz-fritadeiras', label: 'Fritadeiras ligadas e limpas' },
+      { id: 'cz-fornos',      label: 'Fornos ligados e em temperatura' },
+      { id: 'cz-estufa',      label: 'Estufa das pizzas (buffet) ligada' },
+      { id: 'cz-estoque',     label: 'Conferência geral do estoque realizada' },
+      { id: 'cz-preprep',     label: 'Checklist de pré-preparo e abastecimento do buffet concluído' },
+    ] : [
+      { id: 'cz-frit-f',  label: 'Fritadeiras desligadas e limpas' },
+      { id: 'cz-fornos-f',label: 'Fornos desligados' },
+      { id: 'cz-estufa-f',label: 'Estufa desligada e limpa' },
+      { id: 'cz-estoque-f',label: 'Estoque conferido e coberto' },
+      { id: 'cz-lixo',    label: 'Lixo da cozinha retirado e ensacado' },
+      { id: 'cz-piso-f',  label: 'Piso da cozinha varrido e limpo' },
+    ]
+  });
+
+  return secoes;
+}
+
+// ════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════
+let estado = {
+  lojaId: null, lojaConfig: null, gerente: '',
+  turno: 'A', tipo: 'abertura',
+  abertura: { secoes: [], checks: {}, obs: {} },
+  fechamento: { secoes: [], checks: {}, obs: {} },
+  placarOk: false,
+  fotoBlob: null, fotoNome: null,
+};
+
+// ════════════════════════════════════════════════
+// TELA DE SELEÇÃO
+// ════════════════════════════════════════════════
+const selLoja   = document.getElementById('select-loja');
+const selTurno  = document.getElementById('select-turno');
+const selTipo   = document.getElementById('select-tipo');
+const nomeGer   = document.getElementById('nome-gerente');
+const btnInic   = document.getElementById('btn-iniciar');
+const turnoGrp  = document.getElementById('turno-group');
+
+function validarSelecao() {
+  btnInic.disabled = !(selLoja.value && nomeGer.value.trim().length > 2);
+}
+selLoja.addEventListener('change', () => {
+  turnoGrp.style.display = selLoja.value === 'isaac' ? 'block' : 'none';
+  validarSelecao();
+});
+nomeGer.addEventListener('input', validarSelecao);
+
+btnInic.addEventListener('click', () => {
+  estado.lojaId     = selLoja.value;
+  estado.lojaConfig = LOJAS[estado.lojaId];
+  estado.gerente    = nomeGer.value.trim();
+  estado.turno      = selTurno.value;
+  estado.tipo       = selTipo.value;
+
+  if (estado.tipo === 'abertura') {
+    iniciarChecklist('abertura');
+  } else {
+    iniciarChecklist('fechamento');
+  }
+});
+
+// ════════════════════════════════════════════════
+// RENDERIZAR CHECKLIST
+// ════════════════════════════════════════════════
+function iniciarChecklist(tipo) {
+  const secoes = gerarSecoes(estado.lojaId, tipo);
+  const fase   = estado[tipo];
+  fase.secoes  = secoes;
+  fase.checks  = {};
+  fase.obs     = {};
+
+  const containerId = tipo === 'abertura' ? 'cl-secoes' : 'fe-secoes';
+  const container   = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  secoes.forEach((sec, si) => {
+    const div = document.createElement('div');
+    div.className = 'secao' + (si === 0 ? ' aberta' : '');
+    div.id = `sec-${tipo}-${sec.id}`;
+    div.innerHTML = `
+      <div class="secao-header" onclick="toggleSecao('${tipo}','${sec.id}')">
+        <span class="secao-icon">${sec.icon}</span>
+        <span class="secao-titulo">${sec.titulo}</span>
+        <span class="secao-badge" id="badge-${tipo}-${sec.id}">0/${sec.itens.length}</span>
+        <span class="secao-chevron">▼</span>
+      </div>
+      <div class="secao-body">
+        ${sec.itens.map(item => `
+          <div class="item" id="item-${tipo}-${item.id}">
+            <div class="item-check" id="chk-${tipo}-${item.id}"></div>
+            <div style="flex:1">
+              <div class="item-label">${item.label}</div>
+              <div class="item-actions">
+                <button class="btn-ok"  onclick="marcarItem('${tipo}','${item.id}','ok')">✓ OK</button>
+                <button class="btn-nok" onclick="marcarItem('${tipo}','${item.id}','nok')">✗ NOK</button>
+              </div>
+              <div class="item-obs">
+                <input type="text" placeholder="Descreva o problema..." 
+                  oninput="estado['${tipo}'].obs['${item.id}']=this.value"/>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Foto rotativa (só abertura)
+  if (tipo === 'abertura') {
+    const item = getItemFotoDia(estado.lojaId);
+    document.getElementById('foto-destaque-label').textContent = `📌 Hoje: ${item}`;
+    document.getElementById('foto-input').addEventListener('change', handleFoto);
+  }
+
+  // Mostrar tela correta
+  document.getElementById('tela-selecao').style.display = 'none';
+  if (tipo === 'abertura') {
+    document.getElementById('tela-checklist').style.display = 'block';
+    document.getElementById('cl-loja-nome').textContent = estado.lojaConfig.nome +
+      (estado.lojaId === 'isaac' ? ` — Turno ${estado.turno}` : '');
+    document.getElementById('header-sub').textContent = 'Checklist de Abertura';
+  } else {
+    document.getElementById('tela-fechamento').style.display = 'block';
+    document.getElementById('fe-loja-nome').textContent = estado.lojaConfig.nome;
+    document.getElementById('header-sub').textContent = 'Checklist de Fechamento';
+  }
+
+  atualizarProgresso(tipo);
+}
+
+function toggleSecao(tipo, secId) {
+  const el = document.getElementById(`sec-${tipo}-${secId}`);
+  el.classList.toggle('aberta');
+}
+
+function marcarItem(tipo, itemId, status) {
+  const el = document.getElementById(`item-${tipo}-${itemId}`);
+  el.classList.remove('ok','nok');
+  el.classList.add(status);
+  const chk = document.getElementById(`chk-${tipo}-${itemId}`);
+  chk.textContent = status === 'ok' ? '✓' : '✗';
+  estado[tipo].checks[itemId] = status;
+  atualizarProgresso(tipo);
+}
+
+function atualizarProgresso(tipo) {
+  const fase   = estado[tipo];
+  const total  = fase.secoes.reduce((a, s) => a + s.itens.length, 0);
+  const feitos = Object.keys(fase.checks).length;
+  const pct    = total > 0 ? Math.round((feitos / total) * 100) : 0;
+
+  if (tipo === 'abertura') {
+    document.getElementById('prog-texto').textContent = `${feitos} de ${total} itens verificados`;
+    document.getElementById('prog-pct').textContent   = `${pct}%`;
+    document.getElementById('prog-fill').style.width  = `${pct}%`;
+    const btn = document.getElementById('btn-finalizar-checklist');
+    btn.disabled = feitos < total;
+    if (!btn.disabled) btn.textContent = '✅ Concluir Abertura e Abrir Placar →';
+  } else {
+    document.getElementById('fe-prog-texto').textContent = `${feitos} de ${total} itens verificados`;
+    document.getElementById('fe-prog-pct').textContent   = `${pct}%`;
+    document.getElementById('fe-prog-fill').style.width  = `${pct}%`;
+    const btn = document.getElementById('btn-enviar-final');
+    btn.disabled = feitos < total;
+  }
+
+  // Badges das seções
+  fase.secoes.forEach(sec => {
+    const feitos_sec = sec.itens.filter(i => fase.checks[i.id]).length;
+    const badge = document.getElementById(`badge-${tipo}-${sec.id}`);
+    if (badge) {
+      badge.textContent = `${feitos_sec}/${sec.itens.length}`;
+      badge.className   = 'secao-badge' + (feitos_sec === sec.itens.length ? ' completo' : '');
+    }
+  });
+}
+
+// ════════════════════════════════════════════════
+// FOTO
+// ════════════════════════════════════════════════
+function handleFoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  estado.fotoBlob = file;
+  estado.fotoNome = `${estado.lojaId}_${new Date().toISOString().slice(0,10)}_${file.name}`;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('foto-preview').innerHTML =
+      `<img src="${ev.target.result}"/><div class="foto-nome">✅ ${estado.fotoNome}</div>`;
+  };
+  reader.readAsDataURL(file);
+  mostrarToast('Foto registrada com sucesso!');
+}
+
+// ════════════════════════════════════════════════
+// TRANSIÇÕES
+// ════════════════════════════════════════════════
+document.getElementById('btn-finalizar-checklist').addEventListener('click', () => {
+  document.getElementById('tela-checklist').style.display = 'none';
+  document.getElementById('tela-placar').style.display    = 'block';
+  document.getElementById('header-sub').textContent = 'Placar Diário';
+  mostrarToast('Abertura concluída! Preencha os KPIs.');
+});
+
+document.getElementById('btn-ir-fechamento').addEventListener('click', () => {
+  document.getElementById('tela-placar').style.display    = 'none';
+  iniciarChecklist('fechamento');
+});
+
+document.getElementById('btn-enviar-final').addEventListener('click', enviarRelatorio);
+
+// ════════════════════════════════════════════════
+// TABS PLACAR
+// ════════════════════════════════════════════════
+function abaTab(aba, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativa'));
+  el.classList.add('ativa');
+  document.getElementById('aba-kpis').style.display          = aba === 'kpis' ? 'grid' : 'none';
+  document.getElementById('aba-observacoes').style.display   = aba === 'observacoes' ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════════════
+// ENVIO PARA GOOGLE APPS SCRIPT
+// ════════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'SUA_URL_APPS_SCRIPT_AQUI'; // substituir após deploy
+
+async function enviarRelatorio() {
+  const btn = document.getElementById('btn-enviar-final');
+  btn.textContent = '⏳ Enviando...';
+  btn.disabled    = true;
+
+  const payload = {
+    gerente:    estado.gerente,
+    loja:       estado.lojaConfig.nome,
+    lojaId:     estado.lojaId,
+    turno:      estado.turno,
+    data:       new Date().toISOString(),
+    abertura:   { checks: estado.abertura.checks, obs: estado.abertura.obs },
+    fechamento: { checks: estado.fechamento.checks, obs: estado.fechamento.obs },
+    kpis: {
+      faturamento: document.getElementById('k-faturamento').value,
+      pedidos:     document.getElementById('k-pedidos').value,
+      motoboys:    document.getElementById('k-motoboys').value,
+      tempoEntrega:document.getElementById('k-tempo').value,
+      nota:        document.getElementById('k-nota').value,
+      startDina:   document.getElementById('k-startdina').value,
+      destaque:    document.getElementById('k-destaque').value,
+      obs:         document.getElementById('k-obs').value,
+    }
+  };
+
+  try {
+    const r = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    mostrarToast('✅ Relatório enviado com sucesso!');
+    setTimeout(() => {
+      document.getElementById('tela-fechamento').style.display = 'none';
+      document.getElementById('tela-selecao').style.display    = 'block';
+      document.getElementById('header-sub').textContent = 'Painel Operacional';
+    }, 2000);
+  } catch(e) {
+    mostrarToast('❌ Erro ao enviar. Tente novamente.', true);
+    btn.textContent = '✅ Enviar Relatório Final ao Drive';
+    btn.disabled    = false;
+  }
+}
+
+// ════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════
+function mostrarToast(msg, erro = false) {
+  const t = document.getElementById('toast');
+  t.textContent  = msg;
+  t.className    = 'toast' + (erro ? ' erro' : '') + ' show';
+  setTimeout(() => t.className = 'toast' + (erro ? ' erro' : ''), 2800);
+}
+</script>
+</body>
+</html>
