@@ -421,7 +421,8 @@ async function carregarMetas(){
     const d=await r.json();
     METAS_FAT=d.metasFat||FAT_DEF;
     METAS_AVAL=d.metasAval||AVAL_DEF;
-    PREMIO=d.premio||100;
+    PREMIO=d.premio||{semanaCompleto:200,semanaParcial:100,fdsCompleto:100,fdsParcial:50};
+    if(typeof PREMIO === 'number') PREMIO={semanaCompleto:PREMIO,semanaParcial:PREMIO/2,fdsCompleto:PREMIO/2,fdsParcial:PREMIO/4};
     if(d.metasMotoboys) Object.assign(METAS_MOTOBOYS,d.metasMotoboys);
     if(d.metasTempo&&d.metasTempo.length===3) METAS_TEMPO.splice(0,3,...d.metasTempo);
   }
@@ -803,14 +804,13 @@ function verificarPremiacao(){
   let tipoPremio='';
 
   if(todasMetas){
-    valorPremio=fds?100:200;
+    valorPremio=isFds()?(PREMIO.fdsCompleto||100):(PREMIO.semanaCompleto||200);
     tipoPremio='completa';
   } else {
-    // Verifica se só faltou 1 meta
     const metas=[bateuFat,bateuG,bateuI,bateuC,bateuCancel];
     const naoAtingidas=metas.filter(m=>!m).length;
     if(naoAtingidas===1){
-      valorPremio=fds?50:100;
+      valorPremio=isFds()?(PREMIO.fdsParcial||50):(PREMIO.semanaParcial||100);
       tipoPremio='parcial';
     }
   }
