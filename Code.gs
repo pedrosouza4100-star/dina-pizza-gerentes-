@@ -3,8 +3,8 @@
 // Backend: Checklist + KPIs + Fotos + Configuração editável
 // ════════════════════════════════════════════════════════════════
 
-const SPREADSHEET_ID = 'SEU_SPREADSHEET_ID_AQUI'; // substituir
-const DRIVE_FOLDER_ID = 'SEU_FOLDER_ID_AQUI';      // substituir
+const SPREADSHEET_ID = '1Q2SseTHFS51dQZWsG77KOgWjs1jRVynhd_K7bI5WY68';
+const DRIVE_FOLDER_ID = '1eOlNwFaRXZF5N1MZvcffmaJWKq0gLDMt';
 const ADMIN_PASSWORD  = 'dina2024admin';             // trocar para senha sua
 
 // ────────────────────────────────────────────────────────────────
