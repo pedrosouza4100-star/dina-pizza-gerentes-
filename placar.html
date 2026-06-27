@@ -407,7 +407,6 @@ function renderTempoRegistros(){
 }
 
 function metaMotoboysHoje(u){const m=METAS_MOTOBOYS[u];if(!m)return null;return m[new Date().getDay()]||null;}
-function isFds(){const d=new Date().getDay();return d===0||d===5||d===6;}
 function metaFat(u){const m=METAS_FAT[u]||FAT_DEF[u];if(!m)return 0;return isFds()?m.fds:m.semana;}
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 
@@ -565,8 +564,12 @@ window.addEventListener('load',async()=>{
 function updateDate(){
   const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  const now=new Date();
-  document.getElementById('dateDisplay').textContent=`${dias[now.getDay()]}, ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`;
+  const now=dataTurno();
+  const real=new Date();
+  let txt=`${dias[now.getDay()]}, ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`;
+  // Se passou da meia-noite, avisa que é turno do dia anterior
+  if(real.getHours()<4) txt+=` (turno de ontem)`;
+  document.getElementById('dateDisplay').textContent=txt;
 }
 
 function atualizarMetas(){
@@ -721,13 +724,33 @@ function confirmarEnvioComAviso(pendencias){
   }
 }
 
+// Retorna a data correta do turno (se entre 00h e 04h, é o dia anterior)
+function dataTurno(){
+  const now = new Date();
+  const hora = now.getHours();
+  // Entre meia-noite e 4h → pertence ao turno do dia anterior
+  if(hora < 4){
+    const ontem = new Date(now);
+    ontem.setDate(ontem.getDate() - 1);
+    return ontem;
+  }
+  return now;
+}
+
+// Retorna se é fim de semana considerando o turno
+function isFds(){
+  const d = dataTurno().getDay();
+  return d===0||d===5||d===6;
+}
+
 function hoje(){
-  const d=new Date();
+  const d = dataTurno();
   return `${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
 }
 
 function ontem(){
-  const d=new Date();d.setDate(d.getDate()-1);
+  const d = dataTurno();
+  d.setDate(d.getDate()-1);
   return `${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
 }
 
@@ -783,7 +806,7 @@ function lancarConfete(){
 async function registrar(){
   const btn=document.getElementById('saveBtn');
   btn.disabled=true;btn.textContent='Enviando...';
-  const now=new Date();
+  const now=dataTurno();
   const dataFmt=`${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
   // Comprime foto se houver
   let fotoEnvio=null;
