@@ -192,24 +192,82 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- PREMIAÇÃO -->
-    <div class="tab-content" id="tab-premiacao">
-      <div class="section-title">Valor da Premiação Diária</div>
-      <div class="premio-card">
-        <div style="font-size:3rem">🏆</div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-          <div style="font-family:'Oswald',sans-serif;font-size:1.1rem;color:var(--gold)">Premiação por Meta Batida</div>
-          <div style="font-size:0.8rem;color:var(--muted);line-height:1.6">Valor exibido na tela de celebração quando o gerente bate todas as metas do dia.</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-family:'Oswald',sans-serif;font-size:1.2rem;color:var(--muted)">R$</span>
-            <input class="premio-input" type="number" id="valorPremio" min="0" step="10">
+      <div>
+        <div class="section-title">Desbloquear Gerente</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:0.8rem;color:var(--muted);line-height:1.6">Use para desbloquear um gerente que foi bloqueado por não preencher o Start Dina ou os tempos de entrega.</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <select id="lojaDesbloquear" class="meta-input" style="flex:1;min-width:200px;padding:10px">
+              <option value="">— Selecione a loja —</option>
+              ${UNIDADES.map(u => `<option value="${u}">${u}</option>`).join('')}
+            </select>
+            <button class="save-metas-btn" onclick="desbloquearGerente()" style="background:var(--green);white-space:nowrap">🔓 Desbloquear</button>
           </div>
-          <button class="save-metas-btn" onclick="salvarPremio()">Salvar Valor</button>
+          <div id="desbloqueioMsg" style="font-size:0.78rem;min-height:18px"></div>
         </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-premiacao">
+      <div class="section-title">Regras de Premiação Diária</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Semana -->
+        <div class="premio-card" style="flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:2rem">📅</div>
+            <div>
+              <div style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--gold)">Segunda a Quinta</div>
+              <div style="font-size:0.75rem;color:var(--muted)">Dias de semana</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">🏆 Todas as metas batidas</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--muted)">R$</span>
+                <input class="premio-input" type="number" id="premioSemanaCompleto" min="0" step="10" style="width:120px;font-size:1.4rem">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">⭐ Faltou 1 meta</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--muted)">R$</span>
+                <input class="premio-input" type="number" id="premioSemanaParcial" min="0" step="10" style="width:120px;font-size:1.4rem">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fim de semana -->
+        <div class="premio-card" style="flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:2rem">🎉</div>
+            <div>
+              <div style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--gold)">Sexta, Sábado e Domingo</div>
+              <div style="font-size:0.75rem;color:var(--muted)">Fim de semana</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">🏆 Todas as metas batidas</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--muted)">R$</span>
+                <input class="premio-input" type="number" id="premioFdsCompleto" min="0" step="10" style="width:120px;font-size:1.4rem">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">⭐ Faltou 1 meta</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Oswald',sans-serif;font-size:1rem;color:var(--muted)">R$</span>
+                <input class="premio-input" type="number" id="premioFdsParcial" min="0" step="10" style="width:120px;font-size:1.4rem">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <button class="save-metas-btn" onclick="salvarPremio()">Salvar Valores de Premiação</button>
       </div>
     </div>
 
@@ -294,8 +352,8 @@
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('adminWrap').style.display='flex';
     await carregarMetas();
-    renderTabela();renderFat();renderAval();renderMotoboys();renderTempo();
-    document.getElementById('valorPremio').value=premio;
+    renderTabela();renderFat();renderAval();renderMotoboys();renderTempo();renderPremio();
+    document.getElementById('valorPremio') && (document.getElementById('valorPremio').value=premio);
   }
 
   function sairAdmin(){document.getElementById('loginWrap').style.display='flex';document.getElementById('adminWrap').style.display='none';document.getElementById('adminSenhaInput').value='';document.getElementById('adminErro').textContent='';}
@@ -404,11 +462,43 @@
   }
 
   // ── Premiação ──
+  function renderPremio(){
+    const p=premio||{semanaCompleto:200,semanaParcial:100,fdsCompleto:100,fdsParcial:50};
+    document.getElementById('premioSemanaCompleto').value=p.semanaCompleto??200;
+    document.getElementById('premioSemanaParcial').value=p.semanaParcial??100;
+    document.getElementById('premioFdsCompleto').value=p.fdsCompleto??100;
+    document.getElementById('premioFdsParcial').value=p.fdsParcial??50;
+  }
+
   async function salvarPremio(){
-    const val=parseFloat(document.getElementById('valorPremio').value)||0;
+    const val={
+      semanaCompleto:parseFloat(document.getElementById('premioSemanaCompleto').value)||200,
+      semanaParcial:parseFloat(document.getElementById('premioSemanaParcial').value)||100,
+      fdsCompleto:parseFloat(document.getElementById('premioFdsCompleto').value)||100,
+      fdsParcial:parseFloat(document.getElementById('premioFdsParcial').value)||50,
+    };
     const ok=await enviarMetas({premio:val});
-    if(ok){premio=val;registrarLog(`Premiação alterada para R$ ${val.toFixed(2)}.`,'ok');showToast(`Premiação: R$ ${val.toFixed(2)} salvo!`,'ok');}
+    if(ok){premio=val;registrarLog(`Premiação salva: Semana R$${val.semanaCompleto}/R$${val.semanaParcial} | FDS R$${val.fdsCompleto}/R$${val.fdsParcial}`,'ok');showToast('Premiação salva!','ok');}
     else showToast('Erro ao salvar.','warn');
+  }
+
+  // ── Desbloquear Gerente ──
+  function desbloquearGerente(){
+    const loja=document.getElementById('lojaDesbloquear').value;
+    const msg=document.getElementById('desbloqueioMsg');
+    if(!loja){msg.style.color='var(--danger)';msg.textContent='Selecione uma loja.';return;}
+    // Gera a chave de ontem para remover o bloqueio
+    const d=new Date();d.setDate(d.getDate()-1);
+    const chaveOntem=`dina_${loja}_pendencia_${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
+    // Não conseguimos acessar o localStorage do gerente diretamente
+    // A solução é via App Script — registrar desbloqueio
+    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'desbloquear',unidade:loja})})
+      .then(()=>{
+        msg.style.color='var(--green)';
+        msg.textContent=`✓ Desbloqueio registrado para ${loja}. Oriente o gerente a fechar e reabrir o placar.`;
+        registrarLog(`Desbloqueio: ${loja}`,'ok');
+      })
+      .catch(()=>{msg.style.color='var(--danger)';msg.textContent='Erro ao registrar desbloqueio.';});
   }
 
   // ── Helpers ──
