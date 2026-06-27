@@ -359,6 +359,7 @@ function salvarTempoEntrega(){
   renderTempoRegistros();
   avaliar();
   verificarBotaoRegistrar();
+  verificarPremiacao();
 }
 
 function renderTempoRegistros(){
@@ -609,6 +610,7 @@ function processarFoto(input){
     mostrarFotoStartDina();
     avaliar();
     verificarBotaoRegistrar();
+    verificarPremiacao();
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -774,33 +776,70 @@ function verificarPendenciaOntem(){
 document.querySelectorAll('input.val').forEach(el=>el.addEventListener('input',avaliar));
 
 function verificarPremiacao(){
+  if(!unidadeAtual) return;
   const ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
+
   const bateuFat=val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0&&filled('fat');
   const bateuG=ival('google')>=ma.google&&ma.google>0&&filled('google');
   const bateuI=ival('ifood')>=ma.ifood&&ma.ifood>0&&filled('ifood');
   const bateuC=ival('chamados')===0&&filled('chamados');
   const bateuCancel=ival('cancel')===0&&filled('cancel');
   const bateuStart=!!fotoBase64;
-  if(bateuFat&&bateuG&&bateuI&&bateuC&&bateuCancel&&bateuStart&&!document.getElementById('celebracaoOverlay'))setTimeout(mostrarCelebracao,300);
+  const bateuTempo=!temLoja(unidadeAtual)||tempoRegistros.length>=3;
+  const bateuMobo=!temLoja(unidadeAtual)||(filled('motoboys')&&ival('motoboys')>=(metaMotoboysHoje(unidadeAtual)||0));
+
+  // Todos os campos preenchidos (sem considerar metas)
+  const tudoPreenchido=filled('fat')&&filled('google')&&filled('ifood')&&filled('chamados')&&filled('cancel')&&bateuStart&&bateuTempo&&(!temLoja(unidadeAtual)||filled('motoboys'));
+
+  if(!tudoPreenchido) return;
+  if(document.getElementById('celebracaoOverlay')) return;
+
+  // Verifica quantas metas foram batidas
+  const todasMetas=bateuFat&&bateuG&&bateuI&&bateuC&&bateuCancel;
+
+  // Prêmio conforme dia da semana
+  const fds=isFds();
+  let valorPremio=0;
+  let tipoPremio='';
+
+  if(todasMetas){
+    valorPremio=fds?100:200;
+    tipoPremio='completa';
+  } else {
+    // Verifica se só faltou 1 meta
+    const metas=[bateuFat,bateuG,bateuI,bateuC,bateuCancel];
+    const naoAtingidas=metas.filter(m=>!m).length;
+    if(naoAtingidas===1){
+      valorPremio=fds?50:100;
+      tipoPremio='parcial';
+    }
+  }
+
+  if(valorPremio>0) setTimeout(()=>mostrarCelebracao(valorPremio,tipoPremio),300);
 }
 
-function mostrarCelebracao(){
+function metaMotoboysHoje(u){const m=METAS_MOTOBOYS[u];if(!m)return null;const d=dataTurno().getDay();return(isFds()?m.fds:m.semana)||null;}
+
+function mostrarCelebracao(valorPremio, tipoPremio){
+  const fds=isFds();
+  const isParcial=tipoPremio==='parcial';
   const o=document.createElement('div');o.id='celebracaoOverlay';
   o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;';
   o.innerHTML=`<canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:1000"></canvas>
-    <div style="background:#1E1E1E;border:2px solid #D4A017;border-radius:16px;padding:32px 24px;text-align:center;max-width:380px;width:100%;position:relative;z-index:1001;display:flex;flex-direction:column;gap:16px;align-items:center">
-      <div style="font-size:3rem">🏆</div>
-      <div style="font-family:'Oswald',sans-serif;font-size:1.8rem;color:#D4A017">PARABÉNS!</div>
+    <div style="background:#1E1E1E;border:2px solid ${isParcial?'#FFD000':'#D4A017'};border-radius:16px;padding:32px 24px;text-align:center;max-width:380px;width:100%;position:relative;z-index:1001;display:flex;flex-direction:column;gap:16px;align-items:center">
+      <div style="font-size:3rem">${isParcial?'⭐':'🏆'}</div>
+      <div style="font-family:'Oswald',sans-serif;font-size:1.8rem;color:${isParcial?'#FFD000':'#D4A017'};letter-spacing:0.06em">${isParcial?'BOA PERFORMANCE!':'PARABÉNS!'}</div>
       <div style="font-family:'Oswald',sans-serif;font-size:1rem;color:#F0F0F0">${unidadeAtual}</div>
-      <div style="font-size:0.85rem;color:#aaa;line-height:1.7">Você bateu <strong style="color:#F0F0F0">todas as metas do dia!</strong></div>
+      <div style="font-size:0.85rem;color:#aaa;line-height:1.7">${isParcial?'Você preencheu tudo mas <strong style="color:#FFD000">faltou 1 meta</strong>.':'Você bateu <strong style="color:#F0F0F0">todas as metas do dia!</strong>'}</div>
       <div style="background:#C0392B;border-radius:10px;padding:16px 32px;display:flex;flex-direction:column;gap:4px">
-        <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.12em">Premiação do Dia</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:2.2rem;color:#fff">R$ ${PREMIO.toFixed(2).replace('.',',')}</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.12em">Premiação ${isParcial?'Parcial':'Completa'} — ${fds?'Fim de Semana':'Semana'}</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:2.2rem;color:#fff">R$ ${valorPremio.toFixed(2).replace('.',',')}</div>
         <div style="font-size:0.68rem;color:rgba(255,255,255,0.5)">A ser creditado pelo gestor</div>
       </div>
       <button onclick="document.getElementById('celebracaoOverlay').remove()" style="background:transparent;border:1px solid #444;border-radius:8px;color:#888;font-family:'Inter',sans-serif;font-size:0.85rem;padding:10px 28px;cursor:pointer;width:100%">Fechar</button>
     </div>`;
-  document.body.appendChild(o);lancarConfete();
+  document.body.appendChild(o);
+  if(!isParcial) lancarConfete();
 }
 
 function lancarConfete(){
