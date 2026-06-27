@@ -231,6 +231,10 @@
         </button>
         <img class="foto-preview" id="fotoPreview" alt="Foto da reunião">
         <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="processarFoto(this)">
+        <div style="margin-top:8px">
+          <div class="card-label" style="margin-bottom:6px">Assuntos abordados na reunião</div>
+          <textarea id="pautaStartDina" placeholder="Descreva os assuntos discutidos no Start Dina..." style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:72px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="salvarPautaLocal()"></textarea>
+        </div>
         <span class="tag" id="startDinaTag"></span>
       </div>
     </div>
@@ -620,9 +624,16 @@ function mostrarFotoStartDina(){
   tag.className='tag ok';tag.textContent='Registrado';
 }
 
+function salvarPautaLocal(){
+  const pauta=document.getElementById('pautaStartDina').value;
+  localStorage.setItem(chaveHoje('startdina_pauta'), pauta);
+}
+
 function carregarStartDinaLocal(){
   const foto=localStorage.getItem(chaveHoje('startdina_foto'));
   if(foto){fotoBase64=foto;mostrarFotoStartDina();}
+  const pauta=localStorage.getItem(chaveHoje('startdina_pauta'));
+  if(pauta) document.getElementById('pautaStartDina').value=pauta;
   verificarBotaoRegistrar();
 }
 
@@ -828,6 +839,7 @@ async function registrar(){
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
     motoboys:ival('motoboys'),metaMotoboys:metaMotoboysHoje(unidadeAtual)||0,
     startDina:fotoBase64?1:0,fotoStartDina:fotoEnvio,
+    pautaStartDina:document.getElementById('pautaStartDina').value,
     tempoEntrega:tempoRegistros,
     observacoes:document.getElementById('obs').value
   };
@@ -836,6 +848,7 @@ async function registrar(){
     // Limpa dados temporários do dia após envio
     localStorage.removeItem(chaveHoje('startdina_foto'));
     localStorage.removeItem(chaveHoje('startdina_hora'));
+    localStorage.removeItem(chaveHoje('startdina_pauta'));
     localStorage.removeItem(chaveHoje('tempo'));
     showMsg('savedMsg');limpar();
   }catch(e){showMsg('errorMsg');}
@@ -853,6 +866,7 @@ function limpar(){
   document.getElementById('cameraBtnStart').className='camera-btn';
   document.getElementById('cameraBtnStart').textContent='📷 Fotografar reunião agora';
   document.getElementById('cameraInput').value='';
+  document.getElementById('pautaStartDina').value='';
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel'].forEach(id=>{
     const el=document.getElementById(id);
