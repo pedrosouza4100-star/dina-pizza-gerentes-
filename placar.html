@@ -258,24 +258,26 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
             <div class="card-label" style="margin-bottom:4px">App Próprio (min)</div>
-            <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
+            <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
           </div>
           <div>
             <div class="card-label" style="margin-bottom:4px">iFood (min)</div>
-            <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
+            <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
           </div>
         </div>
-        <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.75rem;padding:10px 8px">📷 iFood sistema</button>
-            <img class="foto-small-preview" id="fotoTempoAppPreview" alt="Foto sistema">
-            <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
-          </div>
-          <div>
-            <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.75rem;padding:10px 8px">📷 Sistema próprio</button>
-            <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto iFood">
-            <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
+        <div id="tempoFotoArea" style="display:none">
+          <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div>
+              <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.75rem;padding:10px 8px">📷 iFood sistema</button>
+              <img class="foto-small-preview" id="fotoTempoAppPreview" alt="Foto sistema">
+              <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
+            </div>
+            <div>
+              <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.75rem;padding:10px 8px">📷 Sistema próprio</button>
+              <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto iFood">
+              <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
+            </div>
           </div>
         </div>
         <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:4px">⏱ Registrar tempo agora</button>
@@ -428,6 +430,13 @@ function registroDisponivel(){
 }
 
 // ── CÂMERAS TEMPO ──
+function onTempoInput(){
+  const app=document.getElementById('tempoApp').value;
+  const ifood=document.getElementById('tempoIfood').value;
+  const area=document.getElementById('tempoFotoArea');
+  if(area) area.style.display=(app!==''||ifood!=='')?'block':'none';
+}
+
 function abrirCameraTempoApp(){document.getElementById('cameraTempoAppInput').click();}
 function abrirCameraTempoIfood(){document.getElementById('cameraTempoIfoodInput').click();}
 
@@ -515,6 +524,8 @@ function salvarTempoEntrega(){
   const p2=document.getElementById('fotoTempoIfoodPreview');p2.style.display='none';p2.src='';
   document.getElementById('cameraBtnTempoApp').className='camera-btn';document.getElementById('cameraBtnTempoApp').textContent='📷 iFood sistema';
   document.getElementById('cameraBtnTempoIfood').className='camera-btn';document.getElementById('cameraBtnTempoIfood').textContent='📷 Sistema próprio';
+  // Esconde área de foto até próximo preenchimento
+  const fa=document.getElementById('tempoFotoArea');if(fa)fa.style.display='none';
   renderTempoRegistros();
   avaliar();
   verificarBotaoRegistrar();
