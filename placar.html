@@ -407,8 +407,8 @@ function dentroJanela(janela){
 // ── JANELA FALTA PRODUTO ──
 // Isaac Manhã/Noite: 09h-13h | Demais lojas: 17h-19h
 function getJanelaFalta(){
-  const isIsaac = unidadeAtual==='Isaac Manhã'||unidadeAtual==='Isaac Noite';
-  return isIsaac ? {inicio:9*60, fim:13*60, label:'9h às 13h', fimStr:'13h'} : {inicio:17*60, fim:19*60, label:'17h às 19h', fimStr:'19h'};
+  const isIsaacManha = unidadeAtual==='Isaac Manhã';
+  return isIsaacManha ? {inicio:9*60, fim:13*60, label:'9h às 13h', fimStr:'13h'} : {inicio:17*60, fim:19*60, label:'17h às 19h', fimStr:'19h'};
 }
 
 function dentroDaJanelaFalta(){
