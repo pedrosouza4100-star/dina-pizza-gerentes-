@@ -289,7 +289,7 @@
     <!-- Falta de Produto -->
     <div class="card card-full" id="cardFaltaProduto">
       <div class="card-label">📦 Falta de Produto</div>
-      <div class="card-meta" id="faltaHorarioInfo">Disponível das 17h às 19h</div>
+      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
       <div class="falta-wrap" id="faltaWrap">
         <div class="falta-btns">
           <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
@@ -404,17 +404,25 @@ function dentroJanela(janela){
   return minAgora>=minI&&minAgora<minF;
 }
 
-// ── JANELA FALTA PRODUTO (17h-19h) ──
+// ── JANELA FALTA PRODUTO ──
+// Isaac Manhã/Noite: 09h-13h | Demais lojas: 17h-19h
+function getJanelaFalta(){
+  const isIsaac = unidadeAtual==='Isaac Manhã'||unidadeAtual==='Isaac Noite';
+  return isIsaac ? {inicio:9*60, fim:13*60, label:'9h às 13h', fimStr:'13h'} : {inicio:17*60, fim:19*60, label:'17h às 19h', fimStr:'19h'};
+}
+
 function dentroDaJanelaFalta(){
   const agora=new Date();
   const min=agora.getHours()*60+agora.getMinutes();
-  return min>=17*60&&min<19*60;
+  const j=getJanelaFalta();
+  return min>=j.inicio&&min<j.fim;
 }
 
 function passouJanelaFalta(){
   const agora=new Date();
   const min=agora.getHours()*60+agora.getMinutes();
-  return min>=19*60;
+  const j=getJanelaFalta();
+  return min>=j.fim;
 }
 
 function registroDisponivel(){
@@ -595,16 +603,17 @@ function inicializarFaltaProduto(){
   const card=document.getElementById('cardFaltaProduto');
   const info=document.getElementById('faltaHorarioInfo');
   const wrap=document.getElementById('faltaWrap');
+  const j=getJanelaFalta();
   if(passouJanelaFalta()){
-    info.textContent='⏰ Janela encerrada (17h-19h). Contate o gestor para desbloquear.';
+    info.textContent=`⏰ Janela encerrada (${j.label}). Contate o gestor para desbloquear.`;
     info.style.color='var(--danger)';
     wrap.style.opacity='0.4';wrap.style.pointerEvents='none';
   } else if(!dentroDaJanelaFalta()){
-    info.textContent='⏳ Disponível das 17h às 19h';
+    info.textContent=`⏳ Disponível das ${j.label}`;
     info.style.color='var(--muted)';
     wrap.style.opacity='0.4';wrap.style.pointerEvents='none';
   } else {
-    info.textContent='✅ Janela aberta — preencha até 19h';
+    info.textContent=`✅ Janela aberta — preencha até ${j.fimStr}`;
     info.style.color='var(--green)';
     wrap.style.opacity='1';wrap.style.pointerEvents='auto';
     // Inicia countdown
@@ -614,7 +623,10 @@ function inicializarFaltaProduto(){
 
 function atualizarCountdownFalta(){
   const agora=new Date();
-  const fim=new Date();fim.setHours(19,0,0,0);
+  const j=getJanelaFalta();
+  const fim=new Date();
+  const [h,m]=j.fimStr.replace('h','').split(':').map(Number);
+  fim.setHours(h||parseInt(j.fimStr),m||0,0,0);
   const diff=fim-agora;
   if(diff<=0){inicializarFaltaProduto();return;}
   const min=Math.floor(diff/60000);
@@ -625,7 +637,7 @@ function atualizarCountdownFalta(){
 }
 
 function registrarFalta(opcao){
-  if(!dentroDaJanelaFalta()){alert('Janela encerrada! A falta de produto deve ser informada entre 17h e 19h.');return;}
+  if(!dentroDaJanelaFalta()){alert(`Janela encerrada! A falta de produto deve ser informada entre ${getJanelaFalta().label}.`);return;}
   faltaStatus=opcao;
   const desc=opcao==='sim'?document.getElementById('faltaProdutoDesc').value:'';
   const d={status:opcao,descricao:desc,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
@@ -992,10 +1004,9 @@ function verificarBotaoRegistrar(){
 
   // Falta produto — bloqueia se não preenchido E janela passou
   if(passouJanelaFalta()&&!faltaStatus){
-    // Passou a janela sem preencher — bloqueio especial
-    pendenciasObrig.push('Falta de Produto (janela encerrada — contate gestor)');
+    pendenciasObrig.push(`Falta de Produto (janela encerrada — contate gestor)`);
   } else if(dentroDaJanelaFalta()&&!faltaStatus){
-    pendenciasAviso.push('Falta de Produto (janela aberta até 19h)');
+    pendenciasAviso.push(`Falta de Produto (janela aberta até ${getJanelaFalta().fimStr})`);
   }
 
   if(!fotoBase64) pendenciasAviso.push('Start Dina');
