@@ -238,9 +238,9 @@
       <div class="card card-full" id="cardMotoboys" style="display:none">
         <div class="card-label">Motoboys em Serviço</div>
         <div class="card-meta" id="metaMotoboysDisplay"></div>
-        <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0"><span class="suffix">mb.</span></div>
-        <div style="margin-top:8px">
-          <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista de motoboys (obrigatória — câmera na hora)</div>
+        <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
+        <div id="motoFotoArea" style="margin-top:8px;display:none">
+          <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
           <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
           <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
           <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
@@ -458,6 +458,17 @@ function processarFotoTempoIfood(input){
 }
 
 // ── CÂMERA MOTOBOYS ──
+function onMotoboysInput(){
+  const v=document.getElementById('motoboys').value;
+  const area=document.getElementById('motoFotoArea');
+  if(v!==''&&parseInt(v)>=0){
+    area.style.display='block';
+  } else {
+    area.style.display='none';
+  }
+  avaliar();
+}
+
 function abrirCameraMoto(){document.getElementById('cameraMotoInput').click();}
 
 function processarFotoMoto(input){
@@ -469,6 +480,9 @@ function processarFotoMoto(input){
     preview.src=fotoMotoBase64;preview.style.display='block';
     const btn=document.getElementById('cameraBtnMoto');
     btn.className='camera-btn captured';btn.textContent='✓ Lista fotografada';
+    // Garante que a área fique visível
+    const area=document.getElementById('motoFotoArea');
+    if(area) area.style.display='block';
     avaliar();
     verificarBotaoRegistrar();
   };
