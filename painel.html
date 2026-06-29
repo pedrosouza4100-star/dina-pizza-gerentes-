@@ -300,33 +300,18 @@ window.addEventListener('load', () => {
   }
 });
 
-// ── Carregar dados via JSONP ──
-function carregarDados(url) {
+// ── Carregar dados via fetch ──
+async function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
-
-  const callbackName = 'dinaCb_' + Date.now();
-  const script = document.createElement('script');
-  const timeout = setTimeout(() => {
-    delete window[callbackName];
-    document.body.removeChild(script);
-    renderDashboard(gerarDadosDemo(), true);
-  }, 10000);
-
-  window[callbackName] = function(json) {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    document.body.removeChild(script);
+  try {
+    const res = await fetch(`${url}?action=getDashboard&mes=${mesAtual}&ano=${anoAtual}`, {signal: AbortSignal.timeout(15000)});
+    const json = await res.json();
     if (json && json.dados) renderDashboard(json.dados, false);
     else renderDashboard(gerarDadosDemo(), true);
-  };
-
-  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
-  script.onerror = () => {
-    clearTimeout(timeout);
-    delete window[callbackName];
+  } catch(e) {
+    console.error('Erro ao carregar dados:', e);
     renderDashboard(gerarDadosDemo(), true);
-  };
-  document.body.appendChild(script);
+  }
 }
 
 // ── Dados demo ──
@@ -611,26 +596,20 @@ function renderDashboard(dados, isDemo = false) {
   carregarPresenca();
 }
 
-function carregarPresenca(){
+async function carregarPresenca(){
   const panel = document.getElementById('presencaPanel');
   const urlEl = document.getElementById('scriptUrl');
   const url = urlEl ? urlEl.value.trim() : '';
   if(!panel||!url) return;
-  const callbackName = 'presencaCb_' + Date.now();
-  const script = document.createElement('script');
-  const timeout = setTimeout(() => {
-    delete window[callbackName];
-    if(document.body.contains(script)) document.body.removeChild(script);
-    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
-  }, 8000);
-  window[callbackName] = function(json) {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    if(document.body.contains(script)) document.body.removeChild(script);
+  panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Carregando...</div>';
+  try {
+    const res = await fetch(`${url}?action=getPresenca`, {signal: AbortSignal.timeout(8000)});
+    const json = await res.json();
     if(json && json.presenca) renderPresenca(json.presenca, json.data);
-  };
-  script.src = url + '?action=getPresenca&callback=' + callbackName;
-  document.body.appendChild(script);
+    else panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Sem dados de presença.</div>';
+  } catch(e) {
+    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+  }
 }
 
 function renderPresenca(presenca, dataHoje){
