@@ -765,90 +765,7 @@ function sair(){
   document.getElementById('loginSenha').value='';
 }
 
-async function verificarCumprimento(){
-  try {
-    const hoje=new Date();
-    const mes=hoje.getMonth();const ano=hoje.getFullYear();
-    const url=`${SCRIPT_URL}?action=getDashboard&mes=${mes}&ano=${ano}&diaInicio=1`;
-    const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
-    if(!r.ok) return;
-    const d=await r.json();
-    if(!d||!d.dados) return;
-    const loja=d.dados.find(x=>x.unidade===unidadeAtual);
-    if(!loja||!loja.ultimoRegistro) return;
-    const [dia,mesU,anoU]=loja.ultimoRegistro.split('/').map(Number);
-    const ultimoDate=new Date(anoU,mesU-1,dia);
-    const hojeZero=new Date();hojeZero.setHours(0,0,0,0);
-    const ultZero=new Date(ultimoDate);ultZero.setHours(0,0,0,0);
-    const diffDias=Math.round((hojeZero-ultZero)/(1000*60*60*24));
-    if(diffDias>=2) mostrarBloqueio(diffDias);
-    else if(diffDias===1) mostrarAvisoAtraso();
-    // Conta dias sem bater todas as metas (para mensagem escalada)
-    if(loja.diasSemMeta!==undefined) mostrarMsgEscalada(loja.diasSemMeta, loja.pctMeta);
-  } catch(e) {}
-}
-
-function mostrarAvisoAtraso(){
-  const aviso=document.createElement('div');
-  aviso.id='avisoAtraso';
-  aviso.style.cssText='background:#3a2000;border:2px solid #FFD000;border-radius:8px;padding:12px 16px;margin:12px 12px 0;font-size:0.82rem;color:#FFD000;display:flex;align-items:center;gap:10px;';
-  aviso.innerHTML=`<span style="font-size:1.2rem">⚠️</span><span><strong>Atenção!</strong> Você não preencheu o placar ontem. O preenchimento é obrigatório todos os dias. Se isso se repetir, seu acesso será bloqueado.</span>`;
-  document.querySelector('main').prepend(aviso);
-}
-
-function mostrarMsgEscalada(diasSemMeta, pctMeta){
-  // Só entra aqui quando vem do servidor com histórico
-  // Se já tem mensagem imediata do dia, só adiciona escalonamento se diasSemMeta > 0
-  const el=document.getElementById('msgEscalada');
-  if(!el||diasSemMeta===undefined||diasSemMeta===0) return;
-  // Escalonamento por dias consecutivos sem bater NENHUMA meta
-  el.style.display='block';
-  if(diasSemMeta>=4){
-    el.style.borderColor='var(--danger)';
-    el.innerHTML=`🚨 <strong style="color:var(--danger)">URGENTE — Ligue para o gestor!</strong> Sua operação está em situação crítica há ${diasSemMeta} dias. A situação está se agravando.`;
-  } else if(diasSemMeta===3){
-    el.style.borderColor='var(--danger)';
-    el.innerHTML=`⚠️ <strong style="color:var(--danger)">Os indicadores não estão bons.</strong> Se você estiver precisando de ajuda, procure o gestor imediatamente para fazer a correção.`;
-  } else if(diasSemMeta===2){
-    el.style.borderColor='var(--danger)';
-    el.innerHTML=`⚠️ O desempenho da sua unidade não está indo bem há 2 dias seguidos. <strong style="color:var(--danger)">Você precisa rever os indicadores urgentemente.</strong>`;
-  } else if(diasSemMeta===1){
-    el.style.borderColor='var(--yellow)';
-    el.innerHTML=`⚠️ Você não está batendo todas as metas. <strong style="color:var(--yellow)">Verifique o que está acontecendo na sua operação.</strong>`;
-  }
-}
-
-function mostrarBloqueio(dias){
-  document.getElementById('appWrap').style.display='none';
-  const isPendencia=dias===1&&verificarPendenciaOntem();
-  const msg=isPendencia
-    ?`Ontem você não completou o <strong style="color:#FF3B3B">Start Dina</strong>, os <strong style="color:#FF3B3B">Tempos de Entrega</strong> e/ou a <strong style="color:#FF3B3B">Falta de Produto</strong>.<br><br>Conforme avisado, hoje seu placar está bloqueado.<br>Entre em contato com o gestor para desbloquear.`
-    :`Você ficou <strong style="color:#FF3B3B">${dias} dias</strong> sem preencher o placar diário.<br>O preenchimento é obrigatório todos os dias.<br><br>Entre em contato com o gestor para desbloquear.`;
-  const bloqueio=document.createElement('div');
-  bloqueio.style.cssText='position:fixed;inset:0;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;z-index:9999;';
-  bloqueio.innerHTML=`
-    <div style="background:#1E1E1E;border:2px solid #FF3B3B;border-radius:16px;padding:32px 24px;text-align:center;max-width:380px;width:100%;display:flex;flex-direction:column;gap:16px;align-items:center">
-      <div style="font-size:3rem">🔒</div>
-      <div style="font-family:'Oswald',sans-serif;font-size:1.6rem;color:#FF3B3B;letter-spacing:0.06em">PLACAR BLOQUEADO</div>
-      <div style="font-size:0.85rem;color:#AAAAAA;line-height:1.7">${msg}</div>
-      <div style="background:#C0392B;border-radius:8px;padding:12px 24px;font-size:0.82rem;color:#fff">📞 Contate: Robson Pontes</div>
-    </div>`;
-  document.body.appendChild(bloqueio);
-  document.getElementById('loginWrap').style.display='none';
-}
-
-function iniciarApp(u){
-  unidadeAtual=u;
-  document.getElementById('loginWrap').style.display='none';
-  document.getElementById('appWrap').style.display='flex';
-  document.getElementById('unitBadge').textContent=u;
-  atualizarMetas();updateDate();limpar();
-  carregarStartDinaLocal();
-  if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}
-  inicializarFaltaProduto();
-  if(verificarPendenciaOntem()){mostrarBloqueio(1);return;}
-  verificarCumprimento();
-}
+async function verificarCumprimento(){\n  try {\n    const hoje=new Date();\n    const mes=hoje.getMonth();const ano=hoje.getFullYear();\n    const url=`${SCRIPT_URL}?action=getDashboard&mes=${mes}&ano=${ano}&diaInicio=1`;\n    const r=await fetch(url,{signal:AbortSignal.timeout(5000)});\n    if(!r.ok) return;\n    const d=await r.json();\n    if(!d||!d.dados) return;\n    const loja=d.dados.find(x=>x.unidade===unidadeAtual);\n    if(!loja) return;\n    // Escalonamento por dias consecutivos sem bater metas\n    if(loja.diasSemMeta!==undefined) mostrarMsgEscalada(loja.diasSemMeta, loja.pctMeta);\n  } catch(e) {}\n}\n\nfunction mostrarMsgEscalada(diasSemMeta, pctMeta){\n  const el=document.getElementById('msgEscalada');\n  if(!el||diasSemMeta===undefined||diasSemMeta===0) return;\n  el.style.display='block';\n  if(diasSemMeta>=4){\n    el.style.borderColor='var(--danger)';\n    el.innerHTML=`🚨 <strong style="color:var(--danger)">URGENTE — Ligue para o gestor!</strong> Sua operação está em situação crítica há ${diasSemMeta} dias. A situação está se agravando.`;\n  } else if(diasSemMeta===3){\n    el.style.borderColor='var(--danger)';\n    el.innerHTML=`⚠️ <strong style="color:var(--danger)">Os indicadores não estão bons.</strong> Se você estiver precisando de ajuda, procure o gestor imediatamente para fazer a correção.`;\n  } else if(diasSemMeta===2){\n    el.style.borderColor='var(--danger)';\n    el.innerHTML=`⚠️ O desempenho da sua unidade não está indo bem há 2 dias seguidos. <strong style="color:var(--danger)">Você precisa rever os indicadores urgentemente.</strong>`;\n  } else if(diasSemMeta===1){\n    el.style.borderColor='var(--yellow,#FFD000)';\n    el.innerHTML=`⚠️ Você não está batendo todas as metas. <strong style="color:var(--yellow,#FFD000)">Verifique o que está acontecendo na sua operação.</strong>`;\n  }\n}\n\nfunction iniciarApp(u){\n  unidadeAtual=u;\n  document.getElementById('loginWrap').style.display='none';\n  document.getElementById('appWrap').style.display='flex';\n  document.getElementById('unitBadge').textContent=u;\n  atualizarMetas();updateDate();limpar();\n  carregarStartDinaLocal();\n  if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}\n  inicializarFaltaProduto();\n  verificarCumprimento();\n}
 
 window.addEventListener('load',async()=>{
   await carregarMetas();
@@ -1020,6 +937,10 @@ function confirmarEnvioComAviso(pendencias){
 
 function dataTurno(){
   const now=new Date();
+  // Isaac Manhã: turno das 08h às 19h — sem overnight
+  if(unidadeAtual==='Isaac Manhã') return now;
+  // Demais lojas: turno das 17h até 04h do dia seguinte
+  // Registros entre 00h e 04h pertencem ao dia anterior
   if(now.getHours()<4){const ontem=new Date(now);ontem.setDate(ontem.getDate()-1);return ontem;}
   return now;
 }
