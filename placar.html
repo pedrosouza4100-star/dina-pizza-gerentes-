@@ -198,35 +198,6 @@
         <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="cancelTag"></span>
       </div>
-      <!-- Motoboys (só lojas com entrega própria) -->
-      <div class="card card-full" id="cardMotoboys" style="display:none">
-        <div class="card-label">Motoboys em Serviço</div>
-        <div class="card-meta" id="metaMotoboysDisplay"></div>
-        <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0"><span class="suffix">mb.</span></div>
-        <span class="tag" id="motoboysTag"></span>
-      </div>
-    </div>
-
-    <!-- Tempo de Entrega (só lojas com entrega própria) -->
-    <div class="card card-full" id="cardTempo" style="display:none">
-      <div class="card-label">🕐 Tempo de Entrega</div>
-      <div class="card-meta" id="tempoRegistroInfo">Meta: 3 registros por noite</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
-      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="tempoInputArea">
-        <div>
-          <div class="card-label" style="margin-bottom:4px">App Próprio (min)</div>
-          <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
-        </div>
-        <div>
-          <div class="card-label" style="margin-bottom:4px">iFood (min)</div>
-          <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem">
-        </div>
-      </div>
-      <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:8px">
-        ⏱ Registrar tempo agora
-      </button>
-      <div id="statusTempo" style="font-size:0.75rem;color:var(--muted);text-align:center;padding:8px;display:none"></div>
-      <span class="tag" id="tempoTag"></span>
     </div>
 
     <!-- Motoboys (só lojas com entrega própria) -->
