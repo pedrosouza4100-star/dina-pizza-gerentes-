@@ -267,7 +267,7 @@
             <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
           </div>
         </div>
-        <div id="tempoFotoArea" style="display:none">
+        <div id="tempoFotoArea">
           <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
             <div style="display:flex;flex-direction:column;gap:4px">
@@ -445,10 +445,8 @@ function registroDisponivel(){
 
 // ── CÂMERAS TEMPO ──
 function onTempoInput(){
-  const app=document.getElementById('tempoApp').value;
-  const ifood=document.getElementById('tempoIfood').value;
-  const area=document.getElementById('tempoFotoArea');
-  if(area) area.style.display=(app!==''||ifood!=='')?'block':'none';
+  // Apenas atualiza o botão registrar
+  verificarBotaoRegistrar();
 }
 
 function abrirCameraTempoApp(){document.getElementById('cameraTempoAppInput').click();}
@@ -537,8 +535,6 @@ function salvarTempoEntrega(){
   document.getElementById('cameraBtnTempoApp').textContent='📷 iFood';
   document.getElementById('cameraBtnTempoIfood').className='camera-btn';
   document.getElementById('cameraBtnTempoIfood').textContent='📷 App Próprio';
-  // Esconde área de foto até próximo preenchimento
-  const fa=document.getElementById('tempoFotoArea');if(fa)fa.style.display='none';
   renderTempoRegistros();
   avaliar();
   verificarBotaoRegistrar();
