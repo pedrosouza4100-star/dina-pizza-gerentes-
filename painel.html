@@ -300,66 +300,51 @@ window.addEventListener('load', () => {
   carregarDados(SCRIPT_URL_CORRETA);
 });
 
-// ── Carregar dados via allorigins proxy (resolve CORS) ──
+// ── Carregar dados ──
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 
-async function carregarDados(url) {
+function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados...</div>';
-  const targetUrl = encodeURIComponent(url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual);
-  const proxyUrl = 'https://api.allorigins.win/get?url=' + targetUrl;
-  try {
-    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(20000)});
-    const data = await res.json();
-    const json = JSON.parse(data.contents);
-    if (json && json.dados && json.dados.length > 0) renderDashboard(json.dados, false);
-    else renderDashboard(gerarDadosDemo(), true);
-  } catch(e) {
-    console.error('Erro proxy:', e);
-    // fallback JSONP
-    carregarJsonp(url);
-  }
-}
-
-function carregarJsonp(url) {
+  // Usa JSONP — único método que funciona com Apps Script em browser
   const cb = 'dinaCb_' + Date.now();
   const s = document.createElement('script');
-  const t = setTimeout(() => { delete window[cb]; renderDashboard(gerarDadosDemo(), true); }, 20000);
+  const t = setTimeout(() => {
+    delete window[cb];
+    if(s.parentNode) s.parentNode.removeChild(s);
+    renderDashboard(gerarDadosDemo(), true);
+  }, 25000);
   window[cb] = (json) => {
-    clearTimeout(t); delete window[cb];
+    clearTimeout(t);
+    delete window[cb];
     if(s.parentNode) s.parentNode.removeChild(s);
     if (json && json.dados && json.dados.length > 0) renderDashboard(json.dados, false);
     else renderDashboard(gerarDadosDemo(), true);
   };
-  s.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + cb;
   s.onerror = () => { clearTimeout(t); delete window[cb]; renderDashboard(gerarDadosDemo(), true); };
-  document.body.appendChild(s);
+  // Usa URL sem parâmetro de mês/ano para evitar cache
+  s.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&t=' + Date.now() + '&callback=' + cb;
+  document.head.appendChild(s);
 }
 
-async function carregarPresenca(){
+function carregarPresenca(){
   const panel = document.getElementById('presencaPanel');
   if(!panel) return;
   panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Carregando...</div>';
-  const targetUrl = encodeURIComponent(APPS_SCRIPT_URL + '?action=getPresenca');
-  const proxyUrl = 'https://api.allorigins.win/get?url=' + targetUrl;
-  try {
-    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
-    const data = await res.json();
-    const json = JSON.parse(data.contents);
+  const cb = 'presencaCb_' + Date.now();
+  const s = document.createElement('script');
+  const t = setTimeout(() => {
+    delete window[cb];
+    if(s.parentNode) s.parentNode.removeChild(s);
+    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+  }, 15000);
+  window[cb] = (json) => {
+    clearTimeout(t); delete window[cb];
+    if(s.parentNode) s.parentNode.removeChild(s);
     if(json && json.presenca) renderPresenca(json.presenca, json.data);
-    else panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Sem dados.</div>';
-  } catch(e) {
-    // fallback JSONP
-    const cb = 'presencaCb_' + Date.now();
-    const s = document.createElement('script');
-    const t = setTimeout(() => { delete window[cb]; panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>'; }, 10000);
-    window[cb] = (json) => {
-      clearTimeout(t); delete window[cb];
-      if(s.parentNode) s.parentNode.removeChild(s);
-      if(json && json.presenca) renderPresenca(json.presenca, json.data);
-    };
-    s.src = APPS_SCRIPT_URL + '?action=getPresenca&callback=' + cb;
-    document.body.appendChild(s);
-  }
+  };
+  s.onerror = () => { clearTimeout(t); delete window[cb]; panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Erro ao carregar.</div>'; };
+  s.src = APPS_SCRIPT_URL + '?action=getPresenca&t=' + Date.now() + '&callback=' + cb;
+  document.head.appendChild(s);
 }
 
 function renderPresenca(presenca, dataHoje){
