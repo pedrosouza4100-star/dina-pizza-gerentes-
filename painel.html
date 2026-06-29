@@ -301,37 +301,8 @@ window.addEventListener('load', () => {
 });
 
 // ── Carregar dados via fetch ──
-async function carregarDados(url) {
+function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
-  try {
-    const fullUrl = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual;
-    const res = await fetch(fullUrl, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: AbortSignal.timeout(20000)
-    });
-    const texto = await res.text();
-    let json;
-    try { json = JSON.parse(texto); } catch(e) {
-      console.error('Resposta inválida:', texto.substring(0,200));
-      renderDashboard(gerarDadosDemo(), true);
-      return;
-    }
-    if (json && json.dados && json.dados.length > 0) {
-      renderDashboard(json.dados, false);
-    } else {
-      console.error('Dados vazios:', json);
-      renderDashboard(gerarDadosDemo(), true);
-    }
-  } catch(e) {
-    console.error('Erro fetch:', e.message);
-    // Tenta via JSONP como fallback
-    carregarDadosJsonp(url);
-  }
-}
-
-// Fallback JSONP
-function carregarDadosJsonp(url) {
   const callbackName = 'dinaCb_' + Date.now();
   const script = document.createElement('script');
   const timeout = setTimeout(() => {
@@ -355,321 +326,34 @@ function carregarDadosJsonp(url) {
   document.body.appendChild(script);
 }
 
-// ── Dados demo ──
-function gerarDadosDemo() {
-  return UNIDADES.map(u => ({
-    unidade: u,
-    faturamento: Math.round(METAS_FAT[u] * (0.7 + Math.random() * 0.6) * 22),
-    metaMensal: METAS_FAT[u] * 30,
-    google: Math.round(METAS_AVAL[u] * (0.5 + Math.random() * 0.8) * 22),
-    ifood: Math.round(METAS_AVAL[u] * (0.4 + Math.random() * 0.9) * 22),
-    metaAval: METAS_AVAL[u] * 30,
-    cancelamentos: Math.round(Math.random() * 15),
-    chamados: Math.round(Math.random() * 3),
-    dias: Math.round(15 + Math.random() * 10)
-  }));
-}
-
-// ── Render ──
-function renderDashboard(dados, isDemo = false) {
-  // Ordenar por % meta faturamento desc
-  dados.sort((a,b) => (b.faturamento/b.metaMensal) - (a.faturamento/a.metaMensal));
-
-  const totalFat = dados.reduce((s,d) => s + d.faturamento, 0);
-  const totalMetaFat = dados.reduce((s,d) => s + d.metaMensal, 0);
-  const totalGoogle = dados.reduce((s,d) => s + d.google, 0);
-  const totalIfood = dados.reduce((s,d) => s + d.ifood, 0);
-  const totalCancel = dados.reduce((s,d) => s + d.cancelamentos, 0);
-  const totalChamados = dados.reduce((s,d) => s + (d.chamados||0), 0);
-  const totalMotoboys = dados.reduce((s,d) => s + (d.motoboys||0), 0);
-  const totalStartDina = dados.reduce((s,d) => s + (d.startDina||0), 0);
-  const pctGeral = totalFat / totalMetaFat;
-
-  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:0});
-  const pctFmt = v => (v*100).toFixed(1) + '%';
-
-  const badgeGeral = pctGeral >= 1 ? 'badge-ok' : pctGeral >= 0.8 ? 'badge-warn' : 'badge-bad';
-  const labelGeral = pctGeral >= 1 ? '✓ Meta atingida' : pctGeral >= 0.8 ? '⚠ Atenção' : '✗ Abaixo da meta';
-
-  document.getElementById('pageContent').innerHTML = `
-    ${isDemo ? '<div style="background:#3a2000;border:1px solid #7a4000;border-radius:6px;padding:10px 16px;font-size:0.78rem;color:#F39C12">⚠ Modo demonstração — dados simulados. Configure a URL do Apps Script para carregar dados reais.</div>' : ''}
-
-    <!-- KPIs -->
-    <div>
-      <div class="section-title">Visão Geral da Rede — ${MESES[mesAtual]} ${anoAtual}</div>
-      <div class="kpi-strip" style="grid-template-columns:repeat(6,1fr)">
-        <div class="kpi gold">
-          <div class="kpi-label">Faturamento Total</div>
-          <div class="kpi-value">${fmt(totalFat)}</div>
-          <div class="kpi-sub">Meta: ${fmt(totalMetaFat)}</div>
-          <div class="kpi-badge ${badgeGeral}">${labelGeral} — ${pctFmt(pctGeral)}</div>
-        </div>
-        <div class="kpi green">
-          <div class="kpi-label">Avaliações Google</div>
-          <div class="kpi-value">${totalGoogle.toLocaleString('pt-BR')}</div>
-          <div class="kpi-sub">Total acumulado no mês</div>
-        </div>
-        <div class="kpi green">
-          <div class="kpi-label">Avaliações iFood</div>
-          <div class="kpi-value">${totalIfood.toLocaleString('pt-BR')}</div>
-          <div class="kpi-sub">Total acumulado no mês</div>
-        </div>
-        <div class="kpi ${totalChamados === 0 ? 'green' : totalChamados <= 5 ? 'yellow' : ''}">
-          <div class="kpi-label">Chamados</div>
-          <div class="kpi-value" style="color:${totalChamados === 0 ? 'var(--green)' : totalChamados <= 5 ? 'var(--yellow)' : 'var(--danger)'}">${totalChamados}</div>
-          <div class="kpi-sub">Soma de todas as unidades</div>
-        </div>
-        <div class="kpi ${totalCancel === 0 ? 'green' : totalCancel > 20 ? '' : 'yellow'}">
-          <div class="kpi-label">Cancelamentos</div>
-          <div class="kpi-value" style="color:${totalCancel === 0 ? 'var(--green)' : totalCancel <= 10 ? 'var(--yellow)' : 'var(--danger)'}">${totalCancel}</div>
-          <div class="kpi-sub">Soma de todas as unidades</div>
-        </div>
-        <div class="kpi ${totalStartDina >= dados.length ? 'green' : totalStartDina > 0 ? 'yellow' : ''}">
-          <div class="kpi-label">⭐ Start Dina</div>
-          <div class="kpi-value" style="color:${totalStartDina >= dados.length ? 'var(--green)' : totalStartDina > 0 ? 'var(--yellow)' : 'var(--danger)'}">${totalStartDina}</div>
-          <div class="kpi-sub">Reuniões registradas hoje</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Gráficos -->
-    <div>
-      <div class="section-title">Comparativo entre Unidades</div>
-      <div class="charts-row">
-        <div class="chart-card">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.1em">Faturamento Real vs Meta (R$)</div>
-          <canvas id="chartFat"></canvas>
-        </div>
-        <div class="chart-card">
-          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.1em">Avaliações Google + iFood</div>
-          <canvas id="chartAval"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Mini cards cancelamentos -->
-    <div>
-      <div class="section-title">Cancelamentos + Chamados + Motoboys + Start Dina por Unidade</div>
-      <div class="mini-row" style="grid-template-columns:repeat(5,1fr)">
-        ${dados.map(d => {
-          const pct = d.pctMeta || 0;
-          const pctColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--danger)';
-          const ultimoLabel = d.ultimoRegistro || '—';
-          return `
-          <div class="mini-card">
-            <div class="mini-label">${d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso').replace('Isaac Manhã','Isaac M.').replace('Isaac Noite','Isaac N.')}</div>
-            <div style="display:flex;gap:8px;align-items:flex-end;margin-top:4px;flex-wrap:wrap">
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Cancel.</div>
-                <div class="mini-value" style="color:${d.cancelamentos===0?'var(--green)':d.cancelamentos<=3?'var(--yellow)':'var(--danger)'}">${d.cancelamentos}</div>
-              </div>
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Chamados</div>
-                <div class="mini-value" style="color:${d.chamados===0?'var(--green)':d.chamados===1?'var(--yellow)':'var(--danger)'}">${d.chamados||0}</div>
-              </div>
-              ${d.motoboys>0?`<div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Motos</div>
-                <div class="mini-value" style="color:var(--text)">${d.motoboys}</div>
-              </div>`:''}
-              <div>
-                <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase">Start</div>
-                <div class="mini-value" style="color:${(d.startDina||0)>=1?'var(--green)':'var(--danger)'}">${d.startDina||0}</div>
-              </div>
-            </div>
-            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:0.65rem;color:var(--muted)">${d.dias||0} dias preenchidos</div>
-              <div style="font-size:0.72rem;font-weight:700;color:${pctColor}">${pct}% metas</div>
-            </div>
-            <div style="font-size:0.6rem;color:var(--muted);margin-top:2px">Último: ${ultimoLabel}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- Presença do Dia -->
-    <div>
-      <div class="section-title">📋 Presença do Dia</div>
-      <div id="presencaPanel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="color:var(--muted);font-size:0.8rem;text-align:center">Carregando...</div>
-      </div>
-    </div>
-
-    <!-- Premio do Mês -->
-    <div>
-      <div class="section-title">🏆 Premiação Mensal — Desempenho por Loja</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
-        ${dados.map(d => {
-          const pctFat  = d.metaMensal > 0 ? d.faturamento / d.metaMensal : 0;
-          const metaGoogleMes = (METAS_AVAL[d.unidade]||0) * d.dias;
-          const metaIfoodMes  = (METAS_AVAL[d.unidade]||0) * d.dias;
-          const bateuFat    = pctFat >= 1;
-          const bateuGoogle = metaGoogleMes > 0 && d.google >= metaGoogleMes;
-          const bateuIfood  = metaIfoodMes > 0  && d.ifood  >= metaIfoodMes;
-          const semChamados = d.chamados === 0;
-          const pts = [bateuFat, bateuGoogle, bateuIfood, semChamados].filter(Boolean).length;
-          const bateuTudo = pts === 4;
-          const cor = bateuTudo ? '#D4A017' : pts >= 3 ? '#27AE60' : pts >= 2 ? '#F39C12' : 'var(--muted)';
-          const icone = bateuTudo ? '🏆' : pts >= 3 ? '✅' : pts >= 2 ? '⚠️' : '❌';
-          const nomeAbrev = d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C.Raso');
-          return `
-          <div style="background:${bateuTudo ? 'rgba(212,160,23,0.08)' : 'var(--card)'};border:1px solid ${bateuTudo ? 'rgba(212,160,23,0.4)' : 'var(--border)'};border-radius:8px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center">
-            <div style="font-size:1.6rem">${icone}</div>
-            <div style="font-size:0.72rem;font-weight:700;color:${cor}">${nomeAbrev}</div>
-            <div style="font-size:1rem;font-weight:700;font-family:'Oswald',sans-serif;color:${cor}">${pts}/4</div>
-            <div style="font-size:0.62rem;color:var(--muted);line-height:1.6;text-align:left;width:100%">
-              <div>${bateuFat    ? '✓' : '✗'} Faturamento</div>
-              <div>${bateuGoogle ? '✓' : '✗'} Google</div>
-              <div>${bateuIfood  ? '✓' : '✗'} iFood</div>
-              <div>${semChamados ? '✓' : '✗'} Chamados (${d.chamados})</div>
-            </div>
-            ${bateuTudo ? '<div style="font-size:0.7rem;font-weight:700;color:#D4A017;background:rgba(212,160,23,0.1);padding:4px 10px;border-radius:3px">R$ 100,00 ✓</div>' : ''}
-          </div>`;
-        }).join('')}
-      </div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:10px">* Baseado nos dias registrados no mês. Faturamento e avaliações comparados com meta acumulada × dias registrados. Chamados = total do mês deve ser zero.</div>
-    </div>
-
-    <!-- Ranking -->
-    <div>
-      <div class="section-title">Ranking de Faturamento</div>
-      <div class="ranking-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Unidade</th>
-              <th>Faturamento</th>
-              <th>Meta Mensal</th>
-              <th style="min-width:180px">% da Meta</th>
-              <th>Google</th>
-              <th>iFood</th>
-              <th>Ped. iFood</th>
-              <th>Falta Prod.</th>
-              <th>Dias</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dados.map((d, i) => {
-              const pct = d.faturamento / d.metaMensal;
-              const fillClass = pct >= 1 ? 'fill-ok' : pct >= 0.8 ? 'fill-warn' : 'fill-bad';
-              const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-              const faltaPreench = d.faltaProdutoPreenchidos || 0;
-              const faltaFalta = d.dias - faltaPreench;
-              const pedidos = d.pedidosConfirmadosIfood || 0;
-              return `<tr>
-                <td><span class="rank-num ${rankClass}">${i+1}</span></td>
-                <td><span class="unit-name">${d.unidade}</span></td>
-                <td>${fmt(d.faturamento)}</td>
-                <td style="color:var(--muted)">${fmt(d.metaMensal)}</td>
-                <td class="progress-cell">
-                  <div class="progress-bar-bg"><div class="progress-bar-fill ${fillClass}" style="width:${Math.min(pct*100,100)}%"></div></div>
-                  <div class="pct-label">${pctFmt(pct)}</div>
-                </td>
-                <td>${d.google}</td>
-                <td>${d.ifood}</td>
-                <td style="text-align:center;color:${pedidos>0?'var(--danger)':'var(--green)'}">${pedidos}</td>
-                <td style="text-align:center">
-                  <span style="color:${faltaFalta>0?'var(--danger)':'var(--green)'}">
-                    ${faltaPreench}✓${faltaFalta>0?` / <strong>${faltaFalta}✗</strong>`:''}
-                  </span>
-                </td>
-                <td style="color:var(--muted)">${d.dias}d</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // ── Gráfico faturamento ──
-  const nomes = dados.map(d => d.unidade.replace('São José dos Pinhais','SJP').replace('Fazenda Rio Grande','Fazenda').replace('Capão Raso','C. Raso'));
-  new Chart(document.getElementById('chartFat'), {
-    type: 'bar',
-    data: {
-      labels: nomes,
-      datasets: [
-        {
-          label: 'Faturamento',
-          data: dados.map(d => d.faturamento),
-          backgroundColor: dados.map(d => d.faturamento/d.metaMensal >= 1 ? 'rgba(46,204,113,0.7)' : d.faturamento/d.metaMensal >= 0.8 ? 'rgba(241,196,15,0.7)' : 'rgba(231,76,60,0.7)'),
-          borderRadius: 4,
-        },
-        {
-          label: 'Meta',
-          data: dados.map(d => d.metaMensal),
-          backgroundColor: 'rgba(255,255,255,0.07)',
-          borderColor: 'rgba(255,255,255,0.15)',
-          borderWidth: 1,
-          borderRadius: 4,
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { labels: { color: '#888', font: { family: 'Inter', size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } },
-        y: { ticks: { color: '#666', font: { size: 10 }, callback: v => 'R$' + (v/1000).toFixed(0)+'k' }, grid: { color: '#222' } }
-      }
-    }
-  });
-
-  // ── Gráfico avaliações ──
-  new Chart(document.getElementById('chartAval'), {
-    type: 'bar',
-    data: {
-      labels: nomes,
-      datasets: [
-        { label: 'Google', data: dados.map(d => d.google), backgroundColor: 'rgba(192,57,43,0.8)', borderRadius: 3 },
-        { label: 'iFood', data: dados.map(d => d.ifood), backgroundColor: 'rgba(212,160,23,0.8)', borderRadius: 3 },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { labels: { color: '#888', font: { family: 'Inter', size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e1e1e' } },
-        y: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#222' } }
-      }
-    }
-  });
-
-  // Carrega presença do dia
-  carregarPresenca();
-}
-
-async function carregarPresenca(){
+function carregarPresenca(){
   const panel = document.getElementById('presencaPanel');
   const urlEl = document.getElementById('scriptUrl');
   const url = urlEl ? urlEl.value.trim() : '';
   if(!panel||!url) return;
   panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Carregando...</div>';
-  try {
-    const res = await fetch(url + '?action=getPresenca', {method:'GET', redirect:'follow', signal: AbortSignal.timeout(10000)});
-    const texto = await res.text();
-    const json = JSON.parse(texto);
+  const callbackName = 'presencaCb_' + Date.now();
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    delete window[callbackName];
+    if(document.body.contains(script)) document.body.removeChild(script);
+    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+  }, 10000);
+  window[callbackName] = function(json) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    if(document.body.contains(script)) document.body.removeChild(script);
     if(json && json.presenca) renderPresenca(json.presenca, json.data);
-    else panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Sem dados.</div>';
-  } catch(e) {
-    // Fallback JSONP
-    const callbackName = 'presencaCb_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      if(document.body.contains(script)) document.body.removeChild(script);
-      panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
-    }, 10000);
-    window[callbackName] = function(json) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      if(document.body.contains(script)) document.body.removeChild(script);
-      if(json && json.presenca) renderPresenca(json.presenca, json.data);
-    };
-    script.src = url + '?action=getPresenca&callback=' + callbackName;
-    document.body.appendChild(script);
-  }
+  };
+  script.src = url + '?action=getPresenca&callback=' + callbackName;
+  script.onerror = () => {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+  };
+  document.body.appendChild(script);
 }
+
 
 function renderPresenca(presenca, dataHoje){
   const panel = document.getElementById('presencaPanel');
