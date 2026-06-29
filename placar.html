@@ -307,6 +307,7 @@
 
   <div class="bottom-bar">
     <div id="resumo">Preencha os dados acima</div>
+    <div id="pendenciasList" style="display:none;background:rgba(255,59,59,0.1);border:1px solid var(--danger);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:var(--text);line-height:1.8"></div>
     <div class="msgs">
       <div class="msg ok" id="savedMsg" style="display:none">✓ Registrado!</div>
       <div class="msg err" id="errorMsg" style="display:none">⚠ Erro. Tente novamente.</div>
@@ -963,37 +964,37 @@ function avaliar(){
 
 function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
+  const lista=document.getElementById('pendenciasList');
   if(!btn||!unidadeAtual) return;
 
   const faltando=[];
 
-  // Indicadores finais
-  if(!filled('fat')) faltando.push('Faturamento');
-  if(!filled('google')) faltando.push('Google');
-  if(!filled('ifood')) faltando.push('iFood');
-  if(!filled('chamados')) faltando.push('Chamados');
-  if(!filled('cancel')) faltando.push('Cancelamentos');
-
-  // Start Dina
-  if(!startDinaSalvo) faltando.push('Start Dina');
-
-  // Falta de Produto
-  if(!faltaStatus) faltando.push('Falta de Produto');
-
-  // Lojas com entrega própria
+  if(!filled('fat')) faltando.push('💰 Faturamento');
+  if(!filled('google')) faltando.push('⭐ Google');
+  if(!filled('ifood')) faltando.push('📱 iFood');
+  if(!filled('chamados')) faltando.push('📞 Chamados');
+  if(!filled('cancel')) faltando.push('❌ Cancelamentos');
+  if(!startDinaSalvo) faltando.push('⭐ Start Dina');
+  if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(temLoja(unidadeAtual)){
-    if(!motoboySalvo) faltando.push('Motoboys');
-    if(tempoRegistros.length<3) faltando.push(`Tempos de entrega (${tempoRegistros.length}/3)`);
+    if(!motoboySalvo) faltando.push('👥 Motoboys');
+    if(tempoRegistros.length<3) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
   }
 
   if(faltando.length>0){
     btn.disabled=true;btn.style.opacity='0.45';btn.style.cursor='not-allowed';
-    btn.textContent=`Pendente: ${faltando.join(', ')}`;
+    btn.textContent='Registrar Placar';
     btn.onclick=null;
+    if(lista){
+      lista.style.display='block';
+      lista.innerHTML='<strong style="color:var(--danger)">⚠️ Ainda falta preencher:</strong><br>'
+        + faltando.map(f=>`• ${f}`).join('<br>');
+    }
   } else {
     btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
     btn.textContent='🔴 Registrar Placar';
     btn.onclick=registrar;
+    if(lista) lista.style.display='none';
   }
 }
 
