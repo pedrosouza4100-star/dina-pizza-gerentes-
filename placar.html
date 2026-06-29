@@ -198,6 +198,13 @@
         <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="cancelTag"></span>
       </div>
+      <!-- Pedidos Confirmados iFood (só lojas com entrega própria) -->
+      <div class="card" id="cardPedidosIfood" style="display:none">
+        <div class="card-label">Pedidos Confirmados iFood</div>
+        <div class="card-meta muted">Meta: zero</div>
+        <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">ped.</span></div>
+        <span class="tag" id="pedidosIfoodTag"></span>
+      </div>
     </div>
 
     <!-- Motoboys (só lojas com entrega própria) -->
@@ -803,6 +810,9 @@ function atualizarMetas(){
   const cardTempo=document.getElementById('cardTempo');
   if(temLoja(unidadeAtual)){cardTempo.style.display='flex';renderTempoRegistros();}
   else cardTempo.style.display='none';
+  // Pedidos Confirmados iFood — só lojas com entrega própria
+  const cardPedidos=document.getElementById('cardPedidosIfood');
+  if(cardPedidos) cardPedidos.style.display=temLoja(unidadeAtual)?'flex':'none';
 }
 
 // ── Salvar Start Dina ──
@@ -922,7 +932,13 @@ function avaliar(){
   const f=ival('ifood');if(f>0&&ma.ifood>0){if(f>=ma.ifood)setStatus('cardIfood','ifoodTag','ok','No alvo');else if(f>=ma.ifood*0.7){setStatus('cardIfood','ifoodTag','warn','Atenção');prob++;}else{setStatus('cardIfood','ifoodTag','bad','Abaixo');prob++;}}
   const ch=ival('chamados');if(filled('chamados')){if(ch===0)setStatus('cardChamados','chamadosTag','ok','Zerado');else if(ch===1){setStatus('cardChamados','chamadosTag','warn','Atenção');prob++;}else{setStatus('cardChamados','chamadosTag','bad','Alto');prob++;}}
   const ca=ival('cancel');if(filled('cancel')){if(ca===0)setStatus('cardCancel','cancelTag','ok','Zerado');else if(ca<=3){setStatus('cardCancel','cancelTag','warn','Atenção');prob++;}else{setStatus('cardCancel','cancelTag','bad','Alto');prob++;}}
-  const metaMb=metaMotoboysHoje(unidadeAtual);
+  // Pedidos Confirmados iFood (lojas com entrega própria)
+  if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
+    const pi=ival('pedidosIfood');
+    if(pi===0)setStatus('cardPedidosIfood','pedidosIfoodTag','ok','Zerado');
+    else if(pi<=2){setStatus('cardPedidosIfood','pedidosIfoodTag','warn','Atenção');prob++;}
+    else{setStatus('cardPedidosIfood','pedidosIfoodTag','bad','Alto');prob++;}
+  }  const metaMb=metaMotoboysHoje(unidadeAtual);
   if(metaMb!==null&&filled('motoboys')){
     const mb=ival('motoboys');
     if(mb>=metaMb)setStatus('cardMotoboys','motoboysTag','ok','No alvo');
@@ -941,13 +957,14 @@ function avaliar(){
   else{r.textContent=`⚠ ${prob} indicadores fora da meta`;r.style.color='var(--danger)';}
 
   // Mostra mensagem de desempenho quando todos os 5 indicadores estão preenchidos
-  if(filled('fat')&&filled('google')&&filled('ifood')&&filled('chamados')&&filled('cancel')){
+  if(filled('fat')&&filled('google')&&filled('ifood')&&filled('chamados')&&filled('cancel')&&(!temLoja(unidadeAtual)||filled('pedidosIfood'))){
     const metas=[
       val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
       ival('google')>=(ma.google||0)&&(ma.google||0)>0,
       ival('ifood')>=(ma.ifood||0)&&(ma.ifood||0)>0,
       ival('chamados')===0,
-      ival('cancel')===0
+      ival('cancel')===0,
+      ...(temLoja(unidadeAtual)?[ival('pedidosIfood')===0]:[])
     ];
     const batidas=metas.filter(Boolean).length;
     const pct=batidas/metas.length;
@@ -974,6 +991,7 @@ function verificarBotaoRegistrar(){
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
+  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Confirmados iFood');
   if(!startDinaSalvo) faltando.push('⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(temLoja(unidadeAtual)){
@@ -1131,6 +1149,7 @@ async function registrar(){
     faturamento:val('fat'),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
+    pedidosConfirmadosIfood:temLoja(unidadeAtual)?ival('pedidosIfood'):null,
     motoboys:ival('motoboys'),metaMotoboys:metaMotoboysHoje(unidadeAtual)||0,
     fotoMotoboys:fotoMotoEnvio,
     startDina:fotoBase64?1:0,fotoStartDina:fotoEnvio,
@@ -1212,14 +1231,14 @@ function limpar(){
   const fb1=document.getElementById('faltaBtnNao');if(fb1)fb1.className='falta-btn';
   const fb2=document.getElementById('faltaBtnSim');if(fb2)fb2.className='falta-btn';
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
-  ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel'].forEach(id=>{
+  ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood'].forEach(id=>{
     const el=document.getElementById(id);
     el.className='card'+(id==='cardFat'?' card-full':'');
   });
   const cardMb=document.getElementById('cardMotoboys');
   if(cardMb.style.display!=='none')cardMb.className='card card-full';
   if(temLoja(unidadeAtual))renderTempoRegistros();
-  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
+  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','pedidosIfoodTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
   const r=document.getElementById('resumo');r.textContent='Preencha os dados acima';r.style.color='';
   // Re-inicializa falta produto
   inicializarFaltaProduto();
