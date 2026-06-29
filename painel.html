@@ -266,11 +266,12 @@ let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
 
 // ── Config ──
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+
 function salvarConfig() {
   const url = document.getElementById('scriptUrl').value.trim();
   if (!url.startsWith('https://script.google.com')) { alert('URL inválida.'); return; }
-  mesAtual = parseInt(document.getElementById('mesRef').value);
-  anoAtual = parseInt(document.getElementById('anoRef').value) || new Date().getFullYear();
   localStorage.setItem('dina_script_url', url);
   document.getElementById('modalConfig').style.display = 'none';
   document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
@@ -280,8 +281,6 @@ function salvarConfig() {
 function reconfigurar() {
   const url = localStorage.getItem('dina_script_url') || '';
   document.getElementById('scriptUrl').value = url;
-  document.getElementById('mesRef').value = mesAtual;
-  document.getElementById('anoRef').value = anoAtual;
   document.getElementById('modalConfig').style.display = 'flex';
 }
 
@@ -291,21 +290,16 @@ window.addEventListener('load', () => {
   anoAtual = now.getFullYear();
   document.getElementById('mesRef').value = mesAtual;
   document.getElementById('anoRef').value = anoAtual;
-  // URL correta sempre atualizada
-  const SCRIPT_URL_CORRETA = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
-  localStorage.setItem('dina_script_url', SCRIPT_URL_CORRETA);
-  document.getElementById('scriptUrl').value = SCRIPT_URL_CORRETA;
+  localStorage.setItem('dina_script_url', APPS_SCRIPT_URL);
+  document.getElementById('scriptUrl').value = APPS_SCRIPT_URL;
   document.getElementById('modalConfig').style.display = 'none';
   document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
-  carregarDados(SCRIPT_URL_CORRETA);
+  carregarDados(APPS_SCRIPT_URL);
 });
 
-// ── Carregar dados ──
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
-
+// ── JSONP ──
 function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados...</div>';
-  // Usa JSONP — único método que funciona com Apps Script em browser
   const cb = 'dinaCb_' + Date.now();
   const s = document.createElement('script');
   const t = setTimeout(() => {
@@ -314,16 +308,21 @@ function carregarDados(url) {
     renderDashboard(gerarDadosDemo(), true);
   }, 25000);
   window[cb] = (json) => {
-    clearTimeout(t);
-    delete window[cb];
+    clearTimeout(t); delete window[cb];
     if(s.parentNode) s.parentNode.removeChild(s);
     if (json && json.dados && json.dados.length > 0) renderDashboard(json.dados, false);
     else renderDashboard(gerarDadosDemo(), true);
   };
   s.onerror = () => { clearTimeout(t); delete window[cb]; renderDashboard(gerarDadosDemo(), true); };
-  // Usa URL sem parâmetro de mês/ano para evitar cache
   s.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&t=' + Date.now() + '&callback=' + cb;
   document.head.appendChild(s);
+}
+
+function alterarMes() {
+  mesAtual = parseInt(document.getElementById('mesRef').value);
+  anoAtual = parseInt(document.getElementById('anoRef').value);
+  document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
+  carregarDados(APPS_SCRIPT_URL);
 }
 
 function carregarPresenca(){
@@ -342,9 +341,126 @@ function carregarPresenca(){
     if(s.parentNode) s.parentNode.removeChild(s);
     if(json && json.presenca) renderPresenca(json.presenca, json.data);
   };
-  s.onerror = () => { clearTimeout(t); delete window[cb]; panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Erro ao carregar.</div>'; };
+  s.onerror = () => { clearTimeout(t); delete window[cb]; panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Erro.</div>'; };
   s.src = APPS_SCRIPT_URL + '?action=getPresenca&t=' + Date.now() + '&callback=' + cb;
   document.head.appendChild(s);
+}
+
+// ── Formatação ──
+const fmt = v => 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const pctFmt = v => (v*100).toFixed(1) + '%';
+
+// ── Dados demo ──
+function gerarDadosDemo() {
+  const unidades = ["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
+  return unidades.map(u => ({
+    unidade: u, faturamento: Math.random()*50000+10000, metaMensal: 200000,
+    google: Math.floor(Math.random()*30), ifood: Math.floor(Math.random()*30),
+    cancelamentos: Math.floor(Math.random()*5), chamados: Math.floor(Math.random()*3),
+    motoboys: Math.floor(Math.random()*5), startDina: Math.floor(Math.random()*20),
+    pedidosConfirmadosIfood: Math.floor(Math.random()*3),
+    faltaProdutoPreenchidos: Math.floor(Math.random()*20), faltaProdutoSim: Math.floor(Math.random()*5),
+    dias: Math.floor(Math.random()*25)+1, diasMetaBatida: Math.floor(Math.random()*10), pctMeta: Math.floor(Math.random()*100)
+  }));
+}
+
+// ── Render principal ──
+function renderDashboard(dados, isDemo = false) {
+  dados.sort((a,b) => b.faturamento - a.faturamento);
+  const totalFat = dados.reduce((s,d) => s+d.faturamento, 0);
+  const totalGoogle = dados.reduce((s,d) => s+d.google, 0);
+  const totalIfood = dados.reduce((s,d) => s+d.ifood, 0);
+  const totalCancel = dados.reduce((s,d) => s+d.cancelamentos, 0);
+  const totalChamados = dados.reduce((s,d) => s+d.chamados, 0);
+  const totalStart = dados.reduce((s,d) => s+(d.startDina||0), 0);
+
+  document.getElementById('pageContent').innerHTML = `
+    ${isDemo ? '<div style="background:#3a2000;border:1px solid #7a4000;border-radius:6px;padding:10px 16px;font-size:0.78rem;color:#F39C12;margin-bottom:8px">⚠ Modo demonstração — dados simulados. Configure a URL do Apps Script para dados reais.</div>' : ''}
+
+    <!-- KPIs -->
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-label">Faturamento Total</div><div class="kpi-value">${fmt(totalFat)}</div></div>
+      <div class="kpi"><div class="kpi-label">Avaliações Google</div><div class="kpi-value">${totalGoogle}</div></div>
+      <div class="kpi"><div class="kpi-label">Avaliações iFood</div><div class="kpi-value">${totalIfood}</div></div>
+      <div class="kpi"><div class="kpi-label">Cancelamentos</div><div class="kpi-value" style="color:var(--danger)">${totalCancel}</div></div>
+      <div class="kpi"><div class="kpi-label">Chamados</div><div class="kpi-value" style="color:var(--danger)">${totalChamados}</div></div>
+      <div class="kpi"><div class="kpi-label">Start Dina</div><div class="kpi-value" style="color:var(--green)">${totalStart}</div></div>
+    </div>
+
+    <!-- Presença do dia -->
+    <div class="card" style="padding:20px">
+      <div class="section-title">📋 Presença do Dia</div>
+      <div id="presencaPanel"><div style="color:var(--muted);font-size:0.8rem">Carregando...</div></div>
+    </div>
+
+    <!-- Ranking -->
+    <div class="card" style="padding:20px">
+      <div class="section-title">Ranking de Faturamento — ${MESES[mesAtual]} ${anoAtual}</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Unidade</th><th>Faturamento</th><th>Meta Mensal</th>
+              <th style="min-width:160px">% da Meta</th>
+              <th>Google</th><th>iFood</th><th>Ped. iFood</th><th>Falta Prod.</th><th>Dias</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dados.map((d,i) => {
+              const pct = d.metaMensal > 0 ? d.faturamento / d.metaMensal : 0;
+              const fillClass = pct >= 1 ? 'fill-ok' : pct >= 0.8 ? 'fill-warn' : 'fill-bad';
+              const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+              const pedidos = d.pedidosConfirmadosIfood || 0;
+              const faltaPreench = d.faltaProdutoPreenchidos || 0;
+              const faltaFalta = Math.max(0, d.dias - faltaPreench);
+              return `<tr>
+                <td><span class="rank-num ${rankClass}">${i+1}</span></td>
+                <td><span class="unit-name">${d.unidade}</span></td>
+                <td>${fmt(d.faturamento)}</td>
+                <td style="color:var(--muted)">${fmt(d.metaMensal)}</td>
+                <td class="progress-cell">
+                  <div class="progress-bar-bg"><div class="progress-bar-fill ${fillClass}" style="width:${Math.min(pct*100,100)}%"></div></div>
+                  <div class="pct-label">${pctFmt(pct)}</div>
+                </td>
+                <td>${d.google}</td>
+                <td>${d.ifood}</td>
+                <td style="text-align:center;color:${pedidos>0?'var(--danger)':'var(--green)'}">${pedidos}</td>
+                <td style="text-align:center">
+                  <span style="color:${faltaFalta>0?'var(--danger)':'var(--green)'}">
+                    ${faltaPreench}✓${faltaFalta>0?` / <strong>${faltaFalta}✗</strong>`:''}
+                  </span>
+                </td>
+                <td style="color:var(--muted)">${d.dias}d</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mini cards -->
+    <div class="section-title">Indicadores por Unidade</div>
+    <div class="mini-row">
+      ${dados.map(d => {
+        const pct = d.metaMensal > 0 ? d.faturamento/d.metaMensal : 0;
+        const cor = pct >= 1 ? 'var(--green)' : pct >= 0.8 ? 'var(--yellow)' : 'var(--danger)';
+        return `<div class="mini-card">
+          <div class="mini-unit">${d.unidade}</div>
+          <div class="mini-fat" style="color:${cor}">${fmt(d.faturamento)}</div>
+          <div class="mini-meta">Meta: ${fmt(d.metaMensal)}</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">
+            Google: ${d.google} | iFood: ${d.ifood} | Cancel: ${d.cancelamentos} | Chamados: ${d.chamados}
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted)">
+            Start Dina: ${d.startDina||0} | Dias: ${d.dias} | Meta: ${d.pctMeta||0}%
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+
+  // Carrega presença após render
+  setTimeout(carregarPresenca, 300);
 }
 
 function renderPresenca(presenca, dataHoje){
@@ -372,7 +488,7 @@ function renderPresenca(presenca, dataHoje){
       `).join('')}
     </div>
     <div style="margin-top:12px;text-align:right">
-      <button onclick="carregarPresenca()" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.72rem;padding:6px 14px;cursor:pointer">↻ Atualizar</button>
+      <button onclick="carregarPresenca()" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.72rem;padding:6px 14px;cursor:pointer">↻ Atualizar presença</button>
     </div>`;
 }
 </script>
