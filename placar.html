@@ -965,33 +965,35 @@ function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
   if(!btn||!unidadeAtual) return;
 
-  // Obrigatórios apenas os 5 indicadores finais
   const faltando=[];
+
+  // Indicadores finais
   if(!filled('fat')) faltando.push('Faturamento');
   if(!filled('google')) faltando.push('Google');
   if(!filled('ifood')) faltando.push('iFood');
   if(!filled('chamados')) faltando.push('Chamados');
   if(!filled('cancel')) faltando.push('Cancelamentos');
 
-  // Avisos (não bloqueiam)
-  const avisos=[];
-  if(!motoboySalvo&&temLoja(unidadeAtual)) avisos.push('Motoboys não salvo');
-  if(!startDinaSalvo) avisos.push('Start Dina não salvo');
-  if(temLoja(unidadeAtual)&&tempoRegistros.length<3) avisos.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
-  if(!faltaStatus) avisos.push('Falta de produto não preenchida');
+  // Start Dina
+  if(!startDinaSalvo) faltando.push('Start Dina');
+
+  // Falta de Produto
+  if(!faltaStatus) faltando.push('Falta de Produto');
+
+  // Lojas com entrega própria
+  if(temLoja(unidadeAtual)){
+    if(!motoboySalvo) faltando.push('Motoboys');
+    if(tempoRegistros.length<3) faltando.push(`Tempos de entrega (${tempoRegistros.length}/3)`);
+  }
 
   if(faltando.length>0){
     btn.disabled=true;btn.style.opacity='0.45';btn.style.cursor='not-allowed';
-    btn.textContent='Preencha: '+faltando.join(', ');
+    btn.textContent=`Pendente: ${faltando.join(', ')}`;
     btn.onclick=null;
   } else {
     btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
     btn.textContent='🔴 Registrar Placar';
-    if(avisos.length>0){
-      btn.onclick=()=>confirmarEnvioComAviso(avisos);
-    } else {
-      btn.onclick=registrar;
-    }
+    btn.onclick=registrar;
   }
 }
 
