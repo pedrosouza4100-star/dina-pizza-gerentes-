@@ -291,13 +291,13 @@ window.addEventListener('load', () => {
   anoAtual = now.getFullYear();
   document.getElementById('mesRef').value = mesAtual;
   document.getElementById('anoRef').value = anoAtual;
-  const url = localStorage.getItem('dina_script_url');
-  if (url) {
-    document.getElementById('scriptUrl').value = url;
-    document.getElementById('modalConfig').style.display = 'none';
-    document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
-    carregarDados(url);
-  }
+  // URL correta sempre atualizada
+  const SCRIPT_URL_CORRETA = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+  localStorage.setItem('dina_script_url', SCRIPT_URL_CORRETA);
+  document.getElementById('scriptUrl').value = SCRIPT_URL_CORRETA;
+  document.getElementById('modalConfig').style.display = 'none';
+  document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} / ${anoAtual}`;
+  carregarDados(SCRIPT_URL_CORRETA);
 });
 
 // ── Carregar dados via fetch ──
