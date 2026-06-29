@@ -300,16 +300,17 @@ window.addEventListener('load', () => {
   carregarDados(SCRIPT_URL_CORRETA);
 });
 
-// ── Carregar dados via fetch ──
+// ── Carregar dados via JSONP ──
 function carregarDados(url) {
-  document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
+  document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados... aguarde até 30 segundos</div>';
   const callbackName = 'dinaCb_' + Date.now();
   const script = document.createElement('script');
   const timeout = setTimeout(() => {
     delete window[callbackName];
     if (document.body.contains(script)) document.body.removeChild(script);
-    renderDashboard(gerarDadosDemo(), true);
-  }, 15000);
+    // Tenta de novo uma vez antes de ir para demo
+    tentarNovamente(url);
+  }, 30000);
   window[callbackName] = function(json) {
     clearTimeout(timeout);
     delete window[callbackName];
@@ -321,8 +322,29 @@ function carregarDados(url) {
   script.onerror = () => {
     clearTimeout(timeout);
     delete window[callbackName];
-    renderDashboard(gerarDadosDemo(), true);
+    tentarNovamente(url);
   };
+  document.body.appendChild(script);
+}
+
+function tentarNovamente(url) {
+  document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Reconectando...</div>';
+  const callbackName = 'dinaCb2_' + Date.now();
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    delete window[callbackName];
+    if (document.body.contains(script)) document.body.removeChild(script);
+    renderDashboard(gerarDadosDemo(), true);
+  }, 20000);
+  window[callbackName] = function(json) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    if (document.body.contains(script)) document.body.removeChild(script);
+    if (json && json.dados && json.dados.length > 0) renderDashboard(json.dados, false);
+    else renderDashboard(gerarDadosDemo(), true);
+  };
+  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
+  script.onerror = () => { clearTimeout(timeout); delete window[callbackName]; renderDashboard(gerarDadosDemo(), true); };
   document.body.appendChild(script);
 }
 
