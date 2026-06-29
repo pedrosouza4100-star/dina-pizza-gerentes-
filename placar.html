@@ -205,11 +205,12 @@
       <div class="card-label">👥 Motoboys em Serviço</div>
       <div class="card-meta" id="metaMotoboysDisplay"></div>
       <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
+      <!-- input file fora de qualquer div que some -->
+      <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
       <div id="motoFotoArea" style="margin-top:8px">
         <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
         <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
         <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
-        <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
       </div>
       <div id="motoSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
       <button class="camera-btn" id="btnSalvarMoto" onclick="salvarMotoboys()" style="margin-top:8px;display:none">💾 Salvar Motoboys</button>
@@ -227,6 +228,10 @@
       <div class="card-label">🕐 Tempo de Entrega</div>
       <div class="card-meta" id="tempoRegistroInfo">3 registros por noite — sempre disponível</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
+      <!-- inputs file sempre fora de qualquer div que some -->
+      <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
+      <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
+
       <div style="margin-top:8px" id="tempoInputArea">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
           <div>
@@ -244,12 +249,10 @@
             <div style="display:flex;flex-direction:column;gap:4px">
               <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.78rem;padding:10px 8px">📷 iFood</button>
               <img class="foto-small-preview" id="fotoTempoAppPreview" alt="Foto iFood">
-              <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
             </div>
             <div style="display:flex;flex-direction:column;gap:4px">
               <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.78rem;padding:10px 8px">📷 App Próprio</button>
               <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto App">
-              <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
             </div>
           </div>
           <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:4px;background:var(--red)">💾 Salvar registro de tempo</button>
