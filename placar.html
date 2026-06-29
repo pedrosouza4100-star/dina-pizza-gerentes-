@@ -811,11 +811,13 @@ function iniciarApp(u){
   verificarCumprimento();
 }
 
-window.addEventListener('load',async()=>{
-  await carregarMetas();
+window.addEventListener('load',()=>{
+  // Mostra tela imediatamente, carrega metas em background
   const u=localStorage.getItem('dina_unidade_logada');
   if(u&&localStorage.getItem('dina_senha_'+u))iniciarApp(u);
   else mostrar('telaEscolha');
+  // Carrega metas sem bloquear
+  carregarMetas();
 });
 
 function updateDate(){
