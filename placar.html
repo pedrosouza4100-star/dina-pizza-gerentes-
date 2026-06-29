@@ -229,25 +229,27 @@
       <span class="tag" id="tempoTag"></span>
     </div>
 
+    <!-- Motoboys (só lojas com entrega própria) -->
+    <div class="card card-full" id="cardMotoboys" style="display:none">
+      <div class="card-label">👥 Motoboys em Serviço</div>
+      <div class="card-meta" id="metaMotoboysDisplay"></div>
+      <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
+      <div id="motoFotoArea" style="margin-top:8px;display:none">
+        <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
+        <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
+        <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
+        <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
+      </div>
+      <div id="motoSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
+      <button class="camera-btn" id="btnSalvarMoto" onclick="salvarMotoboys()" style="margin-top:8px;display:none">💾 Salvar Motoboys</button>
+      <span class="tag" id="motoboysTag"></span>
+    </div>
+
     <!-- Start Dina -->
     <div class="card card-full" id="cardStartDina">
       <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
-      <div class="card-meta">Meta: 1 registro por turno — foto obrigatória na hora</div>
+      <div class="card-meta">Foto obrigatória na hora + assuntos abordados</div>
       <div class="start-dina-wrap">
-      <!-- Motoboys (só lojas com entrega própria) -->
-      <div class="card card-full" id="cardMotoboys" style="display:none">
-        <div class="card-label">Motoboys em Serviço</div>
-        <div class="card-meta" id="metaMotoboysDisplay"></div>
-        <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
-        <div id="motoFotoArea" style="margin-top:8px;display:none">
-          <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
-          <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
-          <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
-          <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
-        </div>
-        <span class="tag" id="motoboysTag"></span>
-      </div>
-    </div>
 
     <!-- Tempo de Entrega (só lojas com entrega própria) -->
     <div class="card card-full" id="cardTempo" style="display:none">
@@ -313,6 +315,8 @@
           <div class="card-label" style="margin-bottom:6px">Assuntos abordados na reunião</div>
           <textarea id="pautaStartDina" placeholder="Descreva os assuntos discutidos no Start Dina..." style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:72px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="salvarPautaLocal()"></textarea>
         </div>
+        <div id="startSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
+        <button class="camera-btn" id="btnSalvarStart" onclick="salvarStartDina()" style="margin-top:8px">💾 Salvar Start Dina</button>
         <span class="tag" id="startDinaTag"></span>
       </div>
     </div>
@@ -349,6 +353,8 @@ let METAS_FAT={},METAS_AVAL={},PREMIO={semanaCompleto:200,semanaParcial:100,fdsC
 let fotoMotoBase64=null;
 let fotoTempoAppBase64=null;
 let fotoTempoIfoodBase64=null;
+let motoboySalvo=false;
+let startDinaSalvo=false;
 
 const FAT_DEF={
   "Isaac Manhã":{semana:3900,fds:6000},
@@ -500,6 +506,9 @@ function processarFotoMoto(input){
     // Garante que a área fique visível
     const area=document.getElementById('motoFotoArea');
     if(area) area.style.display='block';
+    // Mostra botão salvar
+    const btnSalvar=document.getElementById('btnSalvarMoto');
+    if(btnSalvar) btnSalvar.style.display='block';
     avaliar();
     verificarBotaoRegistrar();
   };
@@ -847,6 +856,38 @@ function atualizarMetas(){
   else cardTempo.style.display='none';
 }
 
+// ── Salvar Start Dina ──
+function salvarStartDina(){
+  if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
+  startDinaSalvo=true;
+  localStorage.setItem(chaveHoje('startdina_salvo'),'1');
+  const info=document.getElementById('startSalvoInfo');
+  const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  if(info){info.style.display='block';info.textContent=`✅ Start Dina salvo às ${hora}`;}
+  const btn=document.getElementById('btnSalvarStart');
+  if(btn){btn.textContent='✓ Start salvo — toque para regravar';btn.style.background='var(--green)';}
+  const tag=document.getElementById('startDinaTag');
+  if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  verificarBotaoRegistrar();
+}
+
+// ── Salvar Motoboys ──
+function salvarMotoboys(){
+  if(!filled('motoboys')){alert('Informe a quantidade de motoboys.');return;}
+  if(!fotoMotoBase64){alert('📋 Fotografe a lista de motoboys antes de salvar!');return;}
+  motoboySalvo=true;
+  localStorage.setItem(chaveHoje('motoboys_qtd'), document.getElementById('motoboys').value);
+  localStorage.setItem(chaveHoje('motoboys_salvo'),'1');
+  const info=document.getElementById('motoSalvoInfo');
+  const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  if(info){info.style.display='block';info.textContent=`✅ Motoboys salvos às ${hora} — ${document.getElementById('motoboys').value} em serviço`;}
+  const btn=document.getElementById('btnSalvarMoto');
+  if(btn){btn.textContent='✓ Salvo — toque para regravar';btn.style.background='var(--green)';}
+  const tag=document.getElementById('motoboysTag');
+  if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  verificarBotaoRegistrar();
+}
+
 // ── Camera / Start Dina ──
 function abrirCamera(){document.getElementById('cameraInput').click();}
 
@@ -881,6 +922,28 @@ function salvarPautaLocal(){
 function carregarStartDinaLocal(){
   const foto=localStorage.getItem(chaveHoje('startdina_foto'));
   if(foto){fotoBase64=foto;mostrarFotoStartDina();}
+  // Restaura estado salvo do Start
+  if(localStorage.getItem(chaveHoje('startdina_salvo'))==='1'){
+    startDinaSalvo=true;
+    const info=document.getElementById('startSalvoInfo');
+    if(info){info.style.display='block';info.textContent='✅ Start Dina salvo anteriormente';}
+    const btn=document.getElementById('btnSalvarStart');
+    if(btn){btn.textContent='✓ Start salvo — toque para regravar';btn.style.background='var(--green)';}
+    const tag=document.getElementById('startDinaTag');
+    if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  }
+  // Restaura motoboys salvos
+  if(localStorage.getItem(chaveHoje('motoboys_salvo'))==='1'){
+    motoboySalvo=true;
+    const qtd=localStorage.getItem(chaveHoje('motoboys_qtd'))||'';
+    if(qtd) document.getElementById('motoboys').value=qtd;
+    const info=document.getElementById('motoSalvoInfo');
+    if(info){info.style.display='block';info.textContent=`✅ Motoboys salvos — ${qtd} em serviço`;}
+    const btn=document.getElementById('btnSalvarMoto');
+    if(btn){btn.style.display='block';btn.textContent='✓ Salvo — toque para regravar';btn.style.background='var(--green)';}
+    const tag=document.getElementById('motoboysTag');
+    if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  }
   const pauta=localStorage.getItem(chaveHoje('startdina_pauta'));
   if(pauta) document.getElementById('pautaStartDina').value=pauta;
   verificarBotaoRegistrar();
@@ -934,39 +997,33 @@ function avaliar(){
 function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
   if(!btn||!unidadeAtual) return;
-  const pendenciasObrig=[];
-  const pendenciasAviso=[];
 
-  if(!filled('fat')) pendenciasObrig.push('Faturamento');
-  if(!filled('google')) pendenciasObrig.push('Google');
-  if(!filled('ifood')) pendenciasObrig.push('iFood');
-  if(!filled('chamados')) pendenciasObrig.push('Chamados');
-  if(!filled('cancel')) pendenciasObrig.push('Cancelamentos');
-  if(temLoja(unidadeAtual)&&!filled('motoboys')) pendenciasObrig.push('Motoboys');
-  if(temLoja(unidadeAtual)&&!fotoMotoBase64) pendenciasObrig.push('Foto lista motoboys');
+  // Obrigatórios apenas os 5 indicadores finais
+  const faltando=[];
+  if(!filled('fat')) faltando.push('Faturamento');
+  if(!filled('google')) faltando.push('Google');
+  if(!filled('ifood')) faltando.push('iFood');
+  if(!filled('chamados')) faltando.push('Chamados');
+  if(!filled('cancel')) faltando.push('Cancelamentos');
 
-  // Falta produto — bloqueia se não preenchido E janela passou
-  if(passouJanelaFalta()&&!faltaStatus){
-    pendenciasObrig.push(`Falta de Produto (janela encerrada — contate gestor)`);
-  } else if(dentroDaJanelaFalta()&&!faltaStatus){
-    pendenciasAviso.push(`Falta de Produto (janela aberta até ${getJanelaFalta().fimStr})`);
-  }
+  // Avisos (não bloqueiam)
+  const avisos=[];
+  if(!motoboySalvo&&temLoja(unidadeAtual)) avisos.push('Motoboys não salvo');
+  if(!startDinaSalvo) avisos.push('Start Dina não salvo');
+  if(temLoja(unidadeAtual)&&tempoRegistros.length<3) avisos.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
+  if(!faltaStatus) avisos.push('Falta de produto não preenchida');
 
-  if(!fotoBase64) pendenciasAviso.push('Start Dina');
-  if(temLoja(unidadeAtual)&&tempoRegistros.length<3) pendenciasAviso.push(`Tempo de entrega (${tempoRegistros.length}/3)`);
-
-  if(pendenciasObrig.length>0){
+  if(faltando.length>0){
     btn.disabled=true;btn.style.opacity='0.45';btn.style.cursor='not-allowed';
-    btn.textContent=`Pendente: ${pendenciasObrig.length} ${pendenciasObrig.length===1?'item':'itens'}`;
-    btn.title=pendenciasObrig.join(', ');btn.onclick=null;
+    btn.textContent='Preencha: '+faltando.join(', ');
+    btn.onclick=null;
   } else {
     btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
-    btn.textContent='Registrar Placar';
-    if(pendenciasAviso.length>0){
-      btn.onclick=()=>confirmarEnvioComAviso(pendenciasAviso);
-      btn.title='Clique para enviar com aviso';
+    btn.textContent='🔴 Registrar Placar';
+    if(avisos.length>0){
+      btn.onclick=()=>confirmarEnvioComAviso(avisos);
     } else {
-      btn.onclick=registrar;btn.title='';
+      btn.onclick=registrar;
     }
   }
 }
@@ -1130,8 +1187,11 @@ async function registrar(){
     localStorage.removeItem(chaveHoje('startdina_foto'));
     localStorage.removeItem(chaveHoje('startdina_hora'));
     localStorage.removeItem(chaveHoje('startdina_pauta'));
+    localStorage.removeItem(chaveHoje('startdina_salvo'));
     localStorage.removeItem(chaveHoje('tempo'));
     localStorage.removeItem(chaveHoje('falta'));
+    localStorage.removeItem(chaveHoje('motoboys_qtd'));
+    localStorage.removeItem(chaveHoje('motoboys_salvo'));
     showMsg('savedMsg');
 
     // Mostra mensagem imediata baseada no pctMeta local
@@ -1165,7 +1225,7 @@ function showMsg(id){const el=document.getElementById(id);el.style.display='bloc
 function limpar(){
   document.querySelectorAll('input.val').forEach(el=>el.value='');
   document.getElementById('obs').value='';
-  fotoBase64=null;fotoMotoBase64=null;fotoTempoAppBase64=null;fotoTempoIfoodBase64=null;tempoRegistros=[];faltaStatus=null;
+  fotoBase64=null;fotoMotoBase64=null;fotoTempoAppBase64=null;fotoTempoIfoodBase64=null;tempoRegistros=[];faltaStatus=null;motoboySalvo=false;startDinaSalvo=false;
   document.getElementById('fotoPreview').style.display='none';
   document.getElementById('fotoPreview').src='';
   document.getElementById('cameraBtnStart').className='camera-btn';
