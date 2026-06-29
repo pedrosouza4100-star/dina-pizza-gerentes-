@@ -770,6 +770,15 @@ function iniciarApp(u){
   document.getElementById('appWrap').style.display='flex';
   document.getElementById('unitBadge').textContent=u;
   atualizarMetas();updateDate();limpar();
+  // Garante visibilidade dos cards de entrega
+  const cardPedidos=document.getElementById('cardPedidosIfood');
+  const cardMb=document.getElementById('cardMotoboys');
+  const cardTempo=document.getElementById('cardTempo');
+  if(temLoja(u)){
+    if(cardPedidos) cardPedidos.style.display='flex';
+    if(cardMb) cardMb.style.display='flex';
+    if(cardTempo) cardTempo.style.display='flex';
+  }
   carregarStartDinaLocal();
   if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}
   inicializarFaltaProduto();
