@@ -304,12 +304,22 @@ window.addEventListener('load', () => {
 async function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
   try {
-    const res = await fetch(`${url}?action=getDashboard&mes=${mesAtual}&ano=${anoAtual}`, {signal: AbortSignal.timeout(15000)});
-    const json = await res.json();
-    if (json && json.dados) renderDashboard(json.dados, false);
-    else renderDashboard(gerarDadosDemo(), true);
+    const res = await fetch(url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual, {signal: AbortSignal.timeout(15000)});
+    const texto = await res.text();
+    let json;
+    try { json = JSON.parse(texto); } catch(e) {
+      console.error('Resposta inválida:', texto.substring(0,200));
+      renderDashboard(gerarDadosDemo(), true);
+      return;
+    }
+    if (json && json.dados && json.dados.length > 0) {
+      renderDashboard(json.dados, false);
+    } else {
+      console.error('Dados vazios ou inválidos:', json);
+      renderDashboard(gerarDadosDemo(), true);
+    }
   } catch(e) {
-    console.error('Erro ao carregar dados:', e);
+    console.error('Erro fetch:', e.message);
     renderDashboard(gerarDadosDemo(), true);
   }
 }
