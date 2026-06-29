@@ -990,6 +990,25 @@ function avaliar(){
   if(prob===0){r.textContent='✓ Todos os indicadores no alvo';r.style.color='var(--green)';}
   else if(prob===1){r.textContent='⚠ 1 indicador precisa de atenção';r.style.color='var(--yellow)';}
   else{r.textContent=`⚠ ${prob} indicadores fora da meta`;r.style.color='var(--danger)';}
+
+  // Mostra mensagem de desempenho quando todos os 5 indicadores estão preenchidos
+  if(filled('fat')&&filled('google')&&filled('ifood')&&filled('chamados')&&filled('cancel')){
+    const metas=[
+      val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
+      ival('google')>=(ma.google||0)&&(ma.google||0)>0,
+      ival('ifood')>=(ma.ifood||0)&&(ma.ifood||0)>0,
+      ival('chamados')===0,
+      ival('cancel')===0
+    ];
+    const batidas=metas.filter(Boolean).length;
+    const pct=batidas/metas.length;
+    mostrarMsgEscaladaImediata(pct, batidas, metas.length);
+  } else {
+    // Esconde mensagem enquanto não preencheu tudo
+    const el=document.getElementById('msgEscalada');
+    if(el) el.style.display='none';
+  }
+
   verificarPremiacao();
   verificarBotaoRegistrar();
 }
