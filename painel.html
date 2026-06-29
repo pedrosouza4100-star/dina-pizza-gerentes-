@@ -304,7 +304,12 @@ window.addEventListener('load', () => {
 async function carregarDados(url) {
   document.getElementById('pageContent').innerHTML = '<div class="loading"><div class="spinner"></div>Carregando dados da rede...</div>';
   try {
-    const res = await fetch(url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual, {signal: AbortSignal.timeout(15000)});
+    const fullUrl = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual;
+    const res = await fetch(fullUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000)
+    });
     const texto = await res.text();
     let json;
     try { json = JSON.parse(texto); } catch(e) {
@@ -315,13 +320,39 @@ async function carregarDados(url) {
     if (json && json.dados && json.dados.length > 0) {
       renderDashboard(json.dados, false);
     } else {
-      console.error('Dados vazios ou inválidos:', json);
+      console.error('Dados vazios:', json);
       renderDashboard(gerarDadosDemo(), true);
     }
   } catch(e) {
     console.error('Erro fetch:', e.message);
-    renderDashboard(gerarDadosDemo(), true);
+    // Tenta via JSONP como fallback
+    carregarDadosJsonp(url);
   }
+}
+
+// Fallback JSONP
+function carregarDadosJsonp(url) {
+  const callbackName = 'dinaCb_' + Date.now();
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    delete window[callbackName];
+    if (document.body.contains(script)) document.body.removeChild(script);
+    renderDashboard(gerarDadosDemo(), true);
+  }, 15000);
+  window[callbackName] = function(json) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    if (document.body.contains(script)) document.body.removeChild(script);
+    if (json && json.dados && json.dados.length > 0) renderDashboard(json.dados, false);
+    else renderDashboard(gerarDadosDemo(), true);
+  };
+  script.src = url + '?action=getDashboard&mes=' + mesAtual + '&ano=' + anoAtual + '&callback=' + callbackName;
+  script.onerror = () => {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    renderDashboard(gerarDadosDemo(), true);
+  };
+  document.body.appendChild(script);
 }
 
 // ── Dados demo ──
@@ -615,12 +646,28 @@ async function carregarPresenca(){
   if(!panel||!url) return;
   panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Carregando...</div>';
   try {
-    const res = await fetch(`${url}?action=getPresenca`, {signal: AbortSignal.timeout(8000)});
-    const json = await res.json();
+    const res = await fetch(url + '?action=getPresenca', {method:'GET', redirect:'follow', signal: AbortSignal.timeout(10000)});
+    const texto = await res.text();
+    const json = JSON.parse(texto);
     if(json && json.presenca) renderPresenca(json.presenca, json.data);
-    else panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Sem dados de presença.</div>';
+    else panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Sem dados.</div>';
   } catch(e) {
-    panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+    // Fallback JSONP
+    const callbackName = 'presencaCb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      if(document.body.contains(script)) document.body.removeChild(script);
+      panel.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;text-align:center">Não foi possível carregar.</div>';
+    }, 10000);
+    window[callbackName] = function(json) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if(document.body.contains(script)) document.body.removeChild(script);
+      if(json && json.presenca) renderPresenca(json.presenca, json.data);
+    };
+    script.src = url + '?action=getPresenca&callback=' + callbackName;
+    document.body.appendChild(script);
   }
 }
 
