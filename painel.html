@@ -502,6 +502,7 @@ function renderDashboard(dados, isDemo = false) {
               <th style="min-width:180px">% da Meta</th>
               <th>Google</th>
               <th>iFood</th>
+              <th>Ped. iFood</th>
               <th>Falta Prod.</th>
               <th>Dias</th>
             </tr>
@@ -511,9 +512,9 @@ function renderDashboard(dados, isDemo = false) {
               const pct = d.faturamento / d.metaMensal;
               const fillClass = pct >= 1 ? 'fill-ok' : pct >= 0.8 ? 'fill-warn' : 'fill-bad';
               const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-              const faltaTotal = d.faltaProdutoSim || 0;
               const faltaPreench = d.faltaProdutoPreenchidos || 0;
               const faltaFalta = d.dias - faltaPreench;
+              const pedidos = d.pedidosConfirmadosIfood || 0;
               return `<tr>
                 <td><span class="rank-num ${rankClass}">${i+1}</span></td>
                 <td><span class="unit-name">${d.unidade}</span></td>
@@ -525,6 +526,7 @@ function renderDashboard(dados, isDemo = false) {
                 </td>
                 <td>${d.google}</td>
                 <td>${d.ifood}</td>
+                <td style="text-align:center;color:${pedidos>0?'var(--danger)':'var(--green)'}">${pedidos}</td>
                 <td style="text-align:center">
                   <span style="color:${faltaFalta>0?'var(--danger)':'var(--green)'}">
                     ${faltaPreench}✓${faltaFalta>0?` / <strong>${faltaFalta}✗</strong>`:''}
