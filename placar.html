@@ -278,7 +278,8 @@
           <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
           <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
         </div>
-        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none" oninput="salvarFaltaLocal()"></textarea>
+        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
+        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
       </div>
       <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
       <span class="tag" id="faltaTag"></span>
@@ -604,27 +605,29 @@ function atualizarCountdownFalta(){
 function registrarFalta(opcao){
   if(!dentroDaJanelaFalta()){alert(`Janela encerrada! A falta de produto deve ser informada entre ${getJanelaFalta().label}.`);return;}
   faltaStatus=opcao;
-  const desc=opcao==='sim'?document.getElementById('faltaProdutoDesc').value:'';
-  const d={status:opcao,descricao:desc,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
   if(opcao==='sim'){
-    // Mostra campo de descrição
+    // Mostra campo de descrição e botão confirmar — não fecha ainda
     document.getElementById('faltaProdutoDesc').style.display='block';
+    document.getElementById('faltaBtnConfirmar').style.display='block';
     document.getElementById('faltaBtnSim').className='falta-btn sim';
     document.getElementById('faltaBtnNao').className='falta-btn';
-    return; // Aguarda preenchimento
+    document.getElementById('faltaProdutoDesc').focus();
+    return; // Aguarda o gerente digitar e clicar em confirmar
   }
-  // Nao
+  // Não — salva imediatamente
+  const d={status:'nao',descricao:'',hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
+  salvarFalta(d);
+}
+
+function confirmarFaltaSim(){
+  const desc=document.getElementById('faltaProdutoDesc').value.trim();
+  if(!desc){alert('Por favor descreva qual produto está faltando.');return;}
+  const d={status:'sim',descricao:desc,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
   salvarFalta(d);
 }
 
 function salvarFaltaLocal(){
-  if(faltaStatus==='sim'){
-    const desc=document.getElementById('faltaProdutoDesc').value.trim();
-    if(desc.length>0){
-      const d={status:'sim',descricao:desc,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
-      salvarFalta(d);
-    }
-  }
+  // Mantido por compatibilidade mas não faz mais nada automático
 }
 
 function salvarFalta(d){
@@ -1237,7 +1240,7 @@ function limpar(){
   const fw=document.getElementById('faltaWrap');if(fw)fw.style.display='flex';
   const fr=document.getElementById('faltaRegistrada');if(fr)fr.style.display='none';
   const fd=document.getElementById('faltaProdutoDesc');if(fd){fd.style.display='none';fd.value='';}
-  const fb1=document.getElementById('faltaBtnNao');if(fb1)fb1.className='falta-btn';
+  const fb3=document.getElementById('faltaBtnConfirmar');if(fb3)fb3.style.display='none';  const fb1=document.getElementById('faltaBtnNao');if(fb1)fb1.className='falta-btn';
   const fb2=document.getElementById('faltaBtnSim');if(fb2)fb2.className='falta-btn';
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood'].forEach(id=>{
