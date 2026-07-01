@@ -1079,6 +1079,7 @@ function verificarBotaoRegistrar(){
       faltando.push('💳 Motivo das Vendas Canceladas no Caixa');
     }
   }
+  if(!filled('vendasCanceladas')) faltando.push('💳 Vendas Canceladas no Caixa');
   if(!startDinaSalvo) faltando.push('⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(temLoja(unidadeAtual)){
