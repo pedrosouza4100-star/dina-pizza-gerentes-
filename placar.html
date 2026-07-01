@@ -201,6 +201,18 @@
         <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="cancelTag"></span>
       </div>
+      <!-- Vendas Canceladas no Caixa -->
+      <div class="card card-full" id="cardVendasCanceladas">
+        <div class="card-label">💳 Vendas Canceladas no Caixa</div>
+        <div class="card-meta muted">Meta: zero — se houver, descreva o motivo</div>
+        <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">vend.</span></div>
+        <div id="vendasCanceladasMotivoArea" style="display:none;margin-top:8px">
+          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">⚠️ Descreva o motivo do(s) cancelamento(s):</div>
+          <textarea id="vendasCanceladasMotivo" placeholder="Ex: Cliente desistiu após aguardar, erro no pedido, problema no pagamento..." style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:80px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="validarMotivoVendas()"></textarea>
+          <div id="vendasCanceladasMotivoErro" style="display:none;font-size:0.75rem;color:var(--danger);margin-top:4px"></div>
+        </div>
+        <span class="tag" id="vendasCanceladasTag"></span>
+      </div>
       <!-- Pedidos Confirmados iFood (só lojas com entrega própria) -->
       <div class="card" id="cardPedidosIfood" style="display:none">
         <div class="card-label">Pedidos Confirmados iFood</div>
@@ -993,6 +1005,40 @@ function avaliar(){
   verificarBotaoRegistrar();
 }
 
+function onVendasCanceladasInput(){
+  const v = ival('vendasCanceladas');
+  const area = document.getElementById('vendasCanceladasMotivoArea');
+  const tag = document.getElementById('vendasCanceladasTag');
+  if(v > 0){
+    area.style.display = 'block';
+    tag.className = 'tag bad'; tag.textContent = 'Requer motivo';
+  } else {
+    area.style.display = 'none';
+    tag.className = 'tag ok'; tag.textContent = 'Zerado';
+  }
+  avaliar();
+  verificarBotaoRegistrar();
+}
+
+function validarMotivoVendas(){
+  const motivo = document.getElementById('vendasCanceladasMotivo').value.trim();
+  const erro = document.getElementById('vendasCanceladasMotivoErro');
+  // Valida: mínimo 10 caracteres, sem repetição de caracteres (ex: "aaaa", "1111")
+  const apenasRepetido = motivo.length > 0 && /^(.)\1+$/.test(motivo);
+  const muitoCurto = motivo.length > 0 && motivo.length < 10;
+  const soCars = motivo.length > 0 && /^[^a-zA-ZÀ-ú0-9\s]+$/.test(motivo);
+  if(apenasRepetido || soCars){
+    erro.style.display = 'block';
+    erro.textContent = '⚠️ Descrição inválida. Escreva o motivo com palavras completas.';
+  } else if(muitoCurto){
+    erro.style.display = 'block';
+    erro.textContent = '⚠️ Descreva melhor o motivo (mínimo 10 caracteres).';
+  } else {
+    erro.style.display = 'none';
+  }
+  verificarBotaoRegistrar();
+}
+
 function validarFaturamento(){
   const fat = val('fat');
   const meta = metaFat(unidadeAtual);
@@ -1024,6 +1070,15 @@ function verificarBotaoRegistrar(){
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Confirmados iFood');
+  // Vendas canceladas — se preencheu valor > 0, motivo é obrigatório e válido
+  if(filled('vendasCanceladas') && ival('vendasCanceladas') > 0){
+    const motivo = document.getElementById('vendasCanceladasMotivo').value.trim();
+    const apenasRepetido = motivo.length > 0 && /^(.)\1+$/.test(motivo);
+    const soCars = motivo.length > 0 && /^[^a-zA-ZÀ-ú0-9\s]+$/.test(motivo);
+    if(!motivo || motivo.length < 10 || apenasRepetido || soCars){
+      faltando.push('💳 Motivo das Vendas Canceladas no Caixa');
+    }
+  }
   if(!startDinaSalvo) faltando.push('⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(temLoja(unidadeAtual)){
@@ -1181,6 +1236,8 @@ async function registrar(){
     faturamento:val('fat'),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
+    vendasCanceladasCaixa:ival('vendasCanceladas'),
+    vendasCanceladasMotivo:document.getElementById('vendasCanceladasMotivo').value.trim(),
     pedidosConfirmadosIfood:temLoja(unidadeAtual)?ival('pedidosIfood'):null,
     motoboys:ival('motoboys'),metaMotoboys:metaMotoboysHoje(unidadeAtual)||0,
     fotoMotoboys:fotoMotoEnvio,
@@ -1264,14 +1321,16 @@ function limpar(){
   const fb3=document.getElementById('faltaBtnConfirmar');if(fb3)fb3.style.display='none';  const fb1=document.getElementById('faltaBtnNao');if(fb1)fb1.className='falta-btn';
   const fb2=document.getElementById('faltaBtnSim');if(fb2)fb2.className='falta-btn';
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
-  ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood'].forEach(id=>{
+  ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood','cardVendasCanceladas'].forEach(id=>{
     const el=document.getElementById(id);
     el.className='card'+(id==='cardFat'?' card-full':'');
   });
   const cardMb=document.getElementById('cardMotoboys');
   if(cardMb.style.display!=='none')cardMb.className='card card-full';
   if(temLoja(unidadeAtual))renderTempoRegistros();
-  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','pedidosIfoodTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
+  ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','pedidosIfoodTag','vendasCanceladasTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
+  const vcm=document.getElementById('vendasCanceladasMotivo');if(vcm)vcm.value='';
+  const vcma=document.getElementById('vendasCanceladasMotivoArea');if(vcma)vcma.style.display='none';
   const r=document.getElementById('resumo');r.textContent='Preencha os dados acima';r.style.color='';
   // Re-inicializa falta produto
   inicializarFaltaProduto();
