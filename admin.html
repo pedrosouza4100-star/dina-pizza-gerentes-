@@ -219,10 +219,7 @@
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px">
           <div style="font-size:0.8rem;color:var(--muted);line-height:1.6">Use para desbloquear um gerente bloqueado por não preencher o Start Dina ou os tempos de entrega.</div>
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-            <select id="lojaDesbloquear" class="meta-input" style="flex:1;min-width:200px;padding:10px">
-              <option value="">— Selecione a loja —</option>
-              ${UNIDADES.map(u => `<option value="${u}">${u}</option>`).join('')}
-            </select>
+            <select id="lojaDesbloquear" class="meta-input" style="flex:1;min-width:200px;padding:10px"><option value="">— Selecione a loja —</option></select>
             <button class="save-metas-btn" onclick="desbloquearGerente()" style="background:var(--green);white-space:nowrap">🔓 Desbloquear</button>
           </div>
           <div id="desbloqueioMsg" style="font-size:0.78rem;min-height:18px"></div>
@@ -232,10 +229,7 @@
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px">
           <div style="font-size:0.8rem;color:var(--muted);line-height:1.6">Use quando o gerente perdeu a janela de Falta de Produto (17h-19h) e precisa preencher fora do horário.</div>
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-            <select id="lojaDesbloqueioFalta" class="meta-input" style="flex:1;min-width:200px;padding:10px">
-              <option value="">— Selecione a loja —</option>
-              ${UNIDADES.map(u => `<option value="${u}">${u}</option>`).join('')}
-            </select>
+            <select id="lojaDesbloqueioFalta" class="meta-input" style="flex:1;min-width:200px;padding:10px"><option value="">— Selecione a loja —</option></select>
             <button class="save-metas-btn" onclick="desbloquearFalta()" style="background:var(--yellow);color:#000;white-space:nowrap">🔓 Liberar Janela</button>
           </div>
           <div id="desbloqueioFaltaMsg" style="font-size:0.78rem;min-height:18px"></div>
@@ -392,6 +386,12 @@
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('adminWrap').style.display='flex';
     await carregarMetas();
+    // Popular selects de desbloqueio com as lojas
+    const opts = UNIDADES.map(u=>`<option value="${u}">${u}</option>`).join('');
+    const selD = document.getElementById('lojaDesbloquear');
+    const selF = document.getElementById('lojaDesbloqueioFalta');
+    if(selD) selD.innerHTML = '<option value="">— Selecione a loja —</option>' + opts;
+    if(selF) selF.innerHTML = '<option value="">— Selecione a loja —</option>' + opts;
     renderTabela();renderFat();renderAval();renderMotoboys();renderTempo();renderPremio();
     carregarPedidosDesbloqueio();
   }
@@ -543,7 +543,7 @@
     fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'desbloquearFalta',unidade:loja})})
       .then(()=>{
         msg.style.color='var(--green)';
-        msg.textContent=`✓ Janela de Falta de Produto liberada para ${loja}.`;
+        msg.textContent='✓ Janela de Falta de Produto liberada para '+loja+'.';
         registrarLog(`Desbloqueio Falta de Produto: ${loja}`,'ok');
       })
       .catch(()=>{msg.style.color='var(--danger)';msg.textContent='Erro ao liberar janela.';});
