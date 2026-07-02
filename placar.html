@@ -585,9 +585,21 @@ function inicializarFaltaProduto(){
   const wrap=document.getElementById('faltaWrap');
   const j=getJanelaFalta();
   if(passouJanelaFalta()){
-    info.textContent=`⏰ Janela encerrada (${j.label}). Contate o gestor para desbloquear.`;
+    info.textContent=`⏰ Janela encerrada (${j.label}).`;
     info.style.color='var(--danger)';
     wrap.style.opacity='0.4';wrap.style.pointerEvents='none';
+    // Mostra botão para solicitar desbloqueio
+    let btnDesbloqueio=document.getElementById('btnSolicitarDesbloqueioFalta');
+    if(!btnDesbloqueio){
+      btnDesbloqueio=document.createElement('button');
+      btnDesbloqueio.id='btnSolicitarDesbloqueioFalta';
+      btnDesbloqueio.className='camera-btn';
+      btnDesbloqueio.style.marginTop='8px';
+      btnDesbloqueio.style.background='#7a4000';
+      btnDesbloqueio.textContent='📩 Solicitar desbloqueio ao gestor';
+      btnDesbloqueio.onclick=solicitarDesbloqueioFalta;
+      document.getElementById('cardFaltaProduto').appendChild(btnDesbloqueio);
+    }
   } else if(!dentroDaJanelaFalta()){
     info.textContent=`⏳ Disponível das ${j.label}`;
     info.style.color='var(--muted)';
@@ -631,6 +643,26 @@ function registrarFalta(opcao){
   // Não — salva imediatamente
   const d={status:'nao',descricao:'',hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
   salvarFalta(d);
+}
+
+function solicitarDesbloqueioFalta(){
+  const btn=document.getElementById('btnSolicitarDesbloqueioFalta');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Enviando solicitação...';}
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'desbloquearFalta',unidade:unidadeAtual,solicitacao:true})})
+    .then(()=>{
+      if(btn){btn.textContent='✅ Solicitação enviada! Aguarde o gestor liberar.';btn.style.background='#155724';}
+      // Libera o campo para preenchimento após solicitação
+      const wrap=document.getElementById('faltaWrap');
+      const info=document.getElementById('faltaHorarioInfo');
+      const j=getJanelaFalta();
+      wrap.style.opacity='1';wrap.style.pointerEvents='auto';
+      info.textContent='✅ Desbloqueado pelo gestor — preencha agora';
+      info.style.color='var(--green)';
+    })
+    .catch(()=>{
+      if(btn){btn.disabled=false;btn.textContent='📩 Solicitar desbloqueio ao gestor';}
+      alert('Erro ao enviar solicitação. Tente novamente.');
+    });
 }
 
 function confirmarFaltaSim(){
