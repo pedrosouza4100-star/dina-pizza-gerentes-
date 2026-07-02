@@ -507,6 +507,26 @@ function processarFotoMoto(input){
 }
 
 // ── SALVAR TEMPO ──
+// ── Envia dado em tempo real para o Call Center ──
+function enviarTempoReal(tipo, dados){
+  const payload = {
+    action: 'salvarTempoReal',
+    unidade: unidadeAtual,
+    tipo: tipo,
+    dados: dados,
+    hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+  };
+  const cb='trCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
+  window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.onerror=()=>{clearTimeout(t);delete window[cb];};
+  // Envia via GET com JSONP
+  const params=encodeURIComponent(JSON.stringify(payload));
+  s.src=SCRIPT_URL+'?action=salvarTempoReal&unidade='+encodeURIComponent(unidadeAtual)+'&tipo='+tipo+'&dados='+params+'&t='+Date.now()+'&callback='+cb;
+  document.head.appendChild(s);
+}
+
 function salvarTempoEntrega(){
   const idx=tempoRegistros.length;
   if(idx>=3){alert('Você já registrou os 3 tempos de entrega do dia.');return;}
@@ -518,6 +538,8 @@ function salvarTempoEntrega(){
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64});
   localStorage.setItem(chaveHoje('tempo'), JSON.stringify(tempoRegistros.map(r=>({app:r.app,ifood:r.ifood,horario:r.horario,idx:r.idx}))));
+  // Envia tempo em tempo real para o Call Center
+  enviarTempoReal('tempo', {app:app, ifood:ifoodT, horario:horario, registro:idx+1});
   document.getElementById('tempoApp').value='';
   document.getElementById('tempoIfood').value='';
   // Reset fotos
@@ -705,6 +727,8 @@ function salvarFalta(d){
   mostrarFaltaRegistrada(d);
   verificarBotaoRegistrar();
   avaliar();
+  // Envia em tempo real para o Call Center
+  enviarTempoReal('falta', {status:d.status, descricao:d.descricao||''});
 }
 
 function mostrarFaltaRegistrada(d){
@@ -902,6 +926,7 @@ function salvarStartDina(){
   if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
   startDinaSalvo=true;
   localStorage.setItem(chaveHoje('startdina_salvo'),'1');
+  enviarTempoReal('startdina', {salvo:true});
   const info=document.getElementById('startSalvoInfo');
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if(info){info.style.display='block';info.textContent=`✅ Start Dina salvo às ${hora}`;}
@@ -919,6 +944,7 @@ function salvarMotoboys(){
   motoboySalvo=true;
   localStorage.setItem(chaveHoje('motoboys_qtd'), document.getElementById('motoboys').value);
   localStorage.setItem(chaveHoje('motoboys_salvo'),'1');
+  enviarTempoReal('motoboys', {quantidade:parseInt(document.getElementById('motoboys').value)||0});
   const info=document.getElementById('motoSalvoInfo');
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if(info){info.style.display='block';info.textContent=`✅ Motoboys salvos às ${hora} — ${document.getElementById('motoboys').value} em serviço`;}
