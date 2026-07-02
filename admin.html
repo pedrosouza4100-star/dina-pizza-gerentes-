@@ -552,21 +552,25 @@
   async function carregarPedidosDesbloqueio(){
     const el=document.getElementById('pedidosDesbloqueio');
     if(!el) return;
-    try{
-      const r=await fetch(SCRIPT_URL+'?action=getPedidosDesbloqueio');
-      const d=await r.json();
-      if(!d||!d.pedidos||d.pedidos.length===0){
-        el.textContent='Nenhum pedido de desbloqueio pendente.';return;
-      }
+    el.textContent='Carregando...';
+    const cb='pdCb_'+Date.now();
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);el.textContent='Não foi possível carregar pedidos.';},10000);
+    window[cb]=(d)=>{
+      clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+      if(!d||!d.pedidos||d.pedidos.length===0){el.textContent='Nenhum pedido de desbloqueio pendente.';return;}
       el.innerHTML=d.pedidos.map(p=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
           <div>
-            <strong style="color:var(--text)">${p.unidade}</strong>
-            <span style="color:var(--muted);font-size:0.75rem;margin-left:8px">${p.tipo} — ${p.data}</span>
+            <strong style="color:var(--text);font-size:0.95rem">${p.unidade}</strong>
+            <span style="color:var(--muted);font-size:0.75rem;margin-left:8px">${p.tipo==='falta'?'📦 Falta de Produto':'🔒 Acesso'} — ${p.data}</span>
           </div>
           <button class="action-btn btn-nova" onclick="desbloquearDireto('${p.unidade}','${p.tipo}')">🔓 Liberar</button>
         </div>`).join('');
-    }catch(e){el.textContent='Não foi possível carregar pedidos.';}
+    };
+    s.onerror=()=>{clearTimeout(t);delete window[cb];el.textContent='Erro ao carregar.';};
+    s.src=SCRIPT_URL+'?action=getPedidosDesbloqueio&t='+Date.now()+'&callback='+cb;
+    document.head.appendChild(s);
   }
 
   function desbloquearDireto(loja, tipo){
