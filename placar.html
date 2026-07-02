@@ -568,6 +568,7 @@ function renderTempoRegistros(){
 
 // ── FALTA DE PRODUTO ──
 let faltaStatus=null; // null | 'sim' | 'nao'
+let faltaDesbloqueada=false; // true quando admin liberou fora do horário
 
 function inicializarFaltaProduto(){
   const salvo=localStorage.getItem(chaveHoje('falta'));
@@ -629,7 +630,7 @@ function atualizarCountdownFalta(){
 }
 
 function registrarFalta(opcao){
-  if(!dentroDaJanelaFalta()){alert(`Janela encerrada! A falta de produto deve ser informada entre ${getJanelaFalta().label}.`);return;}
+  if(!dentroDaJanelaFalta()&&!faltaDesbloqueada){alert(`Janela encerrada! A falta de produto deve ser informada entre ${getJanelaFalta().label}.`);return;}
   faltaStatus=opcao;
   if(opcao==='sim'){
     // Mostra campo de descrição e botão confirmar — não fecha ainda
@@ -648,21 +649,44 @@ function registrarFalta(opcao){
 function solicitarDesbloqueioFalta(){
   const btn=document.getElementById('btnSolicitarDesbloqueioFalta');
   if(btn){btn.disabled=true;btn.textContent='⏳ Enviando solicitação...';}
-  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'desbloquearFalta',unidade:unidadeAtual,solicitacao:true})})
-    .then(()=>{
-      if(btn){btn.textContent='✅ Solicitação enviada! Aguarde o gestor liberar.';btn.style.background='#155724';}
-      // Libera o campo para preenchimento após solicitação
+  // Envia pedido via JSONP
+  const cb='solCb_'+Date.now();
+  const s=document.createElement('script');
+  window[cb]=(d)=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.src=SCRIPT_URL+'?action=registrarPedidoDesbloqueio&unidade='+encodeURIComponent(unidadeAtual)+'&tipo=falta&t='+Date.now()+'&callback='+cb;
+  document.head.appendChild(s);
+  if(btn){
+    btn.textContent='✅ Solicitação enviada! Aguardando liberação do gestor...';
+    btn.style.background='#155724';
+  }
+  // Começa a verificar a cada 20 segundos se foi liberado
+  setTimeout(verificarDesbloqueioFalta, 5000);
+}
+
+function verificarDesbloqueioFalta(){
+  if(faltaDesbloqueada||faltaStatus) return; // já resolvido
+  const cb='vdbCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
+  window[cb]=(d)=>{
+    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+    if(d&&d.liberado){
+      // Admin liberou!
+      faltaDesbloqueada=true;
       const wrap=document.getElementById('faltaWrap');
       const info=document.getElementById('faltaHorarioInfo');
-      const j=getJanelaFalta();
-      wrap.style.opacity='1';wrap.style.pointerEvents='auto';
-      info.textContent='✅ Desbloqueado pelo gestor — preencha agora';
-      info.style.color='var(--green)';
-    })
-    .catch(()=>{
-      if(btn){btn.disabled=false;btn.textContent='📩 Solicitar desbloqueio ao gestor';}
-      alert('Erro ao enviar solicitação. Tente novamente.');
-    });
+      const btn=document.getElementById('btnSolicitarDesbloqueioFalta');
+      if(wrap){wrap.style.opacity='1';wrap.style.pointerEvents='auto';}
+      if(info){info.textContent='✅ Liberado pelo gestor — preencha agora!';info.style.color='var(--green)';}
+      if(btn){btn.style.display='none';}
+    } else {
+      // Ainda não liberado — verifica de novo em 20 segundos
+      setTimeout(verificarDesbloqueioFalta, 20000);
+    }
+  };
+  s.onerror=()=>{clearTimeout(t);delete window[cb];setTimeout(verificarDesbloqueioFalta,30000);};
+  s.src=SCRIPT_URL+'?action=verificarDesbloqueio&unidade='+encodeURIComponent(unidadeAtual)+'&tipo=falta&t='+Date.now()+'&callback='+cb;
+  document.head.appendChild(s);
 }
 
 function confirmarFaltaSim(){
