@@ -591,11 +591,17 @@
 
   function desbloquearDireto(loja, tipo){
     const action=tipo==='falta'?'desbloquearFalta':'desbloquear';
-    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action,unidade:loja})})
-      .then(()=>{
-        registrarLog(`Desbloqueio ${tipo}: ${loja}`,'ok');
-        carregarPedidosDesbloqueio();
-      });
+    const cb='dbCb_'+Date.now();
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
+    window[cb]=(d)=>{
+      clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+      registrarLog('Desbloqueio '+tipo+': '+loja,'ok');
+      carregarPedidosDesbloqueio();
+    };
+    s.onerror=()=>{clearTimeout(t);delete window[cb];alert('Erro ao liberar. Tente novamente.');};
+    s.src=SCRIPT_URL+'?action='+action+'&unidade='+encodeURIComponent(loja)+'&t='+Date.now()+'&callback='+cb;
+    document.head.appendChild(s);
   }
 
   // ── Helpers ──
