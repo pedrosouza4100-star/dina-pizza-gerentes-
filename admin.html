@@ -590,17 +590,22 @@
   }
 
   function desbloquearDireto(loja, tipo){
-    const action=tipo==='falta'?'desbloquearFalta':'desbloquear';
-    const cb='dbCb_'+Date.now();
-    const s=document.createElement('script');
-    const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
-    window[cb]=(d)=>{
-      clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-      registrarLog('Desbloqueio '+tipo+': '+loja,'ok');
-      carregarPedidosDesbloqueio();
+    const action = tipo==='falta' ? 'desbloquearFalta' : 'desbloquear';
+    const cb = 'dbCb_'+Date.now();
+    const s = document.createElement('script');
+    const t = setTimeout(()=>{ delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s); alert('Timeout. Tente novamente.'); }, 10000);
+    window[cb] = (d)=>{
+      clearTimeout(t); delete window[cb]; if(s.parentNode) s.parentNode.removeChild(s);
+      if(d && d.status==='ok'){
+        registrarLog('Desbloqueio '+tipo+': '+loja, 'ok');
+        // Aguarda 1s e recarrega lista
+        setTimeout(carregarPedidosDesbloqueio, 1000);
+      } else {
+        alert('Erro ao liberar.');
+      }
     };
-    s.onerror=()=>{clearTimeout(t);delete window[cb];alert('Erro ao liberar. Tente novamente.');};
-    s.src=SCRIPT_URL+'?action='+action+'&unidade='+encodeURIComponent(loja)+'&t='+Date.now()+'&callback='+cb;
+    s.onerror = ()=>{ clearTimeout(t); delete window[cb]; alert('Erro ao liberar.'); };
+    s.src = SCRIPT_URL+'?action=marcarAtendido&unidade='+encodeURIComponent(loja)+'&tipo='+tipo+'&t='+Date.now()+'&callback='+cb;
     document.head.appendChild(s);
   }
 
