@@ -451,28 +451,24 @@ function abrirCameraTempoIfood(){document.getElementById('cameraTempoIfoodInput'
 
 function processarFotoTempoApp(input){
   if(!input.files||!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    fotoTempoAppBase64=e.target.result;
+  comprimirFotoLocal(input.files[0], function(base64){
+    fotoTempoAppBase64=base64;
     const preview=document.getElementById('fotoTempoAppPreview');
     preview.src=fotoTempoAppBase64;preview.style.display='block';
     const btn=document.getElementById('cameraBtnTempoApp');
     btn.className='camera-btn captured';btn.textContent='✓ iFood capturado';
-  };
-  reader.readAsDataURL(input.files[0]);
+  });
 }
 
 function processarFotoTempoIfood(input){
   if(!input.files||!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    fotoTempoIfoodBase64=e.target.result;
+  comprimirFotoLocal(input.files[0], function(base64){
+    fotoTempoIfoodBase64=base64;
     const preview=document.getElementById('fotoTempoIfoodPreview');
     preview.src=fotoTempoIfoodBase64;preview.style.display='block';
     const btn=document.getElementById('cameraBtnTempoIfood');
     btn.className='camera-btn captured';btn.textContent='✓ Sistema capturado';
-  };
-  reader.readAsDataURL(input.files[0]);
+  });
 }
 
 // ── CÂMERA MOTOBOYS ──
@@ -485,25 +481,43 @@ function onMotoboysInput(){
 
 function abrirCameraMoto(){document.getElementById('cameraMotoInput').click();}
 
+
+function comprimirFotoLocal(file, callback){
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    const canvas=document.createElement('canvas');
+    const maxW=800;
+    const scale=Math.min(1,maxW/img.width);
+    canvas.width=img.width*scale;
+    canvas.height=img.height*scale;
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    callback(canvas.toDataURL('image/jpeg',0.6));
+  };
+  img.onerror=()=>{
+    const reader=new FileReader();
+    reader.onload=e=>callback(e.target.result);
+    reader.readAsDataURL(file);
+  };
+  img.src=url;
+}
 function processarFotoMoto(input){
   if(!input.files||!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    fotoMotoBase64=e.target.result;
+  comprimirFotoLocal(input.files[0], function(base64){
+    fotoMotoBase64=base64;
     const preview=document.getElementById('fotoMotoPreview');
     preview.src=fotoMotoBase64;preview.style.display='block';
     const btn=document.getElementById('cameraBtnMoto');
     btn.className='camera-btn captured';btn.textContent='✓ Lista fotografada';
-    // Garante que a área fique visível
     const area=document.getElementById('motoFotoArea');
     if(area) area.style.display='block';
-    // Mostra botão salvar
     const btnSalvar=document.getElementById('btnSalvarMoto');
     if(btnSalvar) btnSalvar.style.display='block';
     avaliar();
     verificarBotaoRegistrar();
-  };
-  reader.readAsDataURL(input.files[0]);
+    verificarPremiacao();
+  });
 }
 
 // ── SALVAR TEMPO ──
@@ -960,15 +974,39 @@ function abrirCamera(){document.getElementById('cameraInput').click();}
 
 function processarFoto(input){
   if(!input.files||!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    fotoBase64=e.target.result;
-    localStorage.setItem(chaveHoje('startdina_foto'),fotoBase64);
-    localStorage.setItem(chaveHoje('startdina_hora'),new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  const file=input.files[0];
+  // Comprime antes de salvar no localStorage
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    const canvas=document.createElement('canvas');
+    const maxW=800;
+    const scale=Math.min(1,maxW/img.width);
+    canvas.width=img.width*scale;
+    canvas.height=img.height*scale;
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    fotoBase64=canvas.toDataURL('image/jpeg',0.6);
+    try{
+      localStorage.setItem(chaveHoje('startdina_foto'),fotoBase64);
+      localStorage.setItem(chaveHoje('startdina_hora'),new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    }catch(e){
+      console.warn('localStorage cheio, foto salva apenas em memória');
+    }
     mostrarFotoStartDina();
     avaliar();verificarBotaoRegistrar();verificarPremiacao();
   };
-  reader.readAsDataURL(input.files[0]);
+  img.onerror=()=>{
+    // Fallback: lê direto sem comprimir
+    const reader=new FileReader();
+    reader.onload=e=>{
+      fotoBase64=e.target.result;
+      mostrarFotoStartDina();
+      avaliar();verificarBotaoRegistrar();verificarPremiacao();
+    };
+    reader.readAsDataURL(file);
+  };
+  img.src=url;
 }
 
 function mostrarFotoStartDina(){
