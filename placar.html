@@ -523,21 +523,26 @@ function processarFotoMoto(input){
 // ── SALVAR TEMPO ──
 // ── Envia dado em tempo real para o Call Center ──
 function enviarTempoReal(tipo, dados){
-  const payload = {
-    action: 'salvarTempoReal',
-    unidade: unidadeAtual,
-    tipo: tipo,
-    dados: dados,
-    hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
-  };
   const cb='trCb_'+Date.now();
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
   window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
   s.onerror=()=>{clearTimeout(t);delete window[cb];};
-  // Envia via GET com JSONP
-  const params=encodeURIComponent(JSON.stringify(payload));
-  s.src=SCRIPT_URL+'?action=salvarTempoReal&unidade='+encodeURIComponent(unidadeAtual)+'&tipo='+tipo+'&dados='+params+'&t='+Date.now()+'&callback='+cb;
+  // Monta parâmetros simples
+  let params='action=salvarTempoReal';
+  params+='&unidade='+encodeURIComponent(unidadeAtual);
+  params+='&tipo='+encodeURIComponent(tipo);
+  params+='&hora='+encodeURIComponent(new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  // Campos específicos por tipo
+  if(dados.status!==undefined) params+='&status='+encodeURIComponent(dados.status);
+  if(dados.descricao!==undefined) params+='&descricao='+encodeURIComponent(dados.descricao);
+  if(dados.quantidade!==undefined) params+='&quantidade='+dados.quantidade;
+  if(dados.app!==undefined) params+='&app='+dados.app;
+  if(dados.ifood!==undefined) params+='&ifood='+dados.ifood;
+  if(dados.horario!==undefined) params+='&horario='+encodeURIComponent(dados.horario);
+  if(dados.registro!==undefined) params+='&registro='+dados.registro;
+  params+='&t='+Date.now()+'&callback='+cb;
+  s.src=SCRIPT_URL+'?'+params;
   document.head.appendChild(s);
 }
 
