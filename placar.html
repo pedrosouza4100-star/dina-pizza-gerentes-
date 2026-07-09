@@ -758,21 +758,35 @@ function mostrarFaltaRegistrada(d){
   const tag=document.getElementById('faltaTag');
   wrap.style.display='none';
   reg.style.display='block';
+  const btnAlterar='<button class="falta-btn" style="margin-top:8px;background:var(--surface);font-size:0.78rem;padding:8px" onclick="alterarFalta()">🔄 Alterar resposta</button>';
   if(d.status==='nao'){
     reg.style.background='rgba(46,204,113,0.1)';
     reg.style.border='1px solid var(--green)';
     reg.style.color='var(--green)';
-    reg.innerHTML=`✅ Sem falta de produto hoje <span style="color:var(--muted);font-size:0.72rem">(${d.hora})</span>`;
+    reg.innerHTML=`✅ Sem falta de produto hoje <span style="color:var(--muted);font-size:0.72rem">(${d.hora})</span>` + btnAlterar;
     tag.className='tag ok';tag.textContent='Sem falta';
   } else {
     reg.style.background='rgba(255,59,59,0.1)';
     reg.style.border='1px solid var(--danger)';
     reg.style.color='var(--danger)';
-    reg.innerHTML=`⚠️ Faltou produto <span style="color:var(--muted);font-size:0.72rem">(${d.hora})</span><br><span style="color:var(--text);font-size:0.8rem">${d.descricao||'—'}</span>`;
+    reg.innerHTML=`⚠️ Faltou produto <span style="color:var(--muted);font-size:0.72rem">(${d.hora})</span><br><span style="color:var(--text);font-size:0.8rem">${d.descricao||'—'}</span>` + btnAlterar;
     tag.className='tag warn';tag.textContent='Falta registrada';
   }
   const info=document.getElementById('faltaHorarioInfo');
-  if(info) info.textContent='✓ Preenchido';
+  if(info) info.textContent='✓ Preenchido — pode alterar enquanto a janela estiver aberta';
+}
+
+function alterarFalta(){
+  if(!dentroDaJanelaFalta()&&!faltaDesbloqueada){alert(`Janela encerrada! A falta de produto só pode ser alterada entre ${getJanelaFalta().label}.`);return;}
+  const wrap=document.getElementById('faltaWrap');
+  const reg=document.getElementById('faltaRegistrada');
+  document.getElementById('faltaProdutoDesc').style.display='none';
+  document.getElementById('faltaBtnConfirmar').style.display='none';
+  document.getElementById('faltaProdutoDesc').value='';
+  document.getElementById('faltaBtnSim').className='falta-btn';
+  document.getElementById('faltaBtnNao').className='falta-btn';
+  reg.style.display='none';
+  wrap.style.display='flex';
 }
 
 function metaMotoboysHoje(u){const m=METAS_MOTOBOYS[u];if(!m)return null;return isFds()?m.fds:m.semana;}
