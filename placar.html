@@ -408,17 +408,19 @@ function dentroJanela(janela){
 }
 
 // ── JANELA FALTA PRODUTO ──
-// Isaac Manhã/Noite: 09h-13h | Demais lojas: 17h-19h
+// Isaac Manhã: 9h-18h30 (dia) | Demais lojas + Isaac Noite: 18h30-4h (noite, vira o dia)
 function getJanelaFalta(){
-  if(unidadeAtual==='Isaac Manhã') return {inicio:9*60, fim:13*60, label:'9h às 13h', fimStr:'13h'};
-  if(unidadeAtual==='Isaac Noite') return {inicio:18*60+30, fim:20*60+30, label:'18h30 às 20h30', fimStr:'20h30'};
-  return {inicio:17*60, fim:19*60, label:'17h às 19h', fimStr:'19h'};
+  // Isaac Manhã: expediente diurno 9h às 18h30
+  if(unidadeAtual==='Isaac Manhã') return {inicio:9*60, fim:18*60+30, label:'9h às 18h30', fimStr:'18h30', overnight:false};
+  // Demais lojas (incl. Isaac Noite): expediente noturno 18h30 até 4h da manhã (vira o dia)
+  return {inicio:18*60+30, fim:4*60, label:'18h30 até 4h da manhã', fimStr:'4h', overnight:true};
 }
 
 function dentroDaJanelaFalta(){
   const agora=new Date();
   const min=agora.getHours()*60+agora.getMinutes();
   const j=getJanelaFalta();
+  if(j.overnight) return min>=j.inicio || min<j.fim;
   return min>=j.inicio&&min<j.fim;
 }
 
@@ -426,6 +428,7 @@ function passouJanelaFalta(){
   const agora=new Date();
   const min=agora.getHours()*60+agora.getMinutes();
   const j=getJanelaFalta();
+  if(j.overnight) return min>=j.fim && min<j.inicio; // intervalo entre 4h e 18h30 (loja fechada)
   return min>=j.fim;
 }
 
