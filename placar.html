@@ -213,12 +213,19 @@
         </div>
         <span class="tag" id="vendasCanceladasTag"></span>
       </div>
-      <!-- Pedidos Confirmados iFood (só lojas com entrega própria) -->
-      <div class="card" id="cardPedidosIfood" style="display:none">
-        <div class="card-label">Pedidos Confirmados iFood</div>
+      <!-- Pedidos Não Confirmados iFood (só lojas com entrega própria) -->
+      <div class="card card-full" id="cardPedidosIfood" style="display:none">
+        <div class="card-label">Pedidos Não Confirmados iFood</div>
         <div class="card-meta muted">Meta: zero</div>
-        <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">ped.</span></div>
+        <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0" oninput="onPedidosIfoodInput()"><span class="suffix">ped.</span></div>
         <span class="tag" id="pedidosIfoodTag"></span>
+        <div id="pedidosIfoodDetalheWrap" style="display:none;margin-top:10px">
+          <div class="card-label" style="font-size:0.78rem;margin-bottom:4px">📋 Informe o(s) número(s) do(s) pedido(s) não confirmado(s)</div>
+          <textarea class="falta-produto-input" id="pedidosIfoodDetalhe" placeholder="Ex: 12345, 67890" style="display:block;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:60px;padding:10px;box-sizing:border-box" oninput="verificarBotaoRegistrar()"></textarea>
+        </div>
+        <div id="pedidosIfoodAlerta" style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:rgba(255,68,68,0.12);border:1px solid var(--danger);color:var(--danger);font-size:0.85rem;font-weight:700">
+          🚨 Você está com problema na operação — sugiro que busque ajuda.
+        </div>
       </div>
     </div>
 
@@ -792,6 +799,17 @@ function alterarFalta(){
   wrap.style.display='flex';
 }
 
+function onPedidosIfoodInput(){
+  const v=ival('pedidosIfood');
+  const wrap=document.getElementById('pedidosIfoodDetalheWrap');
+  const alerta=document.getElementById('pedidosIfoodAlerta');
+  if(v>=1&&v<=3){wrap.style.display='block';alerta.style.display='none';}
+  else if(v>3){wrap.style.display='none';alerta.style.display='block';}
+  else {wrap.style.display='none';alerta.style.display='none';}
+  verificarBotaoRegistrar();
+  avaliar();
+}
+
 function metaMotoboysHoje(u){const m=METAS_MOTOBOYS[u];if(!m)return null;return isFds()?m.fds:m.semana;}
 function metaFat(u){const m=METAS_FAT[u]||FAT_DEF[u];if(!m)return 0;return isFds()?m.fds:m.semana;}
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
@@ -953,7 +971,7 @@ function atualizarMetas(){
   const cardTempo=document.getElementById('cardTempo');
   if(temLoja(unidadeAtual)){cardTempo.style.display='flex';renderTempoRegistros();}
   else cardTempo.style.display='none';
-  // Pedidos Confirmados iFood — só lojas com entrega própria
+  // Pedidos Não Confirmados iFood — só lojas com entrega própria
   const cardPedidos=document.getElementById('cardPedidosIfood');
   if(cardPedidos) cardPedidos.style.display=temLoja(unidadeAtual)?'flex':'none';
 }
@@ -1101,7 +1119,7 @@ function avaliar(){
   const f=ival('ifood');if(f>0&&ma.ifood>0){if(f>=ma.ifood)setStatus('cardIfood','ifoodTag','ok','No alvo');else if(f>=ma.ifood*0.7){setStatus('cardIfood','ifoodTag','warn','Atenção');prob++;}else{setStatus('cardIfood','ifoodTag','bad','Abaixo');prob++;}}
   const ch=ival('chamados');if(filled('chamados')){if(ch===0)setStatus('cardChamados','chamadosTag','ok','Zerado');else if(ch===1){setStatus('cardChamados','chamadosTag','warn','Atenção');prob++;}else{setStatus('cardChamados','chamadosTag','bad','Alto');prob++;}}
   const ca=ival('cancel');if(filled('cancel')){if(ca===0)setStatus('cardCancel','cancelTag','ok','Zerado');else if(ca<=3){setStatus('cardCancel','cancelTag','warn','Atenção');prob++;}else{setStatus('cardCancel','cancelTag','bad','Alto');prob++;}}
-  // Pedidos Confirmados iFood (lojas com entrega própria)
+  // Pedidos Não Confirmados iFood (lojas com entrega própria)
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const pi=ival('pedidosIfood');
     if(pi===0)setStatus('cardPedidosIfood','pedidosIfoodTag','ok','Zerado');
@@ -1212,7 +1230,11 @@ function verificarBotaoRegistrar(){
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
-  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Confirmados iFood');
+  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
+  if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
+    const piv=ival('pedidosIfood');
+    if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos Pedidos Não Confirmados');
+  }
   // Vendas canceladas — se preencheu valor > 0, motivo é obrigatório e válido
   if(filled('vendasCanceladas') && ival('vendasCanceladas') > 0){
     const motivo = document.getElementById('vendasCanceladasMotivo').value.trim();
@@ -1375,6 +1397,14 @@ async function registrar(){
   const fotoMotoEnvio=await comprimirFoto(fotoMotoBase64);
   const faltaData=localStorage.getItem(chaveHoje('falta'));
   let faltaObj=null;try{faltaObj=faltaData?JSON.parse(faltaData):null;}catch(e){}
+  const pedidosIfoodQtd=temLoja(unidadeAtual)?ival('pedidosIfood'):0;
+  const pedidosIfoodNums=(pedidosIfoodQtd>=1&&pedidosIfoodQtd<=3)?document.getElementById('pedidosIfoodDetalhe').value.trim():'';
+  let obsFinal=document.getElementById('obs').value;
+  if(pedidosIfoodNums){
+    obsFinal=`Pedidos iFood não confirmados (${pedidosIfoodQtd}): ${pedidosIfoodNums}`+(obsFinal?` | ${obsFinal}`:'');
+  } else if(pedidosIfoodQtd>3){
+    obsFinal=`⚠️ ${pedidosIfoodQtd} pedidos iFood não confirmados — alerta operacional`+(obsFinal?` | ${obsFinal}`:'');
+  }
   const payload={
     unidade:unidadeAtual,data:dataFmt,periodo:isFds()?'fds':'semana',
     faturamento:val('fat'),metaFaturamento:metaFat(unidadeAtual),
@@ -1389,7 +1419,7 @@ async function registrar(){
     pautaStartDina:document.getElementById('pautaStartDina').value,
     tempoEntrega:tempoRegistros,
     faltaProduto:faltaObj,
-    observacoes:document.getElementById('obs').value
+    observacoes:obsFinal
   };
 
   // Calcula pctMeta localmente para mensagem imediata
