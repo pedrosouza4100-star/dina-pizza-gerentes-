@@ -1436,7 +1436,19 @@ async function registrar(){
   const pctMetaLocal=batidas/metas.length;
 
   try{
-    await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const resp = await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const respText = await resp.text();
+    let respJson=null;
+    try{respJson=JSON.parse(respText);}catch(e){}
+    const falhou = !resp.ok || (respJson && respJson.status && respJson.status!=='ok');
+    if(falhou){
+      const detalhe = respJson ? JSON.stringify(respJson) : respText.slice(0,300);
+      const errEl=document.getElementById('errorMsg');
+      if(errEl) errEl.innerHTML = `⚠ Erro ao salvar (HTTP ${resp.status}). Detalhe: <span style="word-break:break-all">${detalhe}</span>. Tente novamente ou avise o suporte.`;
+      showMsg('errorMsg');
+      btn.disabled=false;btn.textContent='Registrar Placar';
+      return;
+    }
     localStorage.removeItem(chaveHoje('startdina_foto'));
     localStorage.removeItem(chaveHoje('startdina_hora'));
     localStorage.removeItem(chaveHoje('startdina_pauta'));
@@ -1453,7 +1465,11 @@ async function registrar(){
     // Depois tenta buscar dias sem meta do servidor
     verificarCumprimento();
     limpar();
-  }catch(e){showMsg('errorMsg');}
+  }catch(e){
+    const errEl=document.getElementById('errorMsg');
+    if(errEl) errEl.innerHTML = `⚠ Erro de conexão ao salvar: <span style="word-break:break-all">${(e&&e.message)||e}</span>. Seus dados NÃO foram perdidos, tente novamente.`;
+    showMsg('errorMsg');
+  }
   btn.disabled=false;btn.textContent='Registrar Placar';
 }
 
