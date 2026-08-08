@@ -1209,10 +1209,10 @@ function validarFaturamento(){
   const pct = fat/meta;
   if(pct > 1.3){
     alerta.style.display='block';
-    alerta.textContent=`⚠️ Valor muito alto! R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((pct-1)*100).toFixed(0)}% acima da meta. Confira se o valor está correto antes de registrar.`;
+    alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((pct-1)*100).toFixed(0)}% acima da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
   } else if(pct < 0.8 && fat > 0){
     alerta.style.display='block';
-    alerta.textContent=`⚠️ Valor muito baixo! R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((1-pct)*100).toFixed(0)}% abaixo da meta. Este valor está fora da faixa permitida (máx. 20% abaixo da meta) e IMPEDE o envio do placar.`;
+    alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((1-pct)*100).toFixed(0)}% abaixo da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
   } else {
     alerta.style.display='none';
   }
