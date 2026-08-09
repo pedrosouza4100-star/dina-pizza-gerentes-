@@ -1207,10 +1207,10 @@ function validarFaturamento(){
   const alerta = document.getElementById('fatAlerta');
   if(!fat||!meta||fat<=0){alerta.style.display='none';return;}
   const pct = fat/meta;
-  if(pct > 1.3){
+  if(pct > 1.5){
     alerta.style.display='block';
     alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((pct-1)*100).toFixed(0)}% acima da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
-  } else if(pct < 0.8 && fat > 0){
+  } else if(pct < 0.5 && fat > 0){
     alerta.style.display='block';
     alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((1-pct)*100).toFixed(0)}% abaixo da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
   } else {
@@ -1232,8 +1232,8 @@ function verificarBotaoRegistrar(){
     const fatVal=val('fat');
     if(fatMeta>0){
       const fatPct=fatVal/fatMeta;
-      if(fatPct<0.8) faltando.push('💰 Faturamento muito abaixo da meta (máx. 20% abaixo permitido) — confira o valor');
-      else if(fatPct>1.3) faltando.push('💰 Faturamento muito acima da meta (máx. 30% acima permitido) — confira o valor');
+      if(fatPct<0.5) faltando.push('💰 Faturamento muito abaixo da meta (máx. 50% abaixo permitido) — confira o valor');
+      else if(fatPct>1.5) faltando.push('💰 Faturamento muito acima da meta (máx. 50% acima permitido) — confira o valor');
     }
   }
   if(!filled('google')) faltando.push('⭐ Google');
