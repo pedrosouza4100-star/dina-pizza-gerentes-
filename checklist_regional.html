@@ -164,7 +164,9 @@ function renderTudo(){
   const main=document.getElementById('main');
   let html='';
 
-  html+=`<div class="card"><div class="sel-label">Visitando</div><div style="font-size:1.1rem;font-weight:700">${unidadeAtual}</div></div>`;
+  const agoraVisita=new Date();
+  const dataVisitaFmt=`${agoraVisita.getDate().toString().padStart(2,'0')}/${(agoraVisita.getMonth()+1).toString().padStart(2,'0')}/${agoraVisita.getFullYear()}`;
+  html+=`<div class="card"><div class="sel-label">Visitando</div><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div style="font-size:1.1rem;font-weight:700">${unidadeAtual}</div><div style="font-size:0.85rem;color:var(--gold);font-weight:700">📅 ${dataVisitaFmt}</div></div></div>`;
 
   if(pendencias.length>0){
     html+='<div class="card"><div class="sel-label">⚠️ Pendências da visita anterior ('+pendencias.length+')</div>';
