@@ -99,12 +99,17 @@ const ESTRUTURA = [
   {cat:"Pizzas Salgadas", itens:["Principais (máx. 2 sabores)","Variações (3 sabores)","Padrão da massa — gelada","Padrão da massa — peso","Padrão da massa — bolhas"]},
   {cat:"Frituras", itens:["Aparência","Variedade"]},
   {cat:"Limpeza do Buffet", itens:["Limpeza geral do buffet"]},
-  {cat:"Atendimento", itens:["Quantidade de colaboradores","Abertura do buffet","Fechamento do buffet","Disposição do atendente do buffet"]},
+  {cat:"Atendimento", itens:["Quantidade de colaboradores",{label:"Quantas pessoas a unidade tem no atendimento",tipo:"numero"},"Abertura do buffet","Fechamento do buffet","Disposição do atendente do buffet"]},
   {cat:"Caixa", itens:["Posicionamento e repasse de informações"]},
   {cat:"Critérios de Avaliação (Equipe)", itens:["Quantidade","Postura","Qualidade"]},
   {cat:"Cozinha", itens:["Aparência","Limpeza","Desperdício","Quantidade de colaboradores","Funções — Pizza","Funções — Fritadeira","Funções — Fogão","Funções — Louças"]},
   {cat:"Depósito", itens:["Quantidade","Organização","Faltas"]},
   {cat:"Postura da Loja", itens:["Limpeza e organização","Dificuldades e melhorias"]},
+  {cat:"Placar Diário", itens:["Placar diário está sendo preenchido corretamente"]},
+  {cat:"Avaliações Negativas", itens:["Google negativo / Reclame Aqui — ação tomada para não repetir"]},
+  {cat:"Limpeza — Banheiros e Lazer", itens:["Banheiro Masculino","Banheiro Feminino","Playground","Fliperama","Boliche"]},
+  {cat:"Pendências Administrativas", itens:["Pendência com RH","Pendência com Administrativo (entrega de notes e caixas)","Pendência com o CD","Pendência com o Nutricionista da rede"]},
+  {cat:"Cumprimento de Metas", itens:["A loja está cumprindo as metas diárias (conforme placar diário)"]},
 ];
 
 let unidadeAtual='';
@@ -113,8 +118,10 @@ let pendencias=[];
 let respostasPendencias={}; // itemId -> true/false
 let respostasItens={}; // itemId -> {status, observacao, sugestao}
 
+function itemLabel(item){ return typeof item==='object' ? item.label : item; }
+function itemTipo(item){ return typeof item==='object' ? item.tipo : 'checklist'; }
 function slugify(cat, item){
-  return (cat+'_'+item).toLowerCase()
+  return (cat+'_'+itemLabel(item)).toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
 }
@@ -180,24 +187,32 @@ function renderTudo(){
     html+=`<div class="card categoria"><div class="categoria-titulo">${secao.cat}</div>`;
     secao.itens.forEach(item=>{
       const id=slugify(secao.cat,item);
-      html+=`<div class="item-row" data-itemid="${id}">
-        <div class="item-nome">${item}</div>
-        <div class="item-opts">
-          <button class="ok" onclick="marcarItem('${id}','conforme',this)">✅ Conforme</button>
-          <button class="nok" onclick="marcarItem('${id}','nao_conforme',this)">⚠️ Não Conforme</button>
-          <button class="na" onclick="marcarItem('${id}','na',this)">— N/A</button>
-        </div>
-        <div class="item-extra" id="extra_${id}">
-          <div>
-            <label>Descrição do problema</label>
-            <textarea id="desc_${id}" placeholder="O que está errado?" oninput="atualizarTexto('${id}')"></textarea>
+      const lbl=itemLabel(item);
+      if(itemTipo(item)==='numero'){
+        html+=`<div class="item-row" data-itemid="${id}">
+          <div class="item-nome">${lbl}</div>
+          <input type="number" inputmode="numeric" min="0" placeholder="0" id="num_${id}" oninput="marcarNumero('${id}')" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:1rem;padding:10px 14px">
+        </div>`;
+      } else {
+        html+=`<div class="item-row" data-itemid="${id}">
+          <div class="item-nome">${lbl}</div>
+          <div class="item-opts">
+            <button class="ok" onclick="marcarItem('${id}','conforme',this)">✅ Conforme</button>
+            <button class="nok" onclick="marcarItem('${id}','nao_conforme',this)">⚠️ Não Conforme</button>
+            <button class="na" onclick="marcarItem('${id}','na',this)">— N/A</button>
           </div>
-          <div>
-            <label>Sugestão de melhoria</label>
-            <textarea id="sug_${id}" placeholder="O que deve ser feito para corrigir?" oninput="atualizarTexto('${id}')"></textarea>
+          <div class="item-extra" id="extra_${id}">
+            <div>
+              <label>Descrição do problema</label>
+              <textarea id="desc_${id}" placeholder="O que está errado?" oninput="atualizarTexto('${id}')"></textarea>
+            </div>
+            <div>
+              <label>Sugestão de melhoria</label>
+              <textarea id="sug_${id}" placeholder="O que deve ser feito para corrigir?" oninput="atualizarTexto('${id}')"></textarea>
+            </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+      }
     });
     html+='</div>';
   });
@@ -228,6 +243,14 @@ function marcarItem(itemId, status, btn){
   const extra=document.getElementById('extra_'+itemId);
   if(status==='nao_conforme'){extra.classList.add('show');}
   else{extra.classList.remove('show');}
+  atualizarProgresso();
+}
+
+function marcarNumero(itemId){
+  const valEl=document.getElementById('num_'+itemId);
+  const valStr=valEl.value;
+  if(valStr===''){ delete respostasItens[itemId]; }
+  else { respostasItens[itemId]={status:'numero',valor:parseInt(valStr)||0,observacao:'',sugestao:''}; }
   atualizarProgresso();
 }
 
@@ -284,7 +307,12 @@ async function enviarChecklist(){
     secao.itens.forEach(item=>{
       const id=slugify(secao.cat,item);
       const r=respostasItens[id];
-      itensPayload.push({itemId:id,itemLabel:secao.cat+' > '+item,status:r.status,observacao:r.observacao||'',sugestao:r.sugestao||''});
+      const lbl=secao.cat+' > '+itemLabel(item);
+      if(r.status==='numero'){
+        itensPayload.push({itemId:id,itemLabel:lbl,status:'numero',valor:r.valor,observacao:'',sugestao:''});
+      } else {
+        itensPayload.push({itemId:id,itemLabel:lbl,status:r.status,observacao:r.observacao||'',sugestao:r.sugestao||''});
+      }
     });
   });
 
