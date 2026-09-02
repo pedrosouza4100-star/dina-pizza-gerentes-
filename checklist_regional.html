@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Checklist Regional — Dina Pizza</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --red:#C0392B;--red2:#FF3B3B;--gold:#FFD700;--dark:#0A0A0A;--bg:#111111;
+    --card:#1E1E1E;--surface:#252525;--border:#3A3A3A;--text:#FFFFFF;--muted:#999999;
+    --green:#2ECC71;--yellow:#FFD700;--danger:#FF4444;--orange:#e67e22;
+  }
+  body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;padding-bottom:100px}
+  header{background:var(--dark);border-bottom:4px solid var(--red);padding:0 4vw;height:70px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+  .brand{font-family:Arial,sans-serif;font-size:1.4rem;font-weight:700;color:#fff}
+  .brand span{color:var(--gold)}
+  .header-title{font-size:0.85rem;color:#fff;font-weight:700}
+  main{padding:20px 4vw 60px;display:flex;flex-direction:column;gap:20px;max-width:900px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .card-full{grid-column:1fr}
+  .sel-label{font-size:0.85rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em}
+  select,input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Arial,sans-serif;font-size:0.95rem;padding:12px 14px;outline:none}
+  select:focus,input:focus,textarea:focus{border-color:var(--gold)}
+  textarea{resize:vertical;min-height:70px;line-height:1.4}
+  .btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:14px 20px;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;transition:background 0.2s}
+  .btn:hover{background:var(--red2)}
+  .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+  .btn-secondary{background:var(--surface);border:1px solid var(--border)}
+  .pend-card{background:rgba(255,68,68,0.08);border:1px solid var(--danger);border-radius:12px;padding:16px;margin-bottom:12px}
+  .pend-card.reincidente{background:rgba(255,68,68,0.18);border:2px solid var(--danger)}
+  .pend-item-label{font-weight:700;font-size:0.92rem;margin-bottom:6px}
+  .pend-reincidencia-tag{display:inline-block;background:var(--danger);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:6px;margin-left:8px;text-transform:uppercase}
+  .pend-detail{font-size:0.82rem;color:var(--muted);margin-bottom:4px}
+  .pend-detail strong{color:var(--text)}
+  .pend-toggle{display:flex;gap:10px;margin-top:10px}
+  .pend-toggle button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:0.85rem;cursor:pointer}
+  .pend-toggle button.sel-sim.active{background:var(--green);border-color:var(--green);color:#0A0A0A}
+  .pend-toggle button.sel-nao.active{background:var(--danger);border-color:var(--danger);color:#fff}
+  .categoria{margin-bottom:6px}
+  .categoria-titulo{font-size:1rem;font-weight:700;color:var(--gold);padding:10px 0 6px;border-bottom:2px solid var(--border);margin-bottom:10px}
+  .item-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+  .item-nome{font-size:0.9rem;font-weight:600;margin-bottom:10px}
+  .item-opts{display:flex;gap:8px}
+  .item-opts button{flex:1;padding:10px 6px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-weight:700;font-size:0.78rem;cursor:pointer;transition:all 0.15s}
+  .item-opts button.ok.active{background:var(--green);border-color:var(--green);color:#0A0A0A}
+  .item-opts button.nok.active{background:var(--danger);border-color:var(--danger);color:#fff}
+  .item-opts button.na.active{background:var(--muted);border-color:var(--muted);color:#0A0A0A}
+  .item-extra{display:none;margin-top:12px;gap:10px;flex-direction:column}
+  .item-extra.show{display:flex}
+  .item-extra label{font-size:0.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+  .progresso{position:fixed;bottom:0;left:0;right:0;background:var(--dark);border-top:1px solid var(--border);padding:14px 4vw;display:flex;align-items:center;gap:14px;z-index:60}
+  .progresso-txt{font-size:0.8rem;color:var(--muted);white-space:nowrap}
+  .progresso-txt strong{color:var(--gold)}
+  .msg{padding:12px 16px;border-radius:10px;font-size:0.85rem;font-weight:700;text-align:center;display:none}
+  .msg.ok{background:rgba(46,204,113,0.15);border:1px solid var(--green);color:var(--green)}
+  .msg.err{background:rgba(255,68,68,0.15);border:1px solid var(--danger);color:var(--danger)}
+  .loading{text-align:center;padding:40px;color:var(--muted)}
+  #telaSelecao{max-width:480px;margin:60px auto;padding:0 16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">DINA <span>PIZZA</span></div>
+  <div class="header-title">📋 Checklist Regional</div>
+</header>
+
+<div id="telaSelecao">
+  <div class="card">
+    <div class="sel-label">Selecione a unidade</div>
+    <select id="selUnidade" onchange="document.getElementById('btnIniciar').disabled=!this.value">
+      <option value="">Escolha a loja...</option>
+    </select>
+    <div style="height:14px"></div>
+    <div class="sel-label">Seu nome (Gerente Regional)</div>
+    <input type="text" id="nomeRegional" placeholder="Digite seu nome">
+    <div style="height:18px"></div>
+    <button class="btn" id="btnIniciar" disabled onclick="iniciarChecklist()">Iniciar Checklist</button>
+  </div>
+</div>
+
+<main id="main" style="display:none"></main>
+
+<div class="progresso" id="progresso" style="display:none">
+  <div class="progresso-txt" id="progressoTxt">0 de 0 itens</div>
+  <button class="btn" id="btnEnviar" onclick="enviarChecklist()" disabled>Enviar Checklist</button>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const TODAS_UNIDADES = ['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
+
+const ESTRUTURA = [
+  {cat:"Buffet — Saladas", itens:["Quantidade","Aparência","Variedade","Cozidos"]},
+  {cat:"Buffet — Sobremesas", itens:["3 mousses","Duas frutas"]},
+  {cat:"Buffet — Comidas", itens:["Arroz","Feijão","Strogonoff","Talharim","Rondelli","Lasanha bolonhesa","Batata rústica","Frango empanado","Sopas e caldos no frio (mín. 2 variedades)"]},
+  {cat:"Buffet — Molhos", itens:["Cheddar (textura)","Barbecue (textura)","Ganache (textura)"]},
+  {cat:"Pizza Doce", itens:["Quantidade de sabores (padrão 4, exceto banana/Califórnia/Romeu e Julieta)"]},
+  {cat:"Pizzas Salgadas", itens:["Principais (máx. 2 sabores)","Variações (3 sabores)","Padrão da massa — gelada","Padrão da massa — peso","Padrão da massa — bolhas"]},
+  {cat:"Frituras", itens:["Aparência","Variedade"]},
+  {cat:"Limpeza do Buffet", itens:["Limpeza geral do buffet"]},
+  {cat:"Atendimento", itens:["Quantidade de colaboradores","Abertura do buffet","Fechamento do buffet","Disposição do atendente do buffet"]},
+  {cat:"Caixa", itens:["Posicionamento e repasse de informações"]},
+  {cat:"Critérios de Avaliação (Equipe)", itens:["Quantidade","Postura","Qualidade"]},
+  {cat:"Cozinha", itens:["Aparência","Limpeza","Desperdício","Quantidade de colaboradores","Funções — Pizza","Funções — Fritadeira","Funções — Fogão","Funções — Louças"]},
+  {cat:"Depósito", itens:["Quantidade","Organização","Faltas"]},
+  {cat:"Postura da Loja", itens:["Limpeza e organização","Dificuldades e melhorias"]},
+];
+
+let unidadeAtual='';
+let nomeRegionalAtual='';
+let pendencias=[];
+let respostasPendencias={}; // itemId -> true/false
+let respostasItens={}; // itemId -> {status, observacao, sugestao}
+
+function slugify(cat, item){
+  return (cat+'_'+item).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  const sel=document.getElementById('selUnidade');
+  TODAS_UNIDADES.forEach(u=>{
+    const opt=document.createElement('option');
+    opt.value=u;opt.textContent=u;
+    sel.appendChild(opt);
+  });
+});
+
+function iniciarChecklist(){
+  unidadeAtual=document.getElementById('selUnidade').value;
+  nomeRegionalAtual=document.getElementById('nomeRegional').value.trim();
+  if(!unidadeAtual) return;
+  document.getElementById('telaSelecao').style.display='none';
+  const main=document.getElementById('main');
+  main.style.display='flex';
+  main.innerHTML='<div class="loading">⏳ Carregando pendências da última visita...</div>';
+  carregarPendencias();
+}
+
+function carregarPendencias(){
+  const cb='pendCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);pendencias=[];renderTudo();},10000);
+  window[cb]=(resp)=>{
+    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+    pendencias=(resp&&resp.pendencias)||[];
+    renderTudo();
+  };
+  s.onerror=()=>{clearTimeout(t);delete window[cb];pendencias=[];renderTudo();};
+  s.src=SCRIPT_URL+'?action=getChecklistPendencias&unidade='+encodeURIComponent(unidadeAtual)+'&t='+Date.now()+'&callback='+cb;
+  document.head.appendChild(s);
+}
+
+function renderTudo(){
+  const main=document.getElementById('main');
+  let html='';
+
+  html+=`<div class="card"><div class="sel-label">Visitando</div><div style="font-size:1.1rem;font-weight:700">${unidadeAtual}</div></div>`;
+
+  if(pendencias.length>0){
+    html+='<div class="card"><div class="sel-label">⚠️ Pendências da visita anterior ('+pendencias.length+')</div>';
+    pendencias.forEach(p=>{
+      const reincCls = p.vezesReincidente>=2 ? ' reincidente' : '';
+      html+=`<div class="pend-card${reincCls}" data-itemid="${p.itemId}">
+        <div class="pend-item-label">${p.itemLabel}${p.vezesReincidente>=2?`<span class="pend-reincidencia-tag">Reincidência ${p.vezesReincidente}x</span>`:''}</div>
+        <div class="pend-detail"><strong>Problema apontado:</strong> ${p.descricaoProblema||'—'}</div>
+        <div class="pend-detail"><strong>Sugestão dada:</strong> ${p.sugestaoMelhoria||'—'}</div>
+        <div class="pend-toggle">
+          <button class="sel-sim" onclick="marcarResolucao('${p.itemId}',true,this)">✅ Resolvido</button>
+          <button class="sel-nao" onclick="marcarResolucao('${p.itemId}',false,this)">❌ Ainda não resolvido</button>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  ESTRUTURA.forEach(secao=>{
+    html+=`<div class="card categoria"><div class="categoria-titulo">${secao.cat}</div>`;
+    secao.itens.forEach(item=>{
+      const id=slugify(secao.cat,item);
+      html+=`<div class="item-row" data-itemid="${id}">
+        <div class="item-nome">${item}</div>
+        <div class="item-opts">
+          <button class="ok" onclick="marcarItem('${id}','conforme',this)">✅ Conforme</button>
+          <button class="nok" onclick="marcarItem('${id}','nao_conforme',this)">⚠️ Não Conforme</button>
+          <button class="na" onclick="marcarItem('${id}','na',this)">— N/A</button>
+        </div>
+        <div class="item-extra" id="extra_${id}">
+          <div>
+            <label>Descrição do problema</label>
+            <textarea id="desc_${id}" placeholder="O que está errado?" oninput="atualizarTexto('${id}')"></textarea>
+          </div>
+          <div>
+            <label>Sugestão de melhoria</label>
+            <textarea id="sug_${id}" placeholder="O que deve ser feito para corrigir?" oninput="atualizarTexto('${id}')"></textarea>
+          </div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+
+  html+='<div class="card"><div class="sel-label">Observações gerais da visita</div><textarea id="obsGeral" placeholder="Observações adicionais sobre a visita..."></textarea></div>';
+  html+='<div class="msg ok" id="msgOk">✅ Checklist enviado com sucesso!</div>';
+  html+='<div class="msg err" id="msgErr"></div>';
+
+  main.innerHTML=html;
+  document.getElementById('progresso').style.display='flex';
+  atualizarProgresso();
+}
+
+function marcarResolucao(itemId, resolvido, btn){
+  respostasPendencias[itemId]=resolvido;
+  const card=btn.closest('.pend-card');
+  card.querySelectorAll('.pend-toggle button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  atualizarProgresso();
+}
+
+function marcarItem(itemId, status, btn){
+  if(!respostasItens[itemId]) respostasItens[itemId]={status:'',observacao:'',sugestao:''};
+  respostasItens[itemId].status=status;
+  const row=btn.closest('.item-row');
+  row.querySelectorAll('.item-opts button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const extra=document.getElementById('extra_'+itemId);
+  if(status==='nao_conforme'){extra.classList.add('show');}
+  else{extra.classList.remove('show');}
+  atualizarProgresso();
+}
+
+function atualizarTexto(itemId){
+  if(!respostasItens[itemId]) respostasItens[itemId]={status:'nao_conforme',observacao:'',sugestao:''};
+  respostasItens[itemId].observacao=document.getElementById('desc_'+itemId).value;
+  respostasItens[itemId].sugestao=document.getElementById('sug_'+itemId).value;
+  atualizarProgresso();
+}
+
+function totalItens(){
+  return ESTRUTURA.reduce((n,s)=>n+s.itens.length,0);
+}
+
+function tudoValido(){
+  // Todas as pendências precisam de resposta
+  for(const p of pendencias){
+    if(respostasPendencias[p.itemId]===undefined) return false;
+  }
+  // Todos os itens do checklist precisam de status
+  let respondidos=0;
+  for(const secao of ESTRUTURA){
+    for(const item of secao.itens){
+      const id=slugify(secao.cat,item);
+      const r=respostasItens[id];
+      if(!r || !r.status) return false;
+      if(r.status==='nao_conforme' && (!r.observacao||!r.observacao.trim()||!r.sugestao||!r.sugestao.trim())) return false;
+      respondidos++;
+    }
+  }
+  return respondidos===totalItens();
+}
+
+function atualizarProgresso(){
+  let respondidos=0;
+  for(const secao of ESTRUTURA){
+    for(const item of secao.itens){
+      const id=slugify(secao.cat,item);
+      if(respostasItens[id] && respostasItens[id].status) respondidos++;
+    }
+  }
+  const total=totalItens();
+  document.getElementById('progressoTxt').innerHTML=`<strong>${respondidos}</strong> de ${total} itens`;
+  document.getElementById('btnEnviar').disabled=!tudoValido();
+}
+
+async function enviarChecklist(){
+  if(!tudoValido()) return;
+  const btn=document.getElementById('btnEnviar');
+  btn.disabled=true;btn.textContent='Enviando...';
+
+  const itensPayload=[];
+  ESTRUTURA.forEach(secao=>{
+    secao.itens.forEach(item=>{
+      const id=slugify(secao.cat,item);
+      const r=respostasItens[id];
+      itensPayload.push({itemId:id,itemLabel:secao.cat+' > '+item,status:r.status,observacao:r.observacao||'',sugestao:r.sugestao||''});
+    });
+  });
+
+  const resolucoesPayload=pendencias.map(p=>({itemId:p.itemId,resolvido:!!respostasPendencias[p.itemId]}));
+
+  const agora=new Date();
+  const dataFmt=`${agora.getDate().toString().padStart(2,'0')}/${(agora.getMonth()+1).toString().padStart(2,'0')}/${agora.getFullYear()}`;
+  const horaFmt=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const payload={
+    action:'salvarChecklist',
+    unidade:unidadeAtual,
+    data:dataFmt,
+    hora:horaFmt,
+    gerenteRegional:nomeRegionalAtual,
+    observacaoGeral:document.getElementById('obsGeral').value,
+    itens:itensPayload,
+    resolucoes:resolucoesPayload
+  };
+
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const respText=await resp.text();
+    let respJson=null;
+    try{respJson=JSON.parse(respText);}catch(e){}
+    const falhou=!resp.ok||(respJson&&respJson.status&&respJson.status!=='ok');
+    if(falhou){
+      const detalhe=respJson?JSON.stringify(respJson):respText.slice(0,300);
+      const errEl=document.getElementById('msgErr');
+      errEl.innerHTML=`⚠ Erro ao salvar (HTTP ${resp.status}). Detalhe: ${detalhe}`;
+      errEl.style.display='block';
+      btn.disabled=false;btn.textContent='Enviar Checklist';
+      return;
+    }
+    document.getElementById('msgOk').style.display='block';
+    window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    btn.textContent='✅ Enviado';
+  }catch(e){
+    const errEl=document.getElementById('msgErr');
+    errEl.innerHTML=`⚠ Erro de conexão: ${(e&&e.message)||e}. Seus dados NÃO foram perdidos, tente novamente.`;
+    errEl.style.display='block';
+    btn.disabled=false;btn.textContent='Enviar Checklist';
+  }
+}
+</script>
+</body>
+</html>
