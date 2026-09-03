@@ -164,6 +164,14 @@
     </div>
   </header>
   <main>
+    <!-- Pendências do Checklist Regional -->
+    <div id="checklistPendenciasWrap" style="display:none;margin-bottom:20px">
+      <div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:16px 18px">
+        <div style="font-size:0.95rem;font-weight:700;color:var(--danger);margin-bottom:12px">📋 Pendências apontadas pelo Gerente Regional — corrija hoje</div>
+        <div id="checklistPendenciasLista"></div>
+      </div>
+    </div>
+
     <div class="cards-grid">
       <!-- Faturamento -->
       <div class="card card-full" id="cardFat">
@@ -936,6 +944,38 @@ function iniciarApp(u){
   if(temLoja(u)){carregarTempoLocal();renderTempoRegistros();}
   inicializarFaltaProduto();
   verificarCumprimento();
+  carregarPendenciasChecklist();
+}
+
+function carregarPendenciasChecklist(){
+  const cb='pendLojaCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},10000);
+  window[cb]=(resp)=>{
+    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+    renderPendenciasChecklist((resp&&resp.pendencias)||[]);
+  };
+  s.onerror=()=>{clearTimeout(t);delete window[cb];};
+  s.src=SCRIPT_URL+'?action=getChecklistPendencias&unidade='+encodeURIComponent(unidadeAtual)+'&t='+Date.now()+'&callback='+cb;
+  document.head.appendChild(s);
+}
+
+function renderPendenciasChecklist(pendencias){
+  const wrap=document.getElementById('checklistPendenciasWrap');
+  const lista=document.getElementById('checklistPendenciasLista');
+  if(!pendencias||pendencias.length===0){wrap.style.display='none';return;}
+  let html='';
+  pendencias.forEach(p=>{
+    const reinc = p.vezesReincidente>=2 ? ` <span style="background:var(--danger);color:#fff;font-size:0.68rem;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase">Reincidência ${p.vezesReincidente}x</span>` : '';
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px">${p.itemLabel}${reinc}</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px"><strong style="color:var(--text)">Problema apontado:</strong> ${p.descricaoProblema||'—'}</div>
+      <div style="font-size:0.8rem;color:var(--muted)"><strong style="color:var(--text)">Sugestão de melhoria:</strong> ${p.sugestaoMelhoria||'—'}</div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Apontado em: ${p.dataAberta||'—'}</div>
+    </div>`;
+  });
+  lista.innerHTML=html;
+  wrap.style.display='block';
 }
 
 window.addEventListener('load',()=>{
