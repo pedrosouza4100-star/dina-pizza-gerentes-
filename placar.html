@@ -171,7 +171,7 @@
         <div class="card-meta" id="metaFatDisplay"></div>
         <div class="card-meta muted" id="periodoDisplay"></div>
         <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="number" inputmode="decimal" placeholder="0,00" onblur="validarFaturamento()"></div>
-        <div id="fatAlerta" style="display:none;font-size:0.8rem;padding:10px 12px;border-radius:8px;margin-top:8px;background:rgba(255,59,59,0.12);border:1px solid var(--danger);color:var(--danger);font-weight:700"></div>
+        <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
         <span class="tag" id="fatTag"></span>
       </div>
       <!-- Google -->
@@ -1201,6 +1201,14 @@ function validarMotivoVendas(){
   verificarBotaoRegistrar();
 }
 
+function faturamentoForaDaFaixa(){
+  const fat = val('fat');
+  const meta = metaFat(unidadeAtual);
+  if(!fat||!meta||fat<=0) return false;
+  const pct = fat/meta;
+  return pct > 2 || pct < 0.5;
+}
+
 function validarFaturamento(){
   const fat = val('fat');
   const meta = metaFat(unidadeAtual);
@@ -1209,10 +1217,10 @@ function validarFaturamento(){
   const pct = fat/meta;
   if(pct > 2){
     alerta.style.display='block';
-    alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((pct-1)*100).toFixed(0)}% acima da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
+    alerta.innerHTML=`⚠️ <strong style="font-size:1.05em">VOCÊ TEM CERTEZA QUE FOI ISSO MESMO QUE VOCÊ VENDEU?</strong><br><br>Não quer rever e fazer a soma do teu caixa novamente? O valor R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito acima da meta.<br><br><strong>Reveja, pois isso pode impactar no teu resultado e você pode ser punido por isso.</strong>`;
   } else if(pct < 0.5 && fat > 0){
     alerta.style.display='block';
-    alerta.innerHTML=`🚫 <strong>Você digitou errado!</strong> R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está ${((1-pct)*100).toFixed(0)}% abaixo da meta — valor absurdo. Digite o valor correto do faturamento para conseguir enviar o placar.`;
+    alerta.innerHTML=`⚠️ <strong style="font-size:1.05em">VOCÊ TEM CERTEZA QUE FOI ISSO MESMO QUE VOCÊ VENDEU?</strong><br><br>Não quer rever e fazer a soma do teu caixa novamente? O valor R$ ${fat.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito abaixo da meta.<br><br><strong>Reveja, pois isso pode impactar no teu resultado e você pode ser punido por isso.</strong>`;
   } else {
     alerta.style.display='none';
   }
@@ -1227,15 +1235,6 @@ function verificarBotaoRegistrar(){
   const faltando=[];
 
   if(!filled('fat')) faltando.push('💰 Faturamento');
-  else {
-    const fatMeta=metaFat(unidadeAtual);
-    const fatVal=val('fat');
-    if(fatMeta>0){
-      const fatPct=fatVal/fatMeta;
-      if(fatPct<0.5) faltando.push('💰 Faturamento muito abaixo da meta (mínimo: metade da meta) — confira o valor');
-      else if(fatPct>2) faltando.push('💰 Faturamento muito acima da meta (máximo: o dobro da meta) — confira o valor');
-    }
-  }
   if(!filled('google')) faltando.push('⭐ Google');
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
@@ -1399,6 +1398,11 @@ async function comprimirFoto(base64){
 }
 
 async function registrar(){
+  if(faturamentoForaDaFaixa()){
+    const fatAtual=val('fat');
+    const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
+    if(!confirmou) return;
+  }
   const btn=document.getElementById('saveBtn');
   btn.disabled=true;btn.textContent='Enviando...';
   const now=dataTurno();
