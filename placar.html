@@ -681,6 +681,7 @@ function atualizarCountdownFalta(){
   const fim=new Date();
   const [h,m]=j.fimStr.replace('h','').split(':').map(Number);
   fim.setHours(h||parseInt(j.fimStr),m||0,0,0);
+  if(j.overnight && fim<=agora){ fim.setDate(fim.getDate()+1); }
   const diff=fim-agora;
   if(diff<=0){inicializarFaltaProduto();return;}
   const min=Math.floor(diff/60000);
