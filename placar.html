@@ -428,8 +428,8 @@ function dentroJanela(janela){
 function getJanelaFalta(){
   // Isaac Manhã: expediente diurno 9h às 18h30
   if(unidadeAtual==='Isaac Manhã') return {inicio:9*60, fim:18*60+30, label:'9h às 18h30', fimStr:'18h30', overnight:false};
-  // Demais lojas (incl. Isaac Noite): expediente noturno 18h30 até 4h da manhã (vira o dia)
-  return {inicio:18*60+30, fim:4*60, label:'18h30 até 4h da manhã', fimStr:'4h', overnight:true};
+  // Demais lojas (incl. Isaac Noite): expediente noturno 17h até 4h da manhã (vira o dia)
+  return {inicio:17*60, fim:4*60, label:'17h até 4h da manhã', fimStr:'4h', overnight:true};
 }
 
 function dentroDaJanelaFalta(){
