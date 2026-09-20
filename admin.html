@@ -354,7 +354,7 @@
 
   async function carregarMetas(){
     try{
-      const r=await fetch(SCRIPT_URL+'?action=getMetas');
+      const r=await fetch(SCRIPT_URL+'?action=getMetas&t='+Date.now(),{cache:'no-store'});
       const d=await r.json();
       metasFat=d.metasFat||FAT_PADRAO;
       metasAval=d.metasAval||AVAL_PADRAO;
