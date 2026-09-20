@@ -178,7 +178,7 @@
         <div class="card-label">Faturamento do Dia</div>
         <div class="card-meta" id="metaFatDisplay"></div>
         <div class="card-meta muted" id="periodoDisplay"></div>
-        <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="number" inputmode="decimal" placeholder="0,00" onblur="validarFaturamento()"></div>
+        <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
         <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
         <span class="tag" id="fatTag"></span>
       </div>
@@ -1149,12 +1149,26 @@ function setStatus(cId,tId,cls,lbl){
   const t=document.getElementById(tId);t.className='tag '+cls;t.textContent=lbl;
 }
 function val(id){return parseFloat(document.getElementById(id).value)||0;}
+function formatarMoedaInput(el){
+  let v = el.value;
+  let partes = v.split(',');
+  let inteiro = partes[0].replace(/\D/g,'');
+  inteiro = inteiro.replace(/^0+(?=\d)/,'');
+  inteiro = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  let decimal = partes.length>1 ? ',' + partes[1].replace(/\D/g,'').slice(0,2) : (v.includes(',')?',':'');
+  el.value = inteiro + decimal;
+}
+function valFat(){
+  const raw = document.getElementById('fat').value || '';
+  const limpo = raw.replace(/\./g,'').replace(',', '.');
+  return parseFloat(limpo) || 0;
+}
 function ival(id){return parseInt(document.getElementById(id).value)||0;}
 function filled(id){return document.getElementById(id).value!=='';}
 
 function avaliar(){
   let prob=0;
-  const fat=val('fat'),meta=metaFat(unidadeAtual);
+  const fat=valFat(),meta=metaFat(unidadeAtual);
   if(fat>0&&meta>0){const p=fat/meta;if(p>=1)setStatus('cardFat','fatTag','ok','No alvo');else if(p>=0.8){setStatus('cardFat','fatTag','warn','Atenção');prob++;}else{setStatus('cardFat','fatTag','bad','Abaixo');prob++;}}
   const ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
   const g=ival('google');if(g>0&&ma.google>0){if(g>=ma.google)setStatus('cardGoogle','googleTag','ok','No alvo');else if(g>=ma.google*0.7){setStatus('cardGoogle','googleTag','warn','Atenção');prob++;}else{setStatus('cardGoogle','googleTag','bad','Abaixo');prob++;}}
@@ -1188,7 +1202,7 @@ function avaliar(){
   // Mostra mensagem de desempenho quando todos os 5 indicadores estão preenchidos
   if(filled('fat')&&filled('google')&&filled('ifood')&&filled('chamados')&&filled('cancel')&&(!temLoja(unidadeAtual)||filled('pedidosIfood'))){
     const metas=[
-      val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
+      valFat()>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
       ival('google')>=(ma.google||0)&&(ma.google||0)>0,
       ival('ifood')>=(ma.ifood||0)&&(ma.ifood||0)>0,
       ival('chamados')===0,
@@ -1243,7 +1257,7 @@ function validarMotivoVendas(){
 }
 
 function faturamentoForaDaFaixa(){
-  const fat = val('fat');
+  const fat = valFat();
   const meta = metaFat(unidadeAtual);
   if(!fat||!meta||fat<=0) return false;
   const pct = fat/meta;
@@ -1251,7 +1265,7 @@ function faturamentoForaDaFaixa(){
 }
 
 function validarFaturamento(){
-  const fat = val('fat');
+  const fat = valFat();
   const meta = metaFat(unidadeAtual);
   const alerta = document.getElementById('fatAlerta');
   if(!fat||!meta||fat<=0){alerta.style.display='none';return;}
@@ -1362,7 +1376,7 @@ document.querySelectorAll('input.val').forEach(el=>el.addEventListener('input',a
 function verificarPremiacao(){
   if(!unidadeAtual) return;
   const ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
-  const bateuFat=val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0&&filled('fat');
+  const bateuFat=valFat()>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0&&filled('fat');
   const bateuG=ival('google')>=ma.google&&ma.google>0&&filled('google');
   const bateuI=ival('ifood')>=ma.ifood&&ma.ifood>0&&filled('ifood');
   const bateuC=ival('chamados')===0&&filled('chamados');
@@ -1440,7 +1454,7 @@ async function comprimirFoto(base64){
 
 async function registrar(){
   if(faturamentoForaDaFaixa()){
-    const fatAtual=val('fat');
+    const fatAtual=valFat();
     const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
     if(!confirmou) return;
   }
@@ -1462,7 +1476,7 @@ async function registrar(){
   }
   const payload={
     unidade:unidadeAtual,data:dataFmt,periodo:isFds()?'fds':'semana',
-    faturamento:val('fat'),metaFaturamento:metaFat(unidadeAtual),
+    faturamento:valFat(),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
     vendasCanceladasCaixa:ival('vendasCanceladas'),
@@ -1480,7 +1494,7 @@ async function registrar(){
   // Calcula pctMeta localmente para mensagem imediata
   const ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
   const metas=[
-    val('fat')>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
+    valFat()>=metaFat(unidadeAtual)&&metaFat(unidadeAtual)>0,
     ival('google')>=ma.google&&ma.google>0,
     ival('ifood')>=ma.ifood&&ma.ifood>0,
     ival('chamados')===0,
