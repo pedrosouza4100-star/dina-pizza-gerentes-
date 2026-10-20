@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Escalas — Dina Pizza</title>
+<link rel="stylesheet" href="escala.css?v=1">
+<style>
+  body{padding-bottom:30px}
+  .lojas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .loja{background:var(--card);border:1px solid var(--border);border-left:5px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+  .loja:hover{border-color:var(--gold)}
+  .loja.ok{border-left-color:var(--green)} .loja.err{border-left-color:var(--danger)} .loja.av{border-left-color:var(--warn)} .loja.nada{border-left-color:#555;cursor:default}
+  .loja-n{font-weight:700;font-size:.95rem}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em}
+  .tag.ok{background:rgba(46,204,113,.15);color:var(--green)} .tag.err{background:rgba(255,77,77,.15);color:var(--danger)}
+  .tag.av{background:rgba(245,166,35,.15);color:var(--warn)} .tag.nada{background:#2a2a2a;color:var(--muted)}
+  .loja-d{font-size:.75rem;color:var(--muted);line-height:1.5}
+  .det-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<div class="auth" id="telaLogin">
+  <div class="card">
+    <div class="auth-logo">DINA <span>PIZZA</span></div>
+    <div class="auth-sub">Painel de escalas</div>
+    <div><div class="lbl">Senha</div><input type="password" id="senha" placeholder="Senha do painel" onkeydown="if(event.key==='Enter')entrar()"></div>
+    <button class="btn" onclick="entrar()">Entrar</button>
+    <div class="erro" id="loginErro"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="top">
+    <div class="brand">DINA <span>PIZZA</span></div>
+    <div class="top-r">
+      <div class="badge">📅 Painel de escalas</div>
+      <button class="link" onclick="sair()">Sair</button>
+    </div>
+  </header>
+  <main>
+    <!-- VISÃO GERAL -->
+    <section id="visao" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="semana">
+          <button class="nav" onclick="irSemana(-7)">‹</button>
+          <div class="semana-t"><b id="tituloSemana">—</b><small id="subSemana"></small></div>
+          <button class="nav" onclick="irSemana(7)">›</button>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <div class="chips">
+            <button class="chip" id="chipAtual" onclick="irPara(0)">Esta semana</button>
+            <button class="chip" id="chipProx" onclick="irPara(7)">Próxima semana</button>
+          </div>
+          <div class="row">
+            <button class="btn sec sm" onclick="carregar()">↻ Atualizar</button>
+            <a class="btn sec sm" id="linkPlanilha" target="_blank" style="text-decoration:none;display:none">Abrir planilha</a>
+          </div>
+        </div>
+      </div>
+      <div class="status">
+        <div class="st" id="stFeitas"><b>—</b><small>Escalas salvas</small></div>
+        <div class="st" id="stOk"><b>—</b><small>Dentro das regras</small></div>
+        <div class="st" id="stErr"><b>—</b><small>Com problemas</small></div>
+        <div class="st" id="stHoras"><b>—</b><small>Horas na rede</small></div>
+      </div>
+      <div id="carregando" class="loading" style="display:none">⏳ Carregando...</div>
+      <div class="lojas" id="lojas"></div>
+    </section>
+
+    <!-- DETALHE DE UMA LOJA -->
+    <section id="detalhe" style="display:none;flex-direction:column;gap:12px">
+      <div class="card no-print">
+        <div class="det-h">
+          <button class="btn sec sm" onclick="voltar()">‹ Voltar</button>
+          <div class="grow"><b id="detTitulo" style="font-size:1.05rem"></b><div class="muted" id="detSub"></div></div>
+          <button class="btn sec sm" onclick="window.print()">🖨 Imprimir</button>
+        </div>
+      </div>
+      <div class="so-print">
+        <h1>DINA PIZZA — <span id="prUnidade"></span></h1>
+        <div>Escala da semana <b id="prSemana"></b> · <span id="prRegra"></span></div>
+      </div>
+      <div id="detBanner"></div>
+      <div class="eg-wrap"><div id="grade"></div></div>
+      <div class="card"><div class="lbl">Conferência das regras</div><div id="alertas"></div></div>
+      <div class="card" id="detObsCard" style="display:none"><div class="lbl">Observações do gerente</div><div class="muted" id="detObs"></div></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="escala-core.js?v=1"></script>
+<script>
+let semana=eSegundaDe(new Date()), senha='', resumo=[];
+
+function lerSS(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }
+function gravarSS(k,v){ try{ v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v); }catch(e){} }
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const s=lerSS('esc_painel');
+  if(s){ document.getElementById('senha').value=s; entrar(); }
+});
+
+async function entrar(){
+  senha=document.getElementById('senha').value;
+  const err=document.getElementById('loginErro');
+  err.textContent='Conferindo...';
+  try{
+    const r=await eJsonp({action:'escalaResumo',semana,senha});
+    if(!r.ok){ err.textContent=r.erro||'Erro'; gravarSS('esc_painel',null); return; }
+    gravarSS('esc_painel',senha);
+    document.getElementById('telaLogin').style.display='none';
+    document.getElementById('app').style.display='block';
+    mostrarResumo(r);
+  }catch(e){ err.textContent=e.message; }
+}
+function sair(){ gravarSS('esc_painel',null); location.reload(); }
+
+function irSemana(n){ semana=eSomarDias(semana,n); carregar(); }
+function irPara(n){ semana=eSomarDias(eSegundaDe(new Date()),n); carregar(); }
+
+async function carregar(){
+  cabecalhoSemana();
+  document.getElementById('carregando').style.display='block';
+  document.getElementById('lojas').innerHTML='';
+  try{
+    const r=await eJsonp({action:'escalaResumo',semana,senha});
+    if(!r.ok) throw new Error(r.erro);
+    mostrarResumo(r);
+  }catch(e){ toast('⚠ '+e.message,'err'); }
+  document.getElementById('carregando').style.display='none';
+}
+
+function cabecalhoSemana(){
+  const hs=eSegundaDe(new Date());
+  document.getElementById('tituloSemana').textContent=eTituloSemana(semana);
+  document.getElementById('subSemana').textContent=(semana===hs?'Esta semana · ':semana===eSomarDias(hs,7)?'Próxima semana · ':'')+ESCALA_REGRAS[eRegraDaSemana(semana)].nome;
+  document.getElementById('chipAtual').classList.toggle('on',semana===hs);
+  document.getElementById('chipProx').classList.toggle('on',semana===eSomarDias(hs,7));
+}
+
+function mostrarResumo(r){
+  cabecalhoSemana();
+  resumo=r.unidades||[];
+  if(r.planilhaUrl){ const l=document.getElementById('linkPlanilha'); l.href=r.planilhaUrl; l.style.display='inline-block'; }
+  let feitas=0, ok=0, comErr=0, horas=0, h='';
+  ESCALA_UNIDADES.forEach(u=>{
+    const x=resumo.find(z=>z.unidade===u);
+    if(!x){ h+='<div class="loja nada"><div class="loja-n">'+eEsc(u)+'</div><div><span class="tag nada">Sem escala</span></div><div class="loja-d">O gerente ainda não salvou a escala desta semana.</div></div>'; return; }
+    feitas++; horas+=Number(x.horasTotal)||0;
+    let cls, tag;
+    if(x.erros>0){ cls='err'; tag=x.erros+' problema'+(x.erros>1?'s':''); comErr++; }
+    else if(x.vazios>0){ cls='av'; tag='Incompleta'; }
+    else { cls='ok'; tag='Dentro das regras'; ok++; }
+    h+='<div class="loja '+cls+'" onclick="abrir(\''+eEsc(u).replace(/'/g,"\\'")+'\')"><div class="loja-n">'+eEsc(u)+'</div><div><span class="tag '+cls+'">'+tag+'</span>'+
+      (x.avisos>0?' <span class="tag av">'+x.avisos+' aviso'+(x.avisos>1?'s':'')+'</span>':'')+'</div>'+
+      '<div class="loja-d">'+x.pessoas+' pessoas · '+String(x.horasTotal).replace('.',',')+' h'+(x.vazios?' · '+x.vazios+' dias sem definir':'')+
+      '<br>Por '+eEsc(x.gerente||'—')+' em '+eEsc(x.atualizadoEm||'—')+
+      (x.regra&&x.regra!==eRegraDaSemana(semana)?'<br>Simulada na '+eEsc((ESCALA_REGRAS[x.regra]||{}).nome||x.regra):'')+'</div></div>';
+  });
+  document.getElementById('lojas').innerHTML=h;
+  const st=(id,v,cls)=>{ const el=document.getElementById(id); el.querySelector('b').textContent=v; el.className='st '+(cls||''); };
+  st('stFeitas',feitas+'/'+ESCALA_UNIDADES.length, feitas===ESCALA_UNIDADES.length?'ok':'av');
+  st('stOk',ok,ok?'ok':'');
+  st('stErr',comErr,comErr?'err':'ok');
+  st('stHoras',Math.round(horas).toLocaleString('pt-BR'));
+}
+
+async function abrir(unidade){
+  document.getElementById('visao').style.display='none';
+  const det=document.getElementById('detalhe'); det.style.display='flex';
+  document.getElementById('detTitulo').textContent=unidade;
+  document.getElementById('detSub').textContent='Semana '+eTituloSemana(semana)+' · carregando...';
+  document.getElementById('grade').innerHTML='<div class="loading">⏳</div>';
+  document.getElementById('alertas').innerHTML='';
+  document.getElementById('detBanner').innerHTML='';
+  window.scrollTo(0,0);
+  try{
+    const r=await eJsonp({action:'escalaGet',unidade,semana});
+    if(!r.ok) throw new Error(r.erro);
+    const e=r.escala||{grade:{},regra:eRegraDaSemana(semana)};
+    const a=eAnalisar(r.equipe,e.grade,r.anteriores,e.regra||eRegraDaSemana(semana));
+    eRenderGrade(document.getElementById('grade'),{equipe:r.equipe,grade:e.grade,analise:a,semana,editavel:false});
+    eRenderAlertas(document.getElementById('alertas'),a);
+    document.getElementById('detSub').textContent='Semana '+eTituloSemana(semana)+' · '+a.regra.nome+' · por '+(e.gerente||'—')+' em '+(e.atualizadoEm||'—');
+    document.getElementById('detBanner').innerHTML=a.erros?'<div class="banner err">'+a.erros+' problema(s) nas regras — veja a lista abaixo.</div>':a.vazios?'<div class="banner warn">'+a.vazios+' dia(s) sem definir.</div>':'<div class="banner ok">✔ Escala completa e dentro das regras conferidas.</div>';
+    document.getElementById('prUnidade').textContent=unidade;
+    document.getElementById('prSemana').textContent=eTituloSemana(semana);
+    document.getElementById('prRegra').textContent=a.regra.nome;
+    document.getElementById('detObsCard').style.display=e.obs?'block':'none';
+    document.getElementById('detObs').textContent=e.obs||'';
+  }catch(err){
+    document.getElementById('grade').innerHTML='<div class="loading">⚠ '+eEsc(err.message)+'</div>';
+  }
+}
+function voltar(){ document.getElementById('detalhe').style.display='none'; document.getElementById('visao').style.display='flex'; }
+
+let toastT=null;
+function toast(msg,tipo,ms){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast on '+(tipo||''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='toast',ms||3000); }
+</script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Escala da Equipe — Dina Pizza</title>
+<link rel="stylesheet" href="escala.css?v=1">
+</head>
+<body>
+
+<!-- ENTRADA -->
+<div class="auth" id="telaLogin">
+  <div class="card">
+    <div class="auth-logo">DINA <span>PIZZA</span></div>
+    <div class="auth-sub">Escala da equipe</div>
+    <div>
+      <div class="lbl">Unidade</div>
+      <select id="selUnidade"><option value="">Escolha a loja...</option></select>
+    </div>
+    <div>
+      <div class="lbl">Seu nome</div>
+      <input type="text" id="nomeGerente" placeholder="Quem está montando a escala" autocomplete="name">
+    </div>
+    <button class="btn" onclick="entrar()">Entrar</button>
+    <div class="erro" id="loginErro"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <header class="top">
+    <div class="brand">DINA <span>PIZZA</span></div>
+    <div class="top-r">
+      <div class="badge" id="badgeUnidade"></div>
+      <button class="link" onclick="sair()">Trocar unidade</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs no-print">
+      <button class="tab on" id="tabEscala" onclick="mudarAba('escala')">📅 Escala</button>
+      <button class="tab" id="tabEquipe" onclick="mudarAba('equipe')">👥 Equipe e turnos</button>
+    </div>
+
+    <!-- ABA ESCALA -->
+    <section id="abaEscala" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card no-print">
+        <div class="semana">
+          <button class="nav" onclick="irSemana(-7)" aria-label="Semana anterior">‹</button>
+          <div class="semana-t"><b id="tituloSemana">—</b><small id="subSemana"></small></div>
+          <button class="nav" onclick="irSemana(7)" aria-label="Próxima semana">›</button>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <div class="chips">
+            <button class="chip" id="chipAtual" onclick="irPara(0)">Esta semana</button>
+            <button class="chip" id="chipProx" onclick="irPara(7)">Próxima semana</button>
+          </div>
+          <select id="selRegra" style="width:auto;flex:0 1 230px;padding:8px 10px;font-size:.82rem" onchange="trocarRegra(this.value)"></select>
+        </div>
+      </div>
+
+      <div id="carregando" class="loading" style="display:none">⏳ Carregando escala...</div>
+
+      <div id="conteudo" style="display:flex;flex-direction:column;gap:12px">
+        <div id="banners" class="no-print" style="display:flex;flex-direction:column;gap:8px"></div>
+
+        <div class="status no-print">
+          <div class="st" id="stErros"><b>0</b><small>Problemas</small></div>
+          <div class="st" id="stAvisos"><b>0</b><small>Avisos</small></div>
+          <div class="st" id="stVazios"><b>0</b><small>Dias sem definir</small></div>
+          <div class="st" id="stHoras"><b>0</b><small>Horas na semana</small></div>
+        </div>
+
+        <div class="row no-print">
+          <button class="btn sec sm" onclick="copiarSemanaAnterior()">⧉ Copiar semana anterior</button>
+          <button class="btn sec sm" onclick="window.print()">🖨 Imprimir</button>
+          <button class="btn sec sm" onclick="mandarWhatsApp()">💬 WhatsApp</button>
+          <div class="grow"></div>
+          <span class="muted">Toque num dia para definir o horário.</span>
+        </div>
+
+        <div class="so-print">
+          <h1>DINA PIZZA — <span id="prUnidade"></span></h1>
+          <div>Escala da semana <b id="prSemana"></b> · <span id="prRegra"></span> · Atualizada em <span id="prAtual"></span></div>
+        </div>
+
+        <div class="eg-wrap"><div id="grade"></div></div>
+
+        <div class="card no-print">
+          <div class="lbl">Conferência das regras</div>
+          <div id="alertas"></div>
+        </div>
+
+        <div class="card no-print">
+          <div class="lbl">Observações da semana</div>
+          <textarea id="obs" rows="2" placeholder="Ex.: feriado na quinta, troca combinada entre João e Ana..." oninput="obsMudou()"></textarea>
+        </div>
+
+        <details class="card no-print">
+          <summary class="lbl" style="cursor:pointer;margin:0">O que a escala confere</summary>
+          <div class="muted" style="margin-top:10px">
+            <p id="regraTexto"></p>
+            <p style="margin-top:8px">Em todas as regras: até 2 h extras por dia (CLT art. 59); 11 h de descanso entre um dia e outro (art. 66); intervalo de 1 h a 2 h acima de 6 h de trabalho e de 15 min entre 4 h e 6 h (art. 71); hora noturna (22h às 5h) de 52min30, com adicional de 20% (art. 73); folga em 1 domingo a cada 3 semanas (Lei 10.101/2000, art. 6º); mulheres, domingo sim, domingo não (art. 386).</p>
+            <p style="margin-top:8px">Não confere feriados nem as regras específicas da convenção do sindicato. Em caso de dúvida, fale com o RH.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ABA EQUIPE -->
+    <section id="abaEquipe" style="display:none;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <div class="lbl" style="margin:0">Equipe da unidade</div>
+          <button class="btn sm" onclick="abrirPessoa(null)">+ Adicionar pessoa</button>
+        </div>
+        <div id="listaEquipe"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <div class="lbl" style="margin:0">Turnos prontos</div>
+          <button class="btn sm" onclick="abrirTurno(null)">+ Adicionar turno</button>
+        </div>
+        <div class="muted" style="margin-bottom:6px">Aparecem como atalho na hora de montar a escala.</div>
+        <div id="listaTurnos"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="barra no-print">
+    <div class="barra-in">
+      <div class="barra-txt" id="barraTxt"></div>
+      <button class="btn" id="btnSalvar" onclick="salvarEscala()">Salvar escala</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLHA: DIA -->
+<div class="ov" id="ovDia" onclick="if(event.target===this)fechar('ovDia')">
+  <div class="sheet">
+    <h3 id="diaTitulo"></h3>
+    <div class="opts" id="diaTipos">
+      <button class="opt" data-t="trab">Trabalha</button>
+      <button class="opt" data-t="folga">Folga</button>
+      <button class="opt" data-t="ferias">Férias</button>
+      <button class="opt" data-t="atestado">Afastado</button>
+    </div>
+    <div id="diaHorario" style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <div class="lbl">Turnos prontos</div>
+        <div class="chips" id="diaTurnos"></div>
+      </div>
+      <div id="diaPeriodos" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn out sm" id="btnAddPer" onclick="addPeriodo()">+ Adicionar 2º período (volta do intervalo)</button>
+    </div>
+    <div>
+      <div class="lbl">Repetir também em</div>
+      <div class="dias-ap" id="diaRepetir"></div>
+    </div>
+    <div class="prev" id="diaPrev"></div>
+    <div class="row">
+      <button class="btn out sm" onclick="limparDia()">Limpar</button>
+      <div class="grow"></div>
+      <button class="btn sec" onclick="fechar('ovDia')">Cancelar</button>
+      <button class="btn" onclick="aplicarDia()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLHA: PESSOA -->
+<div class="ov" id="ovPessoa" onclick="if(event.target===this)fechar('ovPessoa')">
+  <div class="sheet">
+    <h3 id="pesTitulo">Pessoa</h3>
+    <div><div class="lbl">Nome</div><input type="text" id="pesNome" placeholder="Nome e sobrenome"></div>
+    <div><div class="lbl">Função</div><select id="pesFuncao"></select></div>
+    <div>
+      <div class="lbl">Regra de domingo</div>
+      <select id="pesDomingo">
+        <option value="geral">Geral: folga em 1 domingo a cada 3 semanas</option>
+        <option value="mulher">Mulher: domingo sim, domingo não (CLT art. 386)</option>
+      </select>
+    </div>
+    <div>
+      <div class="lbl">Horas do contrato por semana</div>
+      <input type="number" id="pesHoras" inputmode="decimal" min="1" max="44" step="0.5" placeholder="Em branco = jornada cheia da regra">
+      <div class="muted" style="margin-top:4px">Preencha só para meio período (ex.: 30). Em branco, vale o limite da regra (44 h hoje, 42 h a partir de 17/12/2026).</div>
+    </div>
+    <div class="erro" id="pesErro"></div>
+    <div class="row">
+      <button class="btn out sm" id="btnRemoverPes" onclick="removerPessoa()">Tirar da equipe</button>
+      <div class="grow"></div>
+      <button class="btn sec" onclick="fechar('ovPessoa')">Cancelar</button>
+      <button class="btn" onclick="salvarPessoa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLHA: TURNO -->
+<div class="ov" id="ovTurno" onclick="if(event.target===this)fechar('ovTurno')">
+  <div class="sheet">
+    <h3>Turno pronto</h3>
+    <div><div class="lbl">Nome do turno</div><input type="text" id="turNome" placeholder="Ex.: Almoço, Noite, Dobra"></div>
+    <div id="turPeriodos" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn out sm" id="btnAddPerTur" onclick="addPeriodoTurno()">+ Adicionar 2º período</button>
+    <div class="erro" id="turErro"></div>
+    <div class="row">
+      <button class="btn out sm" id="btnExcluirTur" onclick="excluirTurno()">Excluir</button>
+      <div class="grow"></div>
+      <button class="btn sec" onclick="fechar('ovTurno')">Cancelar</button>
+      <button class="btn" onclick="salvarTurno()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="escala-core.js?v=1"></script>
+<script>
+const S = {
+  unidade:null, gerente:'', semana:null, regra:'atual', regraManual:false,
+  equipe:[], turnos:[], grade:{}, anteriores:[null,null], obs:'',
+  salvoEm:null, sujo:false, rascunho:false, analise:null, carregando:false
+};
+
+/* ───────── Entrada ───────── */
+window.addEventListener('DOMContentLoaded',()=>{
+  const sel=document.getElementById('selUnidade');
+  ESCALA_UNIDADES.forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=u; sel.appendChild(o); });
+  const selR=document.getElementById('selRegra');
+  Object.values(ESCALA_REGRAS).forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.nome; selR.appendChild(o); });
+  const fs=document.getElementById('pesFuncao');
+  ESCALA_FUNCOES.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; fs.appendChild(o); });
+
+  const lembrada=lerLS('esc_unidade')||lerLS('dina_unidade_logada');
+  if(lembrada && ESCALA_UNIDADES.includes(lembrada)) sel.value=lembrada;
+  document.getElementById('nomeGerente').value=lerLS('esc_gerente')||'';
+  if(lerLS('esc_logado')==='1' && sel.value && document.getElementById('nomeGerente').value) entrar();
+});
+
+function lerLS(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function gravarLS(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+
+function entrar(){
+  const u=document.getElementById('selUnidade').value;
+  const g=document.getElementById('nomeGerente').value.trim();
+  const err=document.getElementById('loginErro');
+  if(!u){ err.textContent='Escolha a unidade.'; return; }
+  if(!g){ err.textContent='Digite seu nome.'; return; }
+  S.unidade=u; S.gerente=g;
+  gravarLS('esc_unidade',u); gravarLS('esc_gerente',g); gravarLS('esc_logado','1');
+  document.getElementById('telaLogin').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('badgeUnidade').textContent='📍 '+u;
+  S.semana=eSegundaDe(new Date());
+  carregar();
+}
+
+function sair(){
+  gravarLS('esc_logado',null);
+  location.reload();
+}
+
+/* ───────── Semana ───────── */
+function irSemana(n){ S.semana=eSomarDias(S.semana,n); carregar(); }
+function irPara(n){ S.semana=eSomarDias(eSegundaDe(new Date()),n); carregar(); }
+
+function chaveRascunho(){ return 'esc_rasc_'+S.unidade+'_'+S.semana; }
+
+async function carregar(){
+  const hojeSeg=eSegundaDe(new Date());
+  document.getElementById('tituloSemana').textContent=eTituloSemana(S.semana);
+  document.getElementById('subSemana').textContent=S.semana===hojeSeg?'Esta semana':S.semana===eSomarDias(hojeSeg,7)?'Próxima semana':'';
+  document.getElementById('chipAtual').classList.toggle('on',S.semana===hojeSeg);
+  document.getElementById('chipProx').classList.toggle('on',S.semana===eSomarDias(hojeSeg,7));
+  document.getElementById('carregando').style.display='block';
+  document.getElementById('conteudo').style.display='none';
+  S.carregando=true;
+  const semanaPedida=S.semana;
+  let resp=null, erroRede=null;
+  try{ resp=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:S.semana}); }
+  catch(e){ erroRede=e; }
+  if(semanaPedida!==S.semana) return; // usuário já trocou de semana
+  S.carregando=false;
+  document.getElementById('carregando').style.display='none';
+  document.getElementById('conteudo').style.display='flex';
+
+  if(resp && resp.ok){
+    S.equipe=resp.equipe||[];
+    S.turnos=(resp.turnos&&resp.turnos.length)?resp.turnos:JSON.parse(JSON.stringify(TURNOS_PADRAO));
+    S.anteriores=resp.anteriores||[null,null];
+    const e=resp.escala;
+    S.grade=e?e.grade||{}:{};
+    S.obs=e?e.obs||'':'';
+    S.salvoEm=e?e.atualizadoEm:null;
+    S.regraManual=!!(e&&e.regra&&e.regra!==eRegraDaSemana(S.semana));
+    S.regra=(e&&e.regra)||eRegraDaSemana(S.semana);
+    gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:S.turnos}));
+  } else {
+    // sem conexão: usa o que tiver neste aparelho
+    const cache=JSON.parse(lerLS('esc_cache_'+S.unidade)||'null');
+    S.equipe=cache?cache.equipe:[]; S.turnos=cache&&cache.turnos&&cache.turnos.length?cache.turnos:JSON.parse(JSON.stringify(TURNOS_PADRAO));
+    S.anteriores=[null,null]; S.grade={}; S.obs=''; S.salvoEm=null; S.regra=eRegraDaSemana(S.semana); S.regraManual=false;
+    toast('⚠ '+((resp&&resp.erro)||(erroRede&&erroRede.message)||'Erro ao carregar')+'. Mostrando o que está neste aparelho.','err',5000);
+  }
+  // rascunho não enviado deste aparelho
+  S.sujo=false; S.rascunho=false;
+  const r=JSON.parse(lerLS(chaveRascunho())||'null');
+  if(r && r.grade){
+    S.grade=r.grade; S.obs=r.obs||''; if(r.regra){ S.regra=r.regra; S.regraManual=r.regraManual; }
+    S.sujo=true; S.rascunho=true;
+  }
+  document.getElementById('obs').value=S.obs;
+  render();
+}
+
+function trocarRegra(v){
+  S.regra=v; S.regraManual=v!==eRegraDaSemana(S.semana);
+  marcarSujo(); render();
+}
+
+/* ───────── Desenho ───────── */
+function render(){
+  const a=eAnalisar(S.equipe,S.grade,S.anteriores,S.regra);
+  S.analise=a;
+  document.getElementById('selRegra').value=S.regra;
+  eRenderGrade(document.getElementById('grade'),{
+    equipe:S.equipe, grade:S.grade, analise:a, semana:S.semana, editavel:true,
+    onCelula:abrirDia, onPessoa:id=>abrirPessoa(id)
+  });
+  eRenderAlertas(document.getElementById('alertas'),a);
+
+  const st=(id,v,cls)=>{ const el=document.getElementById(id); el.querySelector('b').textContent=v; el.className='st '+cls; };
+  st('stErros',a.erros,a.erros?'err':'ok');
+  st('stAvisos',a.avisos,a.avisos?'av':'ok');
+  st('stVazios',a.vazios,a.vazios?'av':'ok');
+  st('stHoras',String(a.horasTotal).replace('.',','),'');
+
+  // banners
+  let b='';
+  const auto=eRegraDaSemana(S.semana);
+  b+='<div class="banner info"><b>'+a.regra.nome+'</b>'+(S.regraManual?' (simulação — pela data, esta semana segue a <b>'+ESCALA_REGRAS[auto].nome+'</b>)':'')+' · '+a.regra.descricao+'</div>';
+  if(S.rascunho) b+='<div class="banner warn">Há alterações feitas neste aparelho que ainda não foram salvas no sistema. Toque em <b>Salvar escala</b> para enviar.</div>';
+  if(!a.pessoas.length) b+='<div class="banner warn">Comece cadastrando a equipe na aba <b>Equipe e turnos</b>.</div>';
+  else if(a.erros===0 && a.vazios===0) b+='<div class="banner ok">✔ Escala completa e dentro das regras conferidas.</div>';
+  document.getElementById('banners').innerHTML=b;
+  document.getElementById('regraTexto').textContent=a.regra.descricao;
+
+  document.getElementById('prUnidade').textContent=S.unidade;
+  document.getElementById('prSemana').textContent=eTituloSemana(S.semana);
+  document.getElementById('prRegra').textContent=a.regra.nome;
+  document.getElementById('prAtual').textContent=S.salvoEm||'—';
+
+  atualizarBarra();
+  renderEquipe();
+}
+
+function atualizarBarra(){
+  const t=document.getElementById('barraTxt');
+  if(S.sujo) t.innerHTML='<b>Alterações não salvas</b><br>Guardadas só neste aparelho';
+  else if(S.salvoEm) t.innerHTML='Salvo em <b>'+eEsc(S.salvoEm)+'</b>';
+  else t.innerHTML='Escala desta semana ainda não foi salva';
+  document.getElementById('btnSalvar').disabled=S.carregando;
+}
+
+function marcarSujo(){
+  S.sujo=true;
+  gravarLS(chaveRascunho(), JSON.stringify({grade:S.grade,obs:S.obs,regra:S.regra,regraManual:S.regraManual,ts:Date.now()}));
+}
+function obsMudou(){ S.obs=document.getElementById('obs').value; marcarSujo(); atualizarBarra(); }
+
+function mudarAba(a){
+  document.getElementById('abaEscala').style.display=a==='escala'?'flex':'none';
+  document.getElementById('abaEquipe').style.display=a==='equipe'?'flex':'none';
+  document.getElementById('tabEscala').classList.toggle('on',a==='escala');
+  document.getElementById('tabEquipe').classList.toggle('on',a==='equipe');
+}
+
+/* ───────── Folha do dia ───────── */
+let D=null; // edição em andamento
+function pessoaPorId(id){ return S.equipe.find(p=>p.id===id)||{id,nome:'(removido)'}; }
+
+function abrirDia(pid,dia){
+  const atual=(S.grade[pid]||[])[dia];
+  D={ pid, dia, t: atual&&atual.t ? atual.t : 'trab', p: atual&&atual.p ? JSON.parse(JSON.stringify(atual.p)) : [['','']], rep:new Set([dia]) };
+  if(!D.p.length) D.p=[['','']];
+  const p=pessoaPorId(pid);
+  document.getElementById('diaTitulo').innerHTML=eEsc(p.nome)+'<small>'+DIAS_LONGO[dia]+', '+eDataBR(eSomarDias(S.semana,dia))+'</small>';
+  document.querySelectorAll('#diaTipos .opt').forEach(b=>b.onclick=()=>{ D.t=b.dataset.t; desenharDia(); });
+  desenharDia();
+  document.getElementById('ovDia').classList.add('on');
+}
+
+function desenharDia(){
+  document.querySelectorAll('#diaTipos .opt').forEach(b=>b.classList.toggle('on',b.dataset.t===D.t));
+  document.getElementById('diaHorario').style.display=D.t==='trab'?'flex':'none';
+  // turnos prontos
+  document.getElementById('diaTurnos').innerHTML=S.turnos.map((t,i)=>'<button class="chip" onclick="usarTurno('+i+')">'+eEsc(t.nome)+' <span style="color:var(--muted);font-weight:400">'+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+'</span></button>').join('')||'<span class="muted">Nenhum turno pronto cadastrado.</span>';
+  // períodos
+  document.getElementById('diaPeriodos').innerHTML=D.p.map((x,i)=>
+    '<div class="per"><div><label>'+(i?'Volta do intervalo':'Entrada')+'</label><input type="time" value="'+x[0]+'" oninput="D.p['+i+'][0]=this.value;previaDia()"></div>'+
+    '<div><label>Saída</label><input type="time" value="'+x[1]+'" oninput="D.p['+i+'][1]=this.value;previaDia()"></div>'+
+    (i?'<button class="x" onclick="D.p.splice('+i+',1);desenharDia()">✕</button>':'<span></span>')+'</div>').join('');
+  document.getElementById('btnAddPer').style.display=D.p.length<2?'block':'none';
+  // repetir
+  document.getElementById('diaRepetir').innerHTML=DIAS_CURTO.map((d,i)=>'<button class="'+(D.rep.has(i)?'on':'')+'" '+(i===D.dia?'disabled':'')+' onclick="togRep('+i+')">'+d+'</button>').join('');
+  previaDia();
+}
+function togRep(i){ if(D.rep.has(i)) D.rep.delete(i); else D.rep.add(i); desenharDia(); }
+function usarTurno(i){ D.p=JSON.parse(JSON.stringify(S.turnos[i].p)); D.t='trab'; desenharDia(); }
+function addPeriodo(){ D.p.push(['','']); desenharDia(); }
+
+function celulaDeD(){
+  if(D.t!=='trab') return {t:D.t};
+  return {t:'trab', p:D.p.filter(x=>x[0]&&x[1]).map(x=>[x[0],x[1]])};
+}
+
+function previaDia(){
+  const el=document.getElementById('diaPrev');
+  if(D.t!=='trab'){ el.innerHTML=D.t==='folga'?'Dia de folga.':D.t==='ferias'?'Férias: o dia não conta como folga nem como trabalho.':'Afastamento (atestado, licença etc.): o dia não conta como folga nem como trabalho.'; return; }
+  const c=celulaDeD();
+  if(!c.p.length){ el.innerHTML='<span class="muted">Escolha um turno pronto ou preencha entrada e saída.</span>'; return; }
+  const d=eCalcDia(c,ESCALA_REGRAS[S.regra]);
+  let h='<b>'+eFmtH(d.contab)+'</b> de trabalho no dia';
+  if(d.info.length) h+='<br><span class="muted">'+d.info.join(' · ')+'</span>';
+  d.erros.forEach(m=>h+='<div style="color:var(--danger);margin-top:4px">✖ '+eEsc(m)+'</div>');
+  d.avisos.forEach(m=>h+='<div style="color:var(--warn);margin-top:4px">! '+eEsc(m)+'</div>');
+  el.innerHTML=h;
+}
+
+function aplicarDia(){
+  const c=celulaDeD();
+  if(c.t==='trab' && !c.p.length){ toast('Preencha entrada e saída ou escolha um turno.','err'); return; }
+  if(!S.grade[D.pid]) S.grade[D.pid]=[null,null,null,null,null,null,null];
+  D.rep.forEach(i=>{ S.grade[D.pid][i]=JSON.parse(JSON.stringify(c)); });
+  fechar('ovDia'); marcarSujo(); render();
+}
+function limparDia(){
+  if(S.grade[D.pid]) S.grade[D.pid][D.dia]=null;
+  fechar('ovDia'); marcarSujo(); render();
+}
+function fechar(id){ document.getElementById(id).classList.remove('on'); }
+
+/* ───────── Ações da semana ───────── */
+function copiarSemanaAnterior(){
+  const ant=S.anteriores&&S.anteriores[0];
+  if(!ant||!ant.grade||!Object.keys(ant.grade).length){ toast('A semana anterior não tem escala salva.','err'); return; }
+  const temAlgo=Object.values(S.grade).some(c=>(c||[]).some(x=>x&&x.t));
+  if(temAlgo && !confirm('Substituir a escala desta semana pela da semana anterior?')) return;
+  const nova={};
+  S.equipe.filter(p=>p.ativo!==false).forEach(p=>{ if(ant.grade[p.id]) nova[p.id]=JSON.parse(JSON.stringify(ant.grade[p.id])); });
+  S.grade=nova; marcarSujo(); render();
+  toast('Semana anterior copiada. Confira e salve.','ok');
+}
+
+function mandarWhatsApp(){
+  const txt=eTextoWhatsApp(S.unidade,S.semana,S.analise,S.grade);
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+}
+
+async function salvarEscala(){
+  const a=S.analise;
+  if(!a.pessoas.length){ toast('Cadastre a equipe antes de salvar.','err'); return; }
+  const btn=document.getElementById('btnSalvar');
+  btn.disabled=true; btn.textContent='Salvando...';
+  const grade={};
+  Object.entries(S.grade).forEach(([id,cells])=>{ if((cells||[]).some(c=>c&&c.t)) grade[id]=cells; });
+  try{
+    const r=await ePost({
+      action:'escalaSalvar', unidade:S.unidade, semana:S.semana, grade, regra:S.regra, gerente:S.gerente, obs:S.obs,
+      resumo:{erros:a.erros,avisos:a.avisos,vazios:a.vazios,pessoas:a.pessoas.length,horasTotal:a.horasTotal},
+      detalhe:eDetalhe(a,S.grade,S.semana)
+    });
+    S.salvoEm=r.atualizadoEm; S.sujo=false; S.rascunho=false;
+    gravarLS(chaveRascunho(),null);
+    render();
+    toast(a.erros?'Escala salva — ainda com '+a.erros+' problema(s) para corrigir.':'✔ Escala salva!', a.erros?'err':'ok', 3500);
+  }catch(e){
+    toast('⚠ Não salvou: '+e.message+'. Suas alterações continuam guardadas neste aparelho.','err',6000);
+  }
+  btn.disabled=false; btn.textContent='Salvar escala';
+}
+
+/* ───────── Equipe ───────── */
+function renderEquipe(){
+  const ativos=S.equipe.filter(p=>p.ativo!==false), inativos=S.equipe.filter(p=>p.ativo===false);
+  let h='';
+  if(!S.equipe.length) h='<div class="muted" style="padding:10px 0">Ninguém cadastrado ainda.</div>';
+  [...ativos,...inativos].forEach(p=>{
+    h+='<div class="pessoa'+(p.ativo===false?' inativa':'')+'"><div class="grow"><b>'+eEsc(p.nome)+'</b><span class="muted">'+eEsc(p.funcao||'')+
+      ' · '+(p.domingo==='mulher'?'domingo sim, domingo não':'1 domingo a cada 3')+(p.horasContrato?' · '+p.horasContrato+' h/semana':'')+(p.ativo===false?' · fora da equipe':'')+
+      '</span></div><button class="btn sec sm" onclick="abrirPessoa(\''+p.id+'\')">Editar</button></div>';
+  });
+  document.getElementById('listaEquipe').innerHTML=h;
+  document.getElementById('listaTurnos').innerHTML=S.turnos.map((t,i)=>
+    '<div class="turno-it"><div class="grow"><b>'+eEsc(t.nome)+'</b> <span class="muted">'+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+' · '+eFmtH(eCalcDia({t:'trab',p:t.p},ESCALA_REGRAS[S.regra]).contab)+'</span></div><button class="btn sec sm" onclick="abrirTurno('+i+')">Editar</button></div>').join('')||'<div class="muted">Nenhum turno.</div>';
+}
+
+let P=null;
+function abrirPessoa(id){
+  const p=id?S.equipe.find(x=>x.id===id):null;
+  if(id && !p) return;
+  P={id:id||null};
+  document.getElementById('pesTitulo').textContent=p?'Editar pessoa':'Nova pessoa';
+  document.getElementById('pesNome').value=p?p.nome:'';
+  document.getElementById('pesFuncao').value=p?(p.funcao||'Outro'):'Atendimento';
+  document.getElementById('pesDomingo').value=p?(p.domingo||'geral'):'geral';
+  document.getElementById('pesHoras').value=p&&p.horasContrato?p.horasContrato:'';
+  document.getElementById('pesErro').textContent='';
+  const rb=document.getElementById('btnRemoverPes');
+  rb.style.display=p?'inline-block':'none';
+  rb.textContent=p&&p.ativo===false?'Voltar para a equipe':'Tirar da equipe';
+  document.getElementById('ovPessoa').classList.add('on');
+  setTimeout(()=>document.getElementById('pesNome').focus(),50);
+}
+
+async function salvarPessoa(){
+  const nome=document.getElementById('pesNome').value.trim();
+  const horas=parseFloat(String(document.getElementById('pesHoras').value).replace(',','.'));
+  if(!nome){ document.getElementById('pesErro').textContent='Digite o nome.'; return; }
+  if(document.getElementById('pesHoras').value && !(horas>0 && horas<=44)){ document.getElementById('pesErro').textContent='Horas do contrato entre 1 e 44.'; return; }
+  const dados={nome, funcao:document.getElementById('pesFuncao').value, domingo:document.getElementById('pesDomingo').value, horasContrato:horas>0?horas:null};
+  if(P.id){ Object.assign(S.equipe.find(x=>x.id===P.id),dados); }
+  else S.equipe.push({id:eNovoId(),ativo:true,...dados});
+  fechar('ovPessoa'); render();
+  await salvarUnidade();
+}
+
+async function removerPessoa(){
+  const p=S.equipe.find(x=>x.id===P.id); if(!p) return;
+  p.ativo=p.ativo===false?true:false;
+  fechar('ovPessoa'); render();
+  await salvarUnidade();
+}
+
+let T=null;
+function abrirTurno(i){
+  const t=i!=null?S.turnos[i]:null;
+  T={i, p:t?JSON.parse(JSON.stringify(t.p)):[['','']]};
+  document.getElementById('turNome').value=t?t.nome:'';
+  document.getElementById('turErro').textContent='';
+  document.getElementById('btnExcluirTur').style.display=t?'inline-block':'none';
+  desenharTurno();
+  document.getElementById('ovTurno').classList.add('on');
+}
+function desenharTurno(){
+  document.getElementById('turPeriodos').innerHTML=T.p.map((x,i)=>
+    '<div class="per"><div><label>'+(i?'Volta do intervalo':'Entrada')+'</label><input type="time" value="'+x[0]+'" oninput="T.p['+i+'][0]=this.value"></div>'+
+    '<div><label>Saída</label><input type="time" value="'+x[1]+'" oninput="T.p['+i+'][1]=this.value"></div>'+
+    (i?'<button class="x" onclick="T.p.splice('+i+',1);desenharTurno()">✕</button>':'<span></span>')+'</div>').join('');
+  document.getElementById('btnAddPerTur').style.display=T.p.length<2?'block':'none';
+}
+function addPeriodoTurno(){ T.p.push(['','']); desenharTurno(); }
+async function salvarTurno(){
+  const nome=document.getElementById('turNome').value.trim();
+  const p=T.p.filter(x=>x[0]&&x[1]);
+  if(!nome||!p.length){ document.getElementById('turErro').textContent='Preencha o nome e pelo menos entrada e saída.'; return; }
+  if(T.i!=null) S.turnos[T.i]={...S.turnos[T.i],nome,p};
+  else S.turnos.push({id:eNovoId(),nome,p});
+  fechar('ovTurno'); render();
+  await salvarUnidade();
+}
+async function excluirTurno(){
+  S.turnos.splice(T.i,1);
+  fechar('ovTurno'); render();
+  await salvarUnidade();
+}
+
+async function salvarUnidade(){
+  gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:S.turnos}));
+  try{
+    await ePost({action:'escalaSalvarUnidade',unidade:S.unidade,equipe:S.equipe,turnos:S.turnos,gerente:S.gerente});
+    toast('✔ Equipe salva','ok');
+  }catch(e){
+    toast('⚠ Equipe não foi salva no sistema: '+e.message,'err',6000);
+  }
+}
+
+/* ───────── Aviso rápido ───────── */
+let toastT=null;
+function toast(msg,tipo,ms){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast on '+(tipo||'');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.className='toast',ms||2500);
+}
+
+window.addEventListener('beforeunload',e=>{ if(S.sujo){ e.preventDefault(); e.returnValue=''; } });
+</script>
+</body>
+</html>
