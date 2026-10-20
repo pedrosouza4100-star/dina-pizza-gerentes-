@@ -32,7 +32,7 @@
     <div class="brand">DINA <span>PIZZA</span></div>
     <div class="top-r">
       <div class="badge" id="badgeUnidade"></div>
-      <button class="link" onclick="sair()">Trocar unidade</button>
+      <button class="link" id="btnSair" onclick="sair()">Trocar unidade</button>
     </div>
   </header>
 
@@ -231,9 +231,17 @@ window.addEventListener('DOMContentLoaded',()=>{
   const fs=document.getElementById('pesFuncao');
   ESCALA_FUNCOES.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; fs.appendChild(o); });
 
-  const lembrada=lerLS('esc_unidade')||lerLS('dina_unidade_logada');
-  if(lembrada && ESCALA_UNIDADES.includes(lembrada)) sel.value=lembrada;
   document.getElementById('nomeGerente').value=lerLS('esc_gerente')||'';
+  // Vindo do placar: usa a loja em que o gerente já entrou com a senha do placar
+  const doPlacar=lerLS('dina_unidade_logada');
+  if(doPlacar && lerLS('dina_senha_'+doPlacar) && ESCALA_UNIDADES.includes(doPlacar)){
+    sel.value=doPlacar; sel.disabled=true;
+    document.getElementById('btnSair').textContent='‹ Voltar ao placar';
+    if(document.getElementById('nomeGerente').value) entrar();
+    return;
+  }
+  const lembrada=lerLS('esc_unidade');
+  if(lembrada && ESCALA_UNIDADES.includes(lembrada)) sel.value=lembrada;
   if(lerLS('esc_logado')==='1' && sel.value && document.getElementById('nomeGerente').value) entrar();
 });
 
@@ -256,6 +264,7 @@ function entrar(){
 }
 
 function sair(){
+  if(document.getElementById('selUnidade').disabled){ location.href='placar.html'; return; }
   gravarLS('esc_logado',null);
   location.reload();
 }
