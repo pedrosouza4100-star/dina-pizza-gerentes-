@@ -3,8 +3,8 @@
    Usado por escala.html (gerentes) e painel_escalas.html (gestão)
    ════════════════════════════════════════════════════════════════ */
 
-// URL do Apps Script "Dina Pizza — Escalas" (Implantar > App da Web > URL /exec)
-const ESCALA_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT_DE_ESCALAS';
+// URL do Apps Script do placar (as escalas ficam no mesmo script e na mesma planilha)
+const ESCALA_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec'; // mesmo script do placar
 
 const ESCALA_UNIDADES = ["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 
