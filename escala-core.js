@@ -46,6 +46,15 @@ const COBERTURA = [
   { label: 'Noite (20h)',  min: 20 * 60 },
 ];
 
+// Opções da unidade (vêm das preferências salvas): intervalo de refeição e regra de domingo
+const ESCALA_OPCOES = { intervalo: 30, domingo: 'mes' };
+function eSetOpcoes(g){
+  g=g||{};
+  ESCALA_OPCOES.intervalo = Number(g.intervalo)===60 ? 60 : 30;
+  ESCALA_OPCOES.domingo   = g.domingo==='lei' ? 'lei' : 'mes';
+}
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
 /* ─────────────── Datas ─────────────── */
 function eDataLocal(chave){ const [y,m,d]=chave.split('-').map(Number); return new Date(y,m-1,d); }
 function eChave(dt){ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
@@ -109,13 +118,14 @@ function eCalcDia(cell, regra){
   if(abs.length===1){
     // período único: o intervalo fica dentro do horário
     let ded=0;
-    if(bruto>360){ ded=60; r.info.push('Inclui 1 h de intervalo'); }
+    if(bruto>360){ ded=ESCALA_OPCOES.intervalo; r.info.push('Inclui '+(ded===60?'1 h':ded+' min')+' de intervalo'); }
     else if(bruto>240){ ded=15; r.info.push('Inclui 15 min de intervalo'); }
     const doDia=Math.min(ded,diurno); diurno-=doDia; noturno-=Math.min(ded-doDia,noturno);
   } else {
     const gaps=[]; for(let i=1;i<abs.length;i++) gaps.push(abs[i][0]-abs[i-1][1]);
     const menor=Math.min(...gaps), maior=Math.max(...gaps);
-    if(bruto>360 && menor<60) r.erros.push('Intervalo de '+eFmtH(menor)+' — acima de 6 h de trabalho o mínimo é 1 h (CLT art. 71)');
+    const minInt=ESCALA_OPCOES.intervalo;
+    if(bruto>360 && menor<minInt) r.erros.push('Intervalo de '+eFmtH(menor)+' — acima de 6 h de trabalho o mínimo é '+(minInt===60?'1 h (CLT art. 71)':minInt+' min (convenção)'));
     if(maior>120) r.avisos.push('Intervalo de '+eFmtH(maior)+' — acima de 2 h só com acordo escrito ou convenção (CLT art. 71)');
   }
   r.min=diurno+noturno;
@@ -133,8 +143,17 @@ function eCalcDia(cell, regra){
 function eTrab(cell){ return !!(cell && cell.t==='trab' && (cell.p||[]).some(p=>p&&p[0]&&p[1])); }
 
 /* ─────────────── Análise de uma pessoa na semana ───────────────
-   prev = [células da semana anterior, células de 2 semanas atrás] (ou null) */
-function eCalcPessoa(pessoa, cells, prev, regra){
+   prev = [células de 1, 2, 3 e 4 semanas atrás] (ou null); semana = segunda-feira (AAAA-MM-DD) */
+function eDomingosDoMes(semana){
+  // domingos do mês do domingo desta semana: { lista:[chaves], idx:posição deste domingo }
+  const dom=eSomarDias(semana,6), d=eDataLocal(dom), m=d.getMonth();
+  const lista=[]; let k=eSomarDias(dom,-7*Math.floor((d.getDate()-1)/7));
+  while(eDataLocal(k).getMonth()===m){ lista.push(k); k=eSomarDias(k,7); }
+  return { lista, idx:lista.indexOf(dom), mes:m };
+}
+function eFolgouDomingo(cell){ return !!(cell && (cell.t==='folga'||cell.t==='ferias'||cell.t==='atestado')); }
+
+function eCalcPessoa(pessoa, cells, prev, regra, semana){
   cells=cells||[null,null,null,null,null,null,null];
   const dias=cells.map(c=>eCalcDia(c,regra));
   const erros=[], avisos=[];
@@ -190,7 +209,21 @@ function eCalcPessoa(pessoa, cells, prev, regra){
   }
 
   // Domingos
-  if(eTrab(cells[6])){
+  if(ESCALA_OPCOES.domingo==='mes'){
+    // 1 domingo de folga por mês: confere no último domingo do mês
+    if(semana){
+      const dm=eDomingosDoMes(semana);
+      if(dm.idx===dm.lista.length-1 && cells[6] && cells[6].t){
+        let folgas=0, desconhecido=false;
+        for(let n=0;n<=dm.idx;n++){
+          const c=n===0?cells:(prev&&prev[n-1]);
+          if(!c){ desconhecido=true; continue; }
+          if(eFolgouDomingo(c[6])) folgas++;
+        }
+        if(!folgas && !desconhecido) erros.push({msg:'Nenhum domingo de folga em '+MESES[dm.mes]+' — cada colaborador tem 1 domingo de folga por mês',dia:6});
+      }
+    }
+  } else if(eTrab(cells[6])){
     if(pessoa.domingo==='mulher'){
       if(p0 && eTrab(p0[6])) erros.push({msg:'2º domingo seguido de trabalho — para mulheres a folga é domingo sim, domingo não (CLT art. 386)',dia:6});
     } else if(p0 && p1 && eTrab(p0[6]) && eTrab(p1[6])){
@@ -211,15 +244,15 @@ function ePessoasDaEscala(equipe, grade){
   return lista;
 }
 
-function eAnalisar(equipe, grade, anteriores, regraId){
+function eAnalisar(equipe, grade, anteriores, regraId, semana){
   const regra=ESCALA_REGRAS[regraId]||ESCALA_REGRAS.atual;
   grade=grade||{};
   const pessoas=ePessoasDaEscala(equipe,grade);
   const porPessoa={};
   let erros=0, avisos=0, vazios=0, total=0;
   pessoas.forEach(p=>{
-    const prev=[0,1].map(n=>anteriores&&anteriores[n]&&anteriores[n].grade?(anteriores[n].grade[p.id]||null):null);
-    const r=eCalcPessoa(p, grade[p.id], prev, regra);
+    const prev=[0,1,2,3].map(n=>anteriores&&anteriores[n]&&anteriores[n].grade?(anteriores[n].grade[p.id]||null):null);
+    const r=eCalcPessoa(p, grade[p.id], prev, regra, semana);
     porPessoa[p.id]=r;
     erros+=r.erros.length;
     avisos+=r.avisos.filter(a=>!a.vazio).length;
@@ -353,7 +386,7 @@ async function ePost(payload){
   const resp=await fetch(ESCALA_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
   const txt=await resp.text();
   let j=null; try{ j=JSON.parse(txt); }catch(e){}
-  if(!resp.ok || !j || j.ok===false) throw new Error((j&&j.erro)||('HTTP '+resp.status));
+  if(!resp.ok || !j || j.ok!==true) throw new Error((j&&j.erro)||(j&&j.status?'o Apps Script publicado não tem a parte das escalas':'HTTP '+resp.status));
   return j;
 }
 
@@ -370,6 +403,8 @@ const GERADOR_PADRAO = {
   folgasSemana: 'regra',          // 'regra' (1 até 16/12/2026, 2 depois) | 2
   diasFolga: [0,1,2,3],           // SEG–QUI (domingo entra pelo rodízio da lei)
   juntas: false,                  // preferir as 2 folgas em dias seguidos
+  intervalo: 30,                  // intervalo de refeição: 30 min (convenção) | 60
+  domingo: 'mes',                 // 'mes' = 1 domingo de folga por mês para cada um | 'lei' = 1 a cada 3 / mulheres alternado
   minimos: {}                     // { setor: { semana: n, fds: n } } — fds = SEX, SÁB, DOM
 };
 
@@ -397,7 +432,10 @@ function eGerarSemana(o){
   const maxSeg=regra.maxSeguidos;
   const nSem=eNumSemana(o.semana);
   const atual=o.gradeAtual||{};
-  const ant=o.anteriores||[null,null];
+  const ant=o.anteriores||[null,null,null,null];
+  eSetOpcoes(cfg);
+  const modoMes=ESCALA_OPCOES.domingo==='mes';
+  const dm=eDomingosDoMes(o.semana);
   const pessoas=(o.equipe||[]).filter(p=>p.ativo!==false);
   const turnos=o.turnos&&o.turnos.length?o.turnos:TURNOS_PADRAO;
   const diasOk=new Set((cfg.diasFolga&&cfg.diasFolga.length?cfg.diasFolga:[0,1,2,3]).map(Number));
@@ -405,7 +443,7 @@ function eGerarSemana(o){
   // posição de cada pessoa dentro do seu grupo de rodízio de domingo
   // (separado por setor, para não tirar o setor inteiro no mesmo domingo)
   const grupos={};
-  pessoas.forEach(p=>{ const k=(p.funcao||'Outro')+'|'+(p.domingo==='mulher'?'m':'g'); (grupos[k]=grupos[k]||[]).push(p.id); });
+  pessoas.forEach(p=>{ const k=(p.funcao||'Outro')+'|'+(modoMes?'':(p.domingo==='mulher'?'m':'g')); (grupos[k]=grupos[k]||[]).push(p.id); });
 
   const info=pessoas.map((p,idx)=>{
     const setor=p.funcao||'Outro';
@@ -416,14 +454,31 @@ function eGerarSemana(o){
     const p0=ant[0]&&ant[0].grade?ant[0].grade[p.id]:null, p1=ant[1]&&ant[1].grade?ant[1].grade[p.id]:null;
     let corrida=0; if(p0){ for(let d=6;d>=0&&eTrab(p0[d]);d--) corrida++; }
     const dom0=p0?eTrab(p0[6]):false, dom1=p1?eTrab(p1[6]):false;
-    const mulher=p.domingo==='mulher';
-    let domObrig=false;
-    if(!afast.includes(6)){
-      if(mulher && p0 && dom0) domObrig=true;
-      if(!mulher && p0 && p1 && dom0 && dom1) domObrig=true;
+    const mulher=!modoMes && p.domingo==='mulher';
+    let domObrig=false, domAlvo=false, domJaTeve=false;
+    if(modoMes){
+      // 1 domingo por mês: cada pessoa do setor fica com um domingo diferente do mês
+      // posição contínua passando por todos os setores: espalha os domingos na loja toda e dentro do setor
+      const ordemDom=Object.keys(grupos).sort().reduce((l,kk)=>l.concat(grupos[kk]),[]);
+      const pos=ordemDom.indexOf(p.id), k=dm.lista.length;
+      const alvo=(pos+dm.mes)%k;
+      let desconhecido=false;
+      for(let n=1;n<=dm.idx;n++){
+        const c=ant[n-1]&&ant[n-1].grade?ant[n-1].grade[p.id]:null;
+        if(!c){ desconhecido=true; continue; }
+        if(eFolgouDomingo(c[6])) domJaTeve=true;
+      }
+      if(desconhecido && alvo<dm.idx) domJaTeve=true; // domingo dele já passou sem dados: não força
+      domAlvo=!domJaTeve && alvo===dm.idx;
+      if(!domJaTeve && dm.idx===k-1 && !afast.includes(6)) domObrig=true;   // último domingo do mês e ainda não folgou
+    } else {
+      if(!afast.includes(6)){
+        if(mulher && p0 && dom0) domObrig=true;
+        if(!mulher && p0 && p1 && dom0 && dom1) domObrig=true;
+      }
+      const g=grupos[setor+'|'+(mulher?'m':'g')], ciclo=mulher?2:3;
+      domAlvo=(g.indexOf(p.id)+nSem)%ciclo===0;
     }
-    const g=grupos[setor+'|'+(mulher?'m':'g')], ciclo=mulher?2:3;
-    const domAlvo=(g.indexOf(p.id)+nSem)%ciclo===0;
     const turno=turnos.find(t=>t.id===p.turno)||turnos[0];
     // conjuntos de folga possíveis
     const valido=(S,relaxar)=>{
@@ -438,14 +493,14 @@ function eGerarSemana(o){
     // uma folga a mais só entra quando não há outro jeito de cumprir dias seguidos / domingo
     const todas=eCombinacoes(livres,nF);
     const extras=nF<livres.length?eCombinacoes(livres,nF+1):[];
-    let cands=todas.filter(S=>valido(S,false)), relaxado=false;
-    if(!cands.length) cands=extras.filter(S=>valido(S,false));
+    // (folga a mais custa caro, então só é escolhida para cumprir domingo / dias seguidos)
+    let cands=todas.filter(S=>valido(S,false)).concat(extras.filter(S=>valido(S,false)&&(modoMes?S.includes(6):true))), relaxado=false;
     if(!cands.length){ cands=todas.filter(S=>valido(S,true)).concat(extras.filter(S=>valido(S,true))); relaxado=cands.length>0; }
     if(!cands.length){ cands=todas.length?todas:[[]]; relaxado=true; }
     const custoProprio=S=>{
       let c=0;
       const temDom=S.includes(6);
-      if(temDom && !domAlvo && !domObrig) c+=30;
+      if(temDom && !domAlvo && !domObrig) c+=modoMes?(domJaTeve?400:120):30;
       if(!temDom && domAlvo) c+=150; // rodízio vale mais que o mínimo: evita o setor todo folgar no mesmo domingo depois
       if(S.length>nF) c+=40;
       if(cfg.juntas && S.length>=2 && !S.some((d,i)=>i>0 && d-S[i-1]===1)) c+=6;

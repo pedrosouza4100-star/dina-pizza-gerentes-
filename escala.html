@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Escala da Equipe — Dina Pizza</title>
-<link rel="stylesheet" href="escala.css?v=2">
+<link rel="stylesheet" href="escala.css?v=3">
 </head>
 <body>
 
@@ -101,7 +101,7 @@
           <summary class="lbl" style="cursor:pointer;margin:0">O que a escala confere</summary>
           <div class="muted" style="margin-top:10px">
             <p id="regraTexto"></p>
-            <p style="margin-top:8px">Em todas as regras: até 2 h extras por dia (CLT art. 59); 11 h de descanso entre um dia e outro (art. 66); intervalo de 1 h a 2 h acima de 6 h de trabalho e de 15 min entre 4 h e 6 h (art. 71); hora noturna (22h às 5h) de 52min30, com adicional de 20% (art. 73); folga em 1 domingo a cada 3 semanas (Lei 10.101/2000, art. 6º); mulheres, domingo sim, domingo não (art. 386).</p>
+            <p style="margin-top:8px" id="regraGeral"></p>
             <p style="margin-top:8px">Não confere feriados nem as regras específicas da convenção do sindicato. Em caso de dúvida, fale com o RH.</p>
           </div>
         </details>
@@ -137,9 +137,23 @@
             </select>
           </div>
           <div>
+            <div class="lbl">Intervalo de refeição</div>
+            <select id="cfgIntervalo" onchange="cfgMudou()">
+              <option value="30">30 minutos (convenção)</option>
+              <option value="60">1 hora (CLT)</option>
+            </select>
+          </div>
+          <div>
+            <div class="lbl">Folga de domingo</div>
+            <select id="cfgDomingo" onchange="cfgMudou()">
+              <option value="mes">1 domingo de folga por mês para cada colaborador</option>
+              <option value="lei">1 a cada 3 semanas (mulheres: domingo sim, domingo não)</option>
+            </select>
+          </div>
+          <div>
             <div class="lbl">Dias em que pode ter folga</div>
             <div class="dias-ap" id="cfgDias"></div>
-            <div class="muted" style="margin-top:4px">O domingo entra sozinho no rodízio da lei (1 a cada 3 semanas; mulheres, domingo sim, domingo não).</div>
+            <div class="muted" style="margin-top:4px">O domingo entra sozinho, conforme a regra de folga de domingo acima.</div>
           </div>
           <label class="row" style="font-size:.85rem;cursor:pointer"><input type="checkbox" id="cfgJuntas" style="width:auto" onchange="cfgMudou()"> Preferir as 2 folgas em dias seguidos</label>
           <div>
@@ -199,7 +213,7 @@
     <div><div class="lbl">Nome</div><input type="text" id="pesNome" placeholder="Nome e sobrenome"></div>
     <div><div class="lbl">Setor / função</div><select id="pesFuncao"></select></div>
     <div><div class="lbl">Turno padrão</div><select id="pesTurno"></select></div>
-    <div>
+    <div id="pesDomingoBox">
       <div class="lbl">Regra de domingo</div>
       <select id="pesDomingo">
         <option value="geral">Geral: folga em 1 domingo a cada 3 semanas</option>
@@ -258,7 +272,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="escala-core.js?v=2"></script>
+<script src="escala-core.js?v=3"></script>
 <script>
 const S = {
   unidade:null, gerente:'', semana:null, regra:'atual', regraManual:false,
@@ -340,7 +354,10 @@ async function carregar(){
   if(resp && resp.ok){
     S.equipe=resp.equipe||[];
     aplicarTurnos(resp.turnos);
-    S.anteriores=resp.anteriores||[null,null];
+    S.anteriores=(resp.anteriores||[null,null]).concat([null,null]);
+    // 3ª e 4ª semanas para trás (para conferir a folga de domingo do mês)
+    try{ const r2=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:eSomarDias(S.semana,-14)}); if(r2&&r2.ok) S.anteriores=[S.anteriores[0],S.anteriores[1]].concat(r2.anteriores||[null,null]); }catch(e){}
+    if(semanaPedida!==S.semana) return;
     const e=resp.escala;
     S.grade=e?e.grade||{}:{};
     S.obs=e?e.obs||'':'';
@@ -370,6 +387,7 @@ function aplicarTurnos(t){
   const x=eLerTurnos(t);
   S.turnos=x.lista&&x.lista.length?x.lista:JSON.parse(JSON.stringify(TURNOS_PADRAO));
   S.gerador=x.gerador;
+  eSetOpcoes(S.gerador);
 }
 function turnosParaSalvar(){ return {lista:S.turnos, gerador:S.gerador}; }
 function gravarCache(){ gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:turnosParaSalvar()})); }
@@ -381,7 +399,7 @@ function trocarRegra(v){
 
 /* ───────── Desenho ───────── */
 function render(){
-  const a=eAnalisar(S.equipe,S.grade,S.anteriores,S.regra);
+  const a=eAnalisar(S.equipe,S.grade,S.anteriores,S.regra,S.semana);
   S.analise=a;
   document.getElementById('selRegra').value=S.regra;
   eRenderGrade(document.getElementById('grade'),{
@@ -406,6 +424,9 @@ function render(){
   else if(a.erros===0 && a.vazios===0) b+='<div class="banner ok">✔ Escala completa e dentro das regras conferidas.</div>';
   document.getElementById('banners').innerHTML=b;
   document.getElementById('regraTexto').textContent=a.regra.descricao;
+  const iv=ESCALA_OPCOES.intervalo;
+  document.getElementById('regraGeral').textContent='Em todas as regras: até 2 h extras por dia (CLT art. 59); 11 h de descanso entre um dia e outro (art. 66); intervalo de refeição de '+(iv===60?'1 h':iv+' min')+' acima de 6 h de trabalho e de 15 min entre 4 h e 6 h; hora noturna (22h às 5h) de 52min30, com adicional de 20% (art. 73); '+
+    (ESCALA_OPCOES.domingo==='mes'?'1 domingo de folga por mês para cada colaborador.':'folga em 1 domingo a cada 3 semanas (Lei 10.101/2000, art. 6º) e, para mulheres, domingo sim, domingo não (art. 386).');
 
   document.getElementById('prUnidade').textContent=S.unidade;
   document.getElementById('prSemana').textContent=eTituloSemana(S.semana);
@@ -549,7 +570,7 @@ function renderEquipe(){
   if(!S.equipe.length) h='<div class="muted" style="padding:10px 0">Ninguém cadastrado ainda.</div>';
   [...ativos,...inativos].forEach(p=>{
     h+='<div class="pessoa'+(p.ativo===false?' inativa':'')+'"><div class="grow"><b>'+eEsc(p.nome)+'</b><span class="muted">'+eEsc(p.funcao||'')+
-      ' · '+eEsc(turnoDe(p).nome)+' · '+(p.domingo==='mulher'?'domingo sim, domingo não':'1 domingo a cada 3')+(p.horasContrato?' · '+p.horasContrato+' h/semana':'')+(p.ativo===false?' · fora da equipe':'')+
+      ' · '+eEsc(turnoDe(p).nome)+' · '+(ESCALA_OPCOES.domingo==='mes'?'1 domingo/mês':(p.domingo==='mulher'?'domingo sim, domingo não':'1 domingo a cada 3'))+(p.horasContrato?' · '+p.horasContrato+' h/semana':'')+(p.ativo===false?' · fora da equipe':'')+
       '</span></div><button class="btn sec sm" onclick="abrirPessoa(\''+p.id+'\')">Editar</button></div>';
   });
   document.getElementById('listaEquipe').innerHTML=h;
@@ -565,6 +586,8 @@ function renderCfg(){
   const g=S.gerador;
   document.getElementById('cfgFolgas').value=String(g.folgasSemana)==='2'?'2':'regra';
   document.getElementById('cfgJuntas').checked=!!g.juntas;
+  document.getElementById('cfgIntervalo').value=Number(g.intervalo)===60?'60':'30';
+  document.getElementById('cfgDomingo').value=g.domingo==='lei'?'lei':'mes';
   const dias=new Set((g.diasFolga||[]).map(Number));
   document.getElementById('cfgDias').innerHTML=DIAS_CURTO.slice(0,6).map((d,i)=>'<button class="'+(dias.has(i)?'on':'')+'" onclick="togCfgDia('+i+')">'+d+'</button>').join('')+'<button disabled title="Domingo segue o rodízio da lei">DOM</button>';
   const setores=[...new Set(S.equipe.filter(p=>p.ativo!==false).map(p=>p.funcao||'Outro'))];
@@ -584,7 +607,13 @@ function setMin(el){
   S.gerador.minimos=S.gerador.minimos||{}; S.gerador.minimos[st]=S.gerador.minimos[st]||{};
   if(el.value==='') delete S.gerador.minimos[st][c]; else S.gerador.minimos[st][c]=Math.max(0,parseInt(el.value)||0);
 }
-function cfgMudou(){ S.gerador.folgasSemana=document.getElementById('cfgFolgas').value==='2'?2:'regra'; S.gerador.juntas=document.getElementById('cfgJuntas').checked; }
+function cfgMudou(){
+  S.gerador.folgasSemana=document.getElementById('cfgFolgas').value==='2'?2:'regra';
+  S.gerador.juntas=document.getElementById('cfgJuntas').checked;
+  S.gerador.intervalo=Number(document.getElementById('cfgIntervalo').value);
+  S.gerador.domingo=document.getElementById('cfgDomingo').value;
+  eSetOpcoes(S.gerador); render();
+}
 async function salvarCfg(){
   if(!(S.gerador.diasFolga||[]).length){ toast('Escolha pelo menos um dia de folga.','err'); return; }
   cfgMudou(); await salvarUnidade();
@@ -631,12 +660,12 @@ async function gerar(){
         if(w>0){ const g=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:sem}); atual=g&&g.ok&&g.escala?g.escala.grade:{}; }
         const regraId=w===0?S.regra:eRegraDaSemana(sem);
         const r=eGerarSemana({equipe:S.equipe,turnos:S.turnos,gerador:S.gerador,semana:sem,regraId,gradeAtual:atual,anteriores:ant});
-        const a=eAnalisar(S.equipe,r.grade,ant,regraId);
+        const a=eAnalisar(S.equipe,r.grade,ant,regraId,sem);
         await ePost({action:'escalaSalvar',unidade:S.unidade,semana:sem,grade:r.grade,regra:regraId,gerente:S.gerente+' (automática)',obs:'',
           resumo:{erros:a.erros,avisos:a.avisos,vazios:a.vazios,pessoas:a.pessoas.length,horasTotal:a.horasTotal},detalhe:eDetalhe(a,r.grade,sem)});
         gravarLS('esc_rasc_'+S.unidade+'_'+sem,null);
         pend+=r.pendencias.length;
-        ant=[{semana:sem,grade:r.grade},ant[0]];
+        ant=[{semana:sem,grade:r.grade},ant[0],ant[1],ant[2]];
         sem=eSomarDias(sem,7);
       }
       G.rodando=false; fechar('ovGerar');
@@ -660,6 +689,7 @@ function abrirPessoa(id){
   document.getElementById('pesNome').value=p?p.nome:'';
   document.getElementById('pesFuncao').value=p?(p.funcao||'Outro'):'Atendimento';
   document.getElementById('pesDomingo').value=p?(p.domingo||'geral'):'geral';
+  document.getElementById('pesDomingoBox').style.display=ESCALA_OPCOES.domingo==='mes'?'none':'block';
   document.getElementById('pesHoras').value=p&&p.horasContrato?p.horasContrato:'';
   document.getElementById('pesTurno').innerHTML=S.turnos.map(t=>'<option value="'+eEsc(t.id)+'">'+eEsc(t.nome)+' ('+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+')</option>').join('');
   document.getElementById('pesTurno').value=p?turnoDe(p).id:(S.turnos[0]||{}).id;

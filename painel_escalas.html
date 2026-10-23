@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Escalas — Dina Pizza</title>
-<link rel="stylesheet" href="escala.css?v=2">
+<link rel="stylesheet" href="escala.css?v=3">
 <style>
   body{padding-bottom:30px}
   .lojas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
@@ -92,7 +92,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="escala-core.js?v=2"></script>
+<script src="escala-core.js?v=3"></script>
 <script>
 let semana=eSegundaDe(new Date()), senha='', resumo=[];
 
@@ -182,7 +182,10 @@ async function abrir(unidade){
     const r=await eJsonp({action:'escalaGet',unidade,semana});
     if(!r.ok) throw new Error(r.erro);
     const e=r.escala||{grade:{},regra:eRegraDaSemana(semana)};
-    const a=eAnalisar(r.equipe,e.grade,r.anteriores,e.regra||eRegraDaSemana(semana));
+    eSetOpcoes(eLerTurnos(r.turnos).gerador);
+    let anteriores=(r.anteriores||[null,null]).concat([null,null]);
+    try{ const r2=await eJsonp({action:'escalaGet',unidade,semana:eSomarDias(semana,-14)}); if(r2&&r2.ok) anteriores=[anteriores[0],anteriores[1]].concat(r2.anteriores||[null,null]); }catch(_){}
+    const a=eAnalisar(r.equipe,e.grade,anteriores,e.regra||eRegraDaSemana(semana),semana);
     eRenderGrade(document.getElementById('grade'),{equipe:r.equipe,grade:e.grade,analise:a,semana,editavel:false});
     eRenderAlertas(document.getElementById('alertas'),a);
     document.getElementById('detSub').textContent='Semana '+eTituloSemana(semana)+' · '+a.regra.nome+' · por '+(e.gerente||'—')+' em '+(e.atualizadoEm||'—');
