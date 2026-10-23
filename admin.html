@@ -79,6 +79,29 @@
   .toast.warn{border-color:var(--yellow);color:var(--yellow);}
   footer{text-align:center;padding:10px;font-size:0.65rem;color:#3a3a3a;border-top:1px solid var(--border);margin-top:auto;}
 
+  /* ── Checklist (admin) ── */
+  .chk-adm-filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .chk-adm-filtros .modal-input{width:auto;min-width:180px}
+  .chk-adm-check{font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+  .chk-adm-secao{font-size:0.75rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;margin:18px 0 8px}
+  .chk-adm-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center}
+  .chk-adm-item.off{opacity:0.45}
+  .chk-adm-txt{flex:1;min-width:0}
+  .chk-adm-txt b{display:block;font-size:0.9rem;font-weight:600;margin-bottom:4px}
+  .chk-adm-tags{display:flex;gap:6px;flex-wrap:wrap}
+  .chk-adm-tag{font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:3px;background:#2a2a2a;color:var(--muted);text-transform:uppercase}
+  .chk-adm-tag.ab{background:rgba(255,215,0,0.12);color:var(--gold)} .chk-adm-tag.fe{background:rgba(79,163,255,0.12);color:#4FA3FF}
+  .chk-adm-tag.off{background:rgba(255,59,59,0.15);color:var(--danger)}
+  .chk-adm-acoes{display:flex;gap:6px;flex-shrink:0}
+  .chk-adm-acoes button{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 10px;font-size:0.75rem;cursor:pointer}
+  .chk-adm-acoes button.tirar{color:var(--danger)} .chk-adm-acoes button.voltar{color:var(--green)}
+  .chk-adm-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .chk-adm-opts button{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:10px 4px;font-size:0.8rem;font-weight:700;cursor:pointer}
+  .chk-adm-opts button.on{border-color:var(--gold);color:var(--gold)}
+  .chk-adm-lojas{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chk-adm-lojas label{display:flex;align-items:center;gap:8px;font-size:0.82rem;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;cursor:pointer}
+  @media(max-width:768px){.chk-adm-item{flex-direction:column;align-items:stretch}.chk-adm-acoes{justify-content:flex-end}.chk-adm-filtros .modal-input{width:100%}}
+
   /* ── MOBILE ── */
   @media(max-width:768px){
     body{overflow-x:hidden;}
@@ -124,6 +147,7 @@
     <div class="tab active" onclick="mudarTab(event,'senhas')">Senhas</div>
     <div class="tab" onclick="mudarTab(event,'metas')">Metas por Loja</div>
     <div class="tab" onclick="mudarTab(event,'premiacao')">Premiação</div>
+    <div class="tab" onclick="mudarTab(event,'checklist')">Checklist</div>
     <div class="tab" onclick="mudarTab(event,'log')">Registro</div>
   </div>
   <main>
@@ -305,6 +329,25 @@
       </div>
     </div>
 
+    <!-- CHECKLIST -->
+    <div class="tab-content" id="tab-checklist">
+      <div>
+        <div class="section-title">Itens do Checklist de Abertura e Fechamento</div>
+        <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin:8px 0 14px">Inclua, edite ou tire itens. Vale na hora para o checklist do placar de todas as lojas escolhidas. Item tirado não aparece mais para os gerentes, mas o histórico dele continua guardado.</div>
+        <div class="chk-adm-filtros">
+          <select class="modal-input" id="chkAdmTurno" onchange="renderChkAdm()">
+            <option value="">Abertura e fechamento</option>
+            <option value="abertura">Só abertura</option>
+            <option value="fechamento">Só fechamento</option>
+          </select>
+          <select class="modal-input" id="chkAdmLoja" onchange="renderChkAdm()"></select>
+          <label class="chk-adm-check"><input type="checkbox" id="chkAdmInativos" onchange="renderChkAdm()"> Mostrar itens tirados</label>
+          <button class="save-metas-btn" onclick="abrirChkItem(null)">+ Novo item</button>
+        </div>
+        <div id="chkAdmLista" style="margin-top:16px"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
+      </div>
+    </div>
+
     <!-- LOG -->
     <div class="tab-content" id="tab-log">
       <div class="section-title">Registro de Ações</div>
@@ -334,6 +377,22 @@
   <div><div class="modal-label">Confirmar</div><input class="modal-input" type="password" id="adminNova2"></div>
   <div class="modal-error" id="modalAdminErro"></div>
   <div class="modal-btns"><button class="modal-btn cancel" onclick="fecharModal('modalAdminSenha')">Cancelar</button><button class="modal-btn confirm" onclick="confirmarAdminSenha()">Alterar</button></div></div>
+</div>
+<div class="modal-bg" id="modalChkItem" style="display:none">
+  <div class="modal" style="width:520px;max-height:92vh;overflow-y:auto"><h2 id="chkItemTitulo">Novo item</h2>
+  <div><div class="modal-label">Seção</div>
+    <select class="modal-input" id="chkItemSecao" onchange="document.getElementById('chkItemSecaoNovaBox').style.display=this.value==='__nova'?'block':'none'"></select>
+    <div id="chkItemSecaoNovaBox" style="display:none;margin-top:8px"><input class="modal-input" id="chkItemSecaoNova" placeholder="Nome da nova seção (ex.: Delivery)"></div></div>
+  <div><div class="modal-label">O que o gerente deve conferir</div><textarea class="modal-input" id="chkItemTexto" rows="2" placeholder="Ex.: Geladeira de bebidas abastecida e limpa"></textarea></div>
+  <div><div class="modal-label">Quando aparece</div>
+    <div class="chk-adm-opts" id="chkItemTipo">
+      <button type="button" data-v="abertura">🌅 Abertura</button><button type="button" data-v="fechamento">🌙 Fechamento</button><button type="button" data-v="ambos">Os dois</button>
+    </div></div>
+  <div><div class="modal-label">Lojas que fazem este item</div>
+    <div class="chk-adm-lojas" id="chkItemLojas"></div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">Desmarque as lojas que não têm isso (ex.: loja sem buffet).</div></div>
+  <div class="modal-error" id="chkItemErro"></div>
+  <div class="modal-btns"><button class="modal-btn cancel" onclick="fecharModal('modalChkItem')">Cancelar</button><button class="modal-btn confirm" id="chkItemSalvarBtn" onclick="salvarChkItem()">Salvar item</button></div></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -403,6 +462,7 @@
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
     e.target.classList.add('active');
     document.getElementById('tab-'+nome).classList.add('active');
+    if(nome==='checklist' && !chkAdmCarregado) carregarChkAdm();
   }
 
   // ── Senhas ──
@@ -615,6 +675,113 @@
   function showToast(msg,tipo){const t=document.getElementById('toast');t.textContent=(tipo==='ok'?'✓ ':'⚠ ')+msg;t.className='toast '+tipo+' show';setTimeout(()=>t.classList.remove('show'),3000);}
 
   window.addEventListener('load',()=>{if(!localStorage.getItem(ADMIN_KEY))document.getElementById('authSub').textContent='Primeiro acesso — crie sua senha';});
+
+  // ── Checklist (itens de abertura/fechamento) ──
+  // Lojas como aparecem no checklist (mesmo código usado pelo placar)
+  const CHK_LOJAS=[['isaac','Isaac (Manhã e Noite)'],['agua-verde','Água Verde'],['uberaba','Uberaba'],['campo-largo','Campo Largo'],['capao-raso','Capão Raso'],['sao-jose','São José dos Pinhais'],['expressa','Expressa'],['fazenda','Fazenda Rio Grande'],['colombo','Colombo'],['araucaria','Araucária']];
+  let chkAdmItens=[], chkAdmEdit=null, chkAdmCarregado=false;
+
+  function chkAdmJsonp(params){
+    return new Promise((ok,falha)=>{
+      const cb='chkAdmCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
+      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder'));},20000);
+      function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+      window[cb]=r=>{limpar();ok(r);};
+      s.onerror=()=>{limpar();falha(new Error('Sem conexão com o servidor'));};
+      s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
+      document.head.appendChild(s);
+    });
+  }
+  async function chkAdmPost(payload){
+    const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    let j=null; try{j=JSON.parse(await r.text());}catch(e){}
+    if(!j||j.ok!==true) throw new Error((j&&j.erro)||'O Apps Script publicado ainda não tem a edição do checklist');
+    return j;
+  }
+  function chkEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  async function carregarChkAdm(){
+    const sel=document.getElementById('chkAdmLoja');
+    if(!sel.options.length) sel.innerHTML='<option value="">Todas as lojas</option>'+CHK_LOJAS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
+    document.getElementById('chkAdmLista').innerHTML='<div style="color:var(--muted);font-size:0.85rem">Carregando...</div>';
+    try{
+      const r=await chkAdmJsonp({action:'chkAdminListar'});
+      if(!r||r.ok!==true) throw new Error((r&&r.erro)||'O Apps Script publicado ainda não tem a edição do checklist');
+      chkAdmItens=r.itens||[]; chkAdmCarregado=true; renderChkAdm();
+    }catch(e){
+      document.getElementById('chkAdmLista').innerHTML='<div style="color:var(--danger);font-size:0.85rem">⚠ '+chkEsc(e.message)+'</div>';
+    }
+  }
+
+  function renderChkAdm(){
+    const turno=document.getElementById('chkAdmTurno').value, loja=document.getElementById('chkAdmLoja').value, inat=document.getElementById('chkAdmInativos').checked;
+    const lista=chkAdmItens.filter(it=>(inat||it.ativo) && (!turno||it.tipo===turno||it.tipo==='ambos') && (!loja||!it.lojasExcluidas.includes(loja)));
+    const ativos=chkAdmItens.filter(it=>it.ativo).length;
+    let h='<div style="font-size:0.78rem;color:var(--muted)">'+ativos+' itens ativos'+(loja||turno?' · mostrando '+lista.filter(i=>i.ativo).length+' com o filtro':'')+'</div>';
+    let sec=null;
+    lista.forEach(it=>{
+      if(it.secao!==sec){ sec=it.secao; h+='<div class="chk-adm-secao">'+chkEsc(sec)+'</div>'; }
+      const tipoTag=it.tipo==='abertura'?'<span class="chk-adm-tag ab">Abertura</span>':it.tipo==='fechamento'?'<span class="chk-adm-tag fe">Fechamento</span>':'<span class="chk-adm-tag">Abertura e fechamento</span>';
+      const fora=it.lojasExcluidas.map(sl=>(CHK_LOJAS.find(l=>l[0]===sl)||[sl,sl])[1]);
+      h+=`<div class="chk-adm-item${it.ativo?'':' off'}"><div class="chk-adm-txt"><b>${chkEsc(it.item)}</b><div class="chk-adm-tags">${tipoTag}${it.ativo?'':'<span class="chk-adm-tag off">Tirado</span>'}${fora.length?'<span class="chk-adm-tag">Não aparece em: '+chkEsc(fora.join(', '))+'</span>':'<span class="chk-adm-tag">Todas as lojas</span>'}</div></div>
+        <div class="chk-adm-acoes"><button title="Subir" onclick="moverChkItem('${it.id}',-1)">↑</button><button title="Descer" onclick="moverChkItem('${it.id}',1)">↓</button><button onclick="abrirChkItem('${it.id}')">Editar</button>${it.ativo?`<button class="tirar" onclick="ativoChkItem('${it.id}',false)">Tirar</button>`:`<button class="voltar" onclick="ativoChkItem('${it.id}',true)">Voltar</button>`}</div></div>`;
+    });
+    if(!lista.length) h+='<div style="color:var(--muted);font-size:0.85rem;margin-top:12px">Nenhum item com esse filtro.</div>';
+    document.getElementById('chkAdmLista').innerHTML=h;
+  }
+
+  function abrirChkItem(id){
+    const it=id?chkAdmItens.find(x=>x.id===id):null;
+    chkAdmEdit={id:it?it.id:null, tipo:it?it.tipo:'abertura'};
+    document.getElementById('chkItemTitulo').textContent=it?'Editar item':'Novo item';
+    const secoes=[...new Set(chkAdmItens.map(x=>x.secao))];
+    document.getElementById('chkItemSecao').innerHTML=secoes.map(sx=>`<option value="${chkEsc(sx)}">${chkEsc(sx)}</option>`).join('')+'<option value="__nova">+ Nova seção...</option>';
+    document.getElementById('chkItemSecao').value=it?it.secao:(secoes[0]||'__nova');
+    document.getElementById('chkItemSecaoNovaBox').style.display=document.getElementById('chkItemSecao').value==='__nova'?'block':'none';
+    document.getElementById('chkItemSecaoNova').value='';
+    document.getElementById('chkItemTexto').value=it?it.item:'';
+    document.querySelectorAll('#chkItemTipo button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===chkAdmEdit.tipo); b.onclick=()=>{ chkAdmEdit.tipo=b.dataset.v; document.querySelectorAll('#chkItemTipo button').forEach(x=>x.classList.toggle('on',x===b)); }; });
+    const excl=it?it.lojasExcluidas:[];
+    document.getElementById('chkItemLojas').innerHTML=CHK_LOJAS.map(([v,n])=>`<label><input type="checkbox" value="${v}" ${excl.includes(v)?'':'checked'}> ${n}</label>`).join('');
+    document.getElementById('chkItemErro').textContent='';
+    document.getElementById('modalChkItem').style.display='flex';
+  }
+
+  async function salvarChkItem(){
+    const selSec=document.getElementById('chkItemSecao').value;
+    const secao=selSec==='__nova'?document.getElementById('chkItemSecaoNova').value.trim():selSec;
+    const item=document.getElementById('chkItemTexto').value.trim();
+    const err=document.getElementById('chkItemErro');
+    if(!secao){err.textContent='Escolha ou escreva a seção.';return;}
+    if(!item){err.textContent='Escreva o que o gerente deve conferir.';return;}
+    const marcadas=[...document.querySelectorAll('#chkItemLojas input')];
+    if(!marcadas.some(c=>c.checked)){err.textContent='Marque pelo menos uma loja.';return;}
+    // mantém exclusões de lojas que não estão na lista acima (ex.: lojas antigas)
+    const atualIt=chkAdmEdit.id?chkAdmItens.find(x=>x.id===chkAdmEdit.id):null;
+    const outras=atualIt?atualIt.lojasExcluidas.filter(sl=>!CHK_LOJAS.some(l=>l[0]===sl)):[];
+    const lojasExcluidas=marcadas.filter(c=>!c.checked).map(c=>c.value).concat(outras);
+    const btn=document.getElementById('chkItemSalvarBtn'); btn.disabled=true; btn.textContent='Salvando...';
+    try{
+      const atual=chkAdmEdit.id?chkAdmItens.find(x=>x.id===chkAdmEdit.id):null;
+      await chkAdmPost({action:'chkAdminSalvar',id:chkAdmEdit.id||'',secao,item,tipo:chkAdmEdit.tipo,lojasExcluidas,ativo:atual?atual.ativo:true});
+      fecharModal('modalChkItem'); showToast('Item salvo no checklist','ok');
+      registrarLog('Checklist: item '+(chkAdmEdit.id?'editado':'incluído')+' — '+item,'ok');
+      await carregarChkAdm();
+    }catch(e){ err.textContent='Não salvou: '+e.message; }
+    btn.disabled=false; btn.textContent='Salvar item';
+  }
+
+  async function ativoChkItem(id,ativo){
+    const it=chkAdmItens.find(x=>x.id===id);
+    if(!ativo && !confirm('Tirar este item do checklist?\n\n"'+(it?it.item:'')+'"\n\nEle some para os gerentes. Dá para voltar depois.')) return;
+    try{ await chkAdmPost({action:'chkAdminAtivo',id,ativo}); showToast(ativo?'Item voltou para o checklist':'Item tirado do checklist','ok'); registrarLog('Checklist: item '+(ativo?'voltou':'tirado')+' — '+(it?it.item:id),'ok'); await carregarChkAdm(); }
+    catch(e){ showToast(e.message,'warn'); }
+  }
+
+  async function moverChkItem(id,dir){
+    try{ await chkAdmPost({action:'chkAdminMover',id,direcao:dir}); await carregarChkAdm(); }
+    catch(e){ showToast(e.message,'warn'); }
+  }
 </script>
 </body>
 </html>
