@@ -151,6 +151,7 @@
     <!-- Tela escolha -->
     <div id="telaEscolha" style="display:flex;flex-direction:column;gap:14px">
       <div class="auth-title">Acesso ao Placar Diário</div>
+      <div class="auth-error" id="authAviso"></div>
       <button class="auth-btn" onclick="mostrar('telaLogin')">Entrar</button>
       <div class="auth-link" onclick="mostrar('telaCadastro')">Primeiro acesso? Criar senha</div>
     </div>
@@ -973,26 +974,92 @@ function mostrar(tela){
   ['loginErro','cadErro','turnoErro'].forEach(id=>document.getElementById(id).textContent='');
 }
 
-function entrar(){
+// ── Senhas: conferidas no servidor (valem em qualquer aparelho). Se o Apps Script ainda for o antigo, funciona como antes, só no aparelho. ──
+let AUTH_SERVIDOR=null;
+function authJsonpPing(){
+  return new Promise(res=>{
+    const cb='authPing_'+Date.now(), s=document.createElement('script');
+    const t=setTimeout(()=>{limpar();res(false);},8000);
+    function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=r=>{limpar();res(!!(r&&r.ok===true));};
+    s.onerror=()=>{limpar();res(false);};
+    s.src=SCRIPT_URL+'?action=authPing&callback='+cb+'&t='+Date.now();
+    document.head.appendChild(s);
+  });
+}
+async function authDisponivel(){ if(AUTH_SERVIDOR===null) AUTH_SERVIDOR=await authJsonpPing(); return AUTH_SERVIDOR; }
+async function authPost(o){
+  const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(o)});
+  let j=null; try{ j=JSON.parse(await r.text()); }catch(e){}
+  if(!j||j.ok!==true) throw new Error((j&&j.erro)||'Falha ao falar com o servidor');
+  return j;
+}
+// senhas que só existiam neste aparelho passam a valer no servidor (o servidor ignora se a loja já tiver)
+async function migrarSenhasLocais(){
+  for(const u of TODAS_UNIDADES){
+    const h=localStorage.getItem('dina_senha_'+u);
+    if(h){ try{ await authPost({action:'authMigrarLoja',unidade:u,hash:h}); }catch(e){} }
+  }
+}
+// confere, em segundo plano, se a senha deste aparelho ainda vale (o admin pode ter trocado ou redefinido)
+async function verificarSessaoServidor(u){
+  if(!(await authDisponivel())) return;
+  try{
+    await migrarSenhasLocais();
+    const r=await authPost({action:'authVerificar',unidade:u,hash:localStorage.getItem('dina_senha_'+u)||''});
+    if(r.situacao==='diferente'||r.situacao==='resetada'){
+      localStorage.removeItem('dina_senha_'+u);
+      sair();
+      document.getElementById('authAviso').textContent=r.situacao==='resetada'
+        ?'A senha da loja foi redefinida pelo administrador. Toque em "Primeiro acesso? Criar senha".'
+        :'A senha da loja foi alterada pelo administrador. Entre com a nova senha.';
+    }
+  }catch(e){}
+}
+function entrarComo(u){
+  localStorage.setItem('dina_unidade_logada',u);
+  document.getElementById('authAviso').textContent='';
+  iniciarApp(u);
+}
+
+async function entrar(){
   const s=document.getElementById('loginSenha').value;
   const h=hash(s);
+  const err=document.getElementById('loginErro');
+  if(await authDisponivel()){
+    err.textContent='Conferindo...';
+    try{
+      await migrarSenhasLocais();
+      const r=await authPost({action:'authLoginLoja',hash:h});
+      const lojas=r.unidades||[];
+      if(!lojas.length){ err.textContent='Senha incorreta.'; return; }
+      err.textContent='';
+      lojas.forEach(u=>localStorage.setItem('dina_senha_'+u,h));
+      window._turnosIsaac=lojas.filter(u=>u.indexOf('Isaac')===0);
+      if(window._turnosIsaac.length){ window._senhaIsaac=s; mostrar('telaTurno'); return; }
+      entrarComo(lojas[0]); return;
+    }catch(e){ err.textContent=''; /* sem servidor: segue como antes */ }
+  }
+  window._turnosIsaac=null;
   const isaacManha=localStorage.getItem('dina_senha_Isaac Manhã')===h;
   const isaacNoite=localStorage.getItem('dina_senha_Isaac Noite')===h;
   if(isaacManha||isaacNoite){window._senhaIsaac=s;mostrar('telaTurno');return;}
   const encontrada=TODAS_UNIDADES.find(u=>localStorage.getItem('dina_senha_'+u)===h);
-  if(!encontrada){document.getElementById('loginErro').textContent='Senha incorreta.';return;}
-  localStorage.setItem('dina_unidade_logada',encontrada);
-  iniciarApp(encontrada);
+  if(!encontrada){err.textContent='Senha incorreta.';return;}
+  entrarComo(encontrada);
 }
 
 function selecionarTurno(turno){
+  if(window._turnosIsaac){
+    if(window._turnosIsaac.indexOf(turno)<0){document.getElementById('turnoErro').textContent='Sua senha não corresponde a este turno.';return;}
+    entrarComo(turno); return;
+  }
   const h=hash(window._senhaIsaac);
   if(localStorage.getItem('dina_senha_'+turno)!==h){document.getElementById('turnoErro').textContent='Sua senha não corresponde a este turno.';return;}
-  localStorage.setItem('dina_unidade_logada',turno);
-  iniciarApp(turno);
+  entrarComo(turno);
 }
 
-function cadastrar(){
+async function cadastrar(){
   const u=document.getElementById('cadUnidade').value;
   const s=document.getElementById('cadSenha').value;
   const s2=document.getElementById('cadSenha2').value;
@@ -1000,10 +1067,17 @@ function cadastrar(){
   if(!u){err.textContent='Selecione sua unidade.';return;}
   if(s.length<4){err.textContent='Mínimo 4 caracteres.';return;}
   if(s!==s2){err.textContent='As senhas não conferem.';return;}
+  if(await authDisponivel()){
+    err.textContent='Salvando...';
+    try{ await authPost({action:'authCriarSenhaLoja',unidade:u,hash:hash(s)}); }
+    catch(e){ err.textContent=e.message; return; }
+    err.textContent='';
+    localStorage.setItem('dina_senha_'+u,hash(s));
+    entrarComo(u); return;
+  }
   if(localStorage.getItem('dina_senha_'+u)){err.textContent='Unidade já tem senha. Entre normalmente.';return;}
   localStorage.setItem('dina_senha_'+u,hash(s));
-  localStorage.setItem('dina_unidade_logada',u);
-  iniciarApp(u);
+  entrarComo(u);
 }
 
 function sair(){
@@ -1417,7 +1491,7 @@ function salvarChecklist(){
 window.addEventListener('load',()=>{
   // Mostra tela imediatamente, carrega metas em background
   const u=localStorage.getItem('dina_unidade_logada');
-  if(u&&localStorage.getItem('dina_senha_'+u))iniciarApp(u);
+  if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
   // Carrega metas sem bloquear
   carregarMetas();
