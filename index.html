@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dina Pizza — Sistema de Gestão</title>
+<link rel="icon" href="logo.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--red:#C0392B;--gold:#FFD000;--dark:#0A0A0A;--card:#1E1E1E;--border:#3A3A3A;--muted:#999}
+  body{background:var(--dark);color:#fff;font-family:'Inter',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+  header{background:var(--red);border-bottom:3px solid var(--gold);padding:18px 16px;display:flex;align-items:center;justify-content:center;gap:12px}
+  header img{width:56px;height:56px;object-fit:contain}
+  header h1{font-family:'Oswald',sans-serif;font-size:1.5rem;letter-spacing:.08em}
+  header h1 span{color:var(--gold)}
+  main{max-width:720px;width:100%;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:22px}
+  h2{font-size:.72rem;color:var(--gold);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  a.item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;color:#fff;text-decoration:none}
+  a.item:hover{border-color:var(--gold)}
+  a.item i{font-style:normal;font-size:1.6rem}
+  a.item b{display:block;font-size:.95rem}
+  a.item small{color:var(--muted);font-size:.75rem}
+  footer{text-align:center;color:#444;font-size:.7rem;padding:14px;margin-top:auto}
+</style>
+</head>
+<body>
+<header><img src="logo.png" alt=""><h1>DINA <span>PIZZA</span></h1></header>
+<main>
+  <section>
+    <h2>Gerentes das lojas</h2>
+    <div class="grid">
+      <a class="item" href="placar"><i>📊</i><div><b>Placar diário</b><small>Metas do dia e checklist</small></div></a>
+      <a class="item" href="escala"><i>📅</i><div><b>Escala da equipe</b><small>Montar e conferir a semana</small></div></a>
+    </div>
+  </section>
+  <section>
+    <h2>Gestão</h2>
+    <div class="grid">
+      <a class="item" href="admin"><i>⚙️</i><div><b>Admin</b><small>Hoje na rede, metas, senhas e checklist</small></div></a>
+      <a class="item" href="dashboard"><i>📈</i><div><b>Dashboard</b><small>Resultados do mês</small></div></a>
+      <a class="item" href="painel_escalas"><i>🗓️</i><div><b>Painel de escalas</b><small>Escalas de todas as lojas</small></div></a>
+      <a class="item" href="checklist_regional"><i>📋</i><div><b>Checklist regional</b><small>Visita do gerente regional</small></div></a>
+    </div>
+  </section>
+</main>
+<footer>Dina Pizza Gastronomia · Uso interno</footer>
+</body>
+</html>
