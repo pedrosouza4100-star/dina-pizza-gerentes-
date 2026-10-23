@@ -203,12 +203,13 @@
       <div class="logout-btn" onclick="sair()">Sair / Trocar loja</div>
     </div>
   </header>
-  <!-- Overlay bloqueio checklist abertura -->
-  <div id="chkBloqueioOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+  <!-- Overlay bloqueio checklist abertura — visível por padrão, some após confirmação -->
+  <div id="chkBloqueioOverlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:48px;margin-bottom:16px">📋</div>
-    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">Checklist de Abertura</div>
-    <div style="font-size:14px;color:#aaa;margin-bottom:24px;max-width:280px">Preencha o checklist de abertura antes de iniciar o preenchimento do placar.</div>
-    <button onclick="abrirChecklistForm()" style="background:var(--red);border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:14px 32px;cursor:pointer;width:100%;max-width:300px;">📋 Preencher Checklist de Abertura</button>
+    <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:10px">Atenção!</div>
+    <div style="font-size:14px;color:#ccc;margin-bottom:6px;max-width:300px;line-height:1.5">Você precisa fazer o checklist de abertura para iniciar o preenchimento do placar.</div>
+    <div style="font-size:12px;color:#888;margin-bottom:28px;max-width:280px" id="chkBloqueioStatus">Verificando checklist de hoje...</div>
+    <button onclick="abrirChecklistForm()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">📋 Preencher Checklist de Abertura</button>
   </div>
 
   <main>
@@ -1054,11 +1055,10 @@ function iniciarApp(u){
   inicializarFaltaProduto();
   verificarCumprimento();
   carregarPendenciasChecklist();
-  carregarStatusChecklist();
-  // Mostra botão preencher imediatamente (some se já tiver dados)
+  // Mostra botão preencher imediatamente
   document.getElementById('chkPreencherBtn').style.display='block';
-  // Bloqueia tudo até checklist de abertura ser feito
-  if(!chkAberturaFeita) mostrarBloqueioAbertura();
+  // Overlay já está visível por padrão — consulta se já fez hoje
+  carregarStatusChecklist();
 }
 
 function mostrarBloqueioAbertura(){
@@ -1115,11 +1115,21 @@ function carregarStatusChecklist(){
   // Chama o SCRIPT_URL do placar como proxy (evita CORS com o checklist v2 direto)
   const cb='chkStatusCb_'+Date.now();
   const s=document.createElement('script');
-  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);wrap.style.display='none';},10000);
+  const _statusEl = document.getElementById('chkBloqueioStatus');
+  const t=setTimeout(()=>{
+    delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+    wrap.style.display='none';
+    // Timeout — mantém overlay visível, atualiza texto
+    if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+  },10000);
 
   window[cb]=(dados)=>{
     clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    if(!dados||!dados.ok){wrap.style.display='none';return;}
+    if(!dados||!dados.ok){
+      wrap.style.display='none';
+      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+      return;
+    }
 
     // Mapeamento nome completo → slug do checklist v2
     const SLUG_MAP = {
@@ -1132,9 +1142,10 @@ function carregarStatusChecklist(){
     const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
     const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
     if(!r){
-      // Sem dados ainda — mostra só o botão de preencher
+      // Sem dados — mantém overlay, atualiza texto
       document.getElementById('chkPreencherBtn').style.display='block';
       wrap.style.display='none';
+      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
       return;
     }
     document.getElementById('chkPreencherBtn').style.display='none';
@@ -1147,6 +1158,7 @@ function carregarStatusChecklist(){
     if(abOk === 0 && feOk === 0){
       document.getElementById('chkPreencherBtn').style.display='block';
       wrap.style.display='none';
+      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
       return;
     }
 
