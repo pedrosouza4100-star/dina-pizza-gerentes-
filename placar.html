@@ -541,10 +541,30 @@ function processarFotoMoto(input){
   });
 }
 
+// ── LOG DE PROVAS (tentativas, erros e botão travado) ──
+// Grava na aba oculta __tempo_real__ usando o próprio campo "tipo" (sem depender de mudança no backend).
+function dispositivoInfo(){
+  try{
+    const ua=navigator.userAgent||'';
+    const m=ua.match(/\(([^)]*)\)/);
+    return (m?m[1]:ua).replace(/[|;]/g,',').slice(0,60);
+  }catch(e){return '?';}
+}
+function logProva(evento, detalhe){
+  try{
+    if(!unidadeAtual) return;
+    const agora=new Date();
+    const hms=agora.toLocaleTimeString('pt-BR');
+    const tipo=('LOG|'+evento+'|'+hms+'|'+String(detalhe||'').replace(/\|/g,'/').slice(0,300)+'|'+dispositivoInfo()+'|'+(navigator.onLine?'online':'offline'));
+    enviarTempoReal(tipo,{});
+  }catch(e){}
+}
+let _ultimoLogTravado='';
+
 // ── SALVAR TEMPO ──
 // ── Envia dado em tempo real para o Call Center ──
 function enviarTempoReal(tipo, dados){
-  const cb='trCb_'+Date.now();
+  const cb='trCb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
   window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
@@ -1283,6 +1303,7 @@ function validarFaturamento(){
   avaliar();
 }
 
+window._tsInicioPlacar=Date.now();
 function verificarBotaoRegistrar(){
   const btn=document.getElementById('saveBtn');
   const lista=document.getElementById('pendenciasList');
@@ -1318,6 +1339,11 @@ function verificarBotaoRegistrar(){
   }
 
   if(faltando.length>0){
+    const _chaveTrav=faltando.join(',');
+    if(_chaveTrav!==_ultimoLogTravado && typeof logProva==='function' && (Date.now()-(window._tsInicioPlacar||Date.now())>20000)){
+      _ultimoLogTravado=_chaveTrav;
+      logProva('BOTAO_TRAVADO','falta: '+faltando.join(', ').replace(/[^\x20-\x7EÀ-ú,:()\/]/g,'').trim());
+    }
     btn.disabled=true;btn.style.opacity='0.45';btn.style.cursor='not-allowed';
     btn.textContent='Registrar Placar';
     btn.onclick=null;
@@ -1454,10 +1480,11 @@ async function comprimirFoto(base64){
 }
 
 async function registrar(){
+  logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
   if(faturamentoForaDaFaixa()){
     const fatAtual=valFat();
     const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
-    if(!confirmou) return;
+    if(!confirmou){logProva('ENVIO_CANCELADO_PELO_GERENTE','faturamento fora da faixa');return;}
   }
   const btn=document.getElementById('saveBtn');
   btn.disabled=true;btn.textContent='Enviando...';
@@ -1504,6 +1531,8 @@ async function registrar(){
   const batidas=metas.filter(Boolean).length;
   const pctMetaLocal=batidas/metas.length;
 
+  const _tamKB=Math.round(JSON.stringify(payload).length/1024);
+  logProva('ENVIANDO','payload '+_tamKB+'KB');
   try{
     const resp = await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
     const respText = await resp.text();
@@ -1512,12 +1541,14 @@ async function registrar(){
     const falhou = !resp.ok || (respJson && respJson.status && respJson.status!=='ok');
     if(falhou){
       const detalhe = respJson ? JSON.stringify(respJson) : respText.slice(0,300);
+      logProva('ERRO_SERVIDOR','HTTP '+resp.status+' '+detalhe.slice(0,150));
       const errEl=document.getElementById('errorMsg');
       if(errEl) errEl.innerHTML = `⚠ Erro ao salvar (HTTP ${resp.status}). Detalhe: <span style="word-break:break-all">${detalhe}</span>. Tente novamente ou avise o suporte.`;
       showMsg('errorMsg');
       btn.disabled=false;btn.textContent='Registrar Placar';
       return;
     }
+    logProva('SUCESSO','payload '+_tamKB+'KB');
     localStorage.removeItem(chaveHoje('startdina_foto'));
     localStorage.removeItem(chaveHoje('startdina_hora'));
     localStorage.removeItem(chaveHoje('startdina_pauta'));
@@ -1535,6 +1566,7 @@ async function registrar(){
     verificarCumprimento();
     limpar();
   }catch(e){
+    logProva('ERRO_CONEXAO',((e&&e.message)||String(e)).slice(0,150));
     const errEl=document.getElementById('errorMsg');
     if(errEl) errEl.innerHTML = `⚠ Erro de conexão ao salvar: <span style="word-break:break-all">${(e&&e.message)||e}</span>. Seus dados NÃO foram perdidos, tente novamente.`;
     showMsg('errorMsg');
