@@ -204,8 +204,8 @@
     </div>
   </header>
   <!-- Overlay bloqueio checklist abertura — visível por padrão, some após confirmação -->
-  <!-- Aviso inicial — OK leva ao checklist -->
-  <div id="chkAvisoOverlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+  <!-- Aviso inicial — aparece só após login se abertura não feita; começa oculto -->
+  <div id="chkAvisoOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:52px;margin-bottom:16px">⚠️</div>
     <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:12px">Atenção!</div>
     <div style="font-size:15px;color:#ccc;margin-bottom:28px;max-width:300px;line-height:1.6">Você precisa fazer o <strong style="color:#FFD000">checklist de abertura</strong> para iniciar o preenchimento do placar.</div>
@@ -1125,18 +1125,26 @@ function carregarStatusChecklist(){
   const cb='chkStatusCb_'+Date.now();
   const s=document.createElement('script');
   const _statusEl = document.getElementById('chkBloqueioStatus');
-  // Timeout: não esconde overlay — só atualiza texto de status
+
+  // Helper: mostra aviso de bloqueio (abertura pendente)
+  function _exibirBloqueioAbertura(){
+    if(chkAberturaFeita) return; // já liberado nesta sessão, não bloqueia novamente
+    const av=document.getElementById('chkAvisoOverlay');
+    if(av) av.style.display='flex';
+    if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+  }
+
+  // Timeout: se o servidor demorar, mostra o bloqueio
   const t=setTimeout(()=>{
     delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
-    // Mantém ambos os overlays visíveis; o gerente deve preencher
+    _exibirBloqueioAbertura();
   },10000);
 
   window[cb]=(dados)=>{
     clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
     if(!dados||!dados.ok){
-      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
-      return; // overlays permanecem visíveis
+      _exibirBloqueioAbertura();
+      return;
     }
 
     // Mapeamento nome completo → slug do checklist v2
@@ -1150,30 +1158,30 @@ function carregarStatusChecklist(){
     const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
     const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
     if(!r){
-      // Sem dados — mantém overlays; gerente precisa preencher
+      // Sem dados para esta loja hoje — exibe bloqueio
       if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
-      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+      _exibirBloqueioAbertura();
       return;
     }
     if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='none';
 
     const abOk = r.abertura.ok + r.abertura.nok;
     const feOk = r.fechamento.ok + r.fechamento.nok;
-    // Abertura já feita hoje → libera automaticamente (gerente voltou depois do intervalo)
+
     if(abOk > 0){
+      // Abertura já feita hoje → libera automaticamente
       chkAberturaFeita=true;
-      // Fecha ambos os overlays pois checklist já foi preenchido hoje
       const av=document.getElementById('chkAvisoOverlay');
       if(av) av.style.display='none';
       esconderBloqueioAbertura();
       verificarBotaoRegistrar();
     } else {
-      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+      // Abertura pendente → bloqueia
+      _exibirBloqueioAbertura();
     }
     if(feOk > 0){ chkFechamentoFeito=true; }
     if(abOk === 0 && feOk === 0){
       if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
-      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
       return;
     }
 
@@ -1192,7 +1200,7 @@ function carregarStatusChecklist(){
     wrap.style.display='block';
   };
 
-  s.onerror=()=>{clearTimeout(t);delete window[cb];wrap.style.display='none';document.getElementById('chkPreencherBtn').style.display='block';};
+  s.onerror=()=>{clearTimeout(t);delete window[cb];_exibirBloqueioAbertura();};
   s.src=SCRIPT_URL+'?action=getChecklistStatus&callback='+cb+'&t='+Date.now();
   document.head.appendChild(s);
 }
