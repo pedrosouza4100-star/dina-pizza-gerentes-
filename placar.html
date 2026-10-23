@@ -1037,57 +1037,50 @@ function carregarStatusChecklist(){
   const body=document.getElementById('chkStatusBody');
   if(!wrap||!body) return;
   body.innerHTML='<div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>';
-  
-  const cb='chkStatusCb_'+Date.now();
-  const s=document.createElement('script');
-  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);wrap.style.display='none';},8000);
-  
-  window[cb]=(dados)=>{
-    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    if(!dados||!dados.ok){wrap.style.display='none';return;}
-    
-    // Mapeia nome da unidade do placar para o nome no checklist
-    const nomeChk = unidadeAtual.includes('Isaac') ? 'Isaac' : unidadeAtual;
-    const r = dados.resumo && dados.resumo[nomeChk];
-    
-    if(!r){wrap.style.display='none';return;}
-    
-    const abOk  = r.abertura.ok + r.abertura.nok;
-    const feOk  = r.fechamento.ok + r.fechamento.nok;
-    
-    // Só mostra se tiver algum dado
-    if(abOk === 0 && feOk === 0){wrap.style.display='none';return;}
-    
-    let tagAb, tagFe;
-    if(abOk === 0){
-      tagAb='<span class="chk-status-tag pend">— Pendente</span>';
-    } else if(r.abertura.nok > 0){
-      tagAb=`<span class="chk-status-tag nok">⚠ ${r.abertura.nok} item(s) NOK</span>`;
-    } else {
-      tagAb='<span class="chk-status-tag ok">✓ Concluída</span>';
-    }
-    
-    if(feOk === 0){
-      tagFe='<span class="chk-status-tag pend">— Pendente</span>';
-    } else if(r.fechamento.nok > 0){
-      tagFe=`<span class="chk-status-tag nok">⚠ ${r.fechamento.nok} item(s) NOK</span>`;
-    } else {
-      tagFe='<span class="chk-status-tag ok">✓ Concluído</span>';
-    }
-    
-    body.innerHTML=`
-      <div class="chk-status-row">
-        <span class="chk-status-label">🌅 Abertura</span>${tagAb}
-      </div>
-      <div class="chk-status-row">
-        <span class="chk-status-label">🌙 Fechamento</span>${tagFe}
-      </div>`;
-    wrap.style.display='block';
-  };
-  
-  s.onerror=()=>{clearTimeout(t);delete window[cb];wrap.style.display='none';};
-  s.src=CHECKLIST_URL+'?acao=getDados&callback='+cb+'&t='+Date.now();
-  document.head.appendChild(s);
+
+  fetch(CHECKLIST_URL+'?acao=getDados&t='+Date.now())
+    .then(r=>r.json())
+    .then(dados=>{
+      if(!dados||!dados.ok){wrap.style.display='none';return;}
+
+      // Mapeia nome da unidade do placar para o nome no checklist
+      const nomeChk = unidadeAtual.includes('Isaac') ? 'Isaac' : unidadeAtual;
+      const r = dados.resumo && dados.resumo[nomeChk];
+
+      if(!r){wrap.style.display='none';return;}
+
+      const abOk = r.abertura.ok + r.abertura.nok;
+      const feOk = r.fechamento.ok + r.fechamento.nok;
+
+      if(abOk === 0 && feOk === 0){wrap.style.display='none';return;}
+
+      let tagAb, tagFe;
+      if(abOk === 0){
+        tagAb='<span class="chk-status-tag pend">— Pendente</span>';
+      } else if(r.abertura.nok > 0){
+        tagAb=`<span class="chk-status-tag nok">⚠ ${r.abertura.nok} item(s) NOK</span>`;
+      } else {
+        tagAb='<span class="chk-status-tag ok">✓ Concluída</span>';
+      }
+
+      if(feOk === 0){
+        tagFe='<span class="chk-status-tag pend">— Pendente</span>';
+      } else if(r.fechamento.nok > 0){
+        tagFe=`<span class="chk-status-tag nok">⚠ ${r.fechamento.nok} item(s) NOK</span>`;
+      } else {
+        tagFe='<span class="chk-status-tag ok">✓ Concluído</span>';
+      }
+
+      body.innerHTML=`
+        <div class="chk-status-row">
+          <span class="chk-status-label">🌅 Abertura</span>${tagAb}
+        </div>
+        <div class="chk-status-row">
+          <span class="chk-status-label">🌙 Fechamento</span>${tagFe}
+        </div>`;
+      wrap.style.display='block';
+    })
+    .catch(()=>{ wrap.style.display='none'; });
 }
 
 window.addEventListener('load',()=>{
