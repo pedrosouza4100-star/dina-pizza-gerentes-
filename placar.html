@@ -107,6 +107,30 @@
 .chk-status-tag.ok{background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);}
 .chk-status-tag.nok{background:rgba(255,59,59,0.15);color:#ff4444;border:1px solid rgba(255,59,59,0.3);}
 .chk-status-tag.pend{background:rgba(255,255,255,0.06);color:#888;border:1px solid rgba(255,255,255,0.1);}
+.chk-status-preencher{display:block;width:100%;margin-top:10px;padding:9px;background:rgba(255,208,0,0.12);border:1px solid rgba(255,208,0,0.3);border-radius:8px;color:#FFD000;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;}
+
+/* ── Modal Formulário Checklist ── */
+.chk-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;overflow-y:auto;}
+.chk-modal{background:var(--bg);width:100%;min-height:100%;display:flex;flex-direction:column;}
+.chk-modal-header{background:linear-gradient(135deg,#8B0000,#C00000);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.chk-modal-title{font-size:14px;font-weight:700;color:#fff;}
+.chk-modal-close{background:rgba(255,255,255,0.18);border:none;border-radius:6px;color:#fff;font-size:18px;padding:2px 10px;cursor:pointer;line-height:1.4;}
+.chk-modal-body{padding:16px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.chk-turno-sel{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.chk-turno-btn{padding:10px;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.chk-turno-btn.ativo{border-color:var(--gold);color:var(--gold);background:rgba(255,208,0,0.08);}
+.chk-secao-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.chk-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.chk-item-txt{flex:1;font-size:13px;color:var(--text);line-height:1.35;}
+.chk-item-btns{display:flex;gap:6px;flex-shrink:0;}
+.chk-btn-ok{background:rgba(46,204,113,0.15);border:1.5px solid rgba(46,204,113,0.4);color:#2ecc71;border-radius:6px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;}
+.chk-btn-nok{background:rgba(255,59,59,0.12);border:1.5px solid rgba(255,59,59,0.35);color:#ff4444;border-radius:6px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;}
+.chk-btn-ok.sel{background:rgba(46,204,113,0.4);border-color:#2ecc71;}
+.chk-btn-nok.sel{background:rgba(255,59,59,0.4);border-color:#ff4444;}
+.chk-modal-footer{padding:14px 16px;background:var(--surface);border-top:1px solid var(--border);position:sticky;bottom:0;}
+.chk-salvar-btn{width:100%;padding:13px;background:var(--red);border:none;border-radius:8px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;}
+.chk-salvar-btn:disabled{background:#444;cursor:not-allowed;}
+.chk-modal-msg{font-size:12px;text-align:center;margin-top:8px;min-height:16px;color:#888;}
 
 </style>
 </head>
@@ -196,6 +220,35 @@
       </div>
       <div class="chk-status-body" id="chkStatusBody">
         <div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>
+      </div>
+      <div style="padding:0 14px 12px">
+        <button class="chk-status-preencher" onclick="abrirChecklistForm()">📋 Preencher Checklist</button>
+      </div>
+    </div>
+
+    <!-- Fallback: botão preencher quando checklist ainda não foi feito -->
+    <div id="chkPreencherBtn" style="display:none;margin-bottom:16px;">
+      <button class="chk-status-preencher" style="border-radius:14px;padding:12px;" onclick="abrirChecklistForm()">📋 Preencher Checklist de Abertura / Fechamento</button>
+    </div>
+
+    <!-- Modal Formulário Checklist -->
+    <div id="chkModal" class="chk-modal-overlay" style="display:none;">
+      <div class="chk-modal">
+        <div class="chk-modal-header">
+          <span class="chk-modal-title" id="chkModalTitle">📋 Checklist</span>
+          <button class="chk-modal-close" onclick="fecharChecklistForm()">✕</button>
+        </div>
+        <div class="chk-modal-body">
+          <div class="chk-turno-sel">
+            <button class="chk-turno-btn ativo" id="chkBtnAb" onclick="chkSelecionarTurno('abertura')">🌅 Abertura</button>
+            <button class="chk-turno-btn" id="chkBtnFe" onclick="chkSelecionarTurno('fechamento')">🌙 Fechamento</button>
+          </div>
+          <div id="chkItensBody"></div>
+        </div>
+        <div class="chk-modal-footer">
+          <button class="chk-salvar-btn" id="chkSalvarBtn" onclick="salvarChecklist()">Salvar Checklist</button>
+          <div class="chk-modal-msg" id="chkModalMsg"></div>
+        </div>
       </div>
     </div>
 
@@ -994,6 +1047,8 @@ function iniciarApp(u){
   verificarCumprimento();
   carregarPendenciasChecklist();
   carregarStatusChecklist();
+  // Mostra botão preencher imediatamente (some se já tiver dados)
+  document.getElementById('chkPreencherBtn').style.display='block';
 }
 
 function carregarPendenciasChecklist(){
@@ -1057,11 +1112,21 @@ function carregarStatusChecklist(){
     };
     const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
     const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
-    if(!r){wrap.style.display='none';return;}
+    if(!r){
+      // Sem dados ainda — mostra só o botão de preencher
+      document.getElementById('chkPreencherBtn').style.display='block';
+      wrap.style.display='none';
+      return;
+    }
+    document.getElementById('chkPreencherBtn').style.display='none';
 
     const abOk = r.abertura.ok + r.abertura.nok;
     const feOk = r.fechamento.ok + r.fechamento.nok;
-    if(abOk === 0 && feOk === 0){wrap.style.display='none';return;}
+    if(abOk === 0 && feOk === 0){
+      document.getElementById('chkPreencherBtn').style.display='block';
+      wrap.style.display='none';
+      return;
+    }
 
     let tagAb, tagFe;
     if(abOk===0) tagAb='<span class="chk-status-tag pend">— Pendente</span>';
@@ -1078,8 +1143,129 @@ function carregarStatusChecklist(){
     wrap.style.display='block';
   };
 
-  s.onerror=()=>{clearTimeout(t);delete window[cb];wrap.style.display='none';};
+  s.onerror=()=>{clearTimeout(t);delete window[cb];wrap.style.display='none';document.getElementById('chkPreencherBtn').style.display='block';};
   s.src=SCRIPT_URL+'?action=getChecklistStatus&callback='+cb+'&t='+Date.now();
+  document.head.appendChild(s);
+}
+
+// ── Formulário de Checklist ──
+const SLUG_MAP_CHK = {
+  'Água Verde':'agua-verde','Fazenda':'fazenda','Campo Largo':'campo-largo',
+  'Colombo':'colombo','Uberaba':'uberaba','São José dos Pinhais':'sao-jose',
+  'Isaac Manhã':'isaac','Isaac Tarde':'isaac','Isaac Noite':'isaac',
+  'Sítio Cercado':'sitio-cercado','CIC':'cic','Pinheirinho':'pinheirinho',
+  'Portão':'portao','Boqueirão':'boqueirao'
+};
+function slugLoja(u){ return SLUG_MAP_CHK[u] || (u||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-'); }
+
+let chkTurnoAtual = 'abertura';
+let chkItensData = [];
+let chkRespostas = {}; // {id: 'conforme'|'nao_conforme'}
+
+function abrirChecklistForm(){
+  // detecta turno pelo horário
+  const h = new Date().getHours();
+  const turnoSug = (h >= 14 || h < 6) ? 'fechamento' : 'abertura';
+  chkSelecionarTurno(turnoSug);
+  document.getElementById('chkModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function fecharChecklistForm(){
+  document.getElementById('chkModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+function chkSelecionarTurno(turno){
+  chkTurnoAtual = turno;
+  chkRespostas = {};
+  document.getElementById('chkBtnAb').classList.toggle('ativo', turno==='abertura');
+  document.getElementById('chkBtnFe').classList.toggle('ativo', turno==='fechamento');
+  document.getElementById('chkModalTitle').textContent = turno==='abertura' ? '🌅 Checklist de Abertura' : '🌙 Checklist de Fechamento';
+  carregarItensChecklist();
+}
+
+function carregarItensChecklist(){
+  const body = document.getElementById('chkItensBody');
+  body.innerHTML='<div style="text-align:center;padding:20px;color:#888;font-size:13px">Carregando itens...</div>';
+  const slug = slugLoja(unidadeAtual);
+  const cb = 'chkItensCb_'+Date.now();
+  const s = document.createElement('script');
+  const t = setTimeout(()=>{delete window[cb];s.remove();body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens.</div>';},10000);
+  window[cb]=(dados)=>{
+    clearTimeout(t);delete window[cb];s.remove();
+    if(!dados.ok||!dados.itens||!dados.itens.length){
+      body.innerHTML='<div style="color:#888;text-align:center;padding:16px">Nenhum item encontrado.</div>';
+      return;
+    }
+    chkItensData = dados.itens;
+    renderItensChecklist();
+  };
+  s.src=SCRIPT_URL+'?action=getChecklistItens&loja='+encodeURIComponent(slug)+'&turno='+chkTurnoAtual+'&callback='+cb+'&t='+Date.now();
+  document.head.appendChild(s);
+}
+
+function renderItensChecklist(){
+  const body = document.getElementById('chkItensBody');
+  let html='';
+  let secaoAtual='';
+  chkItensData.forEach(function(it){
+    if(it.secao !== secaoAtual){
+      secaoAtual = it.secao;
+      html+=`<div class="chk-secao-title">${secaoAtual}</div>`;
+    }
+    const resp = chkRespostas[it.id] || '';
+    const okSel = resp==='conforme' ? 'sel' : '';
+    const nokSel = resp==='nao_conforme' ? 'sel' : '';
+    html+=`<div class="chk-item-row">
+      <span class="chk-item-txt">${it.item}</span>
+      <div class="chk-item-btns">
+        <button class="chk-btn-ok ${okSel}" onclick="chkResponder('${it.id}','conforme')">✓</button>
+        <button class="chk-btn-nok ${nokSel}" onclick="chkResponder('${it.id}','nao_conforme')">✗</button>
+      </div>
+    </div>`;
+  });
+  body.innerHTML=html;
+}
+
+function chkResponder(id, status){
+  chkRespostas[id] = status;
+  renderItensChecklist();
+  // scroll para manter posição
+}
+
+function salvarChecklist(){
+  const btn = document.getElementById('chkSalvarBtn');
+  const msg = document.getElementById('chkModalMsg');
+  const respondidos = Object.keys(chkRespostas).length;
+  if(respondidos === 0){ msg.textContent='Responda pelo menos um item.'; msg.style.color='#ff4444'; return; }
+
+  btn.disabled=true;
+  msg.textContent='Salvando...';
+  msg.style.color='#888';
+
+  const slug = slugLoja(unidadeAtual);
+  const itens = chkItensData.map(function(it){
+    return { id: it.id, status: chkRespostas[it.id] || 'nao_respondido', obs:'' };
+  }).filter(function(it){ return it.status !== 'nao_respondido'; });
+
+  const payload = JSON.stringify({ loja: slug, turno: chkTurnoAtual, gerente: unidadeAtual, itens: itens });
+  const cb = 'chkSalvCb_'+Date.now();
+  const s = document.createElement('script');
+  const t = setTimeout(()=>{delete window[cb];s.remove();btn.disabled=false;msg.textContent='Tempo esgotado. Tente novamente.';msg.style.color='#ff4444';},15000);
+  window[cb]=(r)=>{
+    clearTimeout(t);delete window[cb];s.remove();
+    btn.disabled=false;
+    if(r&&r.ok){
+      msg.textContent='✓ Checklist salvo com sucesso!';
+      msg.style.color='#2ecc71';
+      setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); },1800);
+    } else {
+      msg.textContent='Erro ao salvar. Tente novamente.';
+      msg.style.color='#ff4444';
+    }
+  };
+  s.src=SCRIPT_URL+'?action=salvarChecklist&payload='+encodeURIComponent(payload)+'&callback='+cb+'&t='+Date.now();
   document.head.appendChild(s);
 }
 
