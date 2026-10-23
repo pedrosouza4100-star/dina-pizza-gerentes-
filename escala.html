@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Escala da Equipe — Dina Pizza</title>
-<link rel="stylesheet" href="escala.css?v=1">
+<link rel="stylesheet" href="escala.css?v=2">
 </head>
 <body>
 
@@ -72,6 +72,7 @@
         </div>
 
         <div class="row no-print">
+          <button class="btn sm" style="background:var(--gold);color:#000" onclick="abrirGerar()">⚡ Gerar escala automática</button>
           <button class="btn sec sm" onclick="copiarSemanaAnterior()">⧉ Copiar semana anterior</button>
           <button class="btn sec sm" onclick="window.print()">🖨 Imprimir</button>
           <button class="btn sec sm" onclick="mandarWhatsApp()">💬 WhatsApp</button>
@@ -121,8 +122,32 @@
           <div class="lbl" style="margin:0">Turnos prontos</div>
           <button class="btn sm" onclick="abrirTurno(null)">+ Adicionar turno</button>
         </div>
-        <div class="muted" style="margin-bottom:6px">Aparecem como atalho na hora de montar a escala.</div>
+        <div class="muted" style="margin-bottom:6px">Cada pessoa tem um turno padrão, usado na escala automática. Também aparecem como atalho ao montar a escala.</div>
         <div id="listaTurnos"></div>
+      </div>
+      <div class="card">
+        <div class="lbl">⚡ Escala automática</div>
+        <div class="muted" style="margin-bottom:12px">O sistema distribui as folgas sozinho seguindo estas preferências e as regras da lei. Depois é só conferir e ajustar.</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div class="lbl">Folgas por semana</div>
+            <select id="cfgFolgas" onchange="cfgMudou()">
+              <option value="regra">Conforme a regra (1 folga até 16/12/2026, 2 depois)</option>
+              <option value="2">Sempre 2 folgas (5x2) já agora</option>
+            </select>
+          </div>
+          <div>
+            <div class="lbl">Dias em que pode ter folga</div>
+            <div class="dias-ap" id="cfgDias"></div>
+            <div class="muted" style="margin-top:4px">O domingo entra sozinho no rodízio da lei (1 a cada 3 semanas; mulheres, domingo sim, domingo não).</div>
+          </div>
+          <label class="row" style="font-size:.85rem;cursor:pointer"><input type="checkbox" id="cfgJuntas" style="width:auto" onchange="cfgMudou()"> Preferir as 2 folgas em dias seguidos</label>
+          <div>
+            <div class="lbl">Mínimo trabalhando por setor</div>
+            <div id="cfgMinimos"></div>
+          </div>
+          <button class="btn" onclick="salvarCfg()">Salvar preferências</button>
+        </div>
       </div>
     </section>
   </main>
@@ -172,7 +197,8 @@
   <div class="sheet">
     <h3 id="pesTitulo">Pessoa</h3>
     <div><div class="lbl">Nome</div><input type="text" id="pesNome" placeholder="Nome e sobrenome"></div>
-    <div><div class="lbl">Função</div><select id="pesFuncao"></select></div>
+    <div><div class="lbl">Setor / função</div><select id="pesFuncao"></select></div>
+    <div><div class="lbl">Turno padrão</div><select id="pesTurno"></select></div>
     <div>
       <div class="lbl">Regra de domingo</div>
       <select id="pesDomingo">
@@ -212,14 +238,32 @@
   </div>
 </div>
 
+<!-- FOLHA: GERAR -->
+<div class="ov" id="ovGerar" onclick="if(event.target===this&&!G.rodando)fechar('ovGerar')">
+  <div class="sheet">
+    <h3>⚡ Gerar escala automática<small id="gerSub"></small></h3>
+    <div class="opts" style="grid-template-columns:1fr 1fr" id="gerQuanto">
+      <button class="opt on" data-n="1">Só esta semana</button>
+      <button class="opt" data-n="4">4 semanas (mês)</button>
+    </div>
+    <div class="muted" id="gerTexto"></div>
+    <div class="prev" id="gerResultado" style="display:none"></div>
+    <div class="row">
+      <div class="grow"></div>
+      <button class="btn sec" id="gerCancelar" onclick="fechar('ovGerar')">Cancelar</button>
+      <button class="btn" id="gerBtn" onclick="gerar()">Gerar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<script src="escala-core.js?v=1"></script>
+<script src="escala-core.js?v=2"></script>
 <script>
 const S = {
   unidade:null, gerente:'', semana:null, regra:'atual', regraManual:false,
-  equipe:[], turnos:[], grade:{}, anteriores:[null,null], obs:'',
-  salvoEm:null, sujo:false, rascunho:false, analise:null, carregando:false
+  equipe:[], turnos:[], gerador:JSON.parse(JSON.stringify(GERADOR_PADRAO)), grade:{}, anteriores:[null,null], obs:'',
+  salvoEm:null, sujo:false, rascunho:false, analise:null, carregando:false, pendencias:null
 };
 
 /* ───────── Entrada ───────── */
@@ -295,7 +339,7 @@ async function carregar(){
 
   if(resp && resp.ok){
     S.equipe=resp.equipe||[];
-    S.turnos=(resp.turnos&&resp.turnos.length)?resp.turnos:JSON.parse(JSON.stringify(TURNOS_PADRAO));
+    aplicarTurnos(resp.turnos);
     S.anteriores=resp.anteriores||[null,null];
     const e=resp.escala;
     S.grade=e?e.grade||{}:{};
@@ -303,16 +347,16 @@ async function carregar(){
     S.salvoEm=e?e.atualizadoEm:null;
     S.regraManual=!!(e&&e.regra&&e.regra!==eRegraDaSemana(S.semana));
     S.regra=(e&&e.regra)||eRegraDaSemana(S.semana);
-    gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:S.turnos}));
+    gravarCache();
   } else {
     // sem conexão: usa o que tiver neste aparelho
     const cache=JSON.parse(lerLS('esc_cache_'+S.unidade)||'null');
-    S.equipe=cache?cache.equipe:[]; S.turnos=cache&&cache.turnos&&cache.turnos.length?cache.turnos:JSON.parse(JSON.stringify(TURNOS_PADRAO));
+    S.equipe=cache?cache.equipe:[]; aplicarTurnos(cache?cache.turnos:null);
     S.anteriores=[null,null]; S.grade={}; S.obs=''; S.salvoEm=null; S.regra=eRegraDaSemana(S.semana); S.regraManual=false;
     toast('⚠ '+((resp&&resp.erro)||(erroRede&&erroRede.message)||'Erro ao carregar')+'. Mostrando o que está neste aparelho.','err',5000);
   }
   // rascunho não enviado deste aparelho
-  S.sujo=false; S.rascunho=false;
+  S.sujo=false; S.rascunho=false; S.pendencias=null;
   const r=JSON.parse(lerLS(chaveRascunho())||'null');
   if(r && r.grade){
     S.grade=r.grade; S.obs=r.obs||''; if(r.regra){ S.regra=r.regra; S.regraManual=r.regraManual; }
@@ -321,6 +365,14 @@ async function carregar(){
   document.getElementById('obs').value=S.obs;
   render();
 }
+
+function aplicarTurnos(t){
+  const x=eLerTurnos(t);
+  S.turnos=x.lista&&x.lista.length?x.lista:JSON.parse(JSON.stringify(TURNOS_PADRAO));
+  S.gerador=x.gerador;
+}
+function turnosParaSalvar(){ return {lista:S.turnos, gerador:S.gerador}; }
+function gravarCache(){ gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:turnosParaSalvar()})); }
 
 function trocarRegra(v){
   S.regra=v; S.regraManual=v!==eRegraDaSemana(S.semana);
@@ -348,6 +400,7 @@ function render(){
   let b='';
   const auto=eRegraDaSemana(S.semana);
   b+='<div class="banner info"><b>'+a.regra.nome+'</b>'+(S.regraManual?' (simulação — pela data, esta semana segue a <b>'+ESCALA_REGRAS[auto].nome+'</b>)':'')+' · '+a.regra.descricao+'</div>';
+  if(S.pendencias&&S.pendencias.length) b+='<div class="banner warn"><b>A escala automática não conseguiu cumprir tudo:</b><br>'+S.pendencias.map(eEsc).join('<br>')+'<br>Ajuste tocando nos dias, ou peça reforço.</div>';
   if(S.rascunho) b+='<div class="banner warn">Há alterações feitas neste aparelho que ainda não foram salvas no sistema. Toque em <b>Salvar escala</b> para enviar.</div>';
   if(!a.pessoas.length) b+='<div class="banner warn">Comece cadastrando a equipe na aba <b>Equipe e turnos</b>.</div>';
   else if(a.erros===0 && a.vazios===0) b+='<div class="banner ok">✔ Escala completa e dentro das regras conferidas.</div>';
@@ -496,12 +549,106 @@ function renderEquipe(){
   if(!S.equipe.length) h='<div class="muted" style="padding:10px 0">Ninguém cadastrado ainda.</div>';
   [...ativos,...inativos].forEach(p=>{
     h+='<div class="pessoa'+(p.ativo===false?' inativa':'')+'"><div class="grow"><b>'+eEsc(p.nome)+'</b><span class="muted">'+eEsc(p.funcao||'')+
-      ' · '+(p.domingo==='mulher'?'domingo sim, domingo não':'1 domingo a cada 3')+(p.horasContrato?' · '+p.horasContrato+' h/semana':'')+(p.ativo===false?' · fora da equipe':'')+
+      ' · '+eEsc(turnoDe(p).nome)+' · '+(p.domingo==='mulher'?'domingo sim, domingo não':'1 domingo a cada 3')+(p.horasContrato?' · '+p.horasContrato+' h/semana':'')+(p.ativo===false?' · fora da equipe':'')+
       '</span></div><button class="btn sec sm" onclick="abrirPessoa(\''+p.id+'\')">Editar</button></div>';
   });
   document.getElementById('listaEquipe').innerHTML=h;
   document.getElementById('listaTurnos').innerHTML=S.turnos.map((t,i)=>
     '<div class="turno-it"><div class="grow"><b>'+eEsc(t.nome)+'</b> <span class="muted">'+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+' · '+eFmtH(eCalcDia({t:'trab',p:t.p},ESCALA_REGRAS[S.regra]).contab)+'</span></div><button class="btn sec sm" onclick="abrirTurno('+i+')">Editar</button></div>').join('')||'<div class="muted">Nenhum turno.</div>';
+  renderCfg();
+}
+
+function turnoDe(p){ return S.turnos.find(t=>t.id===p.turno)||S.turnos[0]||{nome:'—',p:[]}; }
+
+/* ───────── Preferências da escala automática ───────── */
+function renderCfg(){
+  const g=S.gerador;
+  document.getElementById('cfgFolgas').value=String(g.folgasSemana)==='2'?'2':'regra';
+  document.getElementById('cfgJuntas').checked=!!g.juntas;
+  const dias=new Set((g.diasFolga||[]).map(Number));
+  document.getElementById('cfgDias').innerHTML=DIAS_CURTO.slice(0,6).map((d,i)=>'<button class="'+(dias.has(i)?'on':'')+'" onclick="togCfgDia('+i+')">'+d+'</button>').join('')+'<button disabled title="Domingo segue o rodízio da lei">DOM</button>';
+  const setores=[...new Set(S.equipe.filter(p=>p.ativo!==false).map(p=>p.funcao||'Outro'))];
+  const box=document.getElementById('cfgMinimos');
+  if(!setores.length){ box.innerHTML='<div class="muted">Cadastre a equipe primeiro.</div>'; return; }
+  box.innerHTML='<div class="per" style="grid-template-columns:1.4fr 1fr 1fr;margin-bottom:4px"><span class="muted">Setor (pessoas)</span><span class="muted">SEG a QUI</span><span class="muted">SEX a DOM</span></div>'+
+    setores.map((st,k)=>{ const m=(g.minimos||{})[st]||{}; const n=S.equipe.filter(p=>p.ativo!==false&&(p.funcao||'Outro')===st).length;
+      return '<div class="per" style="grid-template-columns:1.4fr 1fr 1fr;margin-bottom:6px;align-items:center"><b style="font-size:.85rem">'+eEsc(st)+' <span class="muted">('+n+')</span></b>'+
+        '<input type="number" min="0" max="'+n+'" inputmode="numeric" placeholder="—" value="'+(m.semana??'')+'" data-k="'+k+'" data-c="semana" onchange="setMin(this)">'+
+        '<input type="number" min="0" max="'+n+'" inputmode="numeric" placeholder="—" value="'+(m.fds??'')+'" data-k="'+k+'" data-c="fds" onchange="setMin(this)"></div>'; }).join('')+
+    '<div class="muted">Em branco = sem mínimo. O sistema evita dar folga que deixe o setor abaixo disso.</div>';
+  box.dataset.setores=JSON.stringify(setores);
+}
+function togCfgDia(i){ const s=new Set((S.gerador.diasFolga||[]).map(Number)); s.has(i)?s.delete(i):s.add(i); S.gerador.diasFolga=[...s].sort(); renderCfg(); }
+function setMin(el){
+  const st=JSON.parse(document.getElementById('cfgMinimos').dataset.setores)[Number(el.dataset.k)], c=el.dataset.c;
+  S.gerador.minimos=S.gerador.minimos||{}; S.gerador.minimos[st]=S.gerador.minimos[st]||{};
+  if(el.value==='') delete S.gerador.minimos[st][c]; else S.gerador.minimos[st][c]=Math.max(0,parseInt(el.value)||0);
+}
+function cfgMudou(){ S.gerador.folgasSemana=document.getElementById('cfgFolgas').value==='2'?2:'regra'; S.gerador.juntas=document.getElementById('cfgJuntas').checked; }
+async function salvarCfg(){
+  if(!(S.gerador.diasFolga||[]).length){ toast('Escolha pelo menos um dia de folga.','err'); return; }
+  cfgMudou(); await salvarUnidade();
+}
+
+/* ───────── Gerar escala ───────── */
+const G={n:1, rodando:false};
+function abrirGerar(){
+  const ativos=S.equipe.filter(p=>p.ativo!==false);
+  if(!ativos.length){ toast('Cadastre a equipe na aba Equipe e turnos.','err'); mudarAba('equipe'); return; }
+  G.n=1;
+  document.querySelectorAll('#gerQuanto .opt').forEach(b=>{ b.classList.toggle('on',b.dataset.n==='1'); b.onclick=()=>{ G.n=Number(b.dataset.n); document.querySelectorAll('#gerQuanto .opt').forEach(x=>x.classList.toggle('on',x===b)); textoGerar(); }; });
+  document.getElementById('gerResultado').style.display='none';
+  document.getElementById('gerBtn').disabled=false;
+  document.getElementById('gerCancelar').textContent='Cancelar';
+  textoGerar();
+  document.getElementById('ovGerar').classList.add('on');
+}
+function textoGerar(){
+  const ativos=S.equipe.filter(p=>p.ativo!==false).length;
+  const fim=eSomarDias(S.semana,7*G.n-1);
+  document.getElementById('gerSub').textContent=ativos+' pessoas · '+eDiaMes(S.semana)+' a '+eDataBR(fim);
+  document.getElementById('gerTexto').innerHTML=(G.n===1
+    ?'Monta a semana na tela para você conferir e depois salvar.'
+    :'Monta e <b>já salva</b> as 4 semanas, uma seguida da outra, mantendo o rodízio de domingo entre elas.')+
+    '<br>O que já estiver montado nessas semanas será substituído. <b>Férias e afastamentos marcados são mantidos.</b> Cada pessoa trabalha no seu turno padrão.';
+}
+
+async function gerar(){
+  const btn=document.getElementById('gerBtn'), res=document.getElementById('gerResultado');
+  btn.disabled=true; G.rodando=true;
+  try{
+    if(G.n===1){
+      const r=eGerarSemana({equipe:S.equipe,turnos:S.turnos,gerador:S.gerador,semana:S.semana,regraId:S.regra,gradeAtual:S.grade,anteriores:S.anteriores});
+      S.grade=r.grade; marcarSujo(); S.pendencias=r.pendencias; render();
+      G.rodando=false; fechar('ovGerar');
+      toast('⚡ Escala gerada. Confira e toque em Salvar escala.','ok',4000);
+    } else {
+      res.style.display='block';
+      let ant=S.anteriores, sem=S.semana, pend=0;
+      for(let w=0;w<G.n;w++){
+        res.innerHTML='⏳ Gerando e salvando a semana '+(w+1)+' de '+G.n+' ('+eTituloSemana(sem)+')...';
+        let atual=S.grade;
+        if(w>0){ const g=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:sem}); atual=g&&g.ok&&g.escala?g.escala.grade:{}; }
+        const regraId=w===0?S.regra:eRegraDaSemana(sem);
+        const r=eGerarSemana({equipe:S.equipe,turnos:S.turnos,gerador:S.gerador,semana:sem,regraId,gradeAtual:atual,anteriores:ant});
+        const a=eAnalisar(S.equipe,r.grade,ant,regraId);
+        await ePost({action:'escalaSalvar',unidade:S.unidade,semana:sem,grade:r.grade,regra:regraId,gerente:S.gerente+' (automática)',obs:'',
+          resumo:{erros:a.erros,avisos:a.avisos,vazios:a.vazios,pessoas:a.pessoas.length,horasTotal:a.horasTotal},detalhe:eDetalhe(a,r.grade,sem)});
+        gravarLS('esc_rasc_'+S.unidade+'_'+sem,null);
+        pend+=r.pendencias.length;
+        ant=[{semana:sem,grade:r.grade},ant[0]];
+        sem=eSomarDias(sem,7);
+      }
+      G.rodando=false; fechar('ovGerar');
+      await carregar();
+      toast('⚡ '+G.n+' semanas geradas e salvas'+(pend?'. Algumas têm avisos de cobertura, confira cada semana.':'!'),'ok',5000);
+    }
+  }catch(e){
+    res.style.display='block';
+    res.innerHTML='<span style="color:var(--danger)">⚠ Parou com erro: '+eEsc(e.message)+'. As semanas anteriores a esta já foram salvas.</span>';
+    document.getElementById('gerCancelar').textContent='Fechar';
+  }
+  G.rodando=false; btn.disabled=false;
 }
 
 let P=null;
@@ -514,6 +661,8 @@ function abrirPessoa(id){
   document.getElementById('pesFuncao').value=p?(p.funcao||'Outro'):'Atendimento';
   document.getElementById('pesDomingo').value=p?(p.domingo||'geral'):'geral';
   document.getElementById('pesHoras').value=p&&p.horasContrato?p.horasContrato:'';
+  document.getElementById('pesTurno').innerHTML=S.turnos.map(t=>'<option value="'+eEsc(t.id)+'">'+eEsc(t.nome)+' ('+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+')</option>').join('');
+  document.getElementById('pesTurno').value=p?turnoDe(p).id:(S.turnos[0]||{}).id;
   document.getElementById('pesErro').textContent='';
   const rb=document.getElementById('btnRemoverPes');
   rb.style.display=p?'inline-block':'none';
@@ -527,7 +676,7 @@ async function salvarPessoa(){
   const horas=parseFloat(String(document.getElementById('pesHoras').value).replace(',','.'));
   if(!nome){ document.getElementById('pesErro').textContent='Digite o nome.'; return; }
   if(document.getElementById('pesHoras').value && !(horas>0 && horas<=44)){ document.getElementById('pesErro').textContent='Horas do contrato entre 1 e 44.'; return; }
-  const dados={nome, funcao:document.getElementById('pesFuncao').value, domingo:document.getElementById('pesDomingo').value, horasContrato:horas>0?horas:null};
+  const dados={nome, funcao:document.getElementById('pesFuncao').value, domingo:document.getElementById('pesDomingo').value, turno:document.getElementById('pesTurno').value, horasContrato:horas>0?horas:null};
   if(P.id){ Object.assign(S.equipe.find(x=>x.id===P.id),dados); }
   else S.equipe.push({id:eNovoId(),ativo:true,...dados});
   fechar('ovPessoa'); render();
@@ -575,9 +724,9 @@ async function excluirTurno(){
 }
 
 async function salvarUnidade(){
-  gravarLS('esc_cache_'+S.unidade, JSON.stringify({equipe:S.equipe,turnos:S.turnos}));
+  gravarCache();
   try{
-    await ePost({action:'escalaSalvarUnidade',unidade:S.unidade,equipe:S.equipe,turnos:S.turnos,gerente:S.gerente});
+    await ePost({action:'escalaSalvarUnidade',unidade:S.unidade,equipe:S.equipe,turnos:turnosParaSalvar(),gerente:S.gerente});
     toast('✔ Equipe salva','ok');
   }catch(e){
     toast('⚠ Equipe não foi salva no sistema: '+e.message,'err',6000);

@@ -358,3 +358,153 @@ async function ePost(payload){
 }
 
 function eNovoId(){ return 'p'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); }
+
+/* ════════════════════════════════════════════════════════════════
+   GERADOR AUTOMÁTICO
+   O gerente cadastra nome, setor (função) e turno; o gerador distribui
+   as folgas da semana respeitando: nº de folgas da regra, dias seguidos,
+   rodízio de domingo, dias em que pode folgar e mínimo por setor.
+   ════════════════════════════════════════════════════════════════ */
+
+const GERADOR_PADRAO = {
+  folgasSemana: 'regra',          // 'regra' (1 até 16/12/2026, 2 depois) | 2
+  diasFolga: [0,1,2,3],           // SEG–QUI (domingo entra pelo rodízio da lei)
+  juntas: false,                  // preferir as 2 folgas em dias seguidos
+  minimos: {}                     // { setor: { semana: n, fds: n } } — fds = SEX, SÁB, DOM
+};
+
+// turnos salvos: aceita o formato antigo (lista) e o novo ({lista, gerador})
+function eLerTurnos(t){
+  if(Array.isArray(t)) return { lista:t, gerador:JSON.parse(JSON.stringify(GERADOR_PADRAO)) };
+  if(t && Array.isArray(t.lista)) return { lista:t.lista, gerador:Object.assign(JSON.parse(JSON.stringify(GERADOR_PADRAO)), t.gerador||{}) };
+  return { lista:null, gerador:JSON.parse(JSON.stringify(GERADOR_PADRAO)) };
+}
+
+function eNumSemana(chave){ return Math.floor(Math.round(eDataLocal(chave).getTime()/86400000)/7); }
+
+function eCombinacoes(arr,k){
+  const out=[];
+  (function rec(i,cur){ if(cur.length===k){ out.push(cur.slice()); return; } for(let j=i;j<arr.length;j++){ cur.push(arr[j]); rec(j+1,cur); cur.pop(); } })(0,[]);
+  return out;
+}
+
+/* opts: { equipe, turnos(lista), gerador, semana, regraId, gradeAtual, anteriores:[{grade}|null, ...] }
+   devolve { grade, pendencias:[texto] } */
+function eGerarSemana(o){
+  const regra=ESCALA_REGRAS[o.regraId]||ESCALA_REGRAS.atual;
+  const cfg=Object.assign({},GERADOR_PADRAO,o.gerador||{});
+  const F=cfg.folgasSemana==='regra'?regra.folgasMin:Math.max(regra.folgasMin,Number(cfg.folgasSemana)||regra.folgasMin);
+  const maxSeg=regra.maxSeguidos;
+  const nSem=eNumSemana(o.semana);
+  const atual=o.gradeAtual||{};
+  const ant=o.anteriores||[null,null];
+  const pessoas=(o.equipe||[]).filter(p=>p.ativo!==false);
+  const turnos=o.turnos&&o.turnos.length?o.turnos:TURNOS_PADRAO;
+  const diasOk=new Set((cfg.diasFolga&&cfg.diasFolga.length?cfg.diasFolga:[0,1,2,3]).map(Number));
+
+  // posição de cada pessoa dentro do seu grupo de rodízio de domingo
+  // (separado por setor, para não tirar o setor inteiro no mesmo domingo)
+  const grupos={};
+  pessoas.forEach(p=>{ const k=(p.funcao||'Outro')+'|'+(p.domingo==='mulher'?'m':'g'); (grupos[k]=grupos[k]||[]).push(p.id); });
+
+  const info=pessoas.map((p,idx)=>{
+    const setor=p.funcao||'Outro';
+    const cells=atual[p.id]||[];
+    const afast=[0,1,2,3,4,5,6].filter(d=>cells[d]&&(cells[d].t==='ferias'||cells[d].t==='atestado'));
+    const livres=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d));
+    const nF=Math.min(livres.length, afast.length?Math.max(0,F-afast.length):F);
+    const p0=ant[0]&&ant[0].grade?ant[0].grade[p.id]:null, p1=ant[1]&&ant[1].grade?ant[1].grade[p.id]:null;
+    let corrida=0; if(p0){ for(let d=6;d>=0&&eTrab(p0[d]);d--) corrida++; }
+    const dom0=p0?eTrab(p0[6]):false, dom1=p1?eTrab(p1[6]):false;
+    const mulher=p.domingo==='mulher';
+    let domObrig=false;
+    if(!afast.includes(6)){
+      if(mulher && p0 && dom0) domObrig=true;
+      if(!mulher && p0 && p1 && dom0 && dom1) domObrig=true;
+    }
+    const g=grupos[setor+'|'+(mulher?'m':'g')], ciclo=mulher?2:3;
+    const domAlvo=(g.indexOf(p.id)+nSem)%ciclo===0;
+    const turno=turnos.find(t=>t.id===p.turno)||turnos[0];
+    // conjuntos de folga possíveis
+    const valido=(S,relaxar)=>{
+      if(domObrig && !S.includes(6)) return false;
+      if(!relaxar && S.some(d=>d!==6 && !diasOk.has(d))) return false;
+      let run=corrida;
+      for(let d=0;d<7;d++){
+        if(S.includes(d)||afast.includes(d)) run=0; else { run++; if(run>maxSeg) return false; }
+      }
+      return true;
+    };
+    // uma folga a mais só entra quando não há outro jeito de cumprir dias seguidos / domingo
+    const todas=eCombinacoes(livres,nF);
+    const extras=nF<livres.length?eCombinacoes(livres,nF+1):[];
+    let cands=todas.filter(S=>valido(S,false)), relaxado=false;
+    if(!cands.length) cands=extras.filter(S=>valido(S,false));
+    if(!cands.length){ cands=todas.filter(S=>valido(S,true)).concat(extras.filter(S=>valido(S,true))); relaxado=cands.length>0; }
+    if(!cands.length){ cands=todas.length?todas:[[]]; relaxado=true; }
+    const custoProprio=S=>{
+      let c=0;
+      const temDom=S.includes(6);
+      if(temDom && !domAlvo && !domObrig) c+=30;
+      if(!temDom && domAlvo) c+=150; // rodízio vale mais que o mínimo: evita o setor todo folgar no mesmo domingo depois
+      if(S.length>nF) c+=40;
+      if(cfg.juntas && S.length>=2 && !S.some((d,i)=>i>0 && d-S[i-1]===1)) c+=6;
+      S.forEach(d=>{ c+=((d+idx+nSem)%7)*0.01; });
+      return c;
+    };
+    return { p, idx, setor, afast, nF, cands, relaxado, turno, custoProprio, escolha:null };
+  });
+
+  // contagem de quem está fora (folga ou afastado) por setor e dia
+  // e também por turno (para não tirar todo o almoço no mesmo dia)
+  const tamSetor={}, fora={}, foraTurno={};
+  info.forEach(x=>{
+    tamSetor[x.setor]=(tamSetor[x.setor]||0)+1;
+    if(!fora[x.setor]) fora[x.setor]=[0,0,0,0,0,0,0];
+    if(!foraTurno[x.turno.id]) foraTurno[x.turno.id]=[0,0,0,0,0,0,0];
+    x.afast.forEach(d=>{ fora[x.setor][d]++; foraTurno[x.turno.id][d]++; });
+  });
+  const minimo=(setor,d)=>{ const m=(cfg.minimos||{})[setor]||{}; const v=d>=4?m.fds:m.semana; return Number(v)||0; };
+  const custoCobertura=(x,S)=>{
+    let c=0;
+    S.forEach(d=>{
+      const f=fora[x.setor][d];
+      const trabalhando=tamSetor[x.setor]-f-1;
+      if(trabalhando<minimo(x.setor,d)) c+=100;
+      c+=f*4+foraTurno[x.turno.id][d]*3+(d>=4?1:0);
+    });
+    return c;
+  };
+  const aplicar=(x,S,sinal)=>S.forEach(d=>{ fora[x.setor][d]+=sinal; foraTurno[x.turno.id][d]+=sinal; });
+  const escolher=x=>{
+    let melhor=null, mc=Infinity;
+    x.cands.forEach(S=>{ const c=x.custoProprio(S)+custoCobertura(x,S); if(c<mc){ mc=c; melhor=S; } });
+    x.escolha=melhor; aplicar(x,melhor,1);
+  };
+  // mais restritos primeiro
+  const ordem=info.slice().sort((a,b)=>a.cands.length-b.cands.length||a.idx-b.idx);
+  ordem.forEach(escolher);
+  for(let it=0;it<4;it++) ordem.forEach(x=>{ aplicar(x,x.escolha,-1); escolher(x); });
+
+  // monta a grade
+  const grade={};
+  info.forEach(x=>{
+    const cells=atual[x.p.id]||[];
+    grade[x.p.id]=[0,1,2,3,4,5,6].map(d=>{
+      if(x.afast.includes(d)) return JSON.parse(JSON.stringify(cells[d]));
+      if(x.escolha.includes(d)) return {t:'folga'};
+      return {t:'trab',p:JSON.parse(JSON.stringify(x.turno.p))};
+    });
+  });
+
+  // pendências de cobertura
+  const pend=[];
+  Object.keys(tamSetor).forEach(s=>{
+    for(let d=0;d<7;d++){
+      const trab=tamSetor[s]-fora[s][d], m=minimo(s,d);
+      if(trab<m) pend.push(DIAS_CURTO[d]+' '+eDiaMes(eSomarDias(o.semana,d))+': '+s+' com '+trab+' de '+m+' no mínimo');
+    }
+  });
+  info.filter(x=>x.relaxado).forEach(x=>pend.push(x.p.nome+': não coube só nos dias de folga escolhidos, folga caiu em outro dia'));
+  return { grade, pendencias:pend };
+}
