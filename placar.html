@@ -1066,7 +1066,11 @@ function iniciarApp(u){
   carregarPendenciasChecklist();
   // Mostra botão preencher imediatamente
   document.getElementById('chkPreencherBtn').style.display='block';
-  // Overlay já está visível por padrão — consulta se já fez hoje
+  // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
+  if(!chkAberturaFeita){
+    const av=document.getElementById('chkAvisoOverlay');
+    if(av) av.style.display='flex';
+  }
   carregarStatusChecklist();
 }
 
