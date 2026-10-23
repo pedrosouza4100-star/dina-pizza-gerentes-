@@ -1170,7 +1170,7 @@ function carregarStatusChecklist(){
     // cada turno só é liberado pelo checklist que ele mesmo preencheu
     if(r && slugCompartilhado(unidadeAtual)){
       const g = r.porGerente && r.porGerente[unidadeAtual];
-      r = g ? { abertura:{ok:g.abertura,nok:0}, fechamento:{ok:g.fechamento,nok:0} } : null;
+      r = g ? { abertura:{ok:g.abertura,nok:0}, fechamento:{ok:g.fechamento,nok:0}, idsAbertura:g.idsAbertura } : null;
     }
     if(!r){
       // Sem dados para esta loja hoje — exibe bloqueio
@@ -1184,12 +1184,19 @@ function carregarStatusChecklist(){
     const feOk = r.fechamento.ok + r.fechamento.nok;
 
     if(abOk > 0){
-      // Abertura já feita hoje → libera automaticamente
-      chkAberturaFeita=true;
-      const av=document.getElementById('chkAvisoOverlay');
-      if(av) av.style.display='none';
-      esconderBloqueioAbertura();
-      verificarBotaoRegistrar();
+      // Já tem abertura hoje: só libera se TODOS os itens do checklist de abertura foram conferidos
+      conferirAberturaCompleta(slug, r, abOk, function(completa){
+        if(completa){
+          chkAberturaFeita=true;
+          const av=document.getElementById('chkAvisoOverlay');
+          if(av) av.style.display='none';
+          esconderBloqueioAbertura();
+          verificarBotaoRegistrar();
+        } else {
+          _exibirBloqueioAbertura();
+          if(_statusEl) _statusEl.textContent='O checklist de abertura de hoje está incompleto. Preencha todos os itens.';
+        }
+      });
     } else {
       // Abertura pendente → bloqueia
       _exibirBloqueioAbertura();
@@ -1217,6 +1224,27 @@ function carregarStatusChecklist(){
 
   s.onerror=()=>{clearTimeout(t);delete window[cb];_exibirBloqueioAbertura();};
   s.src=SCRIPT_URL+'?action=getChecklistStatus&callback='+cb+'&t='+Date.now();
+  document.head.appendChild(s);
+}
+
+// Confere se a abertura de hoje cobre todos os itens do checklist desta loja
+function conferirAberturaCompleta(slug, r, abOk, fim){
+  const cb='chkCompCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; if(s.parentNode)s.parentNode.removeChild(s); fim(false); },10000);
+  window[cb]=(dados)=>{
+    clearTimeout(t); delete window[cb]; if(s.parentNode)s.parentNode.removeChild(s);
+    const itens=(dados&&dados.ok&&dados.itens)||[];
+    if(!itens.length){ fim(false); return; }
+    if(Array.isArray(r.idsAbertura)){
+      const feitos=new Set(r.idsAbertura.map(String));
+      fim(itens.every(it=>feitos.has(String(it.id))));
+    } else {
+      fim(abOk>=itens.length); // servidor antigo: confere pela quantidade
+    }
+  };
+  s.onerror=()=>{ clearTimeout(t); delete window[cb]; fim(false); };
+  s.src=SCRIPT_URL+'?action=getChecklistItens&loja='+encodeURIComponent(slug)+'&turno=abertura&callback='+cb+'&t='+Date.now();
   document.head.appendChild(s);
 }
 
