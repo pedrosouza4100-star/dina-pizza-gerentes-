@@ -1047,8 +1047,16 @@ function carregarStatusChecklist(){
     clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
     if(!dados||!dados.ok){wrap.style.display='none';return;}
 
-    const nomeChk = unidadeAtual.includes('Isaac') ? 'Isaac' : unidadeAtual;
-    const r = dados.resumo && dados.resumo[nomeChk];
+    // Mapeamento nome completo → slug do checklist v2
+    const SLUG_MAP = {
+      'Água Verde':'agua-verde','Fazenda':'fazenda','Campo Largo':'campo-largo',
+      'Colombo':'colombo','Uberaba':'uberaba','São José dos Pinhais':'sao-jose',
+      'Isaac Manhã':'isaac','Isaac Tarde':'isaac','Isaac Noite':'isaac',
+      'Sítio Cercado':'sitio-cercado','CIC':'cic','Pinheirinho':'pinheirinho',
+      'Portão':'portao','Boqueirão':'boqueirao'
+    };
+    const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
+    const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
     if(!r){wrap.style.display='none';return;}
 
     const abOk = r.abertura.ok + r.abertura.nok;
