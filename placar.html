@@ -204,10 +204,19 @@
     </div>
   </header>
   <!-- Overlay bloqueio checklist abertura — visível por padrão, some após confirmação -->
-  <div id="chkBloqueioOverlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+  <!-- Aviso inicial — OK leva ao checklist -->
+  <div id="chkAvisoOverlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div style="font-size:52px;margin-bottom:16px">⚠️</div>
+    <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:12px">Atenção!</div>
+    <div style="font-size:15px;color:#ccc;margin-bottom:28px;max-width:300px;line-height:1.6">Você precisa fazer o <strong style="color:#FFD000">checklist de abertura</strong> para iniciar o preenchimento do placar.</div>
+    <button onclick="chkAvisoOk()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">OK — Ir para o Checklist</button>
+  </div>
+
+  <!-- Overlay bloqueio — impede acesso enquanto abertura não feita -->
+  <div id="chkBloqueioOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:48px;margin-bottom:16px">📋</div>
-    <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:10px">Atenção!</div>
-    <div style="font-size:14px;color:#ccc;margin-bottom:6px;max-width:300px;line-height:1.5">Você precisa fazer o checklist de abertura para iniciar o preenchimento do placar.</div>
+    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px">Checklist de Abertura</div>
+    <div style="font-size:14px;color:#ccc;margin-bottom:6px;max-width:300px;line-height:1.5">Preencha o checklist de abertura para liberar o placar.</div>
     <div style="font-size:12px;color:#888;margin-bottom:28px;max-width:280px" id="chkBloqueioStatus">Verificando checklist de hoje...</div>
     <button onclick="abrirChecklistForm()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">📋 Preencher Checklist de Abertura</button>
   </div>
@@ -1116,19 +1125,18 @@ function carregarStatusChecklist(){
   const cb='chkStatusCb_'+Date.now();
   const s=document.createElement('script');
   const _statusEl = document.getElementById('chkBloqueioStatus');
+  // Timeout: não esconde overlay — só atualiza texto de status
   const t=setTimeout(()=>{
     delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    wrap.style.display='none';
-    // Timeout — mantém overlay visível, atualiza texto
     if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+    // Mantém ambos os overlays visíveis; o gerente deve preencher
   },10000);
 
   window[cb]=(dados)=>{
     clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
     if(!dados||!dados.ok){
-      wrap.style.display='none';
       if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
-      return;
+      return; // overlays permanecem visíveis
     }
 
     // Mapeamento nome completo → slug do checklist v2
@@ -1142,22 +1150,29 @@ function carregarStatusChecklist(){
     const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
     const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
     if(!r){
-      // Sem dados — mantém overlay, atualiza texto
-      document.getElementById('chkPreencherBtn').style.display='block';
-      wrap.style.display='none';
+      // Sem dados — mantém overlays; gerente precisa preencher
+      if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
       if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
       return;
     }
-    document.getElementById('chkPreencherBtn').style.display='none';
+    if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='none';
 
     const abOk = r.abertura.ok + r.abertura.nok;
     const feOk = r.fechamento.ok + r.fechamento.nok;
-    // Marca como feitos se já existem registros de hoje
-    if(abOk > 0){ chkAberturaFeita=true; esconderBloqueioAbertura(); verificarBotaoRegistrar(); }
+    // Abertura já feita hoje → libera automaticamente (gerente voltou depois do intervalo)
+    if(abOk > 0){
+      chkAberturaFeita=true;
+      // Fecha ambos os overlays pois checklist já foi preenchido hoje
+      const av=document.getElementById('chkAvisoOverlay');
+      if(av) av.style.display='none';
+      esconderBloqueioAbertura();
+      verificarBotaoRegistrar();
+    } else {
+      if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
+    }
     if(feOk > 0){ chkFechamentoFeito=true; }
     if(abOk === 0 && feOk === 0){
-      document.getElementById('chkPreencherBtn').style.display='block';
-      wrap.style.display='none';
+      if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
       if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
       return;
     }
@@ -1198,10 +1213,20 @@ let chkRespostas = {}; // {id: 'conforme'|'nao_conforme'}
 let chkAberturaFeita = false;  // liberado após salvar checklist de abertura
 let chkFechamentoFeito = false; // liberado após salvar checklist de fechamento
 
-function abrirChecklistForm(){
-  // detecta turno pelo horário
+// Botão OK do aviso inicial → fecha aviso e abre direto o checklist de abertura
+function chkAvisoOk(){
+  const av = document.getElementById('chkAvisoOverlay');
+  if(av) av.style.display='none';
+  // mostra overlay de bloqueio e abre o form
+  const bl = document.getElementById('chkBloqueioOverlay');
+  if(bl) bl.style.display='flex';
+  abrirChecklistForm('abertura');
+}
+
+function abrirChecklistForm(turnoForce){
+  // detecta turno pelo horário (ou usa o forçado)
   const h = new Date().getHours();
-  const turnoSug = (h >= 14 || h < 6) ? 'fechamento' : 'abertura';
+  const turnoSug = turnoForce || ((h >= 14 || h < 6) ? 'fechamento' : 'abertura');
   chkSelecionarTurno(turnoSug);
   document.getElementById('chkModal').style.display='flex';
   document.body.style.overflow='hidden';
@@ -1295,7 +1320,13 @@ function salvarChecklist(){
     if(r&&r.ok){
       msg.textContent='✓ Checklist salvo com sucesso!';
       msg.style.color='#2ecc71';
-      if(chkTurnoAtual==='abertura'){ chkAberturaFeita=true; esconderBloqueioAbertura(); }
+      if(chkTurnoAtual==='abertura'){
+        chkAberturaFeita=true;
+        // Fecha aviso inicial (caso ainda esteja visível) e overlay de bloqueio
+        const av=document.getElementById('chkAvisoOverlay');
+        if(av) av.style.display='none';
+        esconderBloqueioAbertura();
+      }
       if(chkTurnoAtual==='fechamento') chkFechamentoFeito=true;
       setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); verificarBotaoRegistrar(); },1800);
     } else {
