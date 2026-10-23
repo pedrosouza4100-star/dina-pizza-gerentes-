@@ -1,3 +1,4 @@
+// ⚠️ VERSÃO ANTIGA (v2.0) — NÃO é o código publicado no Apps Script. Não use como base. Veja CLAUDE.md.
 // ════════════════════════════════════════════════════════════════
 // DINA PIZZA — APPS SCRIPT v2.0
 // Backend: Checklist + KPIs + Fotos + Configuração editável
