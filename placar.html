@@ -93,6 +93,21 @@
   .falta-btn.nao{border-color:var(--green);color:var(--green);background:rgba(46,204,113,0.1);}
   .falta-produto-input{background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:56px;line-height:1.5;padding:10px;box-sizing:border-box;}
   .foto-small-preview{width:100%;border-radius:6px;object-fit:cover;max-height:90px;display:none;}
+
+/* ── Widget Status Checklist ── */
+.chk-status-wrap{margin-bottom:16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.chk-status-header{background:linear-gradient(135deg,#8B0000,#C00000);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;}
+.chk-status-header span{font-size:13px;font-weight:700;color:#fff;}
+.chk-status-btn{background:rgba(255,255,255,0.18);border:none;border-radius:6px;color:#fff;font-size:11px;padding:3px 10px;cursor:pointer;}
+.chk-status-body{padding:10px 14px;}
+.chk-status-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.chk-status-row:last-child{border-bottom:none;}
+.chk-status-label{font-size:13px;font-weight:600;flex:1;color:var(--text);}
+.chk-status-tag{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:700;}
+.chk-status-tag.ok{background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);}
+.chk-status-tag.nok{background:rgba(255,59,59,0.15);color:#ff4444;border:1px solid rgba(255,59,59,0.3);}
+.chk-status-tag.pend{background:rgba(255,255,255,0.06);color:#888;border:1px solid rgba(255,255,255,0.1);}
+
 </style>
 </head>
 <body>
@@ -170,6 +185,17 @@
       <div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:16px 18px">
         <div style="font-size:0.95rem;font-weight:700;color:var(--danger);margin-bottom:12px">📋 Pendências apontadas pelo Gerente Regional — corrija hoje</div>
         <div id="checklistPendenciasLista"></div>
+      </div>
+    </div>
+
+    <!-- Status Checklist Abertura/Fechamento -->
+    <div id="chkStatusWrap" style="display:none;" class="chk-status-wrap">
+      <div class="chk-status-header">
+        <span>✅ Checklist do Dia</span>
+        <button class="chk-status-btn" onclick="carregarStatusChecklist()">↻</button>
+      </div>
+      <div class="chk-status-body" id="chkStatusBody">
+        <div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>
       </div>
     </div>
 
@@ -967,6 +993,7 @@ function iniciarApp(u){
   inicializarFaltaProduto();
   verificarCumprimento();
   carregarPendenciasChecklist();
+  carregarStatusChecklist();
 }
 
 function carregarPendenciasChecklist(){
@@ -998,6 +1025,69 @@ function renderPendenciasChecklist(pendencias){
   });
   lista.innerHTML=html;
   wrap.style.display='block';
+}
+
+
+// ── Status do Checklist (Abertura/Fechamento) para esta loja ──
+const CHECKLIST_URL='https://script.google.com/macros/s/AKfycbzC6MR9PFGzlU7sRmFOfDvQwIAo84XdbYMFjoqNm4Av6R16pmHfT6tQ0nlXohmJoZzTHA/exec';
+
+function carregarStatusChecklist(){
+  if(!unidadeAtual) return;
+  const wrap=document.getElementById('chkStatusWrap');
+  const body=document.getElementById('chkStatusBody');
+  if(!wrap||!body) return;
+  body.innerHTML='<div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>';
+  
+  const cb='chkStatusCb_'+Date.now();
+  const s=document.createElement('script');
+  const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);wrap.style.display='none';},8000);
+  
+  window[cb]=(dados)=>{
+    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
+    if(!dados||!dados.ok){wrap.style.display='none';return;}
+    
+    // Mapeia nome da unidade do placar para o nome no checklist
+    const nomeChk = unidadeAtual.includes('Isaac') ? 'Isaac' : unidadeAtual;
+    const r = dados.resumo && dados.resumo[nomeChk];
+    
+    if(!r){wrap.style.display='none';return;}
+    
+    const abOk  = r.abertura.ok + r.abertura.nok;
+    const feOk  = r.fechamento.ok + r.fechamento.nok;
+    
+    // Só mostra se tiver algum dado
+    if(abOk === 0 && feOk === 0){wrap.style.display='none';return;}
+    
+    let tagAb, tagFe;
+    if(abOk === 0){
+      tagAb='<span class="chk-status-tag pend">— Pendente</span>';
+    } else if(r.abertura.nok > 0){
+      tagAb=`<span class="chk-status-tag nok">⚠ ${r.abertura.nok} item(s) NOK</span>`;
+    } else {
+      tagAb='<span class="chk-status-tag ok">✓ Concluída</span>';
+    }
+    
+    if(feOk === 0){
+      tagFe='<span class="chk-status-tag pend">— Pendente</span>';
+    } else if(r.fechamento.nok > 0){
+      tagFe=`<span class="chk-status-tag nok">⚠ ${r.fechamento.nok} item(s) NOK</span>`;
+    } else {
+      tagFe='<span class="chk-status-tag ok">✓ Concluído</span>';
+    }
+    
+    body.innerHTML=`
+      <div class="chk-status-row">
+        <span class="chk-status-label">🌅 Abertura</span>${tagAb}
+      </div>
+      <div class="chk-status-row">
+        <span class="chk-status-label">🌙 Fechamento</span>${tagFe}
+      </div>`;
+    wrap.style.display='block';
+  };
+  
+  s.onerror=()=>{clearTimeout(t);delete window[cb];wrap.style.display='none';};
+  s.src=CHECKLIST_URL+'?acao=getDados&callback='+cb+'&t='+Date.now();
+  document.head.appendChild(s);
 }
 
 window.addEventListener('load',()=>{
