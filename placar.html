@@ -110,6 +110,7 @@
 .chk-status-preencher{display:block;width:100%;margin-top:10px;padding:9px;background:rgba(255,208,0,0.12);border:1px solid rgba(255,208,0,0.3);border-radius:8px;color:#FFD000;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;}
 
 /* ── Modal Formulário Checklist ── */
+.chk-item-row.falta{outline:2px solid #ff4444;outline-offset:-2px;border-radius:8px;}
 .chk-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;overflow-y:auto;}
 .chk-modal{background:var(--bg);width:100%;min-height:100%;display:flex;flex-direction:column;}
 .chk-modal-header{background:linear-gradient(135deg,#8B0000,#C00000);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
@@ -1159,8 +1160,14 @@ function carregarStatusChecklist(){
       'Sítio Cercado':'sitio-cercado','CIC':'cic','Pinheirinho':'pinheirinho',
       'Portão':'portao','Boqueirão':'boqueirao'
     };
-    const slug = SLUG_MAP[unidadeAtual] || unidadeAtual.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
-    const r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
+    const slug = slugLoja(unidadeAtual);
+    let r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
+    // Isaac Manhã e Isaac Noite usam a mesma loja "isaac" no checklist:
+    // cada turno só é liberado pelo checklist que ele mesmo preencheu
+    if(r && slugCompartilhado(unidadeAtual)){
+      const g = r.porGerente && r.porGerente[unidadeAtual];
+      r = g ? { abertura:{ok:g.abertura,nok:0}, fechamento:{ok:g.fechamento,nok:0} } : null;
+    }
     if(!r){
       // Sem dados para esta loja hoje — exibe bloqueio
       if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
@@ -1211,17 +1218,21 @@ function carregarStatusChecklist(){
 
 // ── Formulário de Checklist ──
 const SLUG_MAP_CHK = {
-  'Água Verde':'agua-verde','Fazenda':'fazenda','Campo Largo':'campo-largo',
+  'Água Verde':'agua-verde','Fazenda':'fazenda','Fazenda Rio Grande':'fazenda',
+  'Capão Raso':'capao-raso','Expressa':'expressa','Araucária':'araucaria','Campo Largo':'campo-largo',
   'Colombo':'colombo','Uberaba':'uberaba','São José dos Pinhais':'sao-jose',
   'Isaac Manhã':'isaac','Isaac Tarde':'isaac','Isaac Noite':'isaac',
   'Sítio Cercado':'sitio-cercado','CIC':'cic','Pinheirinho':'pinheirinho',
   'Portão':'portao','Boqueirão':'boqueirao'
 };
+function slugCompartilhado(u){ const sl=slugLoja(u); return Object.keys(SLUG_MAP_CHK).filter(k=>SLUG_MAP_CHK[k]===sl && LOJAS_DO_PLACAR.includes(k)).length>1; }
+const LOJAS_DO_PLACAR = (typeof TODAS_UNIDADES!=='undefined') ? TODAS_UNIDADES : [];
 function slugLoja(u){ return SLUG_MAP_CHK[u] || (u||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-'); }
 
 let chkTurnoAtual = 'abertura';
 let chkItensData = [];
 let chkRespostas = {}; // {id: 'conforme'|'nao_conforme'}
+let chkTentouSalvar = false; // depois de tentar salvar, marca em vermelho o que falta
 let chkAberturaFeita = false;  // liberado após salvar checklist de abertura
 let chkFechamentoFeito = false; // liberado após salvar checklist de fechamento
 
@@ -1252,6 +1263,7 @@ function fecharChecklistForm(){
 function chkSelecionarTurno(turno){
   chkTurnoAtual = turno;
   chkRespostas = {};
+  chkTentouSalvar = false;
   document.getElementById('chkBtnAb').classList.toggle('ativo', turno==='abertura');
   document.getElementById('chkBtnFe').classList.toggle('ativo', turno==='fechamento');
   document.getElementById('chkModalTitle').textContent = turno==='abertura' ? '🌅 Checklist de Abertura' : '🌙 Checklist de Fechamento';
@@ -1290,7 +1302,8 @@ function renderItensChecklist(){
     const resp = chkRespostas[it.id] || '';
     const okSel = resp==='conforme' ? 'sel' : '';
     const nokSel = resp==='nao_conforme' ? 'sel' : '';
-    html+=`<div class="chk-item-row">
+    const falta = (chkTentouSalvar && !resp) ? ' falta' : '';
+    html+=`<div class="chk-item-row${falta}">
       <span class="chk-item-txt">${it.item}</span>
       <div class="chk-item-btns">
         <button class="chk-btn-ok ${okSel}" onclick="chkResponder('${it.id}','conforme')">✓</button>
@@ -1310,8 +1323,15 @@ function chkResponder(id, status){
 function salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
-  const respondidos = Object.keys(chkRespostas).length;
-  if(respondidos === 0){ msg.textContent='Responda pelo menos um item.'; msg.style.color='#ff4444'; return; }
+  const faltam = chkItensData.filter(function(it){ return !chkRespostas[it.id]; }).length;
+  if(!chkItensData.length){ msg.textContent='Nenhum item carregado. Feche e abra o checklist de novo.'; msg.style.color='#ff4444'; return; }
+  if(faltam > 0){
+    msg.textContent='Responda todos os itens antes de salvar (falta'+(faltam>1?'m ':' ')+faltam+').';
+    msg.style.color='#ff4444';
+    chkTentouSalvar = true; renderItensChecklist();
+    const primeiro=document.querySelector('.chk-item-row.falta'); if(primeiro) primeiro.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
 
   btn.disabled=true;
   msg.textContent='Salvando...';
