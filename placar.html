@@ -1122,6 +1122,9 @@ function carregarStatusChecklist(){
 
     const abOk = r.abertura.ok + r.abertura.nok;
     const feOk = r.fechamento.ok + r.fechamento.nok;
+    // Marca como feitos se já existem registros de hoje
+    if(abOk > 0){ chkAberturaFeita=true; verificarBotaoRegistrar(); }
+    if(feOk > 0){ chkFechamentoFeito=true; }
     if(abOk === 0 && feOk === 0){
       document.getElementById('chkPreencherBtn').style.display='block';
       wrap.style.display='none';
@@ -1161,6 +1164,8 @@ function slugLoja(u){ return SLUG_MAP_CHK[u] || (u||'').toLowerCase().normalize(
 let chkTurnoAtual = 'abertura';
 let chkItensData = [];
 let chkRespostas = {}; // {id: 'conforme'|'nao_conforme'}
+let chkAberturaFeita = false;  // liberado após salvar checklist de abertura
+let chkFechamentoFeito = false; // liberado após salvar checklist de fechamento
 
 function abrirChecklistForm(){
   // detecta turno pelo horário
@@ -1259,7 +1264,9 @@ function salvarChecklist(){
     if(r&&r.ok){
       msg.textContent='✓ Checklist salvo com sucesso!';
       msg.style.color='#2ecc71';
-      setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); },1800);
+      if(chkTurnoAtual==='abertura') chkAberturaFeita=true;
+      if(chkTurnoAtual==='fechamento') chkFechamentoFeito=true;
+      setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); verificarBotaoRegistrar(); },1800);
     } else {
       msg.textContent='Erro ao salvar. Tente novamente.';
       msg.style.color='#ff4444';
@@ -1580,6 +1587,7 @@ function verificarBotaoRegistrar(){
 
   const faltando=[];
 
+  if(!chkAberturaFeita) faltando.push('📋 Checklist de Abertura');
   if(!filled('fat')) faltando.push('💰 Faturamento');
   if(!filled('google')) faltando.push('⭐ Google');
   if(!filled('ifood')) faltando.push('📱 iFood');
@@ -1750,6 +1758,10 @@ async function comprimirFoto(base64){
 
 async function registrar(){
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
+  if(!chkFechamentoFeito){
+    alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nClique em "📋 Preencher Checklist" e selecione Fechamento.');
+    return;
+  }
   if(faturamentoForaDaFaixa()){
     const fatAtual=valFat();
     const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
