@@ -548,7 +548,8 @@
     try{
       const r=await admJsonp({action:'authStatus'});
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro');
-      tbody.innerHTML=r.lojas.map(l=>{
+      const quando=v=>{ const d=new Date(v); return (v && !isNaN(d) && !/^\d{2}\/\d{2}\/\d{4}/.test(v)) ? d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : (v||''); };
+      tbody.innerHTML=r.lojas.map(l=>{ l.em=quando(l.em);
         const st=l.situacao==='ativa'?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${l.em}</div>`
           :l.situacao==='resetada'?`<span class="badge sem">Redefinida</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">o gerente cria uma nova ao entrar</div>`
           :`<span class="badge sem">Ainda não registrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">entra no próximo acesso do gerente</div>`;
