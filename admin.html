@@ -186,7 +186,8 @@
 
     <div class="tab-content" id="tab-senhas">
       <div>
-        <div class="section-title">Status das Senhas por Unidade</div>
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Status das Senhas por Unidade</span>
+          <button class="action-btn btn-reset" style="padding:8px 14px" onclick="redefinirTodas()">Pedir senha nova para todas as lojas</button></div>
         <div class="table-wrap"><table><thead><tr><th>Unidade</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tabelaLojas"></tbody></table></div>
       </div>
       <div>
@@ -539,6 +540,19 @@
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro');
       box.innerHTML=r.itens.length?r.itens.map(i=>`<div class="log-item"><span class="log-time">${i.quando}</span><span class="log-msg">${i.acao}${i.detalhe?' — '+String(i.detalhe).replace(/[<>&]/g,''):''}</span></div>`).join(''):'<div class="log-item"><span class="log-msg">Nenhuma ação registrada ainda.</span></div>';
     }catch(e){ box.innerHTML='<div class="log-item"><span class="log-msg warn">⚠ '+e.message+'</span></div>'; }
+  }
+
+  // ── Redefinir todas: cada gerente cria uma senha nova no próximo acesso ──
+  async function redefinirTodas(){
+    if(!(await admServidor())){ showToast('O Apps Script publicado ainda não guarda as senhas no servidor.','warn'); return; }
+    if(!confirm('Pedir senha nova para TODAS as lojas?\n\nTodos os celulares saem do placar. No próximo acesso, cada gerente escolhe a loja em "Primeiro acesso? Criar senha" e cria uma senha nova.\n\nFaça isso fora do horário de movimento.')) return;
+    let ok=0, falhas=[];
+    for(const u of UNIDADES){
+      try{ await admPost({action:'authResetLoja',unidade:u}); ok++; }catch(e){ falhas.push(u); }
+    }
+    registrarLog('Senhas redefinidas em '+ok+' lojas.','warn');
+    showToast(falhas.length?('Redefinidas: '+ok+'. Falharam: '+falhas.join(', ')):('Senhas redefinidas nas '+ok+' lojas.'),falhas.length?'warn':'ok');
+    renderTabela();
   }
 
   // ── Senhas das lojas (no servidor) ──
