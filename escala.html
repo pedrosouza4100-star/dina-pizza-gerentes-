@@ -292,15 +292,16 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nomeGerente').value=lerLS('esc_gerente')||'';
   // Vindo do placar: usa a loja em que o gerente já entrou com a senha do placar
   const doPlacar=lerLS('dina_unidade_logada');
-  if(doPlacar && lerLS('dina_senha_'+doPlacar) && ESCALA_UNIDADES.includes(doPlacar)){
+  if(doPlacar && lerLS('dina_login_v')==='2' && lerLS('dina_senha_'+doPlacar) && ESCALA_UNIDADES.includes(doPlacar)){
     sel.value=doPlacar; sel.disabled=true;
     document.getElementById('btnSair').textContent='‹ Voltar ao placar';
     if(document.getElementById('nomeGerente').value) entrar();
     return;
   }
-  const lembrada=lerLS('esc_unidade');
-  if(lembrada && ESCALA_UNIDADES.includes(lembrada)) sel.value=lembrada;
-  if(lerLS('esc_logado')==='1' && sel.value && document.getElementById('nomeGerente').value) entrar();
+  // Sem login no placar: a escala só abre pelo placar da loja
+  document.querySelector('#telaLogin .card').innerHTML='<div class="auth-logo">DINA <span>PIZZA</span></div><div class="auth-sub">Escala da equipe</div>'+
+    '<div class="muted" style="text-align:center">Para montar a escala, entre primeiro no <b>Placar</b> com a unidade e a senha da sua loja.</div>'+
+    '<a class="btn" href="placar" style="text-align:center;text-decoration:none">Ir para o Placar</a>';
 });
 
 function lerLS(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
