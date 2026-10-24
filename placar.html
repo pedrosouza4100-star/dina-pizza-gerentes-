@@ -159,6 +159,16 @@
     <!-- Tela login -->
     <div id="telaLogin" style="display:none;flex-direction:column;gap:14px">
       <div class="auth-title">Entrar</div>
+      <div><div class="auth-label">Sua unidade</div>
+        <select class="auth-input" id="loginUnidade">
+          <option value="">— Selecione —</option>
+          <option>Isaac Manhã</option><option>Isaac Noite</option>
+          <option>Água Verde</option><option>Uberaba</option>
+          <option>Campo Largo</option><option>Capão Raso</option>
+          <option>São José dos Pinhais</option><option>Expressa</option>
+          <option>Fazenda Rio Grande</option><option>Colombo</option><option>Araucária</option>
+        </select>
+      </div>
       <div><div class="auth-label">Senha</div><input class="auth-input" type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter')entrar()"></div>
       <div class="auth-error" id="loginErro"></div>
       <button class="auth-btn" onclick="entrar()">Entrar</button>
@@ -1018,35 +1028,35 @@ async function verificarSessaoServidor(u){
 }
 function entrarComo(u){
   localStorage.setItem('dina_unidade_logada',u);
+  localStorage.setItem('dina_ultima_loja',u);
+  localStorage.setItem('dina_login_v','2');
   document.getElementById('authAviso').textContent='';
   iniciarApp(u);
 }
 
 async function entrar(){
+  const u=document.getElementById('loginUnidade').value;
   const s=document.getElementById('loginSenha').value;
   const h=hash(s);
   const err=document.getElementById('loginErro');
+  if(!u){ err.textContent='Selecione sua unidade.'; return; }
+  if(!s){ err.textContent='Digite a senha.'; return; }
   if(await authDisponivel()){
     err.textContent='Conferindo...';
     try{
-      await migrarSenhasLocais();
-      const r=await authPost({action:'authLoginLoja',hash:h});
-      const lojas=r.unidades||[];
-      if(!lojas.length){ err.textContent='Senha incorreta.'; return; }
-      err.textContent='';
-      lojas.forEach(u=>localStorage.setItem('dina_senha_'+u,h));
-      window._turnosIsaac=lojas.filter(u=>u.indexOf('Isaac')===0);
-      if(window._turnosIsaac.length){ window._senhaIsaac=s; mostrar('telaTurno'); return; }
-      entrarComo(lojas[0]); return;
+      const r=await authPost({action:'authVerificar',unidade:u,hash:h});
+      if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); entrarComo(u); return; }
+      if(r.situacao==='sem'){
+        // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
+        if(localStorage.getItem('dina_senha_'+u)===h){ await migrarSenhasLocais(); err.textContent=''; entrarComo(u); return; }
+        err.textContent='Esta loja ainda não tem senha no sistema. Volte e toque em "Primeiro acesso? Criar senha".'; return;
+      }
+      if(r.situacao==='resetada'){ err.textContent='A senha desta loja foi redefinida. Volte e toque em "Primeiro acesso? Criar senha".'; return; }
+      err.textContent='Senha incorreta para '+u+'.'; return;
     }catch(e){ err.textContent=''; /* sem servidor: segue como antes */ }
   }
-  window._turnosIsaac=null;
-  const isaacManha=localStorage.getItem('dina_senha_Isaac Manhã')===h;
-  const isaacNoite=localStorage.getItem('dina_senha_Isaac Noite')===h;
-  if(isaacManha||isaacNoite){window._senhaIsaac=s;mostrar('telaTurno');return;}
-  const encontrada=TODAS_UNIDADES.find(u=>localStorage.getItem('dina_senha_'+u)===h);
-  if(!encontrada){err.textContent='Senha incorreta.';return;}
-  entrarComo(encontrada);
+  if(localStorage.getItem('dina_senha_'+u)!==h){ err.textContent='Senha incorreta.'; return; }
+  entrarComo(u);
 }
 
 function selecionarTurno(turno){
@@ -1490,6 +1500,9 @@ function salvarChecklist(){
 
 window.addEventListener('load',()=>{
   // Mostra tela imediatamente, carrega metas em background
+  // 24/10/2026: login passou a pedir loja + senha; quem entrou antes disso entra de novo uma vez
+  if(localStorage.getItem('dina_login_v')!=='2'){ localStorage.removeItem('dina_unidade_logada'); }
+  const ultima=localStorage.getItem('dina_ultima_loja'); if(ultima) document.getElementById('loginUnidade').value=ultima;
   const u=localStorage.getItem('dina_unidade_logada');
   if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
