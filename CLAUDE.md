@@ -6,7 +6,7 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 ## Como o sistema é montado
 
 - **Telas (este repositório, público):** arquivos HTML publicados no GitHub Pages
-  em `https://pedrosouza4100-star.github.io/dina-pizza-gerentes-/`. A branch `main` é o que está no ar.
+  em `https://gerentes.dinapizza.com.br/` (domínio próprio, arquivo `CNAME`; o endereço antigo `pedrosouza4100-star.github.io/dina-pizza-gerentes-/` redireciona). A branch `main` é o que está no ar. Não apague o `CNAME`.
 - **Servidor (Google Apps Script):** um único script, vinculado à planilha do placar, publicado como App da Web:
   `https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec`
   Todas as telas usam essa mesma URL (`SCRIPT_URL` / `ESCALA_SCRIPT_URL`).
