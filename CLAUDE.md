@@ -40,6 +40,7 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 | `placar.html` | Placar diário do gerente (faturamento, avaliações, motoboys, tempos, checklist de abertura/fechamento com bloqueio). Login por senha da loja salva no aparelho (`dina_unidade_logada`). Tem o botão "📅 Escala da equipe". | getMetas, getDashboard, salvarTempoReal, registrarPedidoDesbloqueio, verificarDesbloqueio, getChecklistItens, getChecklistStatus, getChecklistPendencias, salvarChecklist |
 | `admin.html` | Administração: metas, senhas, desbloqueios e itens do checklist (aba Checklist) | getMetas, saveMetas, getPedidosDesbloqueio, desbloquear, desbloquearFalta, marcarAtendido, limparDesbloqueios, chkAdminListar, chkAdminSalvar, chkAdminAtivo, chkAdminMover |
 | `dashboard.html`, `painel.html` | Dashboard mensal | getDashboard, getPresenca |
+| `dashboard-v2.html` | Abre o Dashboard V2 (servido pelo Apps Script) num quadro, depois da senha da gestão; manda a `chave` exigida pelo `dashboardV2` | dashboardV2 |
 | `checklist.html` | Checklist operacional | — |
 | `checklist_regional.html` | Checklist do gerente regional (pendências e reincidência) | getChecklistPendencias, salvarChecklist |
 | `CONTROLE_GERAL_GESTAO.html`, `Gerente_*.html` | Páginas estáticas de gestão por loja | — |

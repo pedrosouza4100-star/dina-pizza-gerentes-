@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="gestao-guard.js?v=1"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard V2 — Dina Pizza</title>
+<link rel="icon" href="logo.png">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#0A0A0A;color:#fff;font-family:Arial,sans-serif}
+  body{display:flex;flex-direction:column}
+  .barra{background:#C0392B;border-bottom:3px solid #FFD000;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .barra a{color:#fff;font-size:.8rem;font-weight:700;text-decoration:none}
+  .barra b{flex:1;font-size:.95rem;letter-spacing:.06em}
+  .barra select{background:rgba(0,0,0,.25);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:6px 8px;font-size:.85rem}
+  .barra select option{color:#000}
+  iframe{flex:1;width:100%;border:0;background:#0A0A0A}
+  #carregando{position:fixed;inset:60px 0 0 0;display:flex;align-items:center;justify-content:center;color:#999;font-size:.9rem;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="barra"><a href="admin">← Admin</a><b>DASHBOARD</b><select id="mes" onchange="carregar()"></select></div>
+<div id="carregando">⏳ Carregando dashboard...</div>
+<iframe id="quadro" title="Dashboard V2"></iframe>
+<script>
+  const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+  const NOMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const sel=document.getElementById('mes'), hoje=new Date();
+  for(let i=0;i<12;i++){ const d=new Date(hoje.getFullYear(),hoje.getMonth()-i,1); const o=document.createElement('option'); o.value=d.getMonth()+'|'+d.getFullYear(); o.textContent=NOMES[d.getMonth()]+' '+d.getFullYear(); sel.appendChild(o); }
+  function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
+  function carregar(){
+    const [m,a]=sel.value.split('|');
+    document.getElementById('carregando').style.display='flex';
+    const f=document.getElementById('quadro');
+    f.onload=()=>{ document.getElementById('carregando').style.display='none'; };
+    f.src=SCRIPT_URL+'?action=dashboardV2&mes='+m+'&ano='+a+'&chave='+encodeURIComponent(chave())+'&t='+Date.now();
+  }
+  // carrega assim que a senha da gestão for confirmada
+  const espera=setInterval(()=>{ if(!document.getElementById('gGuard') && !document.getElementById('gGuardCss') && chave()){ clearInterval(espera); carregar(); } },300);
+</script>
+<script src="atualizador.js"></script>
+</body>
+</html>
