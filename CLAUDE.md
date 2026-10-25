@@ -32,6 +32,9 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 7. Ao mudar um `.js` ou `.css` compartilhado, aumente o `?v=` nas páginas que o usam (o GitHub Pages guarda cache).
 8. **A cada publicação, troque o valor de `versao.json`** (ex.: `2026-10-25-1`). O `atualizador.js` (incluído no fim das páginas) percebe a mudança,
    avisa o gerente e recarrega o placar/escala sozinho (na hora se o app estiver em segundo plano; senão em 1 min sem digitação, ou no máximo 15 min).
+9. **A cada entrega de código do Apps Script, troque `versao-servidor.json`** para o mesmo valor de `VERSAO_SERVIDOR` do Codigo.gs.
+   O Admin (faixa "🛡️ Proteção do sistema" no Hoje na rede) e o robô de cobrança comparam os dois e avisam se o código publicado for outro,
+   se faltar parte do código ou se o backup semanal parar.
 
 ## Mapa das telas
 
