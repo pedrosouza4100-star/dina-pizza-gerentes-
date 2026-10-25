@@ -95,6 +95,19 @@
   .foto-small-preview{width:100%;border-radius:6px;object-fit:cover;max-height:90px;display:none;}
 
 /* ── Widget Status Checklist ── */
+.etapa-titulo{display:flex;align-items:center;gap:10px;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin:22px 0 10px;}
+.etapa-titulo b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#0A0A0A;font-size:0.8rem;}
+.etapa-titulo:first-of-type{margin-top:4px;}
+.chk-det{width:100%;margin:2px 0 8px;padding:10px;border-radius:8px;background:rgba(255,59,59,0.07);border:1px solid rgba(255,59,59,0.3);display:flex;flex-direction:column;gap:8px;}
+.chk-det textarea{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px;resize:vertical;min-height:58px;}
+.chk-det textarea.falta{border-color:#ff4444;}
+.chk-det-linha{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+.chk-foto-btn{background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:7px 10px;cursor:pointer;font-family:'Inter',sans-serif;}
+.chk-det img{max-width:120px;max-height:90px;border-radius:6px;border:1px solid var(--border);}
+.chk-reinc{width:100%;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:8px;background:rgba(255,208,0,0.1);border:1px solid rgba(255,208,0,0.45);color:#FFD000;margin:2px 0 6px;}
+.chk-reinc.forte{background:rgba(255,59,59,0.14);border-color:#ff4444;color:#ff8080;}
+.chk-reinc a{color:inherit;text-decoration:underline;}
+.chk-item-row{flex-wrap:wrap;}
 .chk-status-wrap{margin-bottom:16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .chk-status-header{background:linear-gradient(135deg,#8B0000,#C00000);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;}
 .chk-status-header span{font-size:13px;font-weight:700;color:#fff;}
@@ -112,7 +125,7 @@
 /* ── Modal Formulário Checklist ── */
 .chk-item-row.falta{outline:2px solid #ff4444;outline-offset:-2px;border-radius:8px;}
 .chk-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;overflow-y:auto;}
-.chk-modal{background:var(--bg);width:100%;min-height:100%;display:flex;flex-direction:column;}
+.chk-modal{background:#0A0A0A;width:100%;min-height:100%;display:flex;flex-direction:column;}
 .chk-modal-header{background:linear-gradient(135deg,#8B0000,#C00000);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
 .chk-modal-title{font-size:14px;font-weight:700;color:#fff;}
 .chk-modal-close{background:rgba(255,255,255,0.18);border:none;border-radius:6px;color:#fff;font-size:18px;padding:2px 10px;cursor:pointer;line-height:1.4;}
@@ -234,7 +247,7 @@
     <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px">Checklist de Abertura</div>
     <div style="font-size:14px;color:#ccc;margin-bottom:6px;max-width:300px;line-height:1.5">Preencha o checklist de abertura para liberar o placar.</div>
     <div style="font-size:12px;color:#888;margin-bottom:28px;max-width:280px" id="chkBloqueioStatus">Verificando checklist de hoje...</div>
-    <button onclick="abrirChecklistForm()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">📋 Preencher Checklist de Abertura</button>
+    <button onclick="abrirChecklistForm('abertura')" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">📋 Preencher Checklist de Abertura</button>
   </div>
 
   <main>
@@ -246,24 +259,15 @@
       </div>
     </div>
 
-    <!-- Status Checklist Abertura/Fechamento -->
-    <div id="chkStatusWrap" style="display:none;" class="chk-status-wrap">
-      <div class="chk-status-header">
-        <span>✅ Checklist do Dia</span>
-        <button class="chk-status-btn" onclick="carregarStatusChecklist()">↻</button>
-      </div>
+    <!-- Etapa 1: checklist de abertura (obrigatório; depois de feito some e fica só esta linha) -->
+    <div class="etapa-titulo"><b>1</b> Abertura da loja</div>
+    <div id="chkStatusWrap" class="chk-status-wrap">
       <div class="chk-status-body" id="chkStatusBody">
-        <div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>
-      </div>
-      <div style="padding:0 14px 12px">
-        <button class="chk-status-preencher" onclick="abrirChecklistForm()">📋 Preencher Checklist</button>
+        <div style="font-size:12px;color:#888;text-align:center;padding:8px">Verificando checklist de abertura...</div>
       </div>
     </div>
-
-    <!-- Fallback: botão preencher quando checklist ainda não foi feito -->
-    <div id="chkPreencherBtn" style="display:none;margin-bottom:16px;">
-      <button class="chk-status-preencher" style="border-radius:14px;padding:12px;" onclick="abrirChecklistForm()">📋 Preencher Checklist de Abertura / Fechamento</button>
-    </div>
+    <!-- Problemas do checklist ainda em aberto (reincidência) -->
+    <div id="chkAbertosWrap" style="display:none;margin-bottom:16px"></div>
 
     <!-- Modal Formulário Checklist -->
     <div id="chkModal" class="chk-modal-overlay" style="display:none;">
@@ -273,10 +277,11 @@
           <button class="chk-modal-close" onclick="fecharChecklistForm()">✕</button>
         </div>
         <div class="chk-modal-body">
-          <div class="chk-turno-sel">
+          <div class="chk-turno-sel" style="display:none">
             <button class="chk-turno-btn ativo" id="chkBtnAb" onclick="chkSelecionarTurno('abertura')">🌅 Abertura</button>
             <button class="chk-turno-btn" id="chkBtnFe" onclick="chkSelecionarTurno('fechamento')">🌙 Fechamento</button>
           </div>
+          <div id="chkAbertosModal"></div>
           <div id="chkItensBody"></div>
         </div>
         <div class="chk-modal-footer">
@@ -286,6 +291,103 @@
       </div>
     </div>
 
+    <!-- Etapa 2: início do turno -->
+    <div class="etapa-titulo"><b>2</b> Início do turno</div>
+    <!-- Start Dina -->
+    <div class="card card-full" id="cardStartDina">
+      <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
+      <div class="card-meta">Meta: 1 registro por turno — foto obrigatória na hora</div>
+      <div class="start-dina-wrap">
+        <button class="camera-btn" id="cameraBtnStart" onclick="abrirCamera()">📷 Fotografar reunião agora</button>
+        <img class="foto-preview" id="fotoPreview" alt="Foto da reunião">
+        <div style="margin-top:8px">
+          <div class="card-label" style="margin-bottom:6px">Assuntos abordados na reunião</div>
+          <textarea id="pautaStartDina" placeholder="Descreva os assuntos discutidos no Start Dina..." style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:72px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="salvarPautaLocal()"></textarea>
+        </div>
+        <div id="startSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
+        <button class="camera-btn" id="btnSalvarStart" onclick="salvarStartDina()" style="margin-top:8px">💾 Salvar Start Dina</button>
+        <span class="tag" id="startDinaTag"></span>
+      </div>
+    </div>
+
+    <!-- Motoboys (só lojas com entrega própria) -->
+    <div class="card card-full" id="cardMotoboys" style="display:none">
+      <div class="card-label">👥 Motoboys em Serviço</div>
+      <div class="card-meta" id="metaMotoboysDisplay"></div>
+      <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
+      <!-- input file fora de qualquer div que some -->
+      <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
+      <div id="motoFotoArea" style="margin-top:8px">
+        <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
+        <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
+        <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
+      </div>
+      <div id="motoSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
+      <button class="camera-btn" id="btnSalvarMoto" onclick="salvarMotoboys()" style="margin-top:8px;display:none">💾 Salvar Motoboys</button>
+      <span class="tag" id="motoboysTag"></span>
+    </div>
+
+
+    <!-- Etapa 3: durante a noite -->
+    <div class="etapa-titulo"><b>3</b> Durante o turno</div>
+    <!-- Falta de Produto -->
+    <div class="card card-full" id="cardFaltaProduto">
+      <div class="card-label">📦 Falta de Produto</div>
+      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
+      <div class="falta-wrap" id="faltaWrap">
+        <div class="falta-btns">
+          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
+          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
+        </div>
+        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
+        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
+      </div>
+      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
+      <span class="tag" id="faltaTag"></span>
+    </div>
+
+    <!-- Tempo de Entrega (só lojas com entrega própria) -->
+    <div class="card card-full" id="cardTempo" style="display:none">
+      <div class="card-label">🕐 Tempo de Entrega</div>
+      <div class="card-meta" id="tempoRegistroInfo">3 registros por noite — sempre disponível</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
+      <!-- inputs file sempre fora de qualquer div que some -->
+      <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
+      <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
+
+      <div style="margin-top:8px" id="tempoInputArea">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div>
+            <div class="card-label" style="margin-bottom:4px">App Próprio (min)</div>
+            <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
+          </div>
+          <div>
+            <div class="card-label" style="margin-bottom:4px">iFood (min)</div>
+            <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
+          </div>
+        </div>
+        <div id="tempoFotoArea">
+          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.78rem;padding:10px 8px">📷 iFood</button>
+              <img class="foto-small-preview" id="fotoTempoAppPreview" alt="Foto iFood">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.78rem;padding:10px 8px">📷 App Próprio</button>
+              <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto App">
+            </div>
+          </div>
+          <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:4px;background:var(--red)">💾 Salvar registro de tempo</button>
+        </div>
+      </div>
+      <div id="statusTempo" style="font-size:0.75rem;color:var(--muted);text-align:center;padding:8px;display:none"></div>
+      <span class="tag" id="tempoTag"></span>
+    </div>
+
+
+    <!-- Etapa 4: fechamento -->
+    <div class="etapa-titulo"><b>4</b> Fechamento — preencha no fim da noite</div>
     <div class="cards-grid">
       <!-- Faturamento -->
       <div class="card card-full" id="cardFat">
@@ -352,101 +454,6 @@
       </div>
     </div>
 
-    <!-- Motoboys (só lojas com entrega própria) -->
-    <div class="card card-full" id="cardMotoboys" style="display:none">
-      <div class="card-label">👥 Motoboys em Serviço</div>
-      <div class="card-meta" id="metaMotoboysDisplay"></div>
-      <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
-      <!-- input file fora de qualquer div que some -->
-      <input type="file" id="cameraMotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoMoto(this)">
-      <div id="motoFotoArea" style="margin-top:8px">
-        <div class="card-label" style="margin-bottom:4px;color:var(--danger)">📋 Foto da lista com nomes dos motoboys (obrigatória — câmera na hora)</div>
-        <button class="camera-btn" id="cameraBtnMoto" onclick="abrirCameraMoto()">📷 Fotografar lista agora</button>
-        <img class="foto-small-preview" id="fotoMotoPreview" alt="Lista motoboys">
-      </div>
-      <div id="motoSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
-      <button class="camera-btn" id="btnSalvarMoto" onclick="salvarMotoboys()" style="margin-top:8px;display:none">💾 Salvar Motoboys</button>
-      <span class="tag" id="motoboysTag"></span>
-    </div>
-
-    <!-- Start Dina -->
-    <div class="card card-full" id="cardStartDina">
-      <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
-      <div class="card-meta">Foto obrigatória na hora + assuntos abordados</div>
-      <div class="start-dina-wrap">
-
-    <!-- Tempo de Entrega (só lojas com entrega própria) -->
-    <div class="card card-full" id="cardTempo" style="display:none">
-      <div class="card-label">🕐 Tempo de Entrega</div>
-      <div class="card-meta" id="tempoRegistroInfo">3 registros por noite — sempre disponível</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
-      <!-- inputs file sempre fora de qualquer div que some -->
-      <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
-      <input type="file" id="cameraTempoIfoodInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoIfood(this)">
-
-      <div style="margin-top:8px" id="tempoInputArea">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-          <div>
-            <div class="card-label" style="margin-bottom:4px">App Próprio (min)</div>
-            <input class="val" id="tempoApp" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
-          </div>
-          <div>
-            <div class="card-label" style="margin-bottom:4px">iFood (min)</div>
-            <input class="val" id="tempoIfood" type="number" inputmode="numeric" placeholder="0" style="font-size:1.8rem" oninput="onTempoInput()">
-          </div>
-        </div>
-        <div id="tempoFotoArea">
-          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.78rem;padding:10px 8px">📷 iFood</button>
-              <img class="foto-small-preview" id="fotoTempoAppPreview" alt="Foto iFood">
-            </div>
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.78rem;padding:10px 8px">📷 App Próprio</button>
-              <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto App">
-            </div>
-          </div>
-          <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:4px;background:var(--red)">💾 Salvar registro de tempo</button>
-        </div>
-      </div>
-      <div id="statusTempo" style="font-size:0.75rem;color:var(--muted);text-align:center;padding:8px;display:none"></div>
-      <span class="tag" id="tempoTag"></span>
-    </div>
-
-    <!-- Falta de Produto -->
-    <div class="card card-full" id="cardFaltaProduto">
-      <div class="card-label">📦 Falta de Produto</div>
-      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
-      <div class="falta-wrap" id="faltaWrap">
-        <div class="falta-btns">
-          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
-          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
-        </div>
-        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
-        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
-      </div>
-      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
-      <span class="tag" id="faltaTag"></span>
-    </div>
-
-    <!-- Start Dina -->
-    <div class="card card-full" id="cardStartDina">
-      <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
-      <div class="card-meta">Meta: 1 registro por turno — foto obrigatória na hora</div>
-      <div class="start-dina-wrap">
-        <button class="camera-btn" id="cameraBtnStart" onclick="abrirCamera()">📷 Fotografar reunião agora</button>
-        <img class="foto-preview" id="fotoPreview" alt="Foto da reunião">
-        <div style="margin-top:8px">
-          <div class="card-label" style="margin-bottom:6px">Assuntos abordados na reunião</div>
-          <textarea id="pautaStartDina" placeholder="Descreva os assuntos discutidos no Start Dina..." style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:72px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="salvarPautaLocal()"></textarea>
-        </div>
-        <div id="startSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
-        <button class="camera-btn" id="btnSalvarStart" onclick="salvarStartDina()" style="margin-top:8px">💾 Salvar Start Dina</button>
-        <span class="tag" id="startDinaTag"></span>
-      </div>
-    </div>
-
     <!-- Mensagem escalada de desempenho -->
     <div class="msg-escalada" id="msgEscalada"></div>
 
@@ -454,6 +461,15 @@
     <div class="obs-card">
       <div class="card-label">Observações do Dia</div>
       <textarea id="obs" placeholder="Ocorrências, reclamações, destaque de equipe..."></textarea>
+    </div>
+
+    <!-- Checklist de fechamento: último passo antes de enviar -->
+    <div class="card card-full" id="cardChkFechamento">
+      <div class="card-label">🌙 Checklist de Fechamento da Unidade</div>
+      <div class="card-meta">Último passo antes de enviar o placar</div>
+      <div id="chkFechInfo" style="font-size:0.82rem;color:var(--muted);margin-top:4px"></div>
+      <button class="camera-btn" id="btnChkFech" onclick="abrirChecklistForm('fechamento')" style="margin-top:8px">📋 Preencher checklist de fechamento</button>
+      <span class="tag" id="chkFechTag"></span>
     </div>
   </main>
 
@@ -1153,14 +1169,14 @@ function iniciarApp(u){
   inicializarFaltaProduto();
   verificarCumprimento();
   carregarPendenciasChecklist();
-  // Mostra botão preencher imediatamente
-  document.getElementById('chkPreencherBtn').style.display='block';
+  renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
   if(!chkAberturaFeita){
     const av=document.getElementById('chkAvisoOverlay');
     if(av) av.style.display='flex';
   }
   carregarStatusChecklist();
+  carregarChkAbertos();
 }
 
 function mostrarBloqueioAbertura(){
@@ -1205,131 +1221,150 @@ function renderPendenciasChecklist(pendencias){
 
 
 // ── Status do Checklist (Abertura/Fechamento) para esta loja ──
+// Ordem do dia: 1) checklist de abertura (bloqueia o placar até estar completo) → 2) Start Dina / motoboys →
+// 3) falta de produto e tempos durante o turno → 4) números do fechamento → checklist de fechamento → enviar.
 const CHECKLIST_URL='https://script.google.com/macros/s/AKfycbzC6MR9PFGzlU7sRmFOfDvQwIAo84XdbYMFjoqNm4Av6R16pmHfT6tQ0nlXohmJoZzTHA/exec';
 
-function carregarStatusChecklist(){
-  if(!unidadeAtual) return;
-  const wrap=document.getElementById('chkStatusWrap');
-  const body=document.getElementById('chkStatusBody');
-  if(!wrap||!body) return;
-  body.innerHTML='<div style="font-size:12px;color:#888;text-align:center;padding:8px">Carregando...</div>';
-
-  // Chama o SCRIPT_URL do placar como proxy (evita CORS com o checklist v2 direto)
-  const cb='chkStatusCb_'+Date.now();
-  const s=document.createElement('script');
-  const _statusEl = document.getElementById('chkBloqueioStatus');
-
-  // Helper: mostra aviso de bloqueio (abertura pendente)
-  function _exibirBloqueioAbertura(){
-    if(chkAberturaFeita) return; // já liberado nesta sessão, não bloqueia novamente
-    const av=document.getElementById('chkAvisoOverlay');
-    if(av) av.style.display='flex';
-    if(_statusEl) _statusEl.textContent='Checklist de abertura ainda não foi preenchido hoje.';
-  }
-
-  // Timeout: se o servidor demorar, mostra o bloqueio
-  const t=setTimeout(()=>{
-    delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    _exibirBloqueioAbertura();
-  },10000);
-
-  window[cb]=(dados)=>{
-    clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);
-    if(!dados||!dados.ok){
-      _exibirBloqueioAbertura();
-      return;
-    }
-
-    // Mapeamento nome completo → slug do checklist v2
-    const SLUG_MAP = {
-      'Água Verde':'agua-verde','Fazenda':'fazenda','Campo Largo':'campo-largo',
-      'Colombo':'colombo','Uberaba':'uberaba','São José dos Pinhais':'sao-jose',
-      'Isaac Manhã':'isaac','Isaac Tarde':'isaac','Isaac Noite':'isaac',
-      'Sítio Cercado':'sitio-cercado','CIC':'cic','Pinheirinho':'pinheirinho',
-      'Portão':'portao','Boqueirão':'boqueirao'
-    };
-    const slug = slugLoja(unidadeAtual);
-    let r = dados.resumo && (dados.resumo[slug] || dados.resumo[unidadeAtual]);
-    // Isaac Manhã e Isaac Noite usam a mesma loja "isaac" no checklist:
-    // cada turno só é liberado pelo checklist que ele mesmo preencheu
-    if(r && slugCompartilhado(unidadeAtual)){
-      const g = r.porGerente && r.porGerente[unidadeAtual];
-      r = g ? { abertura:{ok:g.abertura,nok:0}, fechamento:{ok:g.fechamento,nok:0}, idsAbertura:g.idsAbertura } : null;
-    }
-    if(!r){
-      // Sem dados para esta loja hoje — exibe bloqueio
-      if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
-      _exibirBloqueioAbertura();
-      return;
-    }
-    if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='none';
-
-    const abOk = r.abertura.ok + r.abertura.nok;
-    const feOk = r.fechamento.ok + r.fechamento.nok;
-
-    if(abOk > 0){
-      // Já tem abertura hoje: só libera se TODOS os itens do checklist de abertura foram conferidos
-      conferirAberturaCompleta(slug, r, abOk, function(completa){
-        if(completa){
-          chkAberturaFeita=true;
-          const av=document.getElementById('chkAvisoOverlay');
-          if(av) av.style.display='none';
-          esconderBloqueioAbertura();
-          verificarBotaoRegistrar();
-        } else {
-          _exibirBloqueioAbertura();
-          if(_statusEl) _statusEl.textContent='O checklist de abertura de hoje está incompleto. Preencha todos os itens.';
-        }
-      });
-    } else {
-      // Abertura pendente → bloqueia
-      _exibirBloqueioAbertura();
-    }
-    if(feOk > 0){ chkFechamentoFeito=true; }
-    if(abOk === 0 && feOk === 0){
-      if(document.getElementById('chkPreencherBtn')) document.getElementById('chkPreencherBtn').style.display='block';
-      return;
-    }
-
-    let tagAb, tagFe;
-    if(abOk===0) tagAb='<span class="chk-status-tag pend">— Pendente</span>';
-    else if(r.abertura.nok>0) tagAb=`<span class="chk-status-tag nok">⚠ ${r.abertura.nok} NOK</span>`;
-    else tagAb='<span class="chk-status-tag ok">✓ Concluída</span>';
-
-    if(feOk===0) tagFe='<span class="chk-status-tag pend">— Pendente</span>';
-    else if(r.fechamento.nok>0) tagFe=`<span class="chk-status-tag nok">⚠ ${r.fechamento.nok} NOK</span>`;
-    else tagFe='<span class="chk-status-tag ok">✓ Concluído</span>';
-
-    body.innerHTML=`
-      <div class="chk-status-row"><span class="chk-status-label">🌅 Abertura</span>${tagAb}</div>
-      <div class="chk-status-row"><span class="chk-status-label">🌙 Fechamento</span>${tagFe}</div>`;
-    wrap.style.display='block';
-  };
-
-  s.onerror=()=>{clearTimeout(t);delete window[cb];_exibirBloqueioAbertura();};
-  s.src=SCRIPT_URL+'?action=getChecklistStatus&callback='+cb+'&t='+Date.now();
-  document.head.appendChild(s);
+// JSONP simples com tempo-limite
+function chkJsonp(params, ms){
+  return new Promise((ok,falha)=>{
+    const cb='chkCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
+    const t=setTimeout(()=>{limpar();falha(new Error('tempo esgotado'));}, ms||12000);
+    function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=r=>{limpar();ok(r);};
+    s.onerror=()=>{limpar();falha(new Error('sem conexão'));};
+    s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
+    document.head.appendChild(s);
+  });
+}
+// O servidor já tem o checklist novo (descrição, foto e reincidência)?
+let _chkV2=null;
+async function chkServidorV2(){
+  if(_chkV2!==null) return _chkV2;
+  try{ const r=await chkJsonp({action:'authPing'},8000); _chkV2=!!(r&&r.ok&&Array.isArray(r.recursos)&&r.recursos.includes('checklistV2')); }
+  catch(e){ return false; } // não guarda: tenta de novo depois
+  return _chkV2;
 }
 
-// Confere se a abertura de hoje cobre todos os itens do checklist desta loja
-function conferirAberturaCompleta(slug, r, abOk, fim){
-  const cb='chkCompCb_'+Date.now();
-  const s=document.createElement('script');
-  const t=setTimeout(()=>{ delete window[cb]; if(s.parentNode)s.parentNode.removeChild(s); fim(false); },10000);
-  window[cb]=(dados)=>{
-    clearTimeout(t); delete window[cb]; if(s.parentNode)s.parentNode.removeChild(s);
-    const itens=(dados&&dados.ok&&dados.itens)||[];
-    if(!itens.length){ fim(false); return; }
-    if(Array.isArray(r.idsAbertura)){
-      const feitos=new Set(r.idsAbertura.map(String));
-      fim(itens.every(it=>feitos.has(String(it.id))));
+const _chkItensCache={};
+async function chkItensDoTurno(turno){
+  const k=slugLoja(unidadeAtual)+'|'+turno;
+  if(_chkItensCache[k]) return _chkItensCache[k];
+  const r=await chkJsonp({action:'getChecklistItens',loja:slugLoja(unidadeAtual),turno:turno});
+  if(!r||!r.ok) throw new Error('itens');
+  return (_chkItensCache[k]=r.itens||[]);
+}
+
+function _exibirBloqueioAbertura(msg){
+  if(chkAberturaFeita) return; // já liberado nesta sessão
+  const av=document.getElementById('chkAvisoOverlay');
+  const bl=document.getElementById('chkBloqueioOverlay');
+  if(av && (!bl || bl.style.display!=='flex')) av.style.display='flex';
+  const st=document.getElementById('chkBloqueioStatus');
+  if(st) st.textContent=msg||'Checklist de abertura ainda não foi preenchido hoje.';
+}
+function _liberarAbertura(){
+  chkAberturaFeita=true;
+  const av=document.getElementById('chkAvisoOverlay'); if(av) av.style.display='none';
+  esconderBloqueioAbertura();
+}
+
+// Desenha a linha da abertura (etapa 1) e o card do fechamento (antes do Enviar)
+function renderEtapasChecklist(info){
+  const body=document.getElementById('chkStatusBody');
+  if(body){
+    if(chkAberturaFeita){
+      const nok=info&&info.nokAb? ` <span class="chk-status-tag nok">⚠ ${info.nokAb} não conforme${info.nokAb>1?'s':''}</span>`:'';
+      body.innerHTML=`<div class="chk-status-row"><span class="chk-status-label">🌅 Checklist de abertura</span><span class="chk-status-tag ok">✓ Feito</span>${nok}</div>`;
     } else {
-      fim(abOk>=itens.length); // servidor antigo: confere pela quantidade
+      body.innerHTML=`<div class="chk-status-row"><span class="chk-status-label">🌅 Checklist de abertura</span><span class="chk-status-tag pend">— Pendente</span></div>
+        <button class="chk-status-preencher" onclick="abrirChecklistForm('abertura')">📋 Preencher checklist de abertura</button>`;
     }
-  };
-  s.onerror=()=>{ clearTimeout(t); delete window[cb]; fim(false); };
-  s.src=SCRIPT_URL+'?action=getChecklistItens&loja='+encodeURIComponent(slug)+'&turno=abertura&callback='+cb+'&t='+Date.now();
-  document.head.appendChild(s);
+  }
+  const card=document.getElementById('cardChkFechamento');
+  if(card){
+    const btn=document.getElementById('btnChkFech'), inf=document.getElementById('chkFechInfo'), tag=document.getElementById('chkFechTag');
+    if(chkFechamentoFeito){
+      btn.style.display='none';
+      inf.innerHTML='<span style="color:var(--green)">✅ Checklist de fechamento feito. Agora é só enviar o placar.</span>';
+      if(tag){tag.className='tag ok';tag.textContent='Feito';}
+    } else if(!chkAberturaFeita){
+      btn.style.display='none';
+      inf.textContent='Libera depois do checklist de abertura.';
+      if(tag){tag.className='tag';tag.textContent='';}
+    } else {
+      btn.style.display='block';
+      inf.textContent='Preencha no fim da noite, depois dos números do fechamento.';
+      if(tag){tag.className='tag';tag.textContent='';}
+    }
+  }
+  if(typeof verificarBotaoRegistrar==='function') verificarBotaoRegistrar();
+}
+
+async function carregarStatusChecklist(){
+  if(!unidadeAtual) return;
+  let dados;
+  try{ dados=await chkJsonp({action:'getChecklistStatus'},12000); }
+  catch(e){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
+  if(!dados||!dados.ok){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
+  const slug=slugLoja(unidadeAtual);
+  let r=dados.resumo&&(dados.resumo[slug]||dados.resumo[unidadeAtual]);
+  // Isaac Manhã e Isaac Noite usam a mesma loja "isaac": cada turno só conta o que ele mesmo preencheu
+  if(r && slugCompartilhado(unidadeAtual)){
+    const g=r.porGerente&&r.porGerente[unidadeAtual];
+    r=g?{abertura:{ok:g.abertura,nok:0},fechamento:{ok:g.fechamento,nok:0},idsAbertura:g.idsAbertura,idsFechamento:g.idsFechamento}:null;
+  }
+  const idsAb=new Set(((r&&r.idsAbertura)||[]).map(String)), idsFe=new Set(((r&&r.idsFechamento)||[]).map(String));
+  let itAb=[], itFe=[];
+  try{ itAb=await chkItensDoTurno('abertura'); }catch(e){ _exibirBloqueioAbertura('Não consegui conferir o checklist. Verifique a internet.'); renderEtapasChecklist(); return; }
+  try{ itFe=await chkItensDoTurno('fechamento'); }catch(e){ itFe=null; }
+  // abertura completa = todos os itens de abertura conferidos hoje (se a loja não tem itens, não bloqueia)
+  if(!itAb.length || itAb.every(it=>idsAb.has(String(it.id)))) _liberarAbertura();
+  else _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
+  // fechamento completo = todos os itens de fechamento conferidos hoje (loja sem itens de fechamento não trava o envio)
+  if(itFe && (!itFe.length || itFe.every(it=>idsFe.has(String(it.id))))) chkFechamentoFeito = true;
+  renderEtapasChecklist({nokAb:r&&r.abertura?r.abertura.nok:0});
+}
+
+// Problemas do checklist que continuam em aberto (lembrete no placar e dentro do checklist)
+let chkAbertos={};
+async function carregarChkAbertos(){
+  chkAbertos={};
+  if(!(await chkServidorV2())) return renderChkAbertosPlacar();
+  try{
+    const r=await chkJsonp({action:'getChecklistAbertos',loja:slugLoja(unidadeAtual),gerente:unidadeAtual});
+    if(r&&r.ok) (r.abertos||[]).forEach(a=>{ chkAbertos[String(a.id)]=a; });
+  }catch(e){}
+  renderChkAbertosPlacar();
+}
+function chkTextoAberto(a){
+  const quando=a.hoje?'hoje, '+(a.turno==='fechamento'?'no fechamento':'na abertura'):'em '+a.ultimo;
+  const rec=a.vezes>=2;
+  return (rec?`🔁 <b>ASSUNTO RECORRENTE — problema apontado em ${a.vezes} dias</b> (desde ${a.desde}). Resolva imediatamente!`:`⚠️ <b>Este item ficou NÃO CONFORME ${quando}</b>, e não foi marcado como resolvido.`)
+    +(a.descricao?`<br>Problema relatado: “${escChk(a.descricao)}”`:'')+(a.foto?` · <a href="${a.foto}" target="_blank" rel="noopener">ver foto</a>`:'');
+}
+function escChk(t){ return String(t||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+async function renderChkAbertosPlacar(){
+  const w=document.getElementById('chkAbertosWrap'); if(!w) return;
+  const lista=Object.values(chkAbertos).filter(a=>!a.hoje);
+  if(!lista.length){ w.style.display='none'; w.innerHTML=''; return; }
+  // nomes dos itens
+  let nomes={};
+  try{ (await chkItensDoTurno('abertura')).concat(await chkItensDoTurno('fechamento')).forEach(it=>{nomes[String(it.id)]=it.item;}); }catch(e){}
+  w.innerHTML=`<div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:14px 16px">
+    <div style="font-size:0.92rem;font-weight:700;color:var(--danger);margin-bottom:8px">🔁 Problemas do checklist que continuam em aberto — resolva hoje</div>
+    ${lista.map(a=>`<div style="font-size:0.82rem;line-height:1.45;padding:8px 0;border-top:1px solid rgba(255,255,255,0.08)"><b>${escChk(nomes[String(a.id)]||('Item '+a.id))}</b>${a.vezes>=2?` <span style="background:var(--danger);color:#fff;font-size:0.68rem;font-weight:700;padding:2px 7px;border-radius:5px">RECORRENTE ${a.vezes}x</span>`:''}<br><span style="color:var(--muted)">${a.descricao?escChk(a.descricao):'Sem descrição'} · desde ${a.desde}</span></div>`).join('')}
+  </div>`;
+  w.style.display='block';
+}
+
+// Confere se a abertura de hoje cobre todos os itens do checklist desta loja (mantida para compatibilidade)
+function conferirAberturaCompleta(slug, r, abOk, fim){
+  chkItensDoTurno('abertura').then(itens=>{
+    if(!itens.length){ fim(true); return; }
+    const feitos=new Set((r.idsAbertura||[]).map(String));
+    fim(itens.every(it=>feitos.has(String(it.id))));
+  }).catch(()=>fim(false));
 }
 
 // ── Formulário de Checklist ──
@@ -1347,155 +1382,194 @@ function slugLoja(u){ return SLUG_MAP_CHK[u] || (u||'').toLowerCase().normalize(
 
 let chkTurnoAtual = 'abertura';
 let chkItensData = [];
-let chkRespostas = {}; // {id: 'conforme'|'nao_conforme'}
+let chkRespostas = {};   // {id: 'conforme'|'nao_conforme'}
+let chkObs = {};         // {id: descrição do problema}
+let chkResolvido = {};   // {id: true} = problema já resolvido no mesmo dia
+let chkFotos = {};       // {id: dataURL jpeg comprimido}
 let chkTentouSalvar = false; // depois de tentar salvar, marca em vermelho o que falta
-let chkAberturaFeita = false;  // liberado após salvar checklist de abertura
-let chkFechamentoFeito = false; // liberado após salvar checklist de fechamento
+let chkAberturaFeita = false;  // liberado após o checklist de abertura completo
+let chkFechamentoFeito = false; // liberado após o checklist de fechamento
+const CHK_MIN_DESC = 5;
 
 // Botão OK do aviso inicial → fecha aviso e abre direto o checklist de abertura
 function chkAvisoOk(){
   const av = document.getElementById('chkAvisoOverlay');
   if(av) av.style.display='none';
-  // mostra overlay de bloqueio e abre o form
   const bl = document.getElementById('chkBloqueioOverlay');
   if(bl) bl.style.display='flex';
   abrirChecklistForm('abertura');
 }
 
+// O turno é decidido pelo placar (nunca pela hora): sem abertura completa = abertura; depois = fechamento
 function abrirChecklistForm(turnoForce){
-  // detecta turno pelo horário (ou usa o forçado)
-  const h = new Date().getHours();
-  const turnoSug = turnoForce || ((h >= 14 || h < 6) ? 'fechamento' : 'abertura');
-  chkSelecionarTurno(turnoSug);
+  let turno = turnoForce || (chkAberturaFeita ? 'fechamento' : 'abertura');
+  if(turno==='fechamento' && !chkAberturaFeita) turno='abertura';
+  chkSelecionarTurno(turno);
   document.getElementById('chkModal').style.display='flex';
   document.body.style.overflow='hidden';
 }
 
 function fecharChecklistForm(){
+  chkGuardarRascunho();
   document.getElementById('chkModal').style.display='none';
   document.body.style.overflow='';
 }
 
+// Rascunho no aparelho: se a internet cair ou o app recarregar, as respostas não se perdem (as fotos sim)
+function chkChaveRasc(){ return chaveHoje('chk_rasc_'+chkTurnoAtual); }
+function chkGuardarRascunho(){
+  try{ localStorage.setItem(chkChaveRasc(), JSON.stringify({r:chkRespostas,o:chkObs,s:chkResolvido})); }catch(e){}
+}
+function chkLerRascunho(){
+  try{ const x=JSON.parse(localStorage.getItem(chkChaveRasc())||'null'); if(x){ chkRespostas=x.r||{}; chkObs=x.o||{}; chkResolvido=x.s||{}; } }catch(e){}
+}
+
 function chkSelecionarTurno(turno){
   chkTurnoAtual = turno;
-  chkRespostas = {};
+  chkRespostas = {}; chkObs = {}; chkResolvido = {}; chkFotos = {};
   chkTentouSalvar = false;
+  chkLerRascunho();
   document.getElementById('chkBtnAb').classList.toggle('ativo', turno==='abertura');
   document.getElementById('chkBtnFe').classList.toggle('ativo', turno==='fechamento');
   document.getElementById('chkModalTitle').textContent = turno==='abertura' ? '🌅 Checklist de Abertura' : '🌙 Checklist de Fechamento';
+  const m=document.getElementById('chkModalMsg'); if(m) m.textContent='';
   carregarItensChecklist();
 }
 
-function carregarItensChecklist(){
+async function carregarItensChecklist(){
   const body = document.getElementById('chkItensBody');
   body.innerHTML='<div style="text-align:center;padding:20px;color:#888;font-size:13px">Carregando itens...</div>';
   chkItensData = []; atualizarBotaoSalvarChk();
-  const slug = slugLoja(unidadeAtual);
-  const cb = 'chkItensCb_'+Date.now();
-  const s = document.createElement('script');
-  const t = setTimeout(()=>{delete window[cb];s.remove();body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens.</div>';},10000);
-  window[cb]=(dados)=>{
-    clearTimeout(t);delete window[cb];s.remove();
-    if(!dados.ok||!dados.itens||!dados.itens.length){
-      body.innerHTML='<div style="color:#888;text-align:center;padding:16px">Nenhum item encontrado.</div>';
+  const turno=chkTurnoAtual;
+  try{
+    const itens=await chkItensDoTurno(turno);
+    if(turno!==chkTurnoAtual) return;
+    if(!itens.length){
+      body.innerHTML='<div style="color:#888;text-align:center;padding:16px">Esta loja não tem itens neste checklist.</div>';
       return;
     }
-    chkItensData = dados.itens;
+    chkItensData = itens;
     renderItensChecklist();
-  };
-  s.src=SCRIPT_URL+'?action=getChecklistItens&loja='+encodeURIComponent(slug)+'&turno='+chkTurnoAtual+'&callback='+cb+'&t='+Date.now();
-  document.head.appendChild(s);
+    carregarChkAbertos().then(()=>{ if(turno===chkTurnoAtual) renderItensChecklist(); });
+  }catch(e){
+    body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens. Verifique a internet e abra de novo.</div>';
+  }
 }
 
 function renderItensChecklist(){
   const body = document.getElementById('chkItensBody');
-  let html='';
-  let secaoAtual='';
+  const pos = (document.querySelector('.chk-modal-overlay')||{}).scrollTop;
+  let html='', secaoAtual='';
+  const abertosAqui = chkItensData.filter(it=>chkAbertos[String(it.id)]);
+  const topo=document.getElementById('chkAbertosModal');
+  if(topo) topo.innerHTML = abertosAqui.length ? `<div class="chk-reinc forte" style="margin-bottom:8px">🔁 <b>${abertosAqui.length} item(ns) deste checklist continuam com problema de dias anteriores.</b> Eles estão marcados abaixo. Resolva hoje.</div>` : '';
   chkItensData.forEach(function(it){
-    if(it.secao !== secaoAtual){
-      secaoAtual = it.secao;
-      html+=`<div class="chk-secao-title">${secaoAtual}</div>`;
-    }
-    const resp = chkRespostas[it.id] || '';
-    const okSel = resp==='conforme' ? 'sel' : '';
-    const nokSel = resp==='nao_conforme' ? 'sel' : '';
-    const falta = (chkTentouSalvar && !resp) ? ' falta' : '';
-    html+=`<div class="chk-item-row${falta}">
+    if(it.secao !== secaoAtual){ secaoAtual = it.secao; html+=`<div class="chk-secao-title">${secaoAtual}</div>`; }
+    const id=String(it.id), resp = chkRespostas[id] || '';
+    const falta = (chkTentouSalvar && (!resp || (resp==='nao_conforme' && (chkObs[id]||'').trim().length<CHK_MIN_DESC))) ? ' falta' : '';
+    const ab = chkAbertos[id];
+    html+=`<div class="chk-item-row${falta}" data-id="${id}">
+      ${ab?`<div class="chk-reinc${ab.vezes>=2?' forte':''}">${chkTextoAberto(ab)}</div>`:''}
       <span class="chk-item-txt">${it.item}</span>
       <div class="chk-item-btns">
-        <button class="chk-btn-ok ${okSel}" onclick="chkResponder('${it.id}','conforme')">✓</button>
-        <button class="chk-btn-nok ${nokSel}" onclick="chkResponder('${it.id}','nao_conforme')">✗</button>
+        <button class="chk-btn-ok ${resp==='conforme'?'sel':''}" onclick="chkResponder('${id}','conforme')">✓</button>
+        <button class="chk-btn-nok ${resp==='nao_conforme'?'sel':''}" onclick="chkResponder('${id}','nao_conforme')">✗</button>
       </div>
+      ${resp==='nao_conforme'?`<div class="chk-det">
+        <textarea id="chkObs_${id}" class="${chkTentouSalvar&&(chkObs[id]||'').trim().length<CHK_MIN_DESC?'falta':''}" placeholder="Descreva o problema (obrigatório)" oninput="chkObs['${id}']=this.value;chkGuardarRascunho();atualizarBotaoSalvarChk()">${escChk(chkObs[id]||'')}</textarea>
+        <div class="chk-det-linha">
+          <input type="file" accept="image/*" id="chkFotoIn_${id}" style="display:none" onchange="chkFotoEscolhida('${id}',this)">
+          <button type="button" class="chk-foto-btn" onclick="document.getElementById('chkFotoIn_${id}').click()">📷 ${chkFotos[id]?'Trocar foto':'Foto (opcional)'}</button>
+          ${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto"><button type="button" class="chk-foto-btn" onclick="delete chkFotos['${id}'];renderItensChecklist()">Remover foto</button>`:''}
+        </div>
+         <label class="chk-det-linha" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" style="width:18px;height:18px;flex-shrink:0;margin:0" ${chkResolvido[id]?'checked':''} onchange="chkResolvido['${id}']=this.checked;chkGuardarRascunho()"> Já resolvi hoje (se não marcar, o placar lembra amanhã)</label>
+      </div>`:''}
     </div>`;
   });
   body.innerHTML=html;
+  if(pos!=null){ const ov=document.querySelector('.chk-modal-overlay'); if(ov) ov.scrollTop=pos; }
   atualizarBotaoSalvarChk();
 }
 
-// Botão Salvar só libera quando TODOS os itens do checklist foram conferidos
+// Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
+function chkFotoEscolhida(id, input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const leitor=new FileReader();
+  leitor.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const esc=Math.min(1,1280/Math.max(img.width,img.height));
+      const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      chkFotos[id]=c.toDataURL('image/jpeg',0.7);
+      renderItensChecklist();
+    };
+    img.onerror=()=>alert('Não consegui abrir essa imagem. Tente outra foto.');
+    img.src=leitor.result;
+  };
+  leitor.readAsDataURL(f);
+}
+
+// Botão Salvar só libera quando TODOS os itens foram conferidos e todo ✗ tem a descrição do problema
 function atualizarBotaoSalvarChk(){
   const btn=document.getElementById('chkSalvarBtn'); if(!btn) return;
   const total=chkItensData.length;
-  const feitos=chkItensData.filter(function(it){ return !!chkRespostas[it.id]; }).length;
-  const completo= total>0 && feitos===total;
+  const feitos=chkItensData.filter(it=>!!chkRespostas[String(it.id)]).length;
+  const semDesc=chkItensData.filter(it=>chkRespostas[String(it.id)]==='nao_conforme' && (chkObs[String(it.id)]||'').trim().length<CHK_MIN_DESC).length;
+  const completo= total>0 && feitos===total && !semDesc;
   btn.disabled=!completo;
-  btn.textContent= completo ? 'Salvar Checklist' : (total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Aguardando itens do checklist');
+  btn.textContent= completo ? 'Salvar Checklist' : (!total ? 'Aguardando itens do checklist' : feitos<total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Descreva o problema dos itens com ✗ ('+semDesc+')');
 }
 
 function chkResponder(id, status){
-  chkRespostas[id] = status;
+  chkRespostas[String(id)] = status;
+  chkGuardarRascunho();
   renderItensChecklist();
-  // scroll para manter posição
 }
 
-function salvarChecklist(){
+async function salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
-  const faltam = chkItensData.filter(function(it){ return !chkRespostas[it.id]; }).length;
   if(!chkItensData.length){ msg.textContent='Nenhum item carregado. Feche e abra o checklist de novo.'; msg.style.color='#ff4444'; return; }
-  if(faltam > 0){
-    msg.textContent='Responda todos os itens antes de salvar (falta'+(faltam>1?'m ':' ')+faltam+').';
+  const faltam = chkItensData.filter(it=>!chkRespostas[String(it.id)]).length;
+  const semDesc = chkItensData.filter(it=>chkRespostas[String(it.id)]==='nao_conforme' && (chkObs[String(it.id)]||'').trim().length<CHK_MIN_DESC).length;
+  if(faltam>0 || semDesc>0){
+    msg.textContent = faltam>0 ? 'Responda todos os itens antes de salvar (falta'+(faltam>1?'m ':' ')+faltam+').' : 'Descreva o problema de cada item marcado com ✗.';
     msg.style.color='#ff4444';
     chkTentouSalvar = true; renderItensChecklist();
     const primeiro=document.querySelector('.chk-item-row.falta'); if(primeiro) primeiro.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-
-  btn.disabled=true;
-  msg.textContent='Salvando...';
-  msg.style.color='#888';
-
-  const slug = slugLoja(unidadeAtual);
-  const itens = chkItensData.map(function(it){
-    return { id: it.id, status: chkRespostas[it.id] || 'nao_respondido', obs:'' };
-  }).filter(function(it){ return it.status !== 'nao_respondido'; });
-
-  const payload = JSON.stringify({ loja: slug, turno: chkTurnoAtual, gerente: unidadeAtual, itens: itens });
-  const cb = 'chkSalvCb_'+Date.now();
-  const s = document.createElement('script');
-  const t = setTimeout(()=>{delete window[cb];s.remove();atualizarBotaoSalvarChk();msg.textContent='Tempo esgotado. Tente novamente.';msg.style.color='#ff4444';},15000);
-  window[cb]=(r)=>{
-    clearTimeout(t);delete window[cb];s.remove();
-    atualizarBotaoSalvarChk();
-    if(r&&r.ok){
-      msg.textContent='✓ Checklist salvo com sucesso!';
-      msg.style.color='#2ecc71';
-      if(chkTurnoAtual==='abertura'){
-        chkAberturaFeita=true;
-        // Fecha aviso inicial (caso ainda esteja visível) e overlay de bloqueio
-        const av=document.getElementById('chkAvisoOverlay');
-        if(av) av.style.display='none';
-        esconderBloqueioAbertura();
-      }
-      if(chkTurnoAtual==='fechamento') chkFechamentoFeito=true;
-      setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); verificarBotaoRegistrar(); },1800);
+  btn.disabled=true; msg.style.color='#888';
+  const turno=chkTurnoAtual, slug=slugLoja(unidadeAtual);
+  const temFoto=Object.keys(chkFotos).some(id=>chkRespostas[id]==='nao_conforme');
+  msg.textContent = temFoto ? 'Salvando (enviando fotos, pode levar alguns segundos)...' : 'Salvando...';
+  let r=null;
+  try{
+    if(await chkServidorV2()){
+      const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
+        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null }; });
+      const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,itens:itens})});
+      try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
-      msg.textContent='Erro ao salvar. Tente novamente.';
-      msg.style.color='#ff4444';
+      // servidor antigo: grava sem foto, com a descrição na observação
+      const itens=chkItensData.map(it=>{ const id=String(it.id); return { id: it.id, status: chkRespostas[id], obs: chkRespostas[id]==='nao_conforme'?(chkObs[id]||'').trim().slice(0,200):'' }; });
+      r=await chkJsonp({action:'salvarChecklist',payload:JSON.stringify({loja:slug,turno:turno,gerente:unidadeAtual,itens:itens})},20000);
     }
-  };
-  s.src=SCRIPT_URL+'?action=salvarChecklist&payload='+encodeURIComponent(payload)+'&callback='+cb+'&t='+Date.now();
-  document.head.appendChild(s);
+  }catch(e){ r=null; }
+  atualizarBotaoSalvarChk();
+  if(!(r&&r.ok===true)){
+    msg.textContent='Não salvou ('+((r&&r.erro)||'sem conexão')+'). Suas respostas continuam aqui — tente de novo.';
+    msg.style.color='#ff4444';
+    return;
+  }
+  try{ localStorage.removeItem(chkChaveRasc()); }catch(e){}
+  msg.textContent='✓ Checklist salvo com sucesso!'; msg.style.color='#2ecc71';
+  if(typeof logProva==='function') logProva('CHECKLIST_SALVO', turno);
+  if(turno==='abertura') _liberarAbertura();
+  else chkFechamentoFeito=true;
+  renderEtapasChecklist();
+  setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
 }
 
 window.addEventListener('load',()=>{
@@ -1839,6 +1913,7 @@ function verificarBotaoRegistrar(){
     if(!motoboySalvo) faltando.push('👥 Motoboys');
     if(tempoRegistros.length<3) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
   }
+  if(!chkFechamentoFeito) faltando.push('🌙 Checklist de Fechamento (último passo)');
 
   if(faltando.length>0){
     const _chaveTrav=faltando.join(',');
@@ -1984,7 +2059,8 @@ async function comprimirFoto(base64){
 async function registrar(){
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
   if(!chkFechamentoFeito){
-    alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nClique em "📋 Preencher Checklist" e selecione Fechamento.');
+    alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nEle fica logo acima do botão de enviar: "🌙 Checklist de Fechamento da Unidade".');
+    const c=document.getElementById('cardChkFechamento'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(faturamentoForaDaFaixa()){
