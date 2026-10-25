@@ -104,6 +104,16 @@
 
   /* ── Hoje na rede ── */
   .hoje-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .cob-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .cob-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .cob-head b{font-size:0.95rem} .cob-head small{color:var(--muted);font-size:0.75rem}
+  .cob-linha{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:0.84rem;flex-wrap:wrap}
+  .cob-linha .nome{font-weight:600;min-width:150px} .cob-linha .st{flex:1;min-width:160px}
+  .cob-linha.ok .st{color:var(--green)} .cob-linha.av .st{color:var(--yellow)} .cob-linha.err .st{color:var(--danger)} .cob-linha.esp .st{color:var(--muted)}
+  .cob-btn{background:#25D366;color:#06301a;border:none;border-radius:6px;padding:7px 12px;font-weight:700;font-size:0.8rem;cursor:pointer;text-decoration:none;white-space:nowrap}
+  .cob-btn.off{background:var(--border);color:var(--muted);cursor:pointer}
+  .cont-tab{width:100%;border-collapse:collapse;font-size:0.8rem} .cont-tab td,.cont-tab th{padding:5px 4px;text-align:left}
+  .cont-tab input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:6px;font-size:0.8rem}
   .hoje-tile{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
   .hoje-tile b{display:block;font-family:'Oswald',sans-serif;font-size:1.5rem}
   .hoje-tile span{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
@@ -179,6 +189,7 @@
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Hoje na rede</span>
           <span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
+        <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
         <div class="hoje-grid" id="hojeLojas"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
         <div style="margin-top:14px"><button class="save-metas-btn outline" onclick="carregarHoje()">↻ Atualizar agora</button></div>
       </div>
@@ -437,6 +448,13 @@
   <div class="modal-error" id="chkItemErro"></div>
   <div class="modal-btns"><button class="modal-btn cancel" onclick="fecharModal('modalChkItem')">Cancelar</button><button class="modal-btn confirm" id="chkItemSalvarBtn" onclick="salvarChkItem()">Salvar item</button></div></div>
 </div>
+<div class="modal-bg" id="modalContatos" style="display:none">
+  <div class="modal" style="max-width:640px;width:96%;max-height:90vh;overflow:auto">
+  <h3 style="margin-bottom:6px">Contatos dos gerentes</h3>
+  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">WhatsApp com DDD (ex.: 41999998888). A loja fica amarela a partir do horário de cobrança se não iniciou o placar, e vermelha depois do horário de atraso. Os números ficam só no servidor.</p>
+  <table class="cont-tab"><thead><tr><th>Loja</th><th>Gerente</th><th>WhatsApp</th><th>Cobrar a partir</th><th>Atrasado após</th></tr></thead><tbody id="contBody"></tbody></table>
+  <div class="modal-btns" style="margin-top:12px"><button class="modal-btn cancel" onclick="fecharModal('modalContatos')">Cancelar</button><button class="modal-btn confirm" onclick="salvarContatos()">Salvar</button></div></div>
+</div>
 <div class="modal-bg" id="modalLista" style="display:none">
   <div class="modal" style="width:480px"><h2>Senhas novas das lojas</h2>
   <p>Anote ou copie agora: por segurança, as senhas não aparecem de novo. Mande para cada gerente só a senha da loja dele.</p>
@@ -542,7 +560,53 @@
       tile(nEsc+'/'+n,'Escala da semana',nEsc===n?'ok':'av')+
       tile(nDesb,'Lojas pedindo desbloqueio',nDesb?'err':'ok');
     document.getElementById('hojeLojas').innerHTML=cards.join('');
+    renderCobranca(r);
     document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
+  }
+
+  // ── Cobrança do placar (WhatsApp) ──
+  let ULTIMO_HOJE=null;
+  const escH=t=>String(t||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  function linkWhats(l,agora){
+    const c=l.contato||{}; let n=String(c.whats||'').replace(/\D/g,'');
+    if(!n) return '';
+    if(n.length<=11) n='55'+n;
+    const ola=c.gerente?('Olá, '+c.gerente.split(' ')[0]+'!'):'Olá!';
+    const txt=ola+' Já são '+agora+' e o placar de hoje da loja '+l.unidade+' ainda não foi iniciado. Por favor, abra agora e comece o preenchimento: https://gerentes.dinapizza.com.br/placar';
+    return 'https://wa.me/'+n+'?text='+encodeURIComponent(txt);
+  }
+  function renderCobranca(r){
+    ULTIMO_HOJE=r; const agora=r.agora||r.atualizado;
+    let nAtras=0;
+    const linhas=r.lojas.map(l=>{
+      const a=l.atividade||{itens:[]}, c=l.contato||{hora:'17:30',limite:'19:00'};
+      let cls,st,btn='';
+      if(a.iniciou){ cls='ok'; st='✅ Iniciou'+(a.primeira?' às '+a.primeira:'')+' · '+a.itens.join(', '); }
+      else if(agora<c.hora){ cls='esp'; st='Ainda não iniciou · cobrança a partir das '+c.hora; }
+      else{
+        nAtras++; cls=agora>=c.limite?'err':'av';
+        st=(cls==='err'?'🔴 Atrasado':'🟡 Não iniciou')+' · prazo '+c.hora+' às '+c.limite;
+        const lk=linkWhats(l,agora);
+        btn=lk?`<a class="cob-btn" href="${lk}" target="_blank" rel="noopener" onclick="registrarLog('Cobrança do placar enviada para ${escH(l.unidade)}.','warn')">📲 Cobrar no WhatsApp</a>`
+              :`<button class="cob-btn off" onclick="abrirContatos()">Cadastrar WhatsApp</button>`;
+      }
+      return `<div class="cob-linha ${cls}"><span class="nome">${escH(l.unidade)}</span><span class="st">${escH(st)}</span>${btn}</div>`;
+    });
+    const sub=nAtras?`<span style="color:var(--yellow)">${nAtras} loja${nAtras>1?'s':''} para cobrar agora</span>`:'Nenhuma loja para cobrar agora';
+    document.getElementById('cobBox').innerHTML=`<div class="cob-head"><div><b>📲 Cobrança do placar</b><br><small>${sub} · horário do servidor ${escH(agora)}</small></div><button class="save-metas-btn outline" style="padding:6px 12px;font-size:0.78rem" onclick="abrirContatos()">✏️ Contatos dos gerentes</button></div>`+linhas.join('');
+  }
+  function abrirContatos(){
+    if(!ULTIMO_HOJE){ showToast('Espere carregar o painel.','warn'); return; }
+    document.getElementById('contBody').innerHTML=ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{};
+      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`; }).join('');
+    document.getElementById('modalContatos').style.display='flex';
+  }
+  async function salvarContatos(){
+    const contatos=[...document.querySelectorAll('#contBody tr')].map(tr=>({unidade:tr.dataset.u,gerente:tr.querySelector('.cg').value.trim(),whats:tr.querySelector('.cw').value.replace(/\D/g,''),hora:tr.querySelector('.ch').value||'17:30',limite:tr.querySelector('.cl').value||'19:00'}));
+    const ruim=contatos.filter(c=>c.whats&&(c.whats.length<10||c.whats.length>13));
+    if(ruim.length){ showToast('WhatsApp inválido em: '+ruim.map(c=>c.unidade).join(', ')+' (use DDD + número)','warn'); return; }
+    try{ await admPost({action:'authSalvarContatos',contatos}); showToast('Contatos salvos.','ok'); fecharModal('modalContatos'); carregarHoje(); }
+    catch(e){ showToast('Não salvou: '+e.message+(/reconhecida|inválid/.test(e.message)?'':' — o Apps Script publicado é a versão nova?'),'warn'); }
   }
 
   // ── Registro no servidor ──
