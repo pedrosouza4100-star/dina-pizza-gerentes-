@@ -204,5 +204,6 @@ function voltar(){ document.getElementById('detalhe').style.display='none'; docu
 let toastT=null;
 function toast(msg,tipo,ms){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast on '+(tipo||''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='toast',ms||3000); }
 </script>
+<script src="atualizador.js"></script>
 </body>
 </html>

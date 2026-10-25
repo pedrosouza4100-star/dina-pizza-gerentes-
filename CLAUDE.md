@@ -30,6 +30,8 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 5. Não coloque senhas novas neste repositório (ele é público). A senha do painel de escalas fica só no Apps Script (`ESC_SENHA_PAINEL`).
 6. Mexa só nos arquivos do assunto pedido. Antes de enviar, faça `git fetch` e confira o que outras conversas mudaram (`git log HEAD..origin/main`).
 7. Ao mudar um `.js` ou `.css` compartilhado, aumente o `?v=` nas páginas que o usam (o GitHub Pages guarda cache).
+8. **A cada publicação, troque o valor de `versao.json`** (ex.: `2026-10-25-1`). O `atualizador.js` (incluído no fim das páginas) percebe a mudança,
+   avisa o gerente e recarrega o placar/escala sozinho (na hora se o app estiver em segundo plano; senão em 1 min sem digitação, ou no máximo 15 min).
 
 ## Mapa das telas
 
