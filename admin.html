@@ -551,6 +551,15 @@
       // escala
       if(!l.escala) h+=linha('av','Escala','Semana não salva');
       else{ nEsc++; h+=l.escala.erros?linha('err','Escala',l.escala.erros+' problema'+(l.escala.erros>1?'s':'')+' nas regras'):l.escala.vazios?linha('av','Escala','Incompleta ('+l.escala.vazios+' dias)'):linha('ok','Escala','Salva e dentro das regras'); }
+      // horário do checklist de abertura: bloqueio e atrasos do mês
+      const ch=l.chkHorario;
+      if(ch&&ch.bloqueio){
+        nDesb++;
+        h+=linha('err','Placar','🔒 BLOQUEADO — checklist de '+ch.bloqueio.dia+' às '+ch.bloqueio.hora+' ('+ch.bloqueio.n+'º atraso)'+(ch.bloqueio.pedido?' · pediu desbloqueio':''));
+        h+=`<div style="margin:4px 0 6px 100px"><button class="cob-btn" style="background:var(--yellow);color:#000" onclick="liberarChecklist('${l.unidade.replace(/'/g,"\\'")}')">🔓 Liberar placar</button></div>`;
+      } else if(ch&&ch.atrasosMes){
+        h+=linha('av','Horário',ch.atrasosMes+' atraso'+(ch.atrasosMes>1?'s':'')+' no checklist de abertura este mês'+(ch.ultimoAtraso?' (último '+ch.ultimoAtraso.dia+' às '+ch.ultimoAtraso.hora+')':''));
+      }
       // desbloqueios
       if(l.desbloqueios.length){ nDesb++; h+=linha('err','Desbloqueio',l.desbloqueios.length+' pedido'+(l.desbloqueios.length>1?'s':'')+' esperando'); }
       // senha
@@ -599,6 +608,13 @@
     try{ const r=await admPost({action:'authBackupAgora'}); showToast('Backup feito às '+r.quando+' (pasta "Backups Sistema Dina Pizza" no seu Drive)','ok'); registrarLog('Backup manual feito.','ok'); }
     catch(e){ showToast(e.message,'warn'); }
     carregarProtecao();
+  }
+
+  // ── Liberar placar bloqueado por checklist fora do horário ──
+  async function liberarChecklist(u){
+    if(!confirm('Liberar o placar da loja '+u+'?\n\nEla foi bloqueada porque fez o checklist de abertura fora do horário.')) return;
+    try{ await admPost({action:'authLiberarChecklist',unidade:u}); showToast('Placar de '+u+' liberado.','ok'); registrarLog('Placar de '+u+' liberado (checklist fora do horário).','ok'); carregarHoje(); }
+    catch(e){ showToast('Não liberou: '+e.message,'warn'); }
   }
 
   // ── Cobrança do placar (WhatsApp) ──

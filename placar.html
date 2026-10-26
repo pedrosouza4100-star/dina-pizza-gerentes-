@@ -250,6 +250,21 @@
     <button onclick="chkAvisoOk()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">OK — Ir para o Checklist</button>
   </div>
 
+  <!-- Placar bloqueado por checklist de abertura fora do horário (só o admin libera) -->
+  <div id="chkBloqPlacar" style="display:none;position:fixed;inset:0;background:#120000;z-index:800;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div style="font-size:56px;margin-bottom:10px">🔒</div>
+    <div style="font-size:22px;font-weight:800;color:#ff4444;margin-bottom:12px;letter-spacing:0.02em">PLACAR BLOQUEADO</div>
+    <div id="chkBloqTexto" style="font-size:15px;color:#eee;margin-bottom:22px;max-width:340px;line-height:1.6"></div>
+    <button id="chkBloqBtn" onclick="chkPedirDesbloqueio()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 28px;cursor:pointer;width:100%;max-width:330px">🔓 Pedir desbloqueio ao administrador</button>
+    <div id="chkBloqStatus" style="font-size:13px;color:#FFD000;margin-top:14px;max-width:330px;line-height:1.5"></div>
+  </div>
+  <!-- Aviso de horário do checklist de abertura -->
+  <div id="chkHorarioAviso" style="display:none;position:fixed;inset:0;background:rgba(40,0,0,0.97);z-index:1100;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div id="chkHorTitulo" style="font-size:24px;font-weight:900;color:#ff4444;margin-bottom:14px;letter-spacing:0.02em"></div>
+    <div id="chkHorTexto" style="font-size:15px;color:#fff;margin-bottom:24px;max-width:350px;line-height:1.65"></div>
+    <button id="chkHorBtn" style="background:#ff4444;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:800;padding:16px 26px;cursor:pointer;width:100%;max-width:330px;text-transform:uppercase"></button>
+  </div>
+
   <!-- Overlay bloqueio — impede acesso enquanto abertura não feita -->
   <div id="chkBloqueioOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:48px;margin-bottom:16px">📋</div>
@@ -1195,6 +1210,7 @@ function iniciarApp(u){
   carregarStatusChecklist();
   carregarChkAbertos();
   carregarMetaMes();
+  carregarSituacaoChk();
 }
 
 function mostrarBloqueioAbertura(){
@@ -1341,12 +1357,90 @@ function chkJsonp(params, ms){
   });
 }
 // O servidor já tem o checklist novo (descrição, foto e reincidência)?
-let _chkV2=null;
-async function chkServidorV2(){
-  if(_chkV2!==null) return _chkV2;
-  try{ const r=await chkJsonp({action:'authPing'},8000); _chkV2=!!(r&&r.ok&&Array.isArray(r.recursos)&&r.recursos.includes('checklistV2')); }
-  catch(e){ return false; } // não guarda: tenta de novo depois
-  return _chkV2;
+let _chkV2=null, _chkRecursos=null;
+async function chkRecursos(){
+  if(_chkRecursos!==null) return _chkRecursos;
+  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; }
+  catch(e){ return []; } // não guarda: tenta de novo depois
+  return _chkRecursos;
+}
+async function chkServidorV2(){ if(_chkV2===null){ const rc=await chkRecursos(); if(_chkRecursos===null) return false; _chkV2=rc.includes('checklistV2'); } return _chkV2; }
+
+// ── Horário do checklist de abertura (16h30–18h30; Isaac Manhã 9h30–11h) ──
+// Antes do horário: não abre. Depois: libera com aviso. 1º atraso do mês = aviso; do 2º em diante o placar
+// fica bloqueado a partir do dia seguinte até o administrador liberar. Quem decide e registra é o servidor.
+let CHK_SIT=null, CHK_OFFSET=0, _chkSitTimer=null;
+async function carregarSituacaoChk(){
+  const u=unidadeAtual;
+  if(!(await chkRecursos()).includes('janelaChecklist')) return;
+  try{
+    const r=await chkJsonp({action:'chkSituacao',unidade:u});
+    if(u!==unidadeAtual||!r||!r.ok) return;
+    CHK_SIT=r; CHK_OFFSET=(r.agoraMs||Date.now())-Date.now();
+  }catch(e){ return; }
+  renderBloqueioPlacar();
+  atualizarTextoAntesDoHorario();
+}
+function chkHoraSP(){ // hora de São Paulo pelo relógio do servidor (não depende do relógio do celular)
+  const t=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(Date.now()+CHK_OFFSET));
+  return t.replace(/^24/,'00');
+}
+const chkMinH=h=>{const p=String(h).split(':');return (+p[0])*60+(+p[1]||0);};
+function chkPosicao(){
+  if(!CHK_SIT||!CHK_SIT.janela) return 'dentro';
+  const m=chkMinH(chkHoraSP());
+  return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
+}
+function chkJanelaTxt(){ const j=(CHK_SIT&&CHK_SIT.janela)||{ini:'16:30',fim:'18:30'}; return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
+function atualizarTextoAntesDoHorario(){
+  if(chkAberturaFeita||!CHK_SIT) return;
+  const st=document.getElementById('chkBloqueioStatus');
+  if(chkPosicao()==='antes' && st) st.innerHTML='⏰ O checklist de abertura abre às <b style="color:#FFD000">'+CHK_SIT.janela.ini.replace(':','h')+'</b>. Horário do checklist: '+chkJanelaTxt()+'.';
+}
+function renderBloqueioPlacar(){
+  const ov=document.getElementById('chkBloqPlacar'); if(!ov) return;
+  const b=CHK_SIT&&CHK_SIT.bloqueio;
+  clearTimeout(_chkSitTimer);
+  if(!b){ ov.style.display='none'; _chkSitTimer=setTimeout(carregarSituacaoChk, 5*60000); return; }
+  document.getElementById('chkBloqTexto').innerHTML=`O checklist de abertura do dia <b>${b.dia}</b> foi feito às <b>${b.hora}</b>, fora do horário (${chkJanelaTxt()}).<br><br>Foi o <b>${b.n}º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.`;
+  const bt=document.getElementById('chkBloqBtn'), stt=document.getElementById('chkBloqStatus');
+  if(b.pedido){ bt.style.display='none'; stt.textContent='⏳ Pedido de desbloqueio enviado'+(b.pedidoEm?' em '+b.pedidoEm:'')+'. Aguarde o administrador liberar — esta tela se atualiza sozinha.'; }
+  else { bt.style.display='block'; bt.disabled=false; stt.textContent=''; }
+  ov.style.display='flex';
+  _chkSitTimer=setTimeout(carregarSituacaoChk, 30000); // confere a cada 30 s se já foi liberado
+}
+async function chkPedirDesbloqueio(){
+  const bt=document.getElementById('chkBloqBtn'); bt.disabled=true; bt.textContent='Enviando pedido...';
+  try{ await chkJsonp({action:'chkPedirDesbloqueio',unidade:unidadeAtual}); }catch(e){ document.getElementById('chkBloqStatus').textContent='Não consegui enviar. Verifique a internet e tente de novo.'; }
+  bt.textContent='🔓 Pedir desbloqueio ao administrador';
+  carregarSituacaoChk();
+}
+function chkMostrarAviso(titulo, html, botao, aoFechar){
+  document.getElementById('chkHorTitulo').innerHTML=titulo;
+  document.getElementById('chkHorTexto').innerHTML=html;
+  const b=document.getElementById('chkHorBtn'); b.textContent=botao;
+  b.onclick=()=>{ document.getElementById('chkHorarioAviso').style.display='none'; if(aoFechar) aoFechar(); };
+  document.getElementById('chkHorarioAviso').style.display='flex';
+}
+function chkTextoAtraso(n, hora, depoisDeSalvar, bloqueiaEm){
+  const base=`O checklist de abertura é das <b style="color:#FFD000">${chkJanelaTxt()}</b>. ${depoisDeSalvar?'Você salvou às':'Agora são'} <b>${hora}</b>.<br><br>`;
+  if(n<=1) return base+`Este é o seu <b>1º atraso no mês</b>: hoje está liberado <b>SÓ DESTA VEZ</b>.<br><br><span style="color:#ff6b6b;font-weight:800">No próximo atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você vai ter que pedir o desbloqueio ao administrador.</span>`;
+  return base+`Este é o seu <b>${n}º atraso no mês</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">${depoisDeSalvar?'O SEU PLACAR ESTÁ BLOQUEADO A PARTIR DE AMANHÃ'+(bloqueiaEm?' ('+bloqueiaEm+')':''):'AO SALVAR ESTE CHECKLIST, O SEU PLACAR SERÁ BLOQUEADO AMANHÃ'} e só volta a funcionar quando o administrador liberar.</span>`;
+}
+// chamado antes de abrir o checklist de abertura; devolve true se pode abrir agora
+function chkConferirHorarioAbertura(continuar){
+  if(chkAberturaFeita||!CHK_SIT) return true;
+  const pos=chkPosicao();
+  if(pos==='antes'){
+    chkMostrarAviso('⏰ AINDA NÃO É HORA', `O checklist de abertura só pode ser feito a partir das <b style="color:#FFD000">${CHK_SIT.janela.ini.replace(':','h')}</b>.<br><br>Horário do checklist: <b>${chkJanelaTxt()}</b>. Volte no horário certo.`, 'Entendi', null);
+    atualizarTextoAntesDoHorario();
+    return false;
+  }
+  if(pos==='depois'){
+    chkMostrarAviso('🚨 VOCÊ ESTÁ FORA DO HORÁRIO!', chkTextoAtraso((CHK_SIT.atrasosMes||0)+1, chkHoraSP(), false), 'Entendi — fazer o checklist agora', continuar);
+    return false;
+  }
+  return true;
 }
 
 const _chkItensCache={};
@@ -1504,9 +1598,10 @@ function chkAvisoOk(){
 }
 
 // O turno é decidido pelo placar (nunca pela hora): sem abertura completa = abertura; depois = fechamento
-function abrirChecklistForm(turnoForce){
+function abrirChecklistForm(turnoForce, horarioConferido){
   let turno = turnoForce || (chkAberturaFeita ? 'fechamento' : 'abertura');
   if(turno==='fechamento' && !chkAberturaFeita) turno='abertura';
+  if(turno==='abertura' && !horarioConferido && !chkConferirHorarioAbertura(()=>abrirChecklistForm('abertura', true))) return;
   chkSelecionarTurno(turno);
   document.getElementById('chkModal').style.display='flex';
   document.body.style.overflow='hidden';
@@ -1669,6 +1764,7 @@ async function salvarChecklist(){
     }
   }catch(e){ r=null; }
   atualizarBotaoSalvarChk();
+  if(r&&r.antes){ msg.textContent='⏰ '+r.erro; msg.style.color='#FFD000'; return; }
   if(!(r&&r.ok===true)){
     msg.textContent='Não salvou ('+((r&&r.erro)||'sem conexão')+'). Suas respostas continuam aqui — tente de novo.';
     msg.style.color='#ff4444';
@@ -1680,6 +1776,10 @@ async function salvarChecklist(){
   if(turno==='abertura') _liberarAbertura();
   else chkFechamentoFeito=true;
   renderEtapasChecklist();
+  if(turno==='abertura' && r.atraso && !r.atraso.perdoado){
+    if(CHK_SIT) CHK_SIT.atrasosMes=r.atraso.n;
+    setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm), 'Entendi', null), 1600);
+  }
   setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
 }
 
