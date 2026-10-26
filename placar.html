@@ -95,6 +95,15 @@
   .foto-small-preview{width:100%;border-radius:6px;object-fit:cover;max-height:90px;display:none;}
 
 /* ── Widget Status Checklist ── */
+.meta-mes{display:none;margin-top:10px;border-radius:10px;padding:12px 14px;font-size:0.84rem;line-height:1.5;border:2px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text);}
+.meta-mes.mini{font-size:0.76rem;padding:8px 10px;border-width:1px;}
+.meta-mes.ok{border-color:var(--green);background:rgba(46,204,113,0.1);}
+.meta-mes.av{border-color:#FFD000;background:rgba(255,208,0,0.08);}
+.meta-mes.err{border-color:var(--danger);background:rgba(255,59,59,0.14);}
+.meta-mes .mm-tit{font-weight:800;font-size:0.95rem;letter-spacing:0.02em;margin-bottom:4px;}
+.meta-mes.ok .mm-tit{color:var(--green)} .meta-mes.av .mm-tit{color:#FFD000} .meta-mes.err .mm-tit{color:#ff6b6b}
+.meta-mes .mm-dia{font-size:1.02rem;font-weight:800;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,0.35);}
+.meta-mes b{color:#fff}
 .etapa-titulo{display:flex;align-items:center;gap:10px;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin:22px 0 10px;}
 .etapa-titulo b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#0A0A0A;font-size:0.8rem;}
 .etapa-titulo:first-of-type{margin-top:4px;}
@@ -325,6 +334,7 @@
       <div id="motoSalvoInfo" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px;background:rgba(46,204,113,0.1);border:1px solid var(--green);color:var(--green)"></div>
       <button class="camera-btn" id="btnSalvarMoto" onclick="salvarMotoboys()" style="margin-top:8px;display:none">💾 Salvar Motoboys</button>
       <span class="tag" id="motoboysTag"></span>
+      <div class="meta-mes mini" id="mm_motoboys"></div>
     </div>
 
 
@@ -397,20 +407,23 @@
         <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
         <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
         <span class="tag" id="fatTag"></span>
+        <div class="meta-mes" id="mm_fat"></div>
       </div>
       <!-- Google -->
-      <div class="card" id="cardGoogle">
+      <div class="card card-full" id="cardGoogle">
         <div class="card-label">Avaliações Google</div>
         <div class="card-meta" id="metaGoogleDisplay"></div>
         <div class="input-wrap"><input class="val" id="google" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
         <span class="tag" id="googleTag"></span>
+        <div class="meta-mes" id="mm_google"></div>
       </div>
       <!-- iFood -->
-      <div class="card" id="cardIfood">
+      <div class="card card-full" id="cardIfood">
         <div class="card-label">Avaliações iFood</div>
         <div class="card-meta" id="metaIfoodDisplay"></div>
         <div class="input-wrap"><input class="val" id="ifood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
         <span class="tag" id="ifoodTag"></span>
+        <div class="meta-mes" id="mm_ifood"></div>
       </div>
       <!-- Chamados -->
       <div class="card" id="cardChamados">
@@ -418,6 +431,7 @@
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="chamados" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="chamadosTag"></span>
+        <div class="meta-mes mini" id="mm_chamados"></div>
       </div>
       <!-- Cancelamentos -->
       <div class="card" id="cardCancel">
@@ -425,6 +439,7 @@
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="cancelTag"></span>
+        <div class="meta-mes mini" id="mm_cancel"></div>
       </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
@@ -444,6 +459,7 @@
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0" oninput="onPedidosIfoodInput()"><span class="suffix">ped.</span></div>
         <span class="tag" id="pedidosIfoodTag"></span>
+        <div class="meta-mes mini" id="mm_pedidosIfood"></div>
         <div id="pedidosIfoodDetalheWrap" style="display:none;margin-top:10px">
           <div class="card-label" style="font-size:0.78rem;margin-bottom:4px">📋 Informe o(s) número(s) do(s) pedido(s) não confirmado(s)</div>
           <textarea class="falta-produto-input" id="pedidosIfoodDetalhe" placeholder="Ex: 12345, 67890" style="display:block;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:60px;padding:10px;box-sizing:border-box" oninput="verificarBotaoRegistrar()"></textarea>
@@ -989,6 +1005,7 @@ async function carregarMetas(){
     METAS_FAT=JSON.parse(JSON.stringify(FAT_DEF));
     METAS_AVAL=JSON.parse(JSON.stringify(AVAL_DEF));
   }
+  if(unidadeAtual && typeof renderMetaMes==='function') renderMetaMes();
 }
 
 function mostrar(tela){
@@ -1177,6 +1194,7 @@ function iniciarApp(u){
   }
   carregarStatusChecklist();
   carregarChkAbertos();
+  carregarMetaMes();
 }
 
 function mostrarBloqueioAbertura(){
@@ -1219,6 +1237,91 @@ function renderPendenciasChecklist(pendencias){
   wrap.style.display='block';
 }
 
+
+// ── Meta do mês em cada campo do placar ──
+// Mostra, para cada meta, se o mês está acima ou abaixo do esperado até hoje, quanto falta para fechar
+// e quanto precisa por dia nos dias que restam (cada dia que passa, o valor por dia é recalculado).
+let MES_ATE_ONTEM=null; // {faturamento, google, ifood, chamados, cancelamentos, pedidosConfirmadosIfood, dias} de 1 até ontem
+function fdsData(d){ const w=d.getDay(); return w===0||w===5||w===6; }
+function diasDoMesTurno(){ const d=dataTurno(); return {d, dia:d.getDate(), total:new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(), mes:d.getMonth(), ano:d.getFullYear()}; }
+async function carregarMetaMes(){
+  MES_ATE_ONTEM=null;
+  const {dia,mes,ano}=diasDoMesTurno(), u=unidadeAtual;
+  const z={faturamento:0,google:0,ifood:0,chamados:0,cancelamentos:0,pedidosConfirmadosIfood:0,dias:0};
+  if(dia===1){ MES_ATE_ONTEM=z; renderMetaMes(); return; }
+  const p2=n=>String(n).padStart(2,'0');
+  try{
+    const r=await chkJsonp({action:'getFiltroDashboard',ini:`01/${p2(mes+1)}/${ano}`,fim:`${p2(dia-1)}/${p2(mes+1)}/${ano}`},15000);
+    if(u!==unidadeAtual) return;
+    const x=r&&r.dados&&r.dados.find(l=>l.unidade===u);
+    MES_ATE_ONTEM=x?Object.assign({},z,x):z;
+  }catch(e){ MES_ATE_ONTEM=null; }
+  renderMetaMes();
+}
+function mmFmt(v,tipo){ return tipo==='R$' ? 'R$ '+Math.round(v).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')+' '+tipo; }
+// metaDoDia(date) → meta daquele dia; real = valor de hoje digitado (null se vazio)
+function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
+  const {d,dia,total,mes,ano}=diasDoMesTurno();
+  const md=k=>metaDoDia(new Date(ano,mes,k));
+  let metaMes=0, espOntem=0; for(let k=1;k<=total;k++){ metaMes+=md(k); if(k<dia) espOntem+=md(k); }
+  if(!metaMes){ el.style.display='none'; return; }
+  const metaHoje=md(dia), temHoje=real!==null;
+  const feito = acumOntem + (temHoje?real:0);
+  const esperado = espOntem + (temHoje?metaHoje:0);
+  const diasDepois = temHoje ? total-dia : total-dia+1;              // dias que ainda dá para vender
+  let metaRestante=0; for(let k=(temHoje?dia+1:dia);k<=total;k++) metaRestante+=md(k);
+  const falta = Math.max(0, metaMes - feito);
+  const pct = esperado>0 ? feito/esperado*100 : 100;
+  const dif = feito - esperado;
+  const cls = esperado===0 ? 'av' : pct>=100 ? 'ok' : pct>=90 ? 'av' : 'err';
+  let h='';
+  if(esperado===0) h+=`<div class="mm-tit">🎯 META DO MÊS: ${mmFmt(metaMes,tipo)}</div>`;
+  else if(dif>=0) h+=`<div class="mm-tit">📈 ACIMA DA META DO MÊS (+${mmFmt(dif,tipo)})</div>`;
+  else h+=`<div class="mm-tit">${pct<90?'🚨':'📉'} ABAIXO DA META DO MÊS (−${mmFmt(-dif,tipo)})</div>`;
+  if(temHoje) h+=`Hoje: <b>${mmFmt(real,tipo)}</b> — ${real>=metaHoje?'<span style="color:var(--green)">bateu a meta do dia</span>':'<span style="color:#ff6b6b">abaixo da meta do dia</span>'} (${mmFmt(metaHoje,tipo)}${real<metaHoje?', faltaram '+mmFmt(metaHoje-real,tipo):''}).<br>`;
+  if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${tipo==='R$'?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
+  if(falta<=0) h+=`<div class="mm-dia" style="color:var(--green)">🏆 Meta do mês (${mmFmt(metaMes,tipo)}) já batida!</div>`;
+  else if(diasDepois<=0) h+=`<div class="mm-dia" style="color:#ff6b6b">Mês encerrado: faltaram ${mmFmt(falta,tipo)} para a meta de ${mmFmt(metaMes,tipo)}.</div>`;
+  else {
+    h+=`Para fechar a meta do mês (${mmFmt(metaMes,tipo)}) faltam <b>${mmFmt(falta,tipo)}</b>.`;
+    const k = metaRestante>0 ? falta/metaRestante : 0;
+    const porDia = falta/diasDepois;
+    let detalhe='';
+    if(tipo==='R$' && METAS_FAT[unidadeAtual]){ const m=METAS_FAT[unidadeAtual]||FAT_DEF[unidadeAtual]; if(m&&m.semana!==m.fds) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">Seg a Qui: ${mmFmt(m.semana*k,tipo)} por dia · Sex a Dom: ${mmFmt(m.fds*k,tipo)} por dia</span>`; }
+    h+=`<div class="mm-dia" style="color:${cls==='ok'?'var(--green)':cls==='av'?'#FFD000':'#ff6b6b'}">👉 Você precisa fazer ${tipo==='R$'?'em média ':''}<span style="font-size:1.15rem">${mmFmt(porDia,tipo)} por dia</span> nos ${diasDepois} dia${diasDepois>1?'s':''} que ${temHoje?'restam':'restam (contando hoje)'}${detalhe}</div>`;
+  }
+  el.className='meta-mes '+cls; el.innerHTML=h; el.style.display='block';
+}
+// metas "zero" (chamados, cancelamentos, pedidos não confirmados): soma do mês
+function mmZero(el, nome, acumOntem, real){
+  const tot=acumOntem+(real||0);
+  el.className='meta-mes mini '+(tot>0?'err':'ok');
+  el.innerHTML = tot>0 ? `No mês: <b>${tot}</b> ${nome} (meta: zero)` : `No mês: nenhum (meta: zero) ✓`;
+  el.style.display='block';
+}
+function renderMetaMes(){
+  if(!unidadeAtual) return;
+  const g=id=>document.getElementById(id);
+  const vazio=id=>!g(id)||g(id).value==='';
+  const A=MES_ATE_ONTEM;
+  const mf=METAS_FAT[unidadeAtual]||FAT_DEF[unidadeAtual], ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
+  if(A===null){ ['mm_fat','mm_google','mm_ifood','mm_chamados','mm_cancel','mm_pedidosIfood'].forEach(id=>{ if(g(id)) g(id).style.display='none'; }); }
+  else {
+    if(g('mm_fat')&&mf) mmBloco(g('mm_fat'),'faturamento','R$',dt=>fdsData(dt)?(mf.fds||0):(mf.semana||0),A.faturamento||0,vazio('fat')?null:valFat());
+    if(g('mm_google')&&ma.google) mmBloco(g('mm_google'),'Google','avaliações',()=>ma.google,A.google||0,vazio('google')?null:ival('google'));
+    if(g('mm_ifood')&&ma.ifood) mmBloco(g('mm_ifood'),'iFood','avaliações',()=>ma.ifood,A.ifood||0,vazio('ifood')?null:ival('ifood'));
+    if(g('mm_chamados')) mmZero(g('mm_chamados'),'chamados',A.chamados||0,vazio('chamados')?0:ival('chamados'));
+    if(g('mm_cancel')) mmZero(g('mm_cancel'),'cancelamentos',A.cancelamentos||0,vazio('cancel')?0:ival('cancel'));
+    if(g('mm_pedidosIfood')&&temLoja(unidadeAtual)) mmZero(g('mm_pedidosIfood'),'pedidos não confirmados',A.pedidosConfirmadosIfood||0,vazio('pedidosIfood')?0:ival('pedidosIfood'));
+  }
+  // motoboys: meta mínima do dia
+  const mb=g('mm_motoboys'), metaMb=metaMotoboysHoje(unidadeAtual);
+  if(mb){
+    if(metaMb===null||vazio('motoboys')) mb.style.display='none';
+    else { const v=ival('motoboys'); mb.className='meta-mes mini '+(v>=metaMb?'ok':'err'); mb.innerHTML=v>=metaMb?`✓ Meta mínima de hoje (${metaMb}) atingida`:`🚨 ABAIXO da meta mínima de hoje: faltam <b>${metaMb-v} motoboy${metaMb-v>1?'s':''}</b> (meta ${metaMb})`; mb.style.display='block'; }
+  }
+}
+document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys'].includes(e.target&&e.target.id)) renderMetaMes(); });
 
 // ── Status do Checklist (Abertura/Fechamento) para esta loja ──
 // Ordem do dia: 1) checklist de abertura (bloqueia o placar até estar completo) → 2) Start Dina / motoboys →
@@ -1478,8 +1581,8 @@ function renderItensChecklist(){
       ${resp==='nao_conforme'?`<div class="chk-det">
         <textarea id="chkObs_${id}" class="${chkTentouSalvar&&(chkObs[id]||'').trim().length<CHK_MIN_DESC?'falta':''}" placeholder="Descreva o problema (obrigatório)" oninput="chkObs['${id}']=this.value;chkGuardarRascunho();atualizarBotaoSalvarChk()">${escChk(chkObs[id]||'')}</textarea>
         <div class="chk-det-linha">
-          <input type="file" accept="image/*" id="chkFotoIn_${id}" style="display:none" onchange="chkFotoEscolhida('${id}',this)">
-          <button type="button" class="chk-foto-btn" onclick="document.getElementById('chkFotoIn_${id}').click()">📷 ${chkFotos[id]?'Trocar foto':'Foto (opcional)'}</button>
+          <input type="file" accept="image/*" capture="environment" id="chkFotoIn_${id}" style="display:none" onchange="chkFotoEscolhida('${id}',this)">
+          <button type="button" class="chk-foto-btn" onclick="document.getElementById('chkFotoIn_${id}').click()">📷 ${chkFotos[id]?'Tirar outra foto':'Tirar foto agora (opcional)'}</button>
           ${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto"><button type="button" class="chk-foto-btn" onclick="delete chkFotos['${id}'];renderItensChecklist()">Remover foto</button>`:''}
         </div>
          <label class="chk-det-linha" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" style="width:18px;height:18px;flex-shrink:0;margin:0" ${chkResolvido[id]?'checked':''} onchange="chkResolvido['${id}']=this.checked;chkGuardarRascunho()"> Já resolvi hoje (se não marcar, o placar lembra amanhã)</label>
@@ -1492,8 +1595,16 @@ function renderItensChecklist(){
 }
 
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
+// Só vale foto tirada na hora pela câmera: foto antiga da galeria é recusada
+const CHK_FOTO_MAX_MIN = 5;
+function chkFotoNaHora(f){ return !f.lastModified || (Date.now()-f.lastModified) <= CHK_FOTO_MAX_MIN*60000; }
 function chkFotoEscolhida(id, input){
   const f=input.files&&input.files[0]; if(!f) return;
+  if(!chkFotoNaHora(f)){
+    input.value='';
+    alert('📷 A foto precisa ser tirada AGORA pela câmera.\n\nFotos antigas da galeria não são aceitas. Toque em "Tirar foto agora" e fotografe o problema.');
+    return;
+  }
   const leitor=new FileReader();
   leitor.onload=()=>{
     const img=new Image();
@@ -2197,7 +2308,7 @@ function limpar(){
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood','cardVendasCanceladas'].forEach(id=>{
     const el=document.getElementById(id);
-    el.className='card'+(id==='cardFat'?' card-full':'');
+    el.className='card'+(['cardFat','cardGoogle','cardIfood','cardPedidosIfood','cardVendasCanceladas'].includes(id)?' card-full':'');
   });
   const cardMb=document.getElementById('cardMotoboys');
   if(cardMb.style.display!=='none')cardMb.className='card card-full';
