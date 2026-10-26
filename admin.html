@@ -203,9 +203,9 @@
     <div class="tab-content" id="tab-senhas">
       <div>
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Status das Senhas por Unidade</span>
-          <button class="action-btn btn-nova" style="padding:8px 14px" onclick="gerarTodas()">Gerar senha nova para todas as lojas</button></div>
-        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Só o administrador define a senha de cada loja. Os gerentes não conseguem criar nem trocar senha pelo link.</div>
-        <div class="table-wrap"><table><thead><tr><th>Unidade</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tabelaLojas"></tbody></table></div>
+          <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="action-btn btn-nova" style="padding:8px 14px" onclick="gerarTodas()">Gerar senha nova para todos os gerentes</button><button class="action-btn btn-nova" style="padding:8px 14px" onclick="gerarTodas('assistente')">Gerar senha para todos os assistentes</button></span></div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Cada loja tem duas senhas diferentes: a do <b>gerente</b> e a do <b>assistente</b>. Só o administrador define. Trocar a senha de um não derruba o outro.</div>
+        <div class="table-wrap"><table><thead><tr><th>Unidade</th><th>Gerente</th><th>Assistente</th></tr></thead><tbody id="tabelaLojas"></tbody></table></div>
       </div>
       <div>
         <div class="section-title">Senha da Gestão</div>
@@ -680,23 +680,26 @@
     document.getElementById('modalLista').style.display='flex';
   }
   function copiarLista(){ const t=document.getElementById('listaSenhas'); t.select(); try{ navigator.clipboard.writeText(t.value); }catch(e){ document.execCommand('copy'); } showToast('Lista copiada','ok'); }
-  async function gerarTodas(){
+  const PAPEL_TXT={gerente:'gerente',assistente:'assistente'};
+  async function gerarTodas(papel){
+    papel=papel||'gerente';
     if(!(await admServidor())){ showToast('O Apps Script publicado ainda não guarda as senhas no servidor.','warn'); return; }
-    if(!confirm('Gerar uma senha nova e diferente para CADA loja?\n\nAs senhas atuais deixam de valer e todos os celulares saem do placar. Depois você manda a senha nova para cada gerente.\n\nFaça fora do horário de movimento.')) return;
+    if(!confirm('Gerar uma senha nova e diferente para o '+PAPEL_TXT[papel].toUpperCase()+' de CADA loja?\n\nAs senhas atuais de '+PAPEL_TXT[papel]+' deixam de valer e esses celulares saem do placar (os '+(papel==='gerente'?'assistentes':'gerentes')+' continuam entrando normalmente).\n\nFaça fora do horário de movimento.')) return;
     const pares=[], falhas=[];
     for(const u of UNIDADES){
       const sn=senhaAleatoria();
-      try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,hash:hash(sn)}); pares.push([u,sn]); }catch(e){ falhas.push(u); }
+      try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,papel:papel,hash:hash(sn)}); pares.push([u+' ('+PAPEL_TXT[papel]+')',sn]); }catch(e){ falhas.push(u); }
     }
-    registrarLog('Senhas novas geradas para '+pares.length+' lojas.','warn');
+    registrarLog('Senhas novas de '+PAPEL_TXT[papel]+' geradas para '+pares.length+' lojas.','warn');
     renderTabela(); mostrarLista(pares);
     if(falhas.length) showToast('Falharam: '+falhas.join(', ')+'. Tente de novo nessas.','warn');
   }
-  async function gerarUma(u){
-    if(!confirm('Gerar senha nova para '+u+'? A senha atual deixa de valer.')) return;
+  async function gerarUma(u,papel){
+    papel=papel||'gerente';
+    if(!confirm('Gerar senha nova do '+PAPEL_TXT[papel]+' de '+u+'? A senha atual do '+PAPEL_TXT[papel]+' deixa de valer.')) return;
     const sn=senhaAleatoria();
-    try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,hash:hash(sn)}); }catch(e){ showToast('Não gerou: '+e.message,'warn'); return; }
-    registrarLog('Senha nova gerada para '+u+'.','warn'); renderTabela(); mostrarLista([[u,sn]]);
+    try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,papel:papel,hash:hash(sn)}); }catch(e){ showToast('Não gerou: '+e.message,'warn'); return; }
+    registrarLog('Senha nova do '+PAPEL_TXT[papel]+' gerada para '+u+'.','warn'); renderTabela(); mostrarLista([[u+' ('+PAPEL_TXT[papel]+')',sn]]);
   }
   async function definirGestao(){
     if(!(await admServidor())){ showToast('O Apps Script publicado ainda não tem a senha da gestão.','warn'); return; }
@@ -714,12 +717,11 @@
       const r=await admJsonp({action:'authStatus'});
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro');
       const quando=v=>{ const d=new Date(v); return (v && !isNaN(d) && !/^\d{2}\/\d{2}\/\d{4}/.test(v)) ? d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : (v||''); };
-      tbody.innerHTML=r.lojas.map(l=>{ l.em=quando(l.em);
-        const st=l.situacao==='ativa'?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${l.em}</div>`
-          :l.situacao==='resetada'?`<span class="badge sem">Sem senha</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">gere uma senha para a loja</div>`
-          :`<span class="badge sem">Sem senha</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">gere uma senha para a loja</div>`;
-        return `<tr><td style="font-weight:600">${l.unidade}</td><td>${st}</td><td style="display:flex;gap:8px;flex-wrap:wrap"><button class="action-btn btn-nova" onclick="gerarUma('${l.unidade}')">Gerar senha</button><button class="action-btn btn-nova" onclick="abrirNovaSenha('${l.unidade}')">Escolher senha</button></td></tr>`;
-      }).join('');
+      const cel=(u,x,papel)=>{
+        const st=x&&x.situacao==='ativa'?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${quando(x.em)}</div>`:`<span class="badge sem">Sem senha</span>`;
+        return `<td>${st}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="action-btn btn-nova" onclick="gerarUma('${u}','${papel}')">Gerar</button><button class="action-btn btn-nova" onclick="abrirNovaSenha('${u}','${papel}')">Escolher</button></div></td>`;
+      };
+      tbody.innerHTML=r.lojas.map(l=>`<tr><td style="font-weight:600">${l.unidade}</td>${cel(l.unidade,l,'gerente')}${cel(l.unidade,l.assistente||{situacao:'sem'},'assistente')}</tr>`).join('');
       const gs=document.getElementById('gestaoStatus'); if(gs) gs.innerHTML=r.gestao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>';
     }catch(e){ tbody.innerHTML='<tr><td colspan="3" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; }
   }
@@ -834,13 +836,13 @@
     }
     localStorage.removeItem('dina_senha_'+u);localStorage.removeItem('dina_unidade_logada');fecharModal('modalReset');renderTabela();registrarLog(`Senha de "${u}" redefinida.`,'warn');showToast(`Senha de ${u} redefinida.`,'warn');
   }
-  function abrirNovaSenha(u){window._alvo=u;document.getElementById('modalNovaTitulo').textContent=`Definir senha — ${u}`;document.getElementById('modalNovaDesc').textContent=`Defina uma senha para "${u}".`;document.getElementById('novaSenhaInput').value='';document.getElementById('novaSenhaInput2').value='';document.getElementById('modalNovaErro').textContent='';document.getElementById('modalNovaSenha').style.display='flex';}
+  function abrirNovaSenha(u,papel){window._alvo=u;window._papel=papel||'gerente';document.getElementById('modalNovaTitulo').textContent=`Definir senha do ${window._papel} — ${u}`;document.getElementById('modalNovaDesc').textContent=`Defina a senha do ${window._papel} de "${u}". Ela precisa ser diferente da senha do ${window._papel==='gerente'?'assistente':'gerente'}.`;document.getElementById('novaSenhaInput').value='';document.getElementById('novaSenhaInput2').value='';document.getElementById('modalNovaErro').textContent='';document.getElementById('modalNovaSenha').style.display='flex';}
   async function confirmarNovaSenha(){
     const s1=document.getElementById('novaSenhaInput').value,s2=document.getElementById('novaSenhaInput2').value,err=document.getElementById('modalNovaErro'),u=window._alvo;
     if(s1.length<4){err.textContent='Mínimo 4 caracteres.';return;}
     if(s1!==s2){err.textContent='As senhas não conferem.';return;}
     if(await admServidor()){
-      try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,hash:hash(s1)}); }catch(e){ err.textContent='Não salvou: '+e.message; return; }
+      try{ await admPost({action:'authDefinirSenhaLoja',unidade:u,papel:window._papel||'gerente',hash:hash(s1)}); }catch(e){ err.textContent='Não salvou: '+e.message; return; }
     } else localStorage.setItem('dina_senha_'+u,hash(s1));
     fecharModal('modalNovaSenha');renderTabela();registrarLog(`Senha de "${u}" definida.`,'ok');showToast(`Senha de ${u} salva. Vale em todos os aparelhos.`,'ok');
   }

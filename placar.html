@@ -246,7 +246,8 @@
   <div id="chkAvisoOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:52px;margin-bottom:16px">⚠️</div>
     <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:12px">Atenção!</div>
-    <div style="font-size:15px;color:#ccc;margin-bottom:28px;max-width:300px;line-height:1.6">Você precisa fazer o <strong style="color:#FFD000">checklist de abertura</strong> para iniciar o preenchimento do placar.</div>
+    <div style="font-size:15px;color:#ccc;margin-bottom:16px;max-width:300px;line-height:1.6">Você precisa fazer o <strong style="color:#FFD000">checklist de abertura</strong> para iniciar o preenchimento do placar.</div>
+    <div id="chkAvisoHorario" style="font-size:14px;color:#fff;margin-bottom:26px;max-width:320px;line-height:1.6;padding:12px 14px;border:2px solid #ff4444;border-radius:10px;background:rgba(255,59,59,0.15)"></div>
     <button onclick="chkAvisoOk()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">OK — Ir para o Checklist</button>
   </div>
 
@@ -257,6 +258,15 @@
     <div id="chkBloqTexto" style="font-size:15px;color:#eee;margin-bottom:22px;max-width:340px;line-height:1.6"></div>
     <button id="chkBloqBtn" onclick="chkPedirDesbloqueio()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 28px;cursor:pointer;width:100%;max-width:330px">🔓 Pedir desbloqueio ao administrador</button>
     <div id="chkBloqStatus" style="font-size:13px;color:#FFD000;margin-top:14px;max-width:330px;line-height:1.5"></div>
+  </div>
+  <!-- Câmera do checklist: foto só na hora, sem acesso à galeria -->
+  <div id="chkCamModal" style="display:none;position:fixed;inset:0;background:#000;z-index:1200;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;">
+    <video id="chkCamVideo" autoplay playsinline muted style="width:100%;max-width:520px;max-height:70vh;border-radius:10px;background:#111;object-fit:cover"></video>
+    <div id="chkCamMsg" style="color:#ddd;font-size:14px;text-align:center;max-width:340px;line-height:1.5"></div>
+    <div style="display:flex;gap:12px;width:100%;max-width:520px">
+      <button type="button" onclick="chkFecharCamera()" style="flex:1;background:#333;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;padding:16px;cursor:pointer">Cancelar</button>
+      <button type="button" id="chkCamBater" onclick="chkBaterFoto()" style="flex:2;background:#C00000;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:800;padding:16px;cursor:pointer">📸 Bater foto</button>
+    </div>
   </div>
   <!-- Aviso de horário do checklist de abertura -->
   <div id="chkHorarioAviso" style="display:none;position:fixed;inset:0;background:rgba(40,0,0,0.97);z-index:1100;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
@@ -1065,6 +1075,7 @@ async function verificarSessaoServidor(u){
   try{
     await migrarSenhasLocais();
     const r=await authPost({action:'authVerificar',unidade:u,hash:localStorage.getItem('dina_senha_'+u)||''});
+    if(r.situacao==='ok'&&r.papel&&localStorage.getItem('dina_papel_'+u)!==r.papel){ localStorage.setItem('dina_papel_'+u,r.papel); const b=document.getElementById('unitBadge'); if(b) b.textContent=u+(r.papel==='assistente'?' · Assistente':''); }
     if(r.situacao==='diferente'||r.situacao==='resetada'){
       localStorage.removeItem('dina_senha_'+u);
       sair();
@@ -1093,7 +1104,7 @@ async function entrar(){
     err.textContent='Conferindo...';
     try{
       const r=await authPost({action:'authVerificar',unidade:u,hash:h});
-      if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); entrarComo(u); return; }
+      if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); return; }
       if(r.situacao==='sem'){
         // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
         if(localStorage.getItem('dina_senha_'+u)===h){ await migrarSenhasLocais(); err.textContent=''; entrarComo(u); return; }
@@ -1185,7 +1196,8 @@ function iniciarApp(u){
   unidadeAtual=u;
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').style.display='flex';
-  document.getElementById('unitBadge').textContent=u;
+  document.getElementById('unitBadge').textContent=u+(localStorage.getItem('dina_papel_'+u)==='assistente'?' · Assistente':'');
+  renderAvisoHorario();
   atualizarMetas();updateDate();limpar();
   // Garante visibilidade dos cards de entrega
   const cardPedidos=document.getElementById('cardPedidosIfood');
@@ -1380,6 +1392,7 @@ async function carregarSituacaoChk(){
   }catch(e){ return; }
   renderBloqueioPlacar();
   atualizarTextoAntesDoHorario();
+  renderAvisoHorario();
 }
 function chkHoraSP(){ // hora de São Paulo pelo relógio do servidor (não depende do relógio do celular)
   const t=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(Date.now()+CHK_OFFSET));
@@ -1391,7 +1404,13 @@ function chkPosicao(){
   const m=chkMinH(chkHoraSP());
   return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
 }
-function chkJanelaTxt(){ const j=(CHK_SIT&&CHK_SIT.janela)||{ini:'16:30',fim:'18:30'}; return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
+const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:00'}};
+function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'16:30',fim:'18:30'}; }
+function chkJanelaTxt(){ const j=chkJanelaAtual(); return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
+function renderAvisoHorario(){
+  const el=document.getElementById('chkAvisoHorario'); if(!el) return;
+  el.innerHTML=`⏰ <b>Seu horário de preenchimento do checklist é das <span style="color:#FFD000">${chkJanelaTxt()}</span>.</b><br><span style="color:#ff8a8a;font-weight:700">Caso você não cumpra esse horário, o seu placar será bloqueado.</span>`;
+}
 function atualizarTextoAntesDoHorario(){
   if(chkAberturaFeita||!CHK_SIT) return;
   const st=document.getElementById('chkBloqueioStatus');
@@ -1676,8 +1695,7 @@ function renderItensChecklist(){
       ${resp==='nao_conforme'?`<div class="chk-det">
         <textarea id="chkObs_${id}" class="${chkTentouSalvar&&(chkObs[id]||'').trim().length<CHK_MIN_DESC?'falta':''}" placeholder="Descreva o problema (obrigatório)" oninput="chkObs['${id}']=this.value;chkGuardarRascunho();atualizarBotaoSalvarChk()">${escChk(chkObs[id]||'')}</textarea>
         <div class="chk-det-linha">
-          <input type="file" accept="image/*" capture="environment" id="chkFotoIn_${id}" style="display:none" onchange="chkFotoEscolhida('${id}',this)">
-          <button type="button" class="chk-foto-btn" onclick="document.getElementById('chkFotoIn_${id}').click()">📷 ${chkFotos[id]?'Tirar outra foto':'Tirar foto agora (opcional)'}</button>
+          <button type="button" class="chk-foto-btn" onclick="chkAbrirCamera('${id}')">📷 ${chkFotos[id]?'Tirar outra foto':'Tirar foto agora (opcional)'}</button>
           ${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto"><button type="button" class="chk-foto-btn" onclick="delete chkFotos['${id}'];renderItensChecklist()">Remover foto</button>`:''}
         </div>
          <label class="chk-det-linha" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" style="width:18px;height:18px;flex-shrink:0;margin:0" ${chkResolvido[id]?'checked':''} onchange="chkResolvido['${id}']=this.checked;chkGuardarRascunho()"> Já resolvi hoje (se não marcar, o placar lembra amanhã)</label>
@@ -1690,7 +1708,43 @@ function renderItensChecklist(){
 }
 
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
-// Só vale foto tirada na hora pela câmera: foto antiga da galeria é recusada
+// Câmera aberta dentro do placar: o gerente só consegue bater a foto na hora (não existe opção de galeria)
+let _chkCamStream=null, _chkCamItem=null;
+async function chkAbrirCamera(id){
+  _chkCamItem=id;
+  const modal=document.getElementById('chkCamModal'), msg=document.getElementById('chkCamMsg'), bt=document.getElementById('chkCamBater');
+  modal.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera...';
+  if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg.innerHTML='Não consegui abrir a câmera neste aparelho. Abra o placar pelo endereço <b>https://gerentes.dinapizza.com.br/placar</b> no Chrome ou no Safari.'; return;
+  }
+  try{
+    _chkCamStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});
+    const v=document.getElementById('chkCamVideo'); v.srcObject=_chkCamStream; await v.play().catch(()=>{});
+    msg.textContent='Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
+  }catch(e){
+    msg.innerHTML='A câmera foi bloqueada. Toque no cadeado ao lado do endereço do site, permita a <b>Câmera</b> e tente de novo.';
+  }
+}
+function chkFecharCamera(){
+  if(_chkCamStream){ _chkCamStream.getTracks().forEach(t=>t.stop()); _chkCamStream=null; }
+  const v=document.getElementById('chkCamVideo'); if(v) v.srcObject=null;
+  document.getElementById('chkCamModal').style.display='none';
+}
+function chkBaterFoto(){
+  const v=document.getElementById('chkCamVideo'), id=_chkCamItem;
+  if(!v||!v.videoWidth||!id) return;
+  const esc=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight));
+  const c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*esc); c.height=Math.round(v.videoHeight*esc);
+  const ctx=c.getContext('2d'); ctx.drawImage(v,0,0,c.width,c.height);
+  // carimbo com data, hora e loja (prova de que foi tirada na hora)
+  const carimbo=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · '+unidadeAtual;
+  ctx.font='bold '+Math.max(16,Math.round(c.width/40))+'px sans-serif'; ctx.fillStyle='rgba(0,0,0,0.55)';
+  const h=Math.round(c.width/40)+16; ctx.fillRect(0,c.height-h,c.width,h); ctx.fillStyle='#FFD000'; ctx.fillText(carimbo,10,c.height-8);
+  chkFotos[id]=c.toDataURL('image/jpeg',0.72);
+  chkFecharCamera(); renderItensChecklist();
+}
+// (mantido) foto recebida por arquivo: só aceita se for de agora
+
 const CHK_FOTO_MAX_MIN = 5;
 function chkFotoNaHora(f){ return !f.lastModified || (Date.now()-f.lastModified) <= CHK_FOTO_MAX_MIN*60000; }
 function chkFotoEscolhida(id, input){
@@ -1755,7 +1809,7 @@ async function salvarChecklist(){
     if(await chkServidorV2()){
       const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
         return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null }; });
-      const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,itens:itens})});
+      const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens:itens})});
       try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
       // servidor antigo: grava sem foto, com a descrição na observação
