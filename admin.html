@@ -507,7 +507,7 @@
   function admJsonp(params){
     return new Promise((ok,falha)=>{
       const cb='admCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
-      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder'));},20000);
+      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder. Toque em atualizar de novo.'));},45000);
       function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
       window[cb]=r=>{limpar();ok(r);};
       s.onerror=()=>{limpar();falha(new Error('Sem conexão com o servidor'));};
@@ -656,12 +656,17 @@
   let LOJAS_HOJE=null;
   async function carregarLojas(){
     const gt=document.getElementById('geoTabela'), at=document.getElementById('aparTabela');
-    try{ const r=await admJsonp({action:'adminHoje'}); if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r; }
-    catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; return; }
+    gt.innerHTML='<tr><td colspan="5" style="color:var(--muted)">Carregando...</td></tr>';
+    try{
+      let r=await admJsonp({action:'adminLojas'});
+      if(r&&r.ok!==true&&/reconhecida/i.test(r.erro||'')) r={ok:false,erro:'O Apps Script publicado ainda é o antigo. Cole o código novo (CODIGO_APPS_SCRIPT_27102026_b) e publique em Nova versão.'};
+      if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r;
+    }
+    catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; at.innerHTML=''; return; }
     gt.innerHTML=LOJAS_HOJE.lojas.map((l,i)=>{ const g=l.geo;
       const coord=g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}`:'';
       return `<tr data-u="${escH(l.unidade)}"><td style="font-weight:600;white-space:nowrap">${escH(l.unidade)}</td>
-        <td><input class="cont-in gEnd" style="min-width:220px" value="${escH(g?g.endereco:'')}" placeholder="Endereço da loja"></td>
+        <td><input class="cont-in gEnd" style="min-width:220px" value="${escH(g?g.endereco:(l.enderecoSugerido||''))}" placeholder="Endereço da loja"></td>
         <td><input class="cont-in gCoord" style="min-width:170px" value="${coord}" placeholder="-25.47, -49.23">${g?`<div style="font-size:0.72rem;margin-top:3px"><a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--yellow)">ver no mapa</a></div>`:'<div style="font-size:0.72rem;color:var(--danger);margin-top:3px">não cadastrada</div>'}</td>
         <td><input class="cont-in gRaio" style="width:70px" type="number" min="50" max="2000" value="${g?g.raio:150}"></td>
         <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="geoLocalizar(this)">Localizar endereço</button> <button class="action-btn btn-nova" onclick="geoSalvarCoord(this)">Salvar coordenadas</button></td></tr>`; }).join('');
@@ -1144,7 +1149,7 @@
   function chkAdmJsonp(params){
     return new Promise((ok,falha)=>{
       const cb='chkAdmCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
-      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder'));},20000);
+      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder. Toque em atualizar de novo.'));},45000);
       function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
       window[cb]=r=>{limpar();ok(r);};
       s.onerror=()=>{limpar();falha(new Error('Sem conexão com o servidor'));};
