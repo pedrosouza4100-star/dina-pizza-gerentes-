@@ -251,6 +251,22 @@
     <button onclick="chkAvisoOk()" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 32px;cursor:pointer;width:100%;max-width:320px;letter-spacing:0.04em;">OK — Ir para o Checklist</button>
   </div>
 
+  <!-- Celular ainda não autorizado pelo administrador -->
+  <div id="aparOverlay" style="display:none;position:fixed;inset:0;background:#0a0a0a;z-index:900;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div id="aparIcone" style="font-size:54px;margin-bottom:10px">📱</div>
+    <div id="aparTitulo" style="font-size:20px;font-weight:800;color:#FFD000;margin-bottom:12px"></div>
+    <div id="aparTexto" style="font-size:15px;color:#ddd;margin-bottom:18px;max-width:340px;line-height:1.6"></div>
+    <div style="font-size:12px;color:#888;margin-bottom:6px">Código deste celular</div>
+    <div id="aparCodigo" style="font-size:26px;font-weight:800;letter-spacing:0.15em;color:#fff;background:#222;border-radius:10px;padding:10px 18px;margin-bottom:22px"></div>
+    <button onclick="sair()" style="background:transparent;border:1px solid #444;border-radius:10px;color:#aaa;font-size:13px;padding:10px 18px;cursor:pointer">Sair</button>
+  </div>
+  <!-- Fora da loja (localização) -->
+  <div id="geoOverlay" style="display:none;position:fixed;inset:0;background:#0a0a0a;z-index:850;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div style="font-size:54px;margin-bottom:10px">📍</div>
+    <div id="geoTitulo" style="font-size:20px;font-weight:800;color:#ff4444;margin-bottom:12px"></div>
+    <div id="geoTexto" style="font-size:15px;color:#ddd;margin-bottom:22px;max-width:340px;line-height:1.6"></div>
+    <button id="geoBtn" onclick="conferirLocal(true)" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;padding:16px 28px;cursor:pointer;width:100%;max-width:330px">📍 Conferir de novo</button>
+  </div>
   <!-- Placar bloqueado por checklist de abertura fora do horário (só o admin libera) -->
   <div id="chkBloqPlacar" style="display:none;position:fixed;inset:0;background:#120000;z-index:800;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:56px;margin-bottom:10px">🔒</div>
@@ -1074,7 +1090,8 @@ async function verificarSessaoServidor(u){
   if(!(await authDisponivel())) return;
   try{
     await migrarSenhasLocais();
-    const r=await authPost({action:'authVerificar',unidade:u,hash:localStorage.getItem('dina_senha_'+u)||''});
+    const r=await authPost({action:'authVerificar',unidade:u,hash:localStorage.getItem('dina_senha_'+u)||'',aparelho:aparelhoId(),info:aparelhoInfo()});
+    if(r.situacao==='ok') aplicarAparelho(r.aparelho);
     if(r.situacao==='ok'&&r.papel&&localStorage.getItem('dina_papel_'+u)!==r.papel){ localStorage.setItem('dina_papel_'+u,r.papel); const b=document.getElementById('unitBadge'); if(b) b.textContent=u+(r.papel==='assistente'?' · Assistente':''); }
     if(r.situacao==='diferente'||r.situacao==='resetada'){
       localStorage.removeItem('dina_senha_'+u);
@@ -1103,8 +1120,8 @@ async function entrar(){
   if(await authDisponivel()){
     err.textContent='Conferindo...';
     try{
-      const r=await authPost({action:'authVerificar',unidade:u,hash:h});
-      if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); return; }
+      const r=await authPost({action:'authVerificar',unidade:u,hash:h,aparelho:aparelhoId(),info:aparelhoInfo()});
+      if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); aplicarAparelho(r.aparelho); return; }
       if(r.situacao==='sem'){
         // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
         if(localStorage.getItem('dina_senha_'+u)===h){ await migrarSenhasLocais(); err.textContent=''; entrarComo(u); return; }
@@ -1150,6 +1167,8 @@ async function cadastrar(){
 }
 
 function sair(){
+  ['aparOverlay','geoOverlay','chkBloqPlacar','chkAvisoOverlay','chkBloqueioOverlay','chkHorarioAviso'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  try{ clearTimeout(_aparTimer); clearInterval(_geoTimer); clearTimeout(_chkSitTimer); }catch(e){}
   localStorage.removeItem('dina_unidade_logada');
   unidadeAtual=null;fotoBase64=null;fotoMotoBase64=null;fotoTempoAppBase64=null;fotoTempoIfoodBase64=null;
   document.getElementById('loginWrap').style.display='flex';
@@ -1223,6 +1242,7 @@ function iniciarApp(u){
   carregarChkAbertos();
   carregarMetaMes();
   carregarSituacaoChk();
+  iniciarGeo();
 }
 
 function mostrarBloqueioAbertura(){
@@ -1350,6 +1370,82 @@ function renderMetaMes(){
   }
 }
 document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys'].includes(e.target&&e.target.id)) renderMetaMes(); });
+
+// ── Celular autorizado: cada senha só funciona no celular que o administrador aprovou ──
+function aparelhoId(){
+  let id=null; try{ id=localStorage.getItem('dina_aparelho'); }catch(e){}
+  if(!id){ id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('ap-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12)); try{ localStorage.setItem('dina_aparelho',id); }catch(e){} }
+  return id;
+}
+function aparelhoCodigo(){ return aparelhoId().replace(/[^a-z0-9]/gi,'').slice(0,6).toUpperCase(); }
+function aparelhoInfo(){
+  const ua=navigator.userAgent||'';
+  const so=/iPhone|iPad/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'Outro';
+  const m=ua.match(/Android [\d.]+; ([^;)]+)/);
+  const nav=/SamsungBrowser/.test(ua)?'Samsung Internet':/CriOS|Chrome/.test(ua)?'Chrome':/Firefox|FxiOS/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'Navegador';
+  return so+(m&&!/^K$/.test(m[1].trim())?' '+m[1].trim():'')+' · '+nav+' · código '+aparelhoCodigo();
+}
+let _aparTimer=null;
+function aplicarAparelho(sit){
+  const ov=document.getElementById('aparOverlay'); if(!ov||!sit) return;
+  clearTimeout(_aparTimer);
+  if(sit==='autorizado'){ ov.style.display='none'; return; }
+  document.getElementById('aparCodigo').textContent=aparelhoCodigo();
+  if(sit==='recusado'){
+    document.getElementById('aparIcone').textContent='⛔';
+    document.getElementById('aparTitulo').textContent='CELULAR NÃO AUTORIZADO';
+    document.getElementById('aparTexto').innerHTML='O administrador <b>recusou</b> este celular para o placar de <b>'+unidadeAtual+'</b>.<br><br>O placar só pode ser usado no celular autorizado. Fale com o administrador.';
+  } else {
+    document.getElementById('aparIcone').textContent='📱';
+    document.getElementById('aparTitulo').textContent='CELULAR AGUARDANDO AUTORIZAÇÃO';
+    document.getElementById('aparTexto').innerHTML='Cada senha só funciona no celular aprovado pelo administrador.<br><br>O pedido para usar <b>este celular</b> no placar de <b>'+unidadeAtual+'</b> já foi enviado. Assim que ele aprovar, o placar abre sozinho.';
+    _aparTimer=setTimeout(()=>{ if(unidadeAtual) verificarSessaoServidor(unidadeAtual); }, 20000);
+  }
+  ov.style.display='flex';
+}
+
+// ── Localização: o placar só pode ser preenchido dentro da loja ──
+let _geoTimer=null, _geoConferindo=null;
+function mostrarGeo(tipo, r){
+  const t=document.getElementById('geoTitulo'), x=document.getElementById('geoTexto');
+  if(tipo==='fora'){
+    const km=r.distancia>=1000?(r.distancia/1000).toFixed(1).replace('.',',')+' km':r.distancia+' m';
+    t.textContent='VOCÊ ESTÁ FORA DA LOJA';
+    x.innerHTML='O placar de <b>'+unidadeAtual+'</b> só pode ser preenchido <b>dentro da unidade</b>.<br><br>Você está a <b>'+km+'</b> da loja.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”. Esta tentativa fica registrada para o administrador.</span>';
+  } else if(tipo==='negado'){
+    t.textContent='PERMITA A LOCALIZAÇÃO';
+    x.innerHTML='O placar precisa da sua localização para confirmar que você está na loja.<br><br>Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”.';
+  } else {
+    t.textContent='NÃO CONSEGUI SUA LOCALIZAÇÃO';
+    x.innerHTML='Ligue a <b>localização (GPS)</b> do celular e toque em “Conferir de novo”.';
+  }
+  document.getElementById('geoOverlay').style.display='flex';
+}
+function conferirLocal(agora){
+  if(_geoConferindo) return _geoConferindo;
+  const bt=document.getElementById('geoBtn'); if(bt){ bt.disabled=true; bt.textContent='Conferindo...'; }
+  _geoConferindo=(async()=>{
+    try{
+      if(!unidadeAtual || !(await chkRecursos()).includes('geoLoja')) return true;
+      // loja sem localização cadastrada no Admin: não confere (nem pede o GPS)
+      try{ const c=await chkJsonp({action:'geoConferir',unidade:unidadeAtual},12000); if(c&&c.ok&&c.configurado===false){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){ return true; }
+      const pos=await new Promise(res=>{
+        if(!navigator.geolocation) return res({erro:'falhou'});
+        navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}), e=>res({erro:e.code===1?'negado':'falhou'}), {enableHighAccuracy:true,timeout:20000,maximumAge:agora===true?0:60000});
+      });
+      if(pos.erro){ mostrarGeo(pos.erro); return false; }
+      let r=null;
+      try{ r=await chkJsonp({action:'geoConferir',unidade:unidadeAtual,lat:pos.lat,lng:pos.lng,acc:pos.acc,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',aparelho:aparelhoCodigo()},15000); }
+      catch(e){ return true; } // servidor sem resposta: não trava o gerente por isso
+      if(!r||!r.ok||r.dentro){ document.getElementById('geoOverlay').style.display='none'; return true; }
+      mostrarGeo('fora', r); return false;
+    } finally {
+      _geoConferindo=null; if(bt){ bt.disabled=false; bt.textContent='📍 Conferir de novo'; }
+    }
+  })();
+  return _geoConferindo;
+}
+function iniciarGeo(){ clearInterval(_geoTimer); conferirLocal(); _geoTimer=setInterval(conferirLocal, 10*60000); }
 
 // ── Status do Checklist (Abertura/Fechamento) para esta loja ──
 // Ordem do dia: 1) checklist de abertura (bloqueia o placar até estar completo) → 2) Start Dina / motoboys →
@@ -1788,6 +1884,7 @@ function chkResponder(id, status){
 }
 
 async function salvarChecklist(){
+  if(!(await conferirLocal(true))) return;
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
   if(!chkItensData.length){ msg.textContent='Nenhum item carregado. Feche e abra o checklist de novo.'; msg.style.color='#ff4444'; return; }
@@ -2322,6 +2419,7 @@ async function comprimirFoto(base64){
 }
 
 async function registrar(){
+  if(!(await conferirLocal(true))) return;
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
   if(!chkFechamentoFeito){
     alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nEle fica logo acima do botão de enviar: "🌙 Checklist de Fechamento da Unidade".');

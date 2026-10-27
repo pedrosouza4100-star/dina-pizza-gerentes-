@@ -108,6 +108,7 @@
   .prot-box.ok{border-left:5px solid var(--green)} .prot-box.av{border-left:5px solid var(--yellow)} .prot-box.err{border-left:5px solid var(--danger);background:rgba(231,76,60,0.12)}
   .prot-box b{font-size:0.92rem} .prot-linha{display:flex;gap:8px;padding:3px 0;line-height:1.4} .prot-linha i{font-style:normal;width:16px;flex-shrink:0}
   .prot-linha .ok{color:var(--green)} .prot-linha .av{color:var(--yellow)} .prot-linha .err{color:var(--danger)}
+  .cont-in{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:6px 8px;font-size:0.8rem;width:100%;box-sizing:border-box}
   .cob-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
   .cob-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .cob-head b{font-size:0.95rem} .cob-head small{color:var(--muted);font-size:0.75rem}
@@ -182,6 +183,7 @@
     <div class="tab" onclick="mudarTab(event,'metas')">Metas por Loja</div>
     <div class="tab" onclick="mudarTab(event,'premiacao')">Premiação</div>
     <div class="tab" onclick="mudarTab(event,'checklist')">Checklist</div>
+    <div class="tab" onclick="mudarTab(event,'lojas')">Lojas e celulares</div>
     <div class="tab" onclick="mudarTab(event,'log')">Registro</div>
   </div>
   <main>
@@ -192,6 +194,7 @@
       <div>
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Hoje na rede</span>
           <span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span></div>
+        <div id="aparBox" style="display:none;margin-bottom:16px"></div>
         <div class="prot-box" id="protBox"><b>🛡️ Proteção do sistema</b> <span style="color:var(--muted)">conferindo...</span></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
         <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
@@ -404,6 +407,21 @@
       </div>
     </div>
 
+    <!-- LOJAS E CELULARES -->
+    <div class="tab-content" id="tab-lojas">
+      <div>
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>📍 Localização das lojas</span>
+          <button class="action-btn btn-nova" style="padding:8px 14px" onclick="geoLocalizarTodas()">Localizar todas pelo endereço</button></div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">O placar só abre dentro do raio de cada loja. Confira cada ponto em “ver no mapa”. Se o ponto estiver errado, abra o Google Maps na loja, copie as coordenadas (ex.: <b>-25.4722, -49.2361</b>), cole em “Coordenadas” e salve. Loja sem localização não é conferida.</div>
+        <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Endereço</th><th>Coordenadas</th><th>Raio (m)</th><th>Ação</th></tr></thead><tbody id="geoTabela"><tr><td colspan="5" style="color:var(--muted)">Carregando...</td></tr></tbody></table></div>
+      </div>
+      <div>
+        <div class="section-title">📱 Celulares autorizados</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Cada senha (gerente e assistente) só funciona em um celular aprovado aqui. Pedidos novos aparecem também em “Hoje na rede”. Remover um celular faz ele parar de abrir o placar na hora.</div>
+        <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Gerente</th><th>Assistente</th></tr></thead><tbody id="aparTabela"></tbody></table></div>
+      </div>
+    </div>
+
     <!-- LOG -->
     <div class="tab-content" id="tab-log">
       <div class="section-title">Registro de Ações</div>
@@ -551,6 +569,14 @@
       // escala
       if(!l.escala) h+=linha('av','Escala','Semana não salva');
       else{ nEsc++; h+=l.escala.erros?linha('err','Escala',l.escala.erros+' problema'+(l.escala.erros>1?'s':'')+' nas regras'):l.escala.vazios?linha('av','Escala','Incompleta ('+l.escala.vazios+' dias)'):linha('ok','Escala','Salva e dentro das regras'); }
+      // celulares e localização
+      if(l.aparelhos){
+        const ap=l.aparelhos, sem=[!ap.gerente?'gerente':'',!ap.assistente?'assistente':''].filter(Boolean);
+        if(ap.pendentes) h+=linha('err','Celular',ap.pendentes+' celular'+(ap.pendentes>1?'es':'')+' aguardando sua autorização');
+        else if(sem.length) h+=linha('av','Celular','Sem celular autorizado: '+sem.join(' e '));
+      }
+      if(('geo' in l) && !l.geo) h+=linha('av','Local','Localização da loja não cadastrada (aba Lojas e celulares)');
+      else if(l.geo&&l.geo.foraHoje) h+=linha('err','Local',l.geo.foraHoje+' tentativa'+(l.geo.foraHoje>1?'s':'')+' de abrir o placar fora da loja hoje');
       // horário do checklist de abertura: bloqueio e atrasos do mês
       const ch=l.chkHorario;
       if(ch&&ch.bloqueio){
@@ -574,6 +600,7 @@
       tile(nEsc+'/'+n,'Escala da semana',nEsc===n?'ok':'av')+
       tile(nDesb,'Lojas pedindo desbloqueio',nDesb?'err':'ok');
     document.getElementById('hojeLojas').innerHTML=cards.join('');
+    renderAparPendentes(r.aparelhosPendentes);
     renderCobranca(r);
     carregarProtecao();
     document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
@@ -608,6 +635,61 @@
     try{ const r=await admPost({action:'authBackupAgora'}); showToast('Backup feito às '+r.quando+' (pasta "Backups Sistema Dina Pizza" no seu Drive)','ok'); registrarLog('Backup manual feito.','ok'); }
     catch(e){ showToast(e.message,'warn'); }
     carregarProtecao();
+  }
+
+  // ── Celulares autorizados ──
+  function renderAparPendentes(lista){
+    const box=document.getElementById('aparBox'); if(!box) return;
+    if(!lista||!lista.length){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML=`<div class="cob-box" style="border-color:var(--yellow);margin-bottom:0"><div class="cob-head"><b>📱 Celulares aguardando autorização (${lista.length})</b><small>O gerente vê o código na tela do celular — confira com ele antes de autorizar</small></div>`+
+      lista.map(p=>`<div class="cob-linha av"><span class="nome">${escH(p.unidade)} · ${p.papel==='assistente'?'Assistente':'Gerente'}</span><span class="st">${escH(p.info||'celular')}<br><span style="color:var(--muted);font-size:0.75rem">pediu em ${escH(p.pedidoEm)}${p.temOutro?' · vai substituir o celular autorizado hoje':''}</span></span><button class="cob-btn" onclick="aparDecidir(${p.linha},'autorizar')">✓ Autorizar</button><button class="cob-btn off" onclick="aparDecidir(${p.linha},'recusar')">Recusar</button></div>`).join('')+'</div>';
+    box.style.display='block';
+  }
+  async function aparDecidir(linha,decisao){
+    const txt={autorizar:'Autorizar este celular? Se a senha já tinha outro celular, o antigo para de funcionar.',recusar:'Recusar este celular?',remover:'Remover este celular? Ele para de abrir o placar na hora.'}[decisao];
+    if(!confirm(txt)) return;
+    try{ await admPost({action:'authAparelhoDecidir',linha:linha,decisao:decisao}); showToast(decisao==='autorizar'?'Celular autorizado.':decisao==='recusar'?'Celular recusado.':'Celular removido.','ok'); registrarLog({autorizar:'Celular autorizado.',recusar:'Celular recusado.',remover:'Celular removido.'}[decisao],'ok'); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); return; }
+    if(document.getElementById('tab-lojas').classList.contains('active')) carregarLojas(); else carregarHoje();
+  }
+  // ── Lojas: localização e celulares ──
+  let LOJAS_HOJE=null;
+  async function carregarLojas(){
+    const gt=document.getElementById('geoTabela'), at=document.getElementById('aparTabela');
+    try{ const r=await admJsonp({action:'adminHoje'}); if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r; }
+    catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; return; }
+    gt.innerHTML=LOJAS_HOJE.lojas.map((l,i)=>{ const g=l.geo;
+      const coord=g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}`:'';
+      return `<tr data-u="${escH(l.unidade)}"><td style="font-weight:600;white-space:nowrap">${escH(l.unidade)}</td>
+        <td><input class="cont-in gEnd" style="min-width:220px" value="${escH(g?g.endereco:'')}" placeholder="Endereço da loja"></td>
+        <td><input class="cont-in gCoord" style="min-width:170px" value="${coord}" placeholder="-25.47, -49.23">${g?`<div style="font-size:0.72rem;margin-top:3px"><a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--yellow)">ver no mapa</a></div>`:'<div style="font-size:0.72rem;color:var(--danger);margin-top:3px">não cadastrada</div>'}</td>
+        <td><input class="cont-in gRaio" style="width:70px" type="number" min="50" max="2000" value="${g?g.raio:150}"></td>
+        <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="geoLocalizar(this)">Localizar endereço</button> <button class="action-btn btn-nova" onclick="geoSalvarCoord(this)">Salvar coordenadas</button></td></tr>`; }).join('');
+    const cel=(l,p)=>{ const a=l.aparelhos&&l.aparelhos[p]; return a?`<td><span class="badge ok">✓ ${escH(a.info||'autorizado')}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">desde ${escH(a.desde)}</div><button class="action-btn btn-reset" style="margin-top:6px" onclick="aparDecidir(${a.linha},'remover')">Remover</button></td>`:`<td><span class="badge sem">Nenhum</span></td>`; };
+    at.innerHTML=LOJAS_HOJE.lojas.map(l=>`<tr><td style="font-weight:600">${escH(l.unidade)}${l.aparelhos&&l.aparelhos.pendentes?` <span class="badge sem">${l.aparelhos.pendentes} aguardando</span>`:''}</td>${cel(l,'gerente')}${cel(l,'assistente')}</tr>`).join('');
+  }
+  async function geoLocalizar(bt){
+    const tr=bt.closest('tr'), u=tr.dataset.u; bt.disabled=true; bt.textContent='Localizando...';
+    try{ const r=await admPost({action:'authGeoLocalizar',unidade:u,endereco:tr.querySelector('.gEnd').value.trim(),raio:tr.querySelector('.gRaio').value}); showToast(u+': localizada. Confira em "ver no mapa".','ok'); }
+    catch(e){ showToast(u+': '+e.message,'warn'); }
+    carregarLojas();
+  }
+  async function geoSalvarCoord(bt){
+    const tr=bt.closest('tr'), u=tr.dataset.u, m=tr.querySelector('.gCoord').value.match(/(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)/);
+    if(!m){ showToast('Cole as coordenadas assim: -25.4722, -49.2361','warn'); return; }
+    try{ await admPost({action:'authGeoSalvar',unidade:u,endereco:tr.querySelector('.gEnd').value.trim(),lat:m[1].replace(',','.'),lng:m[2].replace(',','.'),raio:tr.querySelector('.gRaio').value}); showToast(u+': localização salva.','ok'); }
+    catch(e){ showToast(u+': '+e.message,'warn'); }
+    carregarLojas();
+  }
+  async function geoLocalizarTodas(){
+    if(!LOJAS_HOJE) await carregarLojas();
+    const faltam=LOJAS_HOJE.lojas.filter(l=>!l.geo);
+    if(!faltam.length){ showToast('Todas as lojas já têm localização.','ok'); return; }
+    if(!confirm('Localizar pelo endereço as '+faltam.length+' lojas sem localização?')) return;
+    let ok=0, falhas=[];
+    for(const l of faltam){ try{ await admPost({action:'authGeoLocalizar',unidade:l.unidade}); ok++; }catch(e){ falhas.push(l.unidade); } }
+    showToast(ok+' loja(s) localizadas'+(falhas.length?' · falharam: '+falhas.join(', '):'')+'. Confira em "ver no mapa".', falhas.length?'warn':'ok');
+    carregarLojas();
   }
 
   // ── Liberar placar bloqueado por checklist fora do horário ──
@@ -813,6 +895,7 @@
     if(nome==='hoje') carregarHoje();
     if(nome==='log') carregarLogServidor();
     if(nome==='senhas') renderTabela();
+    if(nome==='lojas') carregarLojas();
   }
 
   // ── Senhas ──
