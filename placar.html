@@ -749,11 +749,11 @@ let _ultimoLogTravado='';
 
 // ── SALVAR TEMPO ──
 // ── Envia dado em tempo real para o Call Center ──
-function enviarTempoReal(tipo, dados){
+function enviarTempoReal(tipo, dados, aoResponder){
   const cb='trCb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
-  window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
+  window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);if(aoResponder)try{aoResponder(d);}catch(e){}};
   s.onerror=()=>{clearTimeout(t);delete window[cb];};
   // Monta parâmetros simples
   let params='action=salvarTempoReal';
@@ -1474,7 +1474,7 @@ async function chkRecursos(){
 }
 async function chkServidorV2(){ if(_chkV2===null){ const rc=await chkRecursos(); if(_chkRecursos===null) return false; _chkV2=rc.includes('checklistV2'); } return _chkV2; }
 
-// ── Horário do checklist de abertura (16h30–18h30; Isaac Manhã 9h30–11h) ──
+// ── Horário do checklist de abertura e do Start Dina (17h00–19h20; Isaac Manhã 9h30–11h20) ──
 // Antes do horário: não abre. Depois: libera com aviso. 1º atraso do mês = aviso; do 2º em diante o placar
 // fica bloqueado a partir do dia seguinte até o administrador liberar. Quem decide e registra é o servidor.
 let CHK_SIT=null, CHK_OFFSET=0, _chkSitTimer=null;
@@ -1500,12 +1500,12 @@ function chkPosicao(){
   const m=chkMinH(chkHoraSP());
   return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
 }
-const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:00'}};
-function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'16:30',fim:'18:30'}; }
+const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:20'}};
+function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'17:00',fim:'19:20'}; }
 function chkJanelaTxt(){ const j=chkJanelaAtual(); return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
 function renderAvisoHorario(){
   const el=document.getElementById('chkAvisoHorario'); if(!el) return;
-  el.innerHTML=`⏰ <b>Seu horário de preenchimento do checklist é das <span style="color:#FFD000">${chkJanelaTxt()}</span>.</b><br><span style="color:#ff8a8a;font-weight:700">Caso você não cumpra esse horário, o seu placar será bloqueado.</span>`;
+  el.innerHTML=`⏰ <b>O checklist de abertura e o Start Dina devem ser feitos das <span style="color:#FFD000">${chkJanelaTxt()}</span>.</b><br><span style="color:#ff8a8a;font-weight:700">Você tem 2 chances no mês. No 3º atraso, o seu placar será bloqueado e você terá que pedir autorização para o desbloqueio.</span><br><b>Respeite os horários do preenchimento do placar.</b>`;
 }
 function atualizarTextoAntesDoHorario(){
   if(chkAberturaFeita||!CHK_SIT) return;
@@ -1517,7 +1517,7 @@ function renderBloqueioPlacar(){
   const b=CHK_SIT&&CHK_SIT.bloqueio;
   clearTimeout(_chkSitTimer);
   if(!b){ ov.style.display='none'; _chkSitTimer=setTimeout(carregarSituacaoChk, 5*60000); return; }
-  document.getElementById('chkBloqTexto').innerHTML=`O checklist de abertura do dia <b>${b.dia}</b> foi feito às <b>${b.hora}</b>, fora do horário (${chkJanelaTxt()}).<br><br>Foi o <b>${b.n}º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.`;
+  document.getElementById('chkBloqTexto').innerHTML=`O <b>${(b.oque||'Checklist de abertura').toLowerCase()}</b> do dia <b>${b.dia}</b> foi feito às <b>${b.hora}</b>, fora do horário (${chkJanelaTxt()}).<br><br>Foi o <b>${b.n}º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.`;
   const bt=document.getElementById('chkBloqBtn'), stt=document.getElementById('chkBloqStatus');
   if(b.pedido){ bt.style.display='none'; stt.textContent='⏳ Pedido de desbloqueio enviado'+(b.pedidoEm?' em '+b.pedidoEm:'')+'. Aguarde o administrador liberar — esta tela se atualiza sozinha.'; }
   else { bt.style.display='block'; bt.disabled=false; stt.textContent=''; }
@@ -1537,11 +1537,16 @@ function chkMostrarAviso(titulo, html, botao, aoFechar){
   b.onclick=()=>{ document.getElementById('chkHorarioAviso').style.display='none'; if(aoFechar) aoFechar(); };
   document.getElementById('chkHorarioAviso').style.display='flex';
 }
-function chkTextoAtraso(n, hora, depoisDeSalvar, bloqueiaEm){
-  const base=`O checklist de abertura é das <b style="color:#FFD000">${chkJanelaTxt()}</b>. ${depoisDeSalvar?'Você salvou às':'Agora são'} <b>${hora}</b>.<br><br>`;
-  if(n<=1) return base+`Este é o seu <b>1º atraso no mês</b>: hoje está liberado <b>SÓ DESTA VEZ</b>.<br><br><span style="color:#ff6b6b;font-weight:800">No próximo atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você vai ter que pedir o desbloqueio ao administrador.</span>`;
-  return base+`Este é o seu <b>${n}º atraso no mês</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">${depoisDeSalvar?'O SEU PLACAR ESTÁ BLOQUEADO A PARTIR DE AMANHÃ'+(bloqueiaEm?' ('+bloqueiaEm+')':''):'AO SALVAR ESTE CHECKLIST, O SEU PLACAR SERÁ BLOQUEADO AMANHÃ'} e só volta a funcionar quando o administrador liberar.</span>`;
+function chkTextoAtraso(n, hora, depoisDeSalvar, bloqueiaEm, oque){
+  oque=oque||'checklist de abertura';
+  const base=`O checklist de abertura e o Start Dina devem ser feitos das <b style="color:#FFD000">${chkJanelaTxt()}</b>. ${depoisDeSalvar?'Você salvou o '+oque+' às':'Agora são'} <b>${hora}</b>.<br><br>`;
+  const fim='<br><br><b>Respeite os horários do preenchimento do placar.</b>';
+  if(n<=1) return base+`Este é o seu <b>1º atraso no mês</b>: hoje está liberado. Você ainda tem <b>1 chance</b>.<br><br><span style="color:#ff6b6b;font-weight:800">No 3º atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você terá que pedir autorização para o desbloqueio ao administrador.</span>`+fim;
+  if(n===2) return base+`Este é o seu <b>2º atraso no mês</b>: hoje ainda está liberado, mas esta foi a sua <b>ÚLTIMA CHANCE</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">No próximo atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você terá que pedir autorização para o desbloqueio ao administrador.</span>`+fim;
+  return base+`Este é o seu <b>${n}º atraso no mês</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">${depoisDeSalvar?'O SEU PLACAR ESTÁ BLOQUEADO A PARTIR DE AMANHÃ'+(bloqueiaEm?' ('+bloqueiaEm+')':''):'AO SALVAR AGORA, O SEU PLACAR SERÁ BLOQUEADO AMANHÃ'} e só volta a funcionar quando o administrador liberar.</span>`+fim;
 }
+// atraso já registrado hoje (checklist ou Start Dina): o outro não conta de novo
+function chkAtrasoHoje(){ return !!(CHK_SIT&&CHK_SIT.ultimoAtraso&&CHK_SIT.ultimoAtraso.dia===CHK_SIT.hoje); }
 // chamado antes de abrir o checklist de abertura; devolve true se pode abrir agora
 function chkConferirHorarioAbertura(continuar){
   if(chkAberturaFeita||!CHK_SIT) return true;
@@ -1552,7 +1557,7 @@ function chkConferirHorarioAbertura(continuar){
     return false;
   }
   if(pos==='depois'){
-    chkMostrarAviso('🚨 VOCÊ ESTÁ FORA DO HORÁRIO!', chkTextoAtraso((CHK_SIT.atrasosMes||0)+1, chkHoraSP(), false), 'Entendi — fazer o checklist agora', continuar);
+    chkMostrarAviso('🚨 VOCÊ ESTÁ FORA DO HORÁRIO!', chkTextoAtraso((CHK_SIT.atrasosMes||0)+(chkAtrasoHoje()?0:1), chkHoraSP(), false), 'Entendi — fazer o checklist agora', continuar);
     return false;
   }
   return true;
@@ -1929,7 +1934,8 @@ async function salvarChecklist(){
   renderEtapasChecklist();
   if(turno==='abertura' && r.atraso && !r.atraso.perdoado){
     if(CHK_SIT) CHK_SIT.atrasosMes=r.atraso.n;
-    setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm), 'Entendi', null), 1600);
+    if(CHK_SIT) CHK_SIT.ultimoAtraso={dia:CHK_SIT.hoje,hora:r.atraso.hora,n:r.atraso.n,oque:'Checklist de abertura'};
+    setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm, 'checklist de abertura'), 'Entendi', null), 1600);
   }
   setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
 }
@@ -1977,11 +1983,28 @@ function atualizarMetas(){
 }
 
 // ── Salvar Start Dina ──
+// Start Dina tem o mesmo horário do checklist de abertura; fora dele avisa e conta atraso (o servidor registra)
 function salvarStartDina(){
+  if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
+  if(!startDinaSalvo && CHK_SIT && chkPosicao()==='depois'){
+    const jaHoje=chkAtrasoHoje();
+    chkMostrarAviso('🚨 START DINA FORA DO HORÁRIO!', jaHoje
+      ? `O checklist de abertura e o Start Dina devem ser feitos das <b style="color:#FFD000">${chkJanelaTxt()}</b>. Agora são <b>${chkHoraSP()}</b>.<br><br>O atraso de hoje já foi registrado (${CHK_SIT.ultimoAtraso.n}º do mês).<br><br><b>Respeite os horários do preenchimento do placar.</b>`
+      : chkTextoAtraso((CHK_SIT.atrasosMes||0)+1, chkHoraSP(), false),
+      'Entendi — salvar o Start Dina', salvarStartDinaAgora);
+    return;
+  }
+  salvarStartDinaAgora();
+}
+function salvarStartDinaAgora(){
   if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
   startDinaSalvo=true;
   localStorage.setItem(chaveHoje('startdina_salvo'),'1');
-  enviarTempoReal('startdina', {salvo:true});
+  enviarTempoReal('startdina', {salvo:true}, d=>{
+    if(!d||!d.atraso||d.atraso.perdoado) return;
+    if(CHK_SIT){ CHK_SIT.atrasosMes=d.atraso.n; CHK_SIT.ultimoAtraso={dia:CHK_SIT.hoje,hora:d.atraso.hora,n:d.atraso.n,oque:'Start Dina'}; }
+    chkMostrarAviso(d.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 START DINA FORA DO HORÁRIO', chkTextoAtraso(d.atraso.n, d.atraso.hora, true, d.atraso.bloqueiaEm, 'Start Dina'), 'Entendi', null);
+  });
   const info=document.getElementById('startSalvoInfo');
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if(info){info.style.display='block';info.textContent=`✅ Start Dina salvo às ${hora}`;}

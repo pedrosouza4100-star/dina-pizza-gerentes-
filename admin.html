@@ -581,10 +581,10 @@
       const ch=l.chkHorario;
       if(ch&&ch.bloqueio){
         nDesb++;
-        h+=linha('err','Placar','🔒 BLOQUEADO — checklist de '+ch.bloqueio.dia+' às '+ch.bloqueio.hora+' ('+ch.bloqueio.n+'º atraso)'+(ch.bloqueio.pedido?' · pediu desbloqueio':''));
+        h+=linha('err','Placar','🔒 BLOQUEADO — '+(ch.bloqueio.oque||'Checklist de abertura')+' de '+ch.bloqueio.dia+' às '+ch.bloqueio.hora+' ('+ch.bloqueio.n+'º atraso)'+(ch.bloqueio.pedido?' · pediu desbloqueio':''));
         h+=`<div style="margin:4px 0 6px 100px"><button class="cob-btn" style="background:var(--yellow);color:#000" onclick="liberarChecklist('${l.unidade.replace(/'/g,"\\'")}')">🔓 Liberar placar</button></div>`;
       } else if(ch&&ch.atrasosMes){
-        h+=linha('av','Horário',ch.atrasosMes+' atraso'+(ch.atrasosMes>1?'s':'')+' no checklist de abertura este mês'+(ch.ultimoAtraso?' (último '+ch.ultimoAtraso.dia+' às '+ch.ultimoAtraso.hora+')':''));
+        h+=linha(ch.atrasosMes>=2?'err':'av','Horário',ch.atrasosMes+' atraso'+(ch.atrasosMes>1?'s':'')+' no horário (checklist/Start Dina) este mês'+(ch.atrasosMes>=2?' — no próximo, bloqueia':'')+(ch.ultimoAtraso?' (último '+ch.ultimoAtraso.dia+' às '+ch.ultimoAtraso.hora+')':''));
       }
       // desbloqueios
       if(l.desbloqueios.length){ nDesb++; h+=linha('err','Desbloqueio',l.desbloqueios.length+' pedido'+(l.desbloqueios.length>1?'s':'')+' esperando'); }
