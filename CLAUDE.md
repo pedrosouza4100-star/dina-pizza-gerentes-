@@ -2,6 +2,7 @@
 
 Sistema interno da Dina Pizza Gastronomia (Robson Pontes): placar diário, checklists,
 dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro antes de mexer em qualquer coisa.
+**Estado atual, versão publicada e pendências:** arquivo `ESTADO_DO_PROJETO.md` no repositório privado `dina-pizza-backend` (leia também; atualize ao fim de cada entrega).
 
 ## Como o sistema é montado
 
