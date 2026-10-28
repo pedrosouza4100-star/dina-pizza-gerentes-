@@ -482,6 +482,19 @@
         <span class="tag" id="cancelTag"></span>
         <div class="meta-mes mini" id="mm_cancel"></div>
       </div>
+      <!-- Fichas de fliperama e buffets (quantidade) — não aparecem no Capão Raso e na Expressa -->
+      <div class="card card-full" id="cardFichas" style="display:none">
+        <div class="card-label">🕹️ Fichas de Fliperama Vendidas</div>
+        <div class="card-meta" id="metaFichasDisplay"></div>
+        <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">fichas</span></div>
+        <div class="meta-mes" id="mm_fichas"></div>
+      </div>
+      <div class="card card-full" id="cardBuffets" style="display:none">
+        <div class="card-label">🍽️ Buffets Vendidos</div>
+        <div class="card-meta" id="metaBuffetsDisplay"></div>
+        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">buffets</span></div>
+        <div class="meta-mes" id="mm_buffets"></div>
+      </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
         <div class="card-label">💳 Vendas Canceladas no Caixa</div>
@@ -547,6 +560,16 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 
 const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 
+// Fichas de fliperama e buffets: meta MENSAL; a do dia sai de 50% nos dias de dom a qui e 50% nas sextas e sábados
+const LOJAS_SEM_FLIPER_BUFFET=['Capão Raso','Expressa'];
+let METAS_FICHAS={}, METAS_BUFFET={};
+function temFliperBuffet(u){ return !!u && !LOJAS_SEM_FLIPER_BUFFET.includes(u); }
+function metaDiaMensal(mensal, dt){
+  mensal=Number(mensal)||0; if(!mensal) return 0;
+  const a=dt.getFullYear(), m=dt.getMonth(), total=new Date(a,m+1,0).getDate(); let sexSab=0;
+  for(let d=1;d<=total;d++){ const w=new Date(a,m,d).getDay(); if(w===5||w===6) sexSab++; }
+  const w=dt.getDay(); return (w===5||w===6)?(mensal/2)/sexSab:(mensal/2)/(total-sexSab);
+}
 let METAS_FAT={},METAS_AVAL={},PREMIO={semanaCompleto:200,semanaParcial:100,fdsCompleto:100,fdsParcial:50},unidadeAtual=null,fotoBase64=null;
 
 // Fotos de motoboys e tempos
@@ -1040,12 +1063,15 @@ async function carregarMetas(){
     if(d.premio&&typeof d.premio==='object') PREMIO=d.premio;
     else if(typeof d.premio==='number') PREMIO={semanaCompleto:d.premio,semanaParcial:d.premio/2,fdsCompleto:d.premio/2,fdsParcial:d.premio/4};
     if(d.metasMotoboys) Object.assign(METAS_MOTOBOYS,d.metasMotoboys);
+    if(d.metasFichas) METAS_FICHAS=d.metasFichas;
+    if(d.metasBuffet) METAS_BUFFET=d.metasBuffet;
     if(d.metasTempo&&d.metasTempo.length===3) METAS_TEMPO.splice(0,3,...d.metasTempo);
   }
   catch(e){
     METAS_FAT=JSON.parse(JSON.stringify(FAT_DEF));
     METAS_AVAL=JSON.parse(JSON.stringify(AVAL_DEF));
   }
+  if(unidadeAtual && typeof atualizarMetas==='function') atualizarMetas();
   if(unidadeAtual && typeof renderMetaMes==='function') renderMetaMes();
 }
 
@@ -1295,7 +1321,7 @@ function diasDoMesTurno(){ const d=dataTurno(); return {d, dia:d.getDate(), tota
 async function carregarMetaMes(){
   MES_ATE_ONTEM=null;
   const {dia,mes,ano}=diasDoMesTurno(), u=unidadeAtual;
-  const z={faturamento:0,google:0,ifood:0,chamados:0,cancelamentos:0,pedidosConfirmadosIfood:0,dias:0};
+  const z={faturamento:0,google:0,ifood:0,chamados:0,cancelamentos:0,pedidosConfirmadosIfood:0,dias:0,fichas:0,buffets:0};
   if(dia===1){ MES_ATE_ONTEM=z; renderMetaMes(); return; }
   const p2=n=>String(n).padStart(2,'0');
   try{
@@ -1308,7 +1334,7 @@ async function carregarMetaMes(){
 }
 function mmFmt(v,tipo){ return tipo==='R$' ? 'R$ '+Math.round(v).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')+' '+tipo; }
 // metaDoDia(date) → meta daquele dia; real = valor de hoje digitado (null se vazio)
-function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
+function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
   const {d,dia,total,mes,ano}=diasDoMesTurno();
   const md=k=>metaDoDia(new Date(ano,mes,k));
   let metaMes=0, espOntem=0; for(let k=1;k<=total;k++){ metaMes+=md(k); if(k<dia) espOntem+=md(k); }
@@ -1327,7 +1353,7 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
   else if(dif>=0) h+=`<div class="mm-tit">📈 ACIMA DA META DO MÊS (+${mmFmt(dif,tipo)})</div>`;
   else h+=`<div class="mm-tit">${pct<90?'🚨':'📉'} ABAIXO DA META DO MÊS (−${mmFmt(-dif,tipo)})</div>`;
   if(temHoje) h+=`Hoje: <b>${mmFmt(real,tipo)}</b> — ${real>=metaHoje?'<span style="color:var(--green)">bateu a meta do dia</span>':'<span style="color:#ff6b6b">abaixo da meta do dia</span>'} (${mmFmt(metaHoje,tipo)}${real<metaHoje?', faltaram '+mmFmt(metaHoje-real,tipo):''}).<br>`;
-  if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${tipo==='R$'?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
+  if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${(tipo==='R$'||tipo==='buffets')?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
   if(falta<=0) h+=`<div class="mm-dia" style="color:var(--green)">🏆 Meta do mês (${mmFmt(metaMes,tipo)}) já batida!</div>`;
   else if(diasDepois<=0) h+=`<div class="mm-dia" style="color:#ff6b6b">Mês encerrado: faltaram ${mmFmt(falta,tipo)} para a meta de ${mmFmt(metaMes,tipo)}.</div>`;
   else {
@@ -1335,6 +1361,11 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
     const k = metaRestante>0 ? falta/metaRestante : 0;
     const porDia = falta/diasDepois;
     let detalhe='';
+    if(divisao){ // quanto por dia em cada grupo de dias (ex.: Dom a Qui / Sex e Sáb)
+      const ex=w=>{ for(let k=(temHoje?dia+1:dia);k<=total;k++){ const dd=new Date(ano,mes,k); const ws=dd.getDay(); if((w===5)?(ws===5||ws===6):!(ws===5||ws===6)) return md(k); } return 0; };
+      const partes=divisao.map(([rot,w])=>{ const v=ex(w); return v?rot+': '+mmFmt(v*k,tipo)+' por dia':''; }).filter(Boolean);
+      if(partes.length) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">${partes.join(' · ')}</span>`;
+    }
     if(tipo==='R$' && METAS_FAT[unidadeAtual]){ const m=METAS_FAT[unidadeAtual]||FAT_DEF[unidadeAtual]; if(m&&m.semana!==m.fds) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">Seg a Qui: ${mmFmt(m.semana*k,tipo)} por dia · Sex a Dom: ${mmFmt(m.fds*k,tipo)} por dia</span>`; }
     h+=`<div class="mm-dia" style="color:${cls==='ok'?'var(--green)':cls==='av'?'#FFD000':'#ff6b6b'}">👉 Você precisa fazer ${tipo==='R$'?'em média ':''}<span style="font-size:1.15rem">${mmFmt(porDia,tipo)} por dia</span> nos ${diasDepois} dia${diasDepois>1?'s':''} que ${temHoje?'restam':'restam (contando hoje)'}${detalhe}</div>`;
   }
@@ -1358,6 +1389,12 @@ function renderMetaMes(){
     if(g('mm_fat')&&mf) mmBloco(g('mm_fat'),'faturamento','R$',dt=>fdsData(dt)?(mf.fds||0):(mf.semana||0),A.faturamento||0,vazio('fat')?null:valFat());
     if(g('mm_google')&&ma.google) mmBloco(g('mm_google'),'Google','avaliações',()=>ma.google,A.google||0,vazio('google')?null:ival('google'));
     if(g('mm_ifood')&&ma.ifood) mmBloco(g('mm_ifood'),'iFood','avaliações',()=>ma.ifood,A.ifood||0,vazio('ifood')?null:ival('ifood'));
+    if(temFliperBuffet(unidadeAtual)){
+      const mf=(METAS_FICHAS[unidadeAtual]||{}).mensal, mb=(METAS_BUFFET[unidadeAtual]||{}).mensal;
+      const split=[['Dom a Qui',0],['Sex e Sáb',5]];
+      if(g('mm_fichas')){ if(mf) mmBloco(g('mm_fichas'),'fichas','fichas',dt=>metaDiaMensal(mf,dt),A.fichas||0,vazio('fichas')?null:ival('fichas'),split); else g('mm_fichas').style.display='none'; }
+      if(g('mm_buffets')){ if(mb) mmBloco(g('mm_buffets'),'buffets','buffets',dt=>metaDiaMensal(mb,dt),A.buffets||0,vazio('buffets')?null:ival('buffets'),split); else g('mm_buffets').style.display='none'; }
+    }
     if(g('mm_chamados')) mmZero(g('mm_chamados'),'chamados',A.chamados||0,vazio('chamados')?0:ival('chamados'));
     if(g('mm_cancel')) mmZero(g('mm_cancel'),'cancelamentos',A.cancelamentos||0,vazio('cancel')?0:ival('cancel'));
     if(g('mm_pedidosIfood')&&temLoja(unidadeAtual)) mmZero(g('mm_pedidosIfood'),'pedidos não confirmados',A.pedidosConfirmadosIfood||0,vazio('pedidosIfood')?0:ival('pedidosIfood'));
@@ -1369,7 +1406,7 @@ function renderMetaMes(){
     else { const v=ival('motoboys'); mb.className='meta-mes mini '+(v>=metaMb?'ok':'err'); mb.innerHTML=v>=metaMb?`✓ Meta mínima de hoje (${metaMb}) atingida`:`🚨 ABAIXO da meta mínima de hoje: faltam <b>${metaMb-v} motoboy${metaMb-v>1?'s':''}</b> (meta ${metaMb})`; mb.style.display='block'; }
   }
 }
-document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys'].includes(e.target&&e.target.id)) renderMetaMes(); });
+document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys','fichas','buffets'].includes(e.target&&e.target.id)) renderMetaMes(); });
 
 // ── Celular autorizado: cada senha só funciona no celular que o administrador aprovou ──
 function aparelhoId(){
@@ -1980,6 +2017,13 @@ function atualizarMetas(){
   // Pedidos Não Confirmados iFood — só lojas com entrega própria
   const cardPedidos=document.getElementById('cardPedidosIfood');
   if(cardPedidos) cardPedidos.style.display=temLoja(unidadeAtual)?'flex':'none';
+  // fichas de fliperama e buffets
+  const fb=temFliperBuffet(unidadeAtual), hojeT=dataTurno();
+  [['cardFichas','metaFichasDisplay',METAS_FICHAS],['cardBuffets','metaBuffetsDisplay',METAS_BUFFET]].forEach(([c,m,metas])=>{
+    const card=document.getElementById(c); if(!card) return; card.style.display=fb?'flex':'none';
+    const mensal=(metas[unidadeAtual]||{}).mensal, md=metaDiaMensal(mensal,hojeT);
+    document.getElementById(m).textContent=mensal?`Meta de hoje: ${Math.round(md)} · Meta do mês: ${Number(mensal).toLocaleString('pt-BR')}`:'Sem meta definida';
+  });
 }
 
 // ── Salvar Start Dina ──
@@ -2277,6 +2321,8 @@ function verificarBotaoRegistrar(){
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
+  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
+  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
@@ -2475,6 +2521,8 @@ async function registrar(){
     faturamento:valFat(),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
+    fichasFliperama:temFliperBuffet(unidadeAtual)?ival('fichas'):null,
+    buffets:temFliperBuffet(unidadeAtual)?ival('buffets'):null,
     vendasCanceladasCaixa:ival('vendasCanceladas'),
     vendasCanceladasMotivo:document.getElementById('vendasCanceladasMotivo').value.trim(),
     pedidosConfirmadosIfood:temLoja(unidadeAtual)?ival('pedidosIfood'):null,
