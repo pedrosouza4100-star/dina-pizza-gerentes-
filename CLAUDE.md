@@ -45,6 +45,7 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 | `admin.html` | Administração: metas, senhas (gerente e assistente de cada loja), celulares autorizados e localização das lojas (aba Lojas e celulares), desbloqueios e itens do checklist (aba Checklist) | getMetas, saveMetas, getPedidosDesbloqueio, desbloquear, desbloquearFalta, marcarAtendido, limparDesbloqueios, chkAdminListar, chkAdminSalvar, chkAdminAtivo, chkAdminMover |
 | `dashboard.html`, `painel.html` | Dashboard mensal | getDashboard, getPresenca |
 | `dashboard-v2.html` | Abre o Dashboard V2 (servido pelo Apps Script) num quadro, depois da senha da gestão; manda a `chave` exigida pelo `dashboardV2` | dashboardV2 |
+| `callcenter.html` | Endereço fácil do painel do call center (gerentes.dinapizza.com.br/callcenter): abre num quadro o `serveCallCenter` do Apps Script; sem senha, como antes | serveCallCenter, getCallCenter |
 | `checklist.html` | Checklist operacional | — |
 | `checklist_regional.html` | Checklist do gerente regional (pendências e reincidência) | getChecklistPendencias, salvarChecklist |
 | `CONTROLE_GERAL_GESTAO.html`, `Gerente_*.html` | Páginas estáticas de gestão por loja | — |
