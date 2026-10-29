@@ -266,6 +266,19 @@
         </div>
       </div>
       <div>
+        <div class="section-title">Metas de Fichas de Fliperama e Buffets por Loja</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Meta do <b>mês</b>, em quantidade. O sistema divide sozinho: 50% nos dias de domingo a quinta e 50% nas sextas e sábados do mês. Capão Raso e Expressa não têm esses serviços. Deixe 0 (ou em branco) para "sem meta".</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unidade</th><th>🕹️ Fichas de fliperama — meta do mês</th><th>🍽️ Buffets — meta do mês</th></tr></thead>
+            <tbody id="tabelaFliperBuffet"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px">
+          <button class="save-metas-btn" onclick="salvarMetasFliperBuffet()">Salvar Fichas e Buffets</button>
+        </div>
+      </div>
+      <div>
         <div class="section-title">Metas de Tempo de Entrega (Global)</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
           <div style="font-size:0.78rem;color:var(--muted)">Válido para todas as lojas com entrega própria. O gerente registra 3 vezes por noite.</div>
@@ -581,10 +594,10 @@
       const ch=l.chkHorario;
       if(ch&&ch.bloqueio){
         nDesb++;
-        h+=linha('err','Placar','🔒 BLOQUEADO — checklist de '+ch.bloqueio.dia+' às '+ch.bloqueio.hora+' ('+ch.bloqueio.n+'º atraso)'+(ch.bloqueio.pedido?' · pediu desbloqueio':''));
+        h+=linha('err','Placar','🔒 BLOQUEADO — '+(ch.bloqueio.oque||'Checklist de abertura')+' de '+ch.bloqueio.dia+' às '+ch.bloqueio.hora+' ('+ch.bloqueio.n+'º atraso)'+(ch.bloqueio.pedido?' · pediu desbloqueio':''));
         h+=`<div style="margin:4px 0 6px 100px"><button class="cob-btn" style="background:var(--yellow);color:#000" onclick="liberarChecklist('${l.unidade.replace(/'/g,"\\'")}')">🔓 Liberar placar</button></div>`;
       } else if(ch&&ch.atrasosMes){
-        h+=linha('av','Horário',ch.atrasosMes+' atraso'+(ch.atrasosMes>1?'s':'')+' no checklist de abertura este mês'+(ch.ultimoAtraso?' (último '+ch.ultimoAtraso.dia+' às '+ch.ultimoAtraso.hora+')':''));
+        h+=linha(ch.atrasosMes>=2?'err':'av','Horário',ch.atrasosMes+' atraso'+(ch.atrasosMes>1?'s':'')+' no horário (checklist/Start Dina) este mês'+(ch.atrasosMes>=2?' — no próximo, bloqueia':'')+(ch.ultimoAtraso?' (último '+ch.ultimoAtraso.dia+' às '+ch.ultimoAtraso.hora+')':''));
       }
       // desbloqueios
       if(l.desbloqueios.length){ nDesb++; h+=linha('err','Desbloqueio',l.desbloqueios.length+' pedido'+(l.desbloqueios.length>1?'s':'')+' esperando'); }
@@ -820,7 +833,8 @@
   const MOTOBOYS_PADRAO={"Expressa":{semana:3,fds:6},"Capão Raso":{semana:2,fds:4},"Água Verde":{semana:3,fds:5},"Uberaba":{semana:3,fds:4},"Colombo":{semana:2,fds:5},"Fazenda Rio Grande":{semana:2,fds:4}};
   const TEMPO_PADRAO=[30,50,30];
 
-  let metasFat={}, metasAval={}, metasMotoboys={}, metasTempo=[], premio=100;
+  let metasFat={}, metasAval={}, metasMotoboys={}, metasTempo=[], premio=100, metasFichas={}, metasBuffet={};
+  const LOJAS_SEM_FLIPER_BUFFET=['Capão Raso','Expressa'];
 
   function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 
@@ -832,6 +846,7 @@
       metasAval=d.metasAval||AVAL_PADRAO;
       metasMotoboys=d.metasMotoboys||JSON.parse(JSON.stringify(MOTOBOYS_PADRAO));
       metasTempo=d.metasTempo||[...TEMPO_PADRAO];
+      metasFichas=d.metasFichas||{}; metasBuffet=d.metasBuffet||{};
       premio=d.premio||100;
     }catch(e){
       metasFat=JSON.parse(JSON.stringify(FAT_PADRAO));
@@ -884,7 +899,7 @@
     const selF = document.getElementById('lojaDesbloqueioFalta');
     if(selD) selD.innerHTML = '<option value="">— Selecione a loja —</option>' + opts;
     if(selF) selF.innerHTML = '<option value="">— Selecione a loja —</option>' + opts;
-    renderTabela();renderFat();renderAval();renderMotoboys();renderTempo();renderPremio();
+    renderTabela();renderFat();renderAval();renderMotoboys();renderFliperBuffet();renderTempo();renderPremio();
     carregarPedidosDesbloqueio();
     carregarHoje();
   }
@@ -1004,6 +1019,26 @@
     LOJAS_ENTREGA.forEach(u=>{const k=u.replace(/\s/g,'_');mb[u]={semana:parseInt(document.getElementById('mb_s_'+k).value)||0,fds:parseInt(document.getElementById('mb_f_'+k).value)||0};});
     const ok=await enviarMetas({metasMotoboys:mb});
     if(ok){metasMotoboys=mb;registrarLog('Metas de motoboys salvas.','ok');showToast('Metas de motoboys salvas!','ok');}
+    else showToast('Erro ao salvar.','warn');
+  }
+
+  // ── Fichas de fliperama e buffets (quantidade; meta do mês, dividida 50% dom–qui e 50% sex–sáb) ──
+  function renderFliperBuffet(){
+    const tbody=document.getElementById('tabelaFliperBuffet'); if(!tbody) return; tbody.innerHTML='';
+    UNIDADES.filter(u=>!LOJAS_SEM_FLIPER_BUFFET.includes(u)).forEach(u=>{
+      const f=metasFichas[u]||{}, b=metasBuffet[u]||{}, k=u.replace(/\s/g,'_');
+      const inp=(id,v)=>`<td><input class="meta-input" type="number" min="0" id="${id}_${k}" value="${v?v:''}" placeholder="sem meta" style="width:110px"></td>`;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="font-weight:600">${u}</td>`+inp('fi_m',f.mensal)+inp('bu_m',b.mensal);
+      tbody.appendChild(tr);
+    });
+  }
+  async function salvarMetasFliperBuffet(){
+    const fi={}, bu={}, v=id=>parseInt(document.getElementById(id).value)||0;
+    UNIDADES.filter(u=>!LOJAS_SEM_FLIPER_BUFFET.includes(u)).forEach(u=>{ const k=u.replace(/\s/g,'_');
+      fi[u]={mensal:v('fi_m_'+k)}; bu[u]={mensal:v('bu_m_'+k)}; });
+    const ok=await enviarMetas({metasFichas:fi,metasBuffet:bu});
+    if(ok){metasFichas=fi;metasBuffet=bu;registrarLog('Metas de fichas de fliperama e buffets salvas.','ok');showToast('Metas de fichas e buffets salvas!','ok');}
     else showToast('Erro ao salvar.','warn');
   }
 
