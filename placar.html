@@ -615,6 +615,8 @@ const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Camp
 // Fichas de fliperama e buffets: meta MENSAL; a do dia sai de 50% nos dias de dom a qui e 50% nas sextas e sábados
 const LOJAS_SEM_FLIPER_BUFFET=['Capão Raso','Expressa'];
 let METAS_FICHAS={}, METAS_BUFFET={};
+// fichas e buffets começaram a ser lançados em 29/10/2026: em outubro a meta só conta de 29 a 31 (proporcional)
+const FLIPER_BUFFET_INICIO=new Date(2026,9,29);
 function temFliperBuffet(u){ return !!u && !LOJAS_SEM_FLIPER_BUFFET.includes(u); }
 function metaDiaMensal(mensal, dt){
   mensal=Number(mensal)||0; if(!mensal) return 0;
@@ -1445,8 +1447,8 @@ function renderMetaMes(){
     if(temFliperBuffet(unidadeAtual)){
       const mf=(METAS_FICHAS[unidadeAtual]||{}).mensal, mb=(METAS_BUFFET[unidadeAtual]||{}).mensal;
       const split=[['Dom a Qui',0],['Sex e Sáb',5]];
-      if(g('mm_fichas')){ if(mf) mmBloco(g('mm_fichas'),'fichas','fichas',dt=>metaDiaMensal(mf,dt),A.fichas||0,vazio('fichas')?null:ival('fichas'),split); else g('mm_fichas').style.display='none'; }
-      if(g('mm_buffets')){ if(mb) mmBloco(g('mm_buffets'),'buffets','buffets',dt=>metaDiaMensal(mb,dt),A.buffets||0,vazio('buffets')?null:ival('buffets'),split); else g('mm_buffets').style.display='none'; }
+      if(g('mm_fichas')){ if(mf) mmBloco(g('mm_fichas'),'fichas','fichas',dt=>dt<FLIPER_BUFFET_INICIO?0:metaDiaMensal(mf,dt),A.fichas||0,vazio('fichas')?null:ival('fichas'),split); else g('mm_fichas').style.display='none'; }
+      if(g('mm_buffets')){ if(mb) mmBloco(g('mm_buffets'),'buffets','buffets',dt=>dt<FLIPER_BUFFET_INICIO?0:metaDiaMensal(mb,dt),A.buffets||0,vazio('buffets')?null:ival('buffets'),split); else g('mm_buffets').style.display='none'; }
     }
     if(g('mm_chamados')) mmZero(g('mm_chamados'),'chamados',A.chamados||0,vazio('chamados')?0:ival('chamados'));
     if(g('mm_cancel')) mmZero(g('mm_cancel'),'cancelamentos',A.cancelamentos||0,vazio('cancel')?0:ival('cancel'));
