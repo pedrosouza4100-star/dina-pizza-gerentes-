@@ -45,7 +45,7 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 | `admin.html` | Administração: metas, senhas (gerente e assistente de cada loja), celulares autorizados e localização das lojas (aba Lojas e celulares), desbloqueios e itens do checklist (aba Checklist) | getMetas, saveMetas, getPedidosDesbloqueio, desbloquear, desbloquearFalta, marcarAtendido, limparDesbloqueios, chkAdminListar, chkAdminSalvar, chkAdminAtivo, chkAdminMover |
 | `dashboard.html`, `painel.html` | Dashboard mensal | getDashboard, getPresenca |
 | `dashboard-v2.html` | Abre o Dashboard V2 (servido pelo Apps Script) num quadro, depois da senha da gestão; manda a `chave` exigida pelo `dashboardV2` | dashboardV2 |
-| `callcenter.html` | Endereço fácil do painel do call center (gerentes.dinapizza.com.br/callcenter): abre num quadro o `serveCallCenter` do Apps Script; sem senha, como antes | serveCallCenter, getCallCenter |
+| `callcenter.html` | Painel do call center em gerentes.dinapizza.com.br/callcenter: cópia do HTML do `serveCallCenter` com o endereço oficial do servidor fixo (o `ScriptApp.getService().getUrl()` do Apps Script pode devolver outro endereço e o painel ficava carregando). Sem senha, como antes. Se mudar o painel no Codigo.gs, atualize esta cópia também | serveCallCenter, getCallCenter |
 | `checklist.html` | Checklist operacional | — |
 | `checklist_regional.html` | Checklist do gerente regional (pendências e reincidência) | getChecklistPendencias, salvarChecklist |
 | `CONTROLE_GERAL_GESTAO.html`, `Gerente_*.html` | Páginas estáticas de gestão por loja | — |
