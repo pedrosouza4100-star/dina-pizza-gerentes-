@@ -53,6 +53,11 @@
   .progresso{position:fixed;bottom:0;left:0;right:0;background:var(--dark);border-top:1px solid var(--border);padding:14px 4vw;display:flex;align-items:center;gap:14px;z-index:60}
   .progresso-txt{font-size:0.8rem;color:var(--muted);white-space:nowrap}
   .progresso-txt strong{color:var(--gold)}
+  .corr{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px}
+  .corr.atrasada{border-color:var(--danger)}
+  .corr.alvo{box-shadow:0 0 0 3px var(--gold)}
+  .corr .acoes{display:flex;gap:8px;margin-top:10px}
+  .corr .acoes button{flex:1;padding:11px;border-radius:8px;border:none;font-weight:700;font-size:0.85rem;cursor:pointer}
   .msg{padding:12px 16px;border-radius:10px;font-size:0.85rem;font-weight:700;text-align:center;display:none}
   .msg.ok{background:rgba(46,204,113,0.15);border:1px solid var(--green);color:var(--green)}
   .msg.err{background:rgba(255,68,68,0.15);border:1px solid var(--danger);color:var(--danger)}
@@ -72,6 +77,7 @@
 </header>
 
 <div id="telaSelecao">
+  <div id="corrBox" style="display:none;margin-bottom:16px"></div>
   <div class="card">
     <div class="sel-label">Selecione a unidade</div>
     <select id="selUnidade" onchange="document.getElementById('btnIniciar').disabled=!this.value">
@@ -201,6 +207,63 @@ function trocarLoja(){
   respostasItens={}; respostasPendencias={};
 }
 
+// ── Correções que os gerentes justificaram: o regional confirma ou recusa em até 18 h (não precisa estar na loja) ──
+let CORR=[];
+const CORR_ALVO=new URLSearchParams(location.search).get('confirmar')||'';
+function chaveGestao(){ try{ return localStorage.getItem('dina_gestao_hash')||sessionStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
+async function carregarCorrecoes(){
+  const box=document.getElementById('corrBox');
+  try{
+    if(!(await recursos()).includes('regionalPendencias')) return;
+    // espera a senha da gestão ser confirmada
+    for(let i=0;i<120 && (document.getElementById('gGuard')||document.getElementById('gGuardCss')); i++) await new Promise(r=>setTimeout(r,500));
+    const r=await jsonp({action:'regPendAguardando',chave:chaveGestao()},20000);
+    if(!r||!r.ok){ box.style.display='none'; return; }
+    CORR=r.itens||[];
+  }catch(e){ return; }
+  renderCorrecoes();
+}
+function renderCorrecoes(){
+  const box=document.getElementById('corrBox');
+  if(!CORR.length){
+    box.innerHTML=CORR_ALVO?'<div class="card"><div class="sel-label">✅ Correções para confirmar</div><div style="color:var(--muted);font-size:0.9rem">Nada esperando confirmação agora (essa correção já foi confirmada ou voltou para o gerente).</div></div>':'';
+    box.style.display=CORR_ALVO?'block':'none'; return;
+  }
+  const atras=CORR.filter(c=>c.atrasada).length;
+  box.innerHTML='<div class="card"><div class="sel-label">✅ Correções para confirmar ('+CORR.length+')</div><div style="font-size:0.8rem;color:var(--muted)">Os gerentes contaram o que fizeram nas pendências da sua visita. Você tem <b>18 horas</b> para confirmar ou recusar'+(atras?' — <b style="color:var(--danger)">'+atras+' já passou do prazo</b>':'')+'.</div>'+
+    CORR.map(c=>`<div class="corr${c.atrasada?' atrasada':''}${c.pendId===CORR_ALVO?' alvo':''}" id="corr_${c.pendId}">
+      <div style="font-weight:700">${esc(c.unidade)} · ${esc(c.itemLabel)}</div>
+      <div class="pend-detail" style="margin-top:6px"><strong>Problema apontado:</strong> ${esc(c.descricao)||'—'}</div>
+      <div class="pend-detail" style="background:rgba(46,204,113,0.08);border-left:3px solid var(--green);padding:8px 10px;border-radius:6px;margin:8px 0;color:#ddd"><strong>O que o gerente fez:</strong> ${esc(c.justificativa)||'(mandou só a foto)'}${c.foto&&/^https/.test(c.foto)?`<br><a href="${esc(c.foto)}" target="_blank" style="color:var(--gold);font-weight:700">📷 Ver a foto</a>`:''}</div>
+      <div style="font-size:0.75rem;color:${c.atrasada?'var(--danger)':'var(--muted)'}">Justificado em ${esc(c.justificadaEm)} por ${esc(c.justificadaPor)} · ${c.atrasada?'<b>passou do prazo ('+c.horas+' h)</b>':'confirmar até '+esc(c.prazo)}</div>
+      <div class="acoes"><button style="background:var(--green);color:#0A0A0A" onclick="decidirCorr('${c.pendId}','confirmar')">✅ Confirmar</button><button style="background:var(--danger);color:#fff" onclick="abrirRecusa('${c.pendId}')">❌ Não está certo</button></div>
+      <div id="recusa_${c.pendId}" style="display:none;margin-top:10px"><textarea id="motivo_${c.pendId}" placeholder="O que ainda está errado? (o gerente vai ver isso e o placar dele trava de novo)"></textarea><button class="btn" style="margin-top:8px" onclick="decidirCorr('${c.pendId}','recusar')">Devolver para o gerente</button></div>
+      <div id="corrMsg_${c.pendId}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
+    </div>`).join('')+'</div>';
+  box.style.display='block';
+  if(CORR_ALVO){ const el=document.getElementById('corr_'+CORR_ALVO); if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),300); }
+}
+function abrirRecusa(id){ const el=document.getElementById('recusa_'+id); el.style.display=el.style.display==='none'?'block':'none'; }
+async function decidirCorr(id, decisao){
+  const m=document.getElementById('corrMsg_'+id); m.textContent='';
+  const nome=(document.getElementById('nomeRegional').value||'').trim();
+  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (Gerente Regional)" abaixo antes de confirmar.'; return; }
+  const motivo=decisao==='recusar'?(document.getElementById('motivo_'+id).value||'').trim():'';
+  if(decisao==='recusar' && motivo.length<5){ m.textContent='Escreva o que ainda está errado.'; return; }
+  try{ localStorage.setItem('dina_regional_nome',nome); }catch(e){}
+  m.style.color='var(--muted)'; m.textContent='Salvando...';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'regPendDecidir',pendId:id,decisao,motivo,regional:nome,chave:chaveGestao()})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    CORR=CORR.filter(c=>c.pendId!==id); renderCorrecoes();
+    const box=document.getElementById('corrBox');
+    const aviso=document.createElement('div'); aviso.className='msg ok'; aviso.style.display='block'; aviso.style.marginTop='10px';
+    aviso.textContent=decisao==='confirmar'?'✅ Correção confirmada. A pendência foi baixada.':'↩️ Devolvida para o gerente. O placar dele trava até ele justificar de novo.';
+    box.style.display='block'; box.appendChild(aviso); setTimeout(()=>aviso.remove(),6000);
+  }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
+}
+
 let unidadeAtual='';
 let nomeRegionalAtual='';
 let pendencias=[];
@@ -224,6 +287,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   });
   try{ const n=localStorage.getItem('dina_regional_nome'); if(n) document.getElementById('nomeRegional').value=n; }catch(e){}
   recursos();
+  carregarCorrecoes();
 });
 
 async function iniciarChecklist(){
@@ -273,6 +337,7 @@ function renderTudo(){
         <div class="pend-item-label">${p.itemLabel}${p.vezesReincidente>=2?`<span class="pend-reincidencia-tag">Reincidência ${p.vezesReincidente}x</span>`:''}</div>
         <div class="pend-detail"><strong>Problema apontado:</strong> ${p.descricaoProblema||'—'}</div>
         <div class="pend-detail"><strong>Sugestão dada:</strong> ${p.sugestaoMelhoria||'—'}</div>
+        ${p.situacao==='justificada'?`<div class="pend-detail" style="color:#ddd"><strong>O gerente disse que fez:</strong> ${esc(p.justificativa)||'(só foto)'}${p.fotoJustificativa&&/^https/.test(p.fotoJustificativa)?` · <a href="${esc(p.fotoJustificativa)}" target="_blank" style="color:var(--gold)">ver foto</a>`:''}</div>`:''}
         <div class="pend-toggle">
           <button class="sel-sim" onclick="marcarResolucao('${p.itemId}',true,this)">✅ Resolvido</button>
           <button class="sel-nao" onclick="marcarResolucao('${p.itemId}',false,this)">❌ Ainda não resolvido</button>
