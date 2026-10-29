@@ -482,6 +482,19 @@
         <span class="tag" id="cancelTag"></span>
         <div class="meta-mes mini" id="mm_cancel"></div>
       </div>
+      <!-- Fichas de fliperama e buffets (quantidade) — não aparecem no Capão Raso e na Expressa -->
+      <div class="card card-full" id="cardFichas" style="display:none">
+        <div class="card-label">🕹️ Fichas de Fliperama Vendidas</div>
+        <div class="card-meta" id="metaFichasDisplay"></div>
+        <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">fichas</span></div>
+        <div class="meta-mes" id="mm_fichas"></div>
+      </div>
+      <div class="card card-full" id="cardBuffets" style="display:none">
+        <div class="card-label">🍽️ Buffets Vendidos</div>
+        <div class="card-meta" id="metaBuffetsDisplay"></div>
+        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">buffets</span></div>
+        <div class="meta-mes" id="mm_buffets"></div>
+      </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
         <div class="card-label">💳 Vendas Canceladas no Caixa</div>
@@ -547,6 +560,16 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 
 const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 
+// Fichas de fliperama e buffets: meta MENSAL; a do dia sai de 50% nos dias de dom a qui e 50% nas sextas e sábados
+const LOJAS_SEM_FLIPER_BUFFET=['Capão Raso','Expressa'];
+let METAS_FICHAS={}, METAS_BUFFET={};
+function temFliperBuffet(u){ return !!u && !LOJAS_SEM_FLIPER_BUFFET.includes(u); }
+function metaDiaMensal(mensal, dt){
+  mensal=Number(mensal)||0; if(!mensal) return 0;
+  const a=dt.getFullYear(), m=dt.getMonth(), total=new Date(a,m+1,0).getDate(); let sexSab=0;
+  for(let d=1;d<=total;d++){ const w=new Date(a,m,d).getDay(); if(w===5||w===6) sexSab++; }
+  const w=dt.getDay(); return (w===5||w===6)?(mensal/2)/sexSab:(mensal/2)/(total-sexSab);
+}
 let METAS_FAT={},METAS_AVAL={},PREMIO={semanaCompleto:200,semanaParcial:100,fdsCompleto:100,fdsParcial:50},unidadeAtual=null,fotoBase64=null;
 
 // Fotos de motoboys e tempos
@@ -749,11 +772,11 @@ let _ultimoLogTravado='';
 
 // ── SALVAR TEMPO ──
 // ── Envia dado em tempo real para o Call Center ──
-function enviarTempoReal(tipo, dados){
+function enviarTempoReal(tipo, dados, aoResponder){
   const cb='trCb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
-  window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);};
+  window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);if(aoResponder)try{aoResponder(d);}catch(e){}};
   s.onerror=()=>{clearTimeout(t);delete window[cb];};
   // Monta parâmetros simples
   let params='action=salvarTempoReal';
@@ -1040,12 +1063,15 @@ async function carregarMetas(){
     if(d.premio&&typeof d.premio==='object') PREMIO=d.premio;
     else if(typeof d.premio==='number') PREMIO={semanaCompleto:d.premio,semanaParcial:d.premio/2,fdsCompleto:d.premio/2,fdsParcial:d.premio/4};
     if(d.metasMotoboys) Object.assign(METAS_MOTOBOYS,d.metasMotoboys);
+    if(d.metasFichas) METAS_FICHAS=d.metasFichas;
+    if(d.metasBuffet) METAS_BUFFET=d.metasBuffet;
     if(d.metasTempo&&d.metasTempo.length===3) METAS_TEMPO.splice(0,3,...d.metasTempo);
   }
   catch(e){
     METAS_FAT=JSON.parse(JSON.stringify(FAT_DEF));
     METAS_AVAL=JSON.parse(JSON.stringify(AVAL_DEF));
   }
+  if(unidadeAtual && typeof atualizarMetas==='function') atualizarMetas();
   if(unidadeAtual && typeof renderMetaMes==='function') renderMetaMes();
 }
 
@@ -1295,7 +1321,7 @@ function diasDoMesTurno(){ const d=dataTurno(); return {d, dia:d.getDate(), tota
 async function carregarMetaMes(){
   MES_ATE_ONTEM=null;
   const {dia,mes,ano}=diasDoMesTurno(), u=unidadeAtual;
-  const z={faturamento:0,google:0,ifood:0,chamados:0,cancelamentos:0,pedidosConfirmadosIfood:0,dias:0};
+  const z={faturamento:0,google:0,ifood:0,chamados:0,cancelamentos:0,pedidosConfirmadosIfood:0,dias:0,fichas:0,buffets:0};
   if(dia===1){ MES_ATE_ONTEM=z; renderMetaMes(); return; }
   const p2=n=>String(n).padStart(2,'0');
   try{
@@ -1308,7 +1334,7 @@ async function carregarMetaMes(){
 }
 function mmFmt(v,tipo){ return tipo==='R$' ? 'R$ '+Math.round(v).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')+' '+tipo; }
 // metaDoDia(date) → meta daquele dia; real = valor de hoje digitado (null se vazio)
-function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
+function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
   const {d,dia,total,mes,ano}=diasDoMesTurno();
   const md=k=>metaDoDia(new Date(ano,mes,k));
   let metaMes=0, espOntem=0; for(let k=1;k<=total;k++){ metaMes+=md(k); if(k<dia) espOntem+=md(k); }
@@ -1327,7 +1353,7 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
   else if(dif>=0) h+=`<div class="mm-tit">📈 ACIMA DA META DO MÊS (+${mmFmt(dif,tipo)})</div>`;
   else h+=`<div class="mm-tit">${pct<90?'🚨':'📉'} ABAIXO DA META DO MÊS (−${mmFmt(-dif,tipo)})</div>`;
   if(temHoje) h+=`Hoje: <b>${mmFmt(real,tipo)}</b> — ${real>=metaHoje?'<span style="color:var(--green)">bateu a meta do dia</span>':'<span style="color:#ff6b6b">abaixo da meta do dia</span>'} (${mmFmt(metaHoje,tipo)}${real<metaHoje?', faltaram '+mmFmt(metaHoje-real,tipo):''}).<br>`;
-  if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${tipo==='R$'?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
+  if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${(tipo==='R$'||tipo==='buffets')?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
   if(falta<=0) h+=`<div class="mm-dia" style="color:var(--green)">🏆 Meta do mês (${mmFmt(metaMes,tipo)}) já batida!</div>`;
   else if(diasDepois<=0) h+=`<div class="mm-dia" style="color:#ff6b6b">Mês encerrado: faltaram ${mmFmt(falta,tipo)} para a meta de ${mmFmt(metaMes,tipo)}.</div>`;
   else {
@@ -1335,6 +1361,11 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real){
     const k = metaRestante>0 ? falta/metaRestante : 0;
     const porDia = falta/diasDepois;
     let detalhe='';
+    if(divisao){ // quanto por dia em cada grupo de dias (ex.: Dom a Qui / Sex e Sáb)
+      const ex=w=>{ for(let k=(temHoje?dia+1:dia);k<=total;k++){ const dd=new Date(ano,mes,k); const ws=dd.getDay(); if((w===5)?(ws===5||ws===6):!(ws===5||ws===6)) return md(k); } return 0; };
+      const partes=divisao.map(([rot,w])=>{ const v=ex(w); return v?rot+': '+mmFmt(v*k,tipo)+' por dia':''; }).filter(Boolean);
+      if(partes.length) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">${partes.join(' · ')}</span>`;
+    }
     if(tipo==='R$' && METAS_FAT[unidadeAtual]){ const m=METAS_FAT[unidadeAtual]||FAT_DEF[unidadeAtual]; if(m&&m.semana!==m.fds) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">Seg a Qui: ${mmFmt(m.semana*k,tipo)} por dia · Sex a Dom: ${mmFmt(m.fds*k,tipo)} por dia</span>`; }
     h+=`<div class="mm-dia" style="color:${cls==='ok'?'var(--green)':cls==='av'?'#FFD000':'#ff6b6b'}">👉 Você precisa fazer ${tipo==='R$'?'em média ':''}<span style="font-size:1.15rem">${mmFmt(porDia,tipo)} por dia</span> nos ${diasDepois} dia${diasDepois>1?'s':''} que ${temHoje?'restam':'restam (contando hoje)'}${detalhe}</div>`;
   }
@@ -1358,6 +1389,12 @@ function renderMetaMes(){
     if(g('mm_fat')&&mf) mmBloco(g('mm_fat'),'faturamento','R$',dt=>fdsData(dt)?(mf.fds||0):(mf.semana||0),A.faturamento||0,vazio('fat')?null:valFat());
     if(g('mm_google')&&ma.google) mmBloco(g('mm_google'),'Google','avaliações',()=>ma.google,A.google||0,vazio('google')?null:ival('google'));
     if(g('mm_ifood')&&ma.ifood) mmBloco(g('mm_ifood'),'iFood','avaliações',()=>ma.ifood,A.ifood||0,vazio('ifood')?null:ival('ifood'));
+    if(temFliperBuffet(unidadeAtual)){
+      const mf=(METAS_FICHAS[unidadeAtual]||{}).mensal, mb=(METAS_BUFFET[unidadeAtual]||{}).mensal;
+      const split=[['Dom a Qui',0],['Sex e Sáb',5]];
+      if(g('mm_fichas')){ if(mf) mmBloco(g('mm_fichas'),'fichas','fichas',dt=>metaDiaMensal(mf,dt),A.fichas||0,vazio('fichas')?null:ival('fichas'),split); else g('mm_fichas').style.display='none'; }
+      if(g('mm_buffets')){ if(mb) mmBloco(g('mm_buffets'),'buffets','buffets',dt=>metaDiaMensal(mb,dt),A.buffets||0,vazio('buffets')?null:ival('buffets'),split); else g('mm_buffets').style.display='none'; }
+    }
     if(g('mm_chamados')) mmZero(g('mm_chamados'),'chamados',A.chamados||0,vazio('chamados')?0:ival('chamados'));
     if(g('mm_cancel')) mmZero(g('mm_cancel'),'cancelamentos',A.cancelamentos||0,vazio('cancel')?0:ival('cancel'));
     if(g('mm_pedidosIfood')&&temLoja(unidadeAtual)) mmZero(g('mm_pedidosIfood'),'pedidos não confirmados',A.pedidosConfirmadosIfood||0,vazio('pedidosIfood')?0:ival('pedidosIfood'));
@@ -1369,7 +1406,7 @@ function renderMetaMes(){
     else { const v=ival('motoboys'); mb.className='meta-mes mini '+(v>=metaMb?'ok':'err'); mb.innerHTML=v>=metaMb?`✓ Meta mínima de hoje (${metaMb}) atingida`:`🚨 ABAIXO da meta mínima de hoje: faltam <b>${metaMb-v} motoboy${metaMb-v>1?'s':''}</b> (meta ${metaMb})`; mb.style.display='block'; }
   }
 }
-document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys'].includes(e.target&&e.target.id)) renderMetaMes(); });
+document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys','fichas','buffets'].includes(e.target&&e.target.id)) renderMetaMes(); });
 
 // ── Celular autorizado: cada senha só funciona no celular que o administrador aprovou ──
 function aparelhoId(){
@@ -1474,7 +1511,7 @@ async function chkRecursos(){
 }
 async function chkServidorV2(){ if(_chkV2===null){ const rc=await chkRecursos(); if(_chkRecursos===null) return false; _chkV2=rc.includes('checklistV2'); } return _chkV2; }
 
-// ── Horário do checklist de abertura (16h30–18h30; Isaac Manhã 9h30–11h) ──
+// ── Horário do checklist de abertura e do Start Dina (17h00–19h20; Isaac Manhã 9h30–11h20) ──
 // Antes do horário: não abre. Depois: libera com aviso. 1º atraso do mês = aviso; do 2º em diante o placar
 // fica bloqueado a partir do dia seguinte até o administrador liberar. Quem decide e registra é o servidor.
 let CHK_SIT=null, CHK_OFFSET=0, _chkSitTimer=null;
@@ -1500,12 +1537,12 @@ function chkPosicao(){
   const m=chkMinH(chkHoraSP());
   return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
 }
-const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:00'}};
-function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'16:30',fim:'18:30'}; }
+const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:20'}};
+function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'17:00',fim:'19:20'}; }
 function chkJanelaTxt(){ const j=chkJanelaAtual(); return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
 function renderAvisoHorario(){
   const el=document.getElementById('chkAvisoHorario'); if(!el) return;
-  el.innerHTML=`⏰ <b>Seu horário de preenchimento do checklist é das <span style="color:#FFD000">${chkJanelaTxt()}</span>.</b><br><span style="color:#ff8a8a;font-weight:700">Caso você não cumpra esse horário, o seu placar será bloqueado.</span>`;
+  el.innerHTML=`⏰ <b>O checklist de abertura e o Start Dina devem ser feitos das <span style="color:#FFD000">${chkJanelaTxt()}</span>.</b><br><span style="color:#ff8a8a;font-weight:700">Você tem 2 chances no mês. No 3º atraso, o seu placar será bloqueado e você terá que pedir autorização para o desbloqueio.</span><br><b>Respeite os horários do preenchimento do placar.</b>`;
 }
 function atualizarTextoAntesDoHorario(){
   if(chkAberturaFeita||!CHK_SIT) return;
@@ -1517,7 +1554,7 @@ function renderBloqueioPlacar(){
   const b=CHK_SIT&&CHK_SIT.bloqueio;
   clearTimeout(_chkSitTimer);
   if(!b){ ov.style.display='none'; _chkSitTimer=setTimeout(carregarSituacaoChk, 5*60000); return; }
-  document.getElementById('chkBloqTexto').innerHTML=`O checklist de abertura do dia <b>${b.dia}</b> foi feito às <b>${b.hora}</b>, fora do horário (${chkJanelaTxt()}).<br><br>Foi o <b>${b.n}º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.`;
+  document.getElementById('chkBloqTexto').innerHTML=`O <b>${(b.oque||'Checklist de abertura').toLowerCase()}</b> do dia <b>${b.dia}</b> foi feito às <b>${b.hora}</b>, fora do horário (${chkJanelaTxt()}).<br><br>Foi o <b>${b.n}º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.`;
   const bt=document.getElementById('chkBloqBtn'), stt=document.getElementById('chkBloqStatus');
   if(b.pedido){ bt.style.display='none'; stt.textContent='⏳ Pedido de desbloqueio enviado'+(b.pedidoEm?' em '+b.pedidoEm:'')+'. Aguarde o administrador liberar — esta tela se atualiza sozinha.'; }
   else { bt.style.display='block'; bt.disabled=false; stt.textContent=''; }
@@ -1537,11 +1574,16 @@ function chkMostrarAviso(titulo, html, botao, aoFechar){
   b.onclick=()=>{ document.getElementById('chkHorarioAviso').style.display='none'; if(aoFechar) aoFechar(); };
   document.getElementById('chkHorarioAviso').style.display='flex';
 }
-function chkTextoAtraso(n, hora, depoisDeSalvar, bloqueiaEm){
-  const base=`O checklist de abertura é das <b style="color:#FFD000">${chkJanelaTxt()}</b>. ${depoisDeSalvar?'Você salvou às':'Agora são'} <b>${hora}</b>.<br><br>`;
-  if(n<=1) return base+`Este é o seu <b>1º atraso no mês</b>: hoje está liberado <b>SÓ DESTA VEZ</b>.<br><br><span style="color:#ff6b6b;font-weight:800">No próximo atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você vai ter que pedir o desbloqueio ao administrador.</span>`;
-  return base+`Este é o seu <b>${n}º atraso no mês</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">${depoisDeSalvar?'O SEU PLACAR ESTÁ BLOQUEADO A PARTIR DE AMANHÃ'+(bloqueiaEm?' ('+bloqueiaEm+')':''):'AO SALVAR ESTE CHECKLIST, O SEU PLACAR SERÁ BLOQUEADO AMANHÃ'} e só volta a funcionar quando o administrador liberar.</span>`;
+function chkTextoAtraso(n, hora, depoisDeSalvar, bloqueiaEm, oque){
+  oque=oque||'checklist de abertura';
+  const base=`O checklist de abertura e o Start Dina devem ser feitos das <b style="color:#FFD000">${chkJanelaTxt()}</b>. ${depoisDeSalvar?'Você salvou o '+oque+' às':'Agora são'} <b>${hora}</b>.<br><br>`;
+  const fim='<br><br><b>Respeite os horários do preenchimento do placar.</b>';
+  if(n<=1) return base+`Este é o seu <b>1º atraso no mês</b>: hoje está liberado. Você ainda tem <b>1 chance</b>.<br><br><span style="color:#ff6b6b;font-weight:800">No 3º atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você terá que pedir autorização para o desbloqueio ao administrador.</span>`+fim;
+  if(n===2) return base+`Este é o seu <b>2º atraso no mês</b>: hoje ainda está liberado, mas esta foi a sua <b>ÚLTIMA CHANCE</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">No próximo atraso, o seu PLACAR SERÁ BLOQUEADO no dia seguinte e você terá que pedir autorização para o desbloqueio ao administrador.</span>`+fim;
+  return base+`Este é o seu <b>${n}º atraso no mês</b>.<br><br><span style="color:#ff6b6b;font-weight:800;font-size:1.05em">${depoisDeSalvar?'O SEU PLACAR ESTÁ BLOQUEADO A PARTIR DE AMANHÃ'+(bloqueiaEm?' ('+bloqueiaEm+')':''):'AO SALVAR AGORA, O SEU PLACAR SERÁ BLOQUEADO AMANHÃ'} e só volta a funcionar quando o administrador liberar.</span>`+fim;
 }
+// atraso já registrado hoje (checklist ou Start Dina): o outro não conta de novo
+function chkAtrasoHoje(){ return !!(CHK_SIT&&CHK_SIT.ultimoAtraso&&CHK_SIT.ultimoAtraso.dia===CHK_SIT.hoje); }
 // chamado antes de abrir o checklist de abertura; devolve true se pode abrir agora
 function chkConferirHorarioAbertura(continuar){
   if(chkAberturaFeita||!CHK_SIT) return true;
@@ -1552,7 +1594,7 @@ function chkConferirHorarioAbertura(continuar){
     return false;
   }
   if(pos==='depois'){
-    chkMostrarAviso('🚨 VOCÊ ESTÁ FORA DO HORÁRIO!', chkTextoAtraso((CHK_SIT.atrasosMes||0)+1, chkHoraSP(), false), 'Entendi — fazer o checklist agora', continuar);
+    chkMostrarAviso('🚨 VOCÊ ESTÁ FORA DO HORÁRIO!', chkTextoAtraso((CHK_SIT.atrasosMes||0)+(chkAtrasoHoje()?0:1), chkHoraSP(), false), 'Entendi — fazer o checklist agora', continuar);
     return false;
   }
   return true;
@@ -1929,7 +1971,8 @@ async function salvarChecklist(){
   renderEtapasChecklist();
   if(turno==='abertura' && r.atraso && !r.atraso.perdoado){
     if(CHK_SIT) CHK_SIT.atrasosMes=r.atraso.n;
-    setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm), 'Entendi', null), 1600);
+    if(CHK_SIT) CHK_SIT.ultimoAtraso={dia:CHK_SIT.hoje,hora:r.atraso.hora,n:r.atraso.n,oque:'Checklist de abertura'};
+    setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm, 'checklist de abertura'), 'Entendi', null), 1600);
   }
   setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
 }
@@ -1974,14 +2017,38 @@ function atualizarMetas(){
   // Pedidos Não Confirmados iFood — só lojas com entrega própria
   const cardPedidos=document.getElementById('cardPedidosIfood');
   if(cardPedidos) cardPedidos.style.display=temLoja(unidadeAtual)?'flex':'none';
+  // fichas de fliperama e buffets
+  const fb=temFliperBuffet(unidadeAtual), hojeT=dataTurno();
+  [['cardFichas','metaFichasDisplay',METAS_FICHAS],['cardBuffets','metaBuffetsDisplay',METAS_BUFFET]].forEach(([c,m,metas])=>{
+    const card=document.getElementById(c); if(!card) return; card.style.display=fb?'flex':'none';
+    const mensal=(metas[unidadeAtual]||{}).mensal, md=metaDiaMensal(mensal,hojeT);
+    document.getElementById(m).textContent=mensal?`Meta de hoje: ${Math.round(md)} · Meta do mês: ${Number(mensal).toLocaleString('pt-BR')}`:'Sem meta definida';
+  });
 }
 
 // ── Salvar Start Dina ──
+// Start Dina tem o mesmo horário do checklist de abertura; fora dele avisa e conta atraso (o servidor registra)
 function salvarStartDina(){
+  if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
+  if(!startDinaSalvo && CHK_SIT && chkPosicao()==='depois'){
+    const jaHoje=chkAtrasoHoje();
+    chkMostrarAviso('🚨 START DINA FORA DO HORÁRIO!', jaHoje
+      ? `O checklist de abertura e o Start Dina devem ser feitos das <b style="color:#FFD000">${chkJanelaTxt()}</b>. Agora são <b>${chkHoraSP()}</b>.<br><br>O atraso de hoje já foi registrado (${CHK_SIT.ultimoAtraso.n}º do mês).<br><br><b>Respeite os horários do preenchimento do placar.</b>`
+      : chkTextoAtraso((CHK_SIT.atrasosMes||0)+1, chkHoraSP(), false),
+      'Entendi — salvar o Start Dina', salvarStartDinaAgora);
+    return;
+  }
+  salvarStartDinaAgora();
+}
+function salvarStartDinaAgora(){
   if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
   startDinaSalvo=true;
   localStorage.setItem(chaveHoje('startdina_salvo'),'1');
-  enviarTempoReal('startdina', {salvo:true});
+  enviarTempoReal('startdina', {salvo:true}, d=>{
+    if(!d||!d.atraso||d.atraso.perdoado) return;
+    if(CHK_SIT){ CHK_SIT.atrasosMes=d.atraso.n; CHK_SIT.ultimoAtraso={dia:CHK_SIT.hoje,hora:d.atraso.hora,n:d.atraso.n,oque:'Start Dina'}; }
+    chkMostrarAviso(d.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 START DINA FORA DO HORÁRIO', chkTextoAtraso(d.atraso.n, d.atraso.hora, true, d.atraso.bloqueiaEm, 'Start Dina'), 'Entendi', null);
+  });
   const info=document.getElementById('startSalvoInfo');
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   if(info){info.style.display='block';info.textContent=`✅ Start Dina salvo às ${hora}`;}
@@ -2254,6 +2321,8 @@ function verificarBotaoRegistrar(){
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
+  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
+  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
@@ -2452,6 +2521,8 @@ async function registrar(){
     faturamento:valFat(),metaFaturamento:metaFat(unidadeAtual),
     avaliacoesGoogle:ival('google'),avaliacoesIfood:ival('ifood'),
     cancelamentos:ival('cancel'),chamados:ival('chamados'),
+    fichasFliperama:temFliperBuffet(unidadeAtual)?ival('fichas'):null,
+    buffets:temFliperBuffet(unidadeAtual)?ival('buffets'):null,
     vendasCanceladasCaixa:ival('vendasCanceladas'),
     vendasCanceladasMotivo:document.getElementById('vendasCanceladasMotivo').value.trim(),
     pedidosConfirmadosIfood:temLoja(unidadeAtual)?ival('pedidosIfood'):null,
