@@ -285,6 +285,15 @@
       <button type="button" id="chkCamBater" onclick="chkBaterFoto()" style="flex:2;background:#C00000;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:800;padding:16px;cursor:pointer">📸 Bater foto</button>
     </div>
   </div>
+  <!-- Pendências da visita do gerente regional: o placar só libera depois de justificar todas -->
+  <div id="regPendOverlay" style="display:none;position:fixed;inset:0;background:#0A0A0A;z-index:700;overflow-y:auto;padding:22px 16px 40px">
+    <div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px">
+      <div style="text-align:center;font-size:2.4rem">📋</div>
+      <div style="text-align:center;font-size:20px;font-weight:900;color:#ff4444;letter-spacing:0.02em">PENDÊNCIAS DA VISITA DO REGIONAL</div>
+      <div style="text-align:center;font-size:14px;color:#ddd;line-height:1.55">O gerente regional apontou os problemas abaixo. Para liberar o placar, conte <b>o que foi feito</b> em cada um, por escrito ou com uma <b>foto</b>. O regional vai conferir.</div>
+      <div id="regPendLista"></div>
+    </div>
+  </div>
   <!-- Aviso de horário do checklist de abertura -->
   <div id="chkHorarioAviso" style="display:none;position:fixed;inset:0;background:rgba(40,0,0,0.97);z-index:1100;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div id="chkHorTitulo" style="font-size:24px;font-weight:900;color:#ff4444;margin-bottom:14px;letter-spacing:0.02em"></div>
@@ -1249,7 +1258,8 @@ async function cadastrar(){
 }
 
 function sair(){
-  ['aparOverlay','geoOverlay','chkBloqPlacar','chkAvisoOverlay','chkBloqueioOverlay','chkHorarioAviso'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  try{ clearInterval(_regPendTimer); }catch(e){}
+  ['aparOverlay','geoOverlay','chkBloqPlacar','chkAvisoOverlay','chkBloqueioOverlay','chkHorarioAviso','regPendOverlay'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
   try{ clearTimeout(_aparTimer); clearInterval(_geoTimer); clearTimeout(_chkSitTimer); }catch(e){}
   localStorage.removeItem('dina_unidade_logada');
   unidadeAtual=null;fotoBase64=null;fotoMotoBase64=null;fotoTempoAppBase64=null;fotoTempoIfoodBase64=null;
@@ -1314,6 +1324,7 @@ function iniciarApp(u){
   inicializarFaltaProduto();
   verificarCumprimento();
   carregarPendenciasChecklist();
+  REG_PEND=[]; REG_PEND_FOTO={}; carregarRegPend();
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
   if(!chkAberturaFeita){
@@ -1349,6 +1360,70 @@ function carregarPendenciasChecklist(){
   document.head.appendChild(s);
 }
 
+// ── Pendências da visita do regional: justificativa obrigatória antes de usar o placar ──
+let REG_PEND=[], REG_PEND_FOTO={}, _regPendTimer=null;
+async function carregarRegPend(){
+  clearInterval(_regPendTimer); _regPendTimer=setInterval(carregarRegPend, 10*60000);
+  const u=unidadeAtual;
+  try{
+    if(!(await chkRecursos()).includes('regionalPendencias')) return;
+    const r=await chkJsonp({action:'regPendLoja',unidade:u},15000);
+    if(u!==unidadeAtual||!r||!r.ok) return;
+    REG_PEND=r.abertas||[];
+  }catch(e){ return; }
+  renderRegPend();
+}
+function renderRegPend(){
+  const ov=document.getElementById('regPendOverlay'); if(!ov) return;
+  if(!REG_PEND.length){ ov.style.display='none'; return; }
+  const e=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  document.getElementById('regPendLista').innerHTML=REG_PEND.map(p=>{
+    const id=p.pendId, foto=REG_PEND_FOTO[id];
+    return `<div class="regp" data-id="${id}" style="background:#1A1A1A;border:1px solid ${p.motivoRecusa?'#ff4444':'#3A3A3A'};border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:800;font-size:15px;margin-bottom:6px;color:#fff">${e(p.itemLabel)}${p.vezes>=2?` <span style="background:#ff4444;color:#fff;font-size:11px;padding:2px 7px;border-radius:5px">REINCIDÊNCIA ${p.vezes}x</span>`:''}</div>
+      <div style="font-size:13px;color:#bbb;margin-bottom:4px"><b style="color:#fff">Problema apontado:</b> ${e(p.descricao)||'—'}</div>
+      <div style="font-size:13px;color:#bbb;margin-bottom:4px"><b style="color:#fff">Sugestão do regional:</b> ${e(p.sugestao)||'—'}</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">Visita de ${e(p.dataAberta)}</div>
+      ${p.motivoRecusa?`<div style="background:rgba(255,68,68,0.12);border:1px solid #ff4444;border-radius:8px;padding:9px 11px;font-size:13px;color:#ffb3b3;margin-bottom:10px">❌ <b>O regional não aceitou a correção:</b> ${e(p.motivoRecusa)}</div>`:''}
+      <textarea id="regpTxt_${id}" rows="3" placeholder="O que foi feito para corrigir?" style="width:100%;background:#111;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-size:14px;padding:10px;font-family:inherit" oninput="regPendBotao('${id}')"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button type="button" onclick="regPendFoto('${id}')" style="flex:1;background:#252525;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-weight:700;padding:11px;font-size:13px;cursor:pointer">📷 ${foto?'Tirar outra foto':'Tirar foto'}</button>
+        ${foto?`<img src="${foto}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #3A3A3A">`:''}
+      </div>
+      <button type="button" id="regpBtn_${id}" onclick="regPendEnviar('${id}')" disabled style="width:100%;margin-top:10px;background:#C00000;border:none;border-radius:10px;color:#fff;font-weight:800;font-size:15px;padding:14px;cursor:pointer;opacity:.5">Enviar justificativa</button>
+      <div id="regpMsg_${id}" style="font-size:12px;margin-top:6px;color:#ff8a8a"></div>
+    </div>`;
+  }).join('');
+  REG_PEND.forEach(p=>regPendBotao(p.pendId));
+  ov.style.display='block';
+}
+function regPendBotao(id){
+  const t=(document.getElementById('regpTxt_'+id)||{}).value||'', b=document.getElementById('regpBtn_'+id); if(!b) return;
+  const ok=t.trim().length>=10||!!REG_PEND_FOTO[id];
+  b.disabled=!ok; b.style.opacity=ok?'1':'.5';
+  b.textContent=ok?'Enviar justificativa':'Escreva o que foi feito (mín. 10 letras) ou tire uma foto';
+}
+function regPendFoto(id){
+  const txt=(document.getElementById('regpTxt_'+id)||{}).value||'';
+  chkAbrirCamera('regp_'+id, foto=>{ REG_PEND_FOTO[id]=foto; renderRegPend(); const t=document.getElementById('regpTxt_'+id); if(t){ t.value=txt; regPendBotao(id); } });
+}
+async function regPendEnviar(id){
+  const p=REG_PEND.find(x=>x.pendId===id); if(!p) return;
+  const t=(document.getElementById('regpTxt_'+id).value||'').trim(), b=document.getElementById('regpBtn_'+id), m=document.getElementById('regpMsg_'+id);
+  if(!(await conferirLocal(true))) return;
+  b.disabled=true; b.textContent='Enviando...'; m.textContent='';
+  try{
+    const foto=REG_PEND_FOTO[id]?{base64:REG_PEND_FOTO[id].split(',')[1],tipo:'image/jpeg'}:null;
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'regPendJustificar',unidade:unidadeAtual,pendId:id,texto:t,foto:foto,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    if(typeof logProva==='function') logProva('PENDENCIA_REGIONAL_JUSTIFICADA', p.itemLabel);
+    REG_PEND=REG_PEND.filter(x=>x.pendId!==id); delete REG_PEND_FOTO[id];
+    const sobra=REG_PEND.length; renderRegPend();
+    if(!sobra) carregarPendenciasChecklist();
+  }catch(e){ m.textContent='Não enviou ('+e.message+'). Tente de novo.'; b.disabled=false; regPendBotao(id); }
+}
+
 function renderPendenciasChecklist(pendencias){
   const wrap=document.getElementById('checklistPendenciasWrap');
   const lista=document.getElementById('checklistPendenciasLista');
@@ -1360,7 +1435,7 @@ function renderPendenciasChecklist(pendencias){
       <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px">${p.itemLabel}${reinc}</div>
       <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px"><strong style="color:var(--text)">Problema apontado:</strong> ${p.descricaoProblema||'—'}</div>
       <div style="font-size:0.8rem;color:var(--muted)"><strong style="color:var(--text)">Sugestão de melhoria:</strong> ${p.sugestaoMelhoria||'—'}</div>
-      <div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Apontado em: ${p.dataAberta||'—'}</div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Apontado em: ${p.dataAberta||'—'}${p.situacao==='justificada'?' · <b style="color:#FFD000">✔ justificado — aguardando o regional confirmar</b>':''}</div>
     </div>`;
   });
   lista.innerHTML=html;
@@ -1905,9 +1980,9 @@ function renderItensChecklist(){
 
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
 // Câmera aberta dentro do placar: o gerente só consegue bater a foto na hora (não existe opção de galeria)
-let _chkCamStream=null, _chkCamItem=null;
-async function chkAbrirCamera(id){
-  _chkCamItem=id;
+let _chkCamStream=null, _chkCamItem=null, _camAoBater=null;
+async function chkAbrirCamera(id, aoBater){
+  _chkCamItem=id; _camAoBater=aoBater||null;
   const modal=document.getElementById('chkCamModal'), msg=document.getElementById('chkCamMsg'), bt=document.getElementById('chkCamBater');
   modal.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera...';
   if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
@@ -1938,7 +2013,9 @@ function chkBaterFoto(){
   const carimbo=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · '+unidadeAtual;
   ctx.font='bold '+Math.max(16,Math.round(c.width/40))+'px sans-serif'; ctx.fillStyle='rgba(0,0,0,0.55)';
   const h=Math.round(c.width/40)+16; ctx.fillRect(0,c.height-h,c.width,h); ctx.fillStyle='#FFD000'; ctx.fillText(carimbo,10,c.height-8);
-  chkFotos[id]=c.toDataURL('image/jpeg',0.72);
+  const foto=c.toDataURL('image/jpeg',0.72);
+  if(_camAoBater){ const f=_camAoBater; _camAoBater=null; chkFecharCamera(); f(foto); return; }
+  chkFotos[id]=foto;
   chkFecharCamera(); renderItensChecklist();
 }
 // (mantido) foto recebida por arquivo: só aceita se for de agora
