@@ -558,6 +558,58 @@
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 
+// ── MODO TESTE (administrador): a senha do Admin abre o placar de qualquer loja, sem celular autorizado,
+// sem GPS e sem horário, e NADA é gravado (planilha, checklist, atrasos, tempo real, robô). Leituras são reais. ──
+let MODO_TESTE=false, TESTE_CHK={abertura:[],fechamento:[]};
+const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirDesbloqueio','salvarChecklist','geoConferir'];
+(function(){
+  const fetchOrig=window.fetch.bind(window);
+  window.fetch=function(url,opt){
+    if(MODO_TESTE && opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
+      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
+      return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify({ok:true,status:'ok',teste:true}),{status:200,headers:{'Content-Type':'application/json'}})),500));
+    }
+    return fetchOrig(url,opt);
+  };
+  const appendOrig=Node.prototype.appendChild;
+  Node.prototype.appendChild=function(el){
+    if(MODO_TESTE && el && el.tagName==='SCRIPT' && el.src && el.src.indexOf(SCRIPT_URL)===0){
+      let q; try{ q=new URL(el.src).searchParams; }catch(e){ q=new URLSearchParams(''); }
+      const acao=q.get('action'), cb=q.get('callback');
+      if(TESTE_GRAVACOES.includes(acao)){
+        const resp=acao==='geoConferir'?{ok:true,configurado:false,dentro:true,teste:true}:{ok:true,teste:true};
+        setTimeout(()=>{ if(cb&&typeof window[cb]==='function') window[cb](resp); },300);
+        return el;
+      }
+      if(cb && typeof window[cb]==='function' && (acao==='chkSituacao'||acao==='getChecklistStatus')){
+        const orig=window[cb];
+        window[cb]=function(r){
+          if(r&&acao==='chkSituacao'){ r.bloqueio=null; r.ultimoAtraso=null; r.atrasosMes=0; }
+          if(r&&acao==='getChecklistStatus'){ // o teste começa o dia do zero e só vê o que foi "salvo" no teste
+            const a=TESTE_CHK.abertura, f=TESTE_CHK.fechamento, sl=slugLoja(unidadeAtual);
+            r.resumo={}; r.resumo[sl]={abertura:{ok:a.length,nok:0},fechamento:{ok:f.length,nok:0},idsAbertura:a,idsFechamento:f,porGerente:{}};
+            r.resumo[sl].porGerente[unidadeAtual]={abertura:a.length,fechamento:f.length,idsAbertura:a,idsFechamento:f};
+          }
+          return orig(r);
+        };
+      }
+    }
+    return appendOrig.call(this,el);
+  };
+})();
+function entrarTeste(u){
+  MODO_TESTE=true; TESTE_CHK={abertura:[],fechamento:[]};
+  try{ Object.keys(localStorage).filter(k=>k.indexOf('dinateste_')===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  document.getElementById('testeFaixa').style.display='flex';
+  document.body.style.paddingTop='38px';
+  const esc=document.querySelector('a[href*="escala.html"]'); if(esc) esc.style.display='none';
+  iniciarApp(u);
+  document.getElementById('unitBadge').textContent=u+' · 🧪 TESTE';
+}
+async function ehSenhaAdmin(h){
+  try{ const g=await authPost({action:'authGestaoLogin',hash:h}); return !!(g&&g.valido&&g.papel==='admin'); }catch(e){ return false; }
+}
+
 const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
 
 // Fichas de fliperama e buffets: meta MENSAL; a do dia sai de 50% nos dias de dom a qui e 50% nas sextas e sábados
@@ -620,7 +672,7 @@ function temLoja(u){return LOJAS_ENTREGA.includes(u);}
 function chaveHoje(sufixo){
   const d=dataTurno();
   const data=`${d.getDate().toString().padStart(2,'0')}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getFullYear()}`;
-  return `dina_${unidadeAtual}_${data}_${sufixo}`;
+  return `${MODO_TESTE?'dinateste_':'dina_'}${unidadeAtual}_${data}_${sufixo}`;
 }
 
 function dentroJanela(janela){
@@ -1147,6 +1199,7 @@ async function entrar(){
     err.textContent='Conferindo...';
     try{
       const r=await authPost({action:'authVerificar',unidade:u,hash:h,aparelho:aparelhoId(),info:aparelhoInfo()});
+      if(r.situacao!=='ok' && await ehSenhaAdmin(h)){ err.textContent=''; document.getElementById('loginSenha').value=''; entrarTeste(u); return; }
       if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); aplicarAparelho(r.aparelho); return; }
       if(r.situacao==='sem'){
         // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
@@ -1535,7 +1588,7 @@ function chkHoraSP(){ // hora de São Paulo pelo relógio do servidor (não depe
 }
 const chkMinH=h=>{const p=String(h).split(':');return (+p[0])*60+(+p[1]||0);};
 function chkPosicao(){
-  if(!CHK_SIT||!CHK_SIT.janela) return 'dentro';
+  if(MODO_TESTE||!CHK_SIT||!CHK_SIT.janela) return 'dentro';
   const m=chkMinH(chkHoraSP());
   return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
 }
@@ -2376,7 +2429,7 @@ function confirmarEnvioComAviso(pendencias){
   const itens=pendencias.join(' e ');
   const msg=`⚠️ ATENÇÃO!\n\nVocê não completou: ${itens}.\n\nSe não cumprir essas regras amanhã, você NÃO conseguirá enviar o placar.\n\nDeseja enviar mesmo assim?`;
   if(confirm(msg)){
-    const chave=`dina_${unidadeAtual}_pendencia_${hoje()}`;
+    const chave=`${MODO_TESTE?'dinateste_':'dina_'}${unidadeAtual}_pendencia_${hoje()}`;
     localStorage.setItem(chave,pendencias.join(','));
     registrar();
   }
@@ -2406,7 +2459,7 @@ function ontem(){
 
 function verificarPendenciaOntem(){
   if(!unidadeAtual) return false;
-  const chave=`dina_${unidadeAtual}_pendencia_${ontem()}`;
+  const chave=`${MODO_TESTE?'dinateste_':'dina_'}${unidadeAtual}_pendencia_${ontem()}`;
   return !!localStorage.getItem(chave);
 }
 
@@ -2649,6 +2702,10 @@ function limpar(){
   verificarBotaoRegistrar();
 }
 </script>
+<div id="testeFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:2147483000;background:#7a3cff;color:#fff;font:700 13px/1.2 system-ui,sans-serif;align-items:center;justify-content:center;gap:10px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.5)">
+  <span>🧪 MODO TESTE — nada é gravado nem conta para a loja</span>
+  <button onclick="location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">Sair do teste</button>
+</div>
 <script src="atualizador.js"></script>
 </body>
 </html>
