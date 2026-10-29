@@ -180,6 +180,7 @@
   <div class="tabs">
     <div class="tab active" onclick="mudarTab(event,'hoje')">Hoje na rede</div>
     <div class="tab" onclick="mudarTab(event,'senhas')">Senhas</div>
+    <div class="tab" onclick="mudarTab(event,'gerentes')">Gerentes e mensagens</div>
     <div class="tab" onclick="mudarTab(event,'metas')">Metas por Loja</div>
     <div class="tab" onclick="mudarTab(event,'premiacao')">Premiação</div>
     <div class="tab" onclick="mudarTab(event,'checklist')">Checklist</div>
@@ -419,6 +420,31 @@
           <button class="save-metas-btn" onclick="abrirChkItem(null)">+ Novo item</button>
         </div>
         <div id="chkAdmLista" style="margin-top:16px"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- GERENTES E MENSAGENS -->
+    <div class="tab-content" id="tab-gerentes">
+      <div>
+        <div class="section-title">👔 Gerentes das lojas</div>
+        <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin:8px 0 12px">Nome e WhatsApp de cada gerente (com DDD, ex.: 41999998888) e o horário de cobrança do robô. O nome aparece nas mensagens no lugar de <b>{gerente}</b> (só o primeiro nome). A primeira linha é o gerente regional.</div>
+        <div class="table-wrap"><table class="cont-tab"><thead><tr><th>Loja</th><th>Nome do gerente</th><th>WhatsApp</th><th>Cobrar a partir</th><th>Atrasado após</th></tr></thead><tbody id="gmBody"><tr><td colspan="5" style="color:var(--muted)">Carregando...</td></tr></tbody></table></div>
+        <button class="save-metas-btn" style="margin-top:12px" onclick="salvarContatos('gmBody')">Salvar gerentes</button>
+      </div>
+      <div style="margin-top:26px">
+        <div class="section-title">💬 Mensagens do robô para os gerentes</div>
+        <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin:8px 0 12px">Escreva do seu jeito. O robô troca sozinho: <b>{gerente}</b> pelo primeiro nome, <b>{loja}</b> pela loja e <b>{hora}</b> pela hora do envio. Deixe o link do placar no texto para o gerente abrir direto.</div>
+        <div class="modal-label">1ª cobrança — no horário de cobrança (padrão 17h30), se a loja não iniciou o placar</div>
+        <textarea class="modal-input" id="msgAviso" rows="4" oninput="previaMsg()"></textarea>
+        <div class="modal-label" style="margin-top:14px">2ª cobrança — no horário de atraso (padrão 19h), se continuar sem iniciar</div>
+        <textarea class="modal-input" id="msgAtraso" rows="4" oninput="previaMsg()"></textarea>
+        <div class="modal-label" style="margin-top:14px">Como o gerente vai receber (exemplo)</div>
+        <div id="msgPrevia" style="background:#0b2e1e;border:1px solid #1f5c3f;border-radius:10px;padding:12px 14px;font-size:0.85rem;line-height:1.5;white-space:pre-wrap;color:#e8ffe8"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="save-metas-btn" onclick="salvarMensagens()">Salvar mensagens</button>
+          <button class="save-metas-btn outline" onclick="padraoMensagens()">Voltar ao texto padrão</button>
+        </div>
+        <div id="msgInfo" style="font-size:0.75rem;color:var(--muted);margin-top:8px"></div>
       </div>
     </div>
 
@@ -793,16 +819,50 @@
   }
   function abrirContatos(){
     if(!ULTIMO_HOJE){ showToast('Espere carregar o painel.','warn'); return; }
-    const rg=ULTIMO_HOJE.regional||{};
-    document.getElementById('contBody').innerHTML=`<tr data-u="__regional__" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>👔 Gerente regional</b><br><small style="color:var(--muted)">recebe cópia das cobranças, o resumo, atrasos e as correções para confirmar</small></td><td><input class="cg" value="${escH(rg.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(rg.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`+ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{};
-      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`; }).join('');
+    document.getElementById('contBody').innerHTML=linhasContatos(ULTIMO_HOJE);
     document.getElementById('modalContatos').style.display='flex';
   }
-  async function salvarContatos(){
-    const contatos=[...document.querySelectorAll('#contBody tr')].map(tr=>({unidade:tr.dataset.u,gerente:tr.querySelector('.cg').value.trim(),whats:tr.querySelector('.cw').value.replace(/\D/g,''),hora:tr.querySelector('.ch').value||'17:30',limite:tr.querySelector('.cl').value||'19:00'}));
+  function linhasContatos(H){
+    const rg=H.regional||{};
+    return `<tr data-u="__regional__" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>👔 Gerente regional</b><br><small style="color:var(--muted)">recebe cópia das cobranças, o resumo, atrasos e as correções para confirmar</small></td><td><input class="cg" value="${escH(rg.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(rg.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`+ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{};
+      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`; }).join('');
+  }
+  // ── Aba Gerentes e mensagens ──
+  let MSG_PADRAO=null;
+  async function carregarGerentes(){
+    try{
+      const r=await admJsonp({action:'adminHoje'});
+      if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro ao carregar');
+      ULTIMO_HOJE=r;
+    }catch(e){ document.getElementById('gmBody').innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+escH(e.message)+'</td></tr>'; return; }
+    document.getElementById('gmBody').innerHTML=linhasContatos(ULTIMO_HOJE);
+    const m=ULTIMO_HOJE.mensagens;
+    if(m){ MSG_PADRAO=m.padrao; document.getElementById('msgAviso').value=m.aviso; document.getElementById('msgAtraso').value=m.atraso; document.getElementById('msgInfo').textContent=m.personalizada?'Usando as suas mensagens.':'Usando o texto padrão.'; }
+    else document.getElementById('msgInfo').innerHTML='<span style="color:var(--yellow)">⚠ Falta colar no Apps Script o código novo para salvar as mensagens aqui.</span>';
+    previaMsg();
+  }
+  function montarMsg(t){
+    const l=ULTIMO_HOJE&&ULTIMO_HOJE.lojas.find(x=>(x.contato||{}).gerente)||{unidade:'Uberaba',contato:{gerente:'Neusa'}};
+    const nome=String((l.contato||{}).gerente||'Gerente').trim().split(/\s+/)[0];
+    return String(t||'').replace(/\{gerente\}/g,nome).replace(/\{loja\}/g,l.unidade).replace(/\{hora\}/g,'17:30');
+  }
+  function previaMsg(){ document.getElementById('msgPrevia').textContent='1ª: '+montarMsg(document.getElementById('msgAviso').value)+'\n\n2ª: '+montarMsg(document.getElementById('msgAtraso').value); }
+  function padraoMensagens(){ if(!MSG_PADRAO) return; document.getElementById('msgAviso').value=MSG_PADRAO.aviso; document.getElementById('msgAtraso').value=MSG_PADRAO.atraso; previaMsg(); showToast('Texto padrão colocado. Toque em Salvar mensagens para valer.','ok'); }
+  async function salvarMensagens(){
+    const aviso=document.getElementById('msgAviso').value.trim(), atraso=document.getElementById('msgAtraso').value.trim();
+    if(aviso.length<10||atraso.length<10){ showToast('Escreva as duas mensagens.','warn'); return; }
+    const p=MSG_PADRAO||{};
+    try{
+      await admPost({action:'authSalvarMensagens',mensagens:{aviso:aviso===p.aviso?'':aviso,atraso:atraso===p.atraso?'':atraso}});
+      showToast('Mensagens salvas. O robô já usa na próxima cobrança.','ok'); registrarLog('Mensagens do robô alteradas.','ok'); carregarGerentes();
+    }catch(e){ showToast('Não salvou: '+e.message+(/reconhecida/.test(e.message)?' — cole o código novo no Apps Script.':''),'warn'); }
+  }
+  async function salvarContatos(corpo){
+    corpo=corpo||'contBody';
+    const contatos=[...document.querySelectorAll('#'+corpo+' tr')].map(tr=>({unidade:tr.dataset.u,gerente:tr.querySelector('.cg').value.trim(),whats:tr.querySelector('.cw').value.replace(/\D/g,''),hora:tr.querySelector('.ch').value||'17:30',limite:tr.querySelector('.cl').value||'19:00'}));
     const ruim=contatos.filter(c=>c.whats&&(c.whats.length<10||c.whats.length>13));
     if(ruim.length){ showToast('WhatsApp inválido em: '+ruim.map(c=>c.unidade==='__regional__'?'Gerente regional':c.unidade).join(', ')+' (use DDD + número)','warn'); return; }
-    try{ await admPost({action:'authSalvarContatos',contatos}); showToast('Contatos salvos.','ok'); fecharModal('modalContatos'); carregarHoje(); }
+    try{ await admPost({action:'authSalvarContatos',contatos}); showToast('Gerentes salvos.','ok'); fecharModal('modalContatos'); if(corpo==='gmBody') carregarGerentes(); else carregarHoje(); }
     catch(e){ showToast('Não salvou: '+e.message+(/reconhecida|inválid/.test(e.message)?'':' — o Apps Script publicado é a versão nova?'),'warn'); }
   }
 
@@ -957,6 +1017,7 @@
     document.getElementById('tab-'+nome).classList.add('active');
     if(nome==='checklist' && !chkAdmCarregado) carregarChkAdm();
     if(nome==='regional' && !regAdmCarregado) carregarRegAdm();
+    if(nome==='gerentes') carregarGerentes();
     if(nome==='hoje') carregarHoje();
     if(nome==='log') carregarLogServidor();
     if(nome==='senhas') renderTabela();
