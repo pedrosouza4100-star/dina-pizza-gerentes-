@@ -1451,7 +1451,9 @@ function mostrarGeo(tipo, r){
     x.innerHTML='O placar de <b>'+unidadeAtual+'</b> só pode ser preenchido <b>dentro da unidade</b>.<br><br>Você está a <b>'+km+'</b> da loja.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”. Esta tentativa fica registrada para o administrador.</span>';
   } else if(tipo==='negado'){
     t.textContent='PERMITA A LOCALIZAÇÃO';
-    x.innerHTML='O placar precisa da sua localização para confirmar que você está na loja.<br><br>Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”.';
+    x.innerHTML='O placar precisa da sua localização para confirmar que você está na loja.<br><br>'+(/iPhone|iPad|iPod/.test(navigator.userAgent)
+      ? '<b>No iPhone:</b><br>1) Toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Localização</b> › <b>Permitir</b>.<br>2) Se não resolver: <b>Ajustes</b> do iPhone › <b>Privacidade e Segurança</b> › <b>Serviços de Localização</b> (ligado) › <b>Sites do Safari</b> › <b>Durante o Uso do App</b>.<br>Depois toque em “Conferir de novo”.'
+      : 'Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”.');
   } else {
     t.textContent='NÃO CONSEGUI SUA LOCALIZAÇÃO';
     x.innerHTML='Ligue a <b>localização (GPS)</b> do celular e toque em “Conferir de novo”.';
@@ -1860,7 +1862,9 @@ async function chkAbrirCamera(id){
     const v=document.getElementById('chkCamVideo'); v.srcObject=_chkCamStream; await v.play().catch(()=>{});
     msg.textContent='Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
   }catch(e){
-    msg.innerHTML='A câmera foi bloqueada. Toque no cadeado ao lado do endereço do site, permita a <b>Câmera</b> e tente de novo.';
+    msg.innerHTML='A câmera foi bloqueada. '+(/iPhone|iPad|iPod/.test(navigator.userAgent)
+      ? 'No iPhone: toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Câmera</b> › <b>Permitir</b> e tente de novo.'
+      : 'Toque no cadeado ao lado do endereço do site, permita a <b>Câmera</b> e tente de novo.');
   }
 }
 function chkFecharCamera(){
