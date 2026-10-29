@@ -1,27 +1,259 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+<!-- Painel do call center (cópia do serveCallCenter do Apps Script) com o endereço oficial do servidor fixo. Dados: getCallCenter. -->
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Call Center — Dina Pizza</title>
-<link rel="icon" href="logo.png">
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:#0D0D0D;color:#fff;font-family:Arial,sans-serif}
-  body{display:flex;flex-direction:column}
-  iframe{flex:1;width:100%;border:0;background:#0D0D0D}
-  #carregando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#999;font-size:.95rem;pointer-events:none}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#C0392B;--gold:#FFD700;--dark:#0A0A0A;--bg:#0D0D0D;--card:#1C1C1C;--surface:#252525;--border:#383838;--text:#fff;--muted:#999;--green:#2ECC71;--yellow:#FFD700;--danger:#FF4444;}
+body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh}
+header{background:var(--dark);border-bottom:4px solid var(--red);padding:0 4vw;display:flex;align-items:center;justify-content:space-between;height:70px;position:sticky;top:0;z-index:50}
+.brand{font-family:Arial,sans-serif;font-size:1.4rem;font-weight:700;color:#fff}
+.brand span{color:var(--gold)}
+.header-right{text-align:right}
+.header-title{font-size:0.85rem;color:#fff;font-weight:700;font-family:Arial,sans-serif}
+.update-info{font-size:0.7rem;color:var(--gold);font-weight:700;margin-top:2px}
+
+main{padding:20px 4vw 60px;display:flex;flex-direction:column;gap:20px;width:100%}
+
+.bloco-sep{font-family:Arial,sans-serif;font-size:1.2rem;font-weight:700;color:var(--gold);padding:6px 0 10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:10px}
+
+.lojas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.loja-card{background:var(--card);border:2px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.loja-card.ok{border-color:rgba(46,204,113,0.4)}
+.loja-card.warn{border-color:rgba(255,68,68,0.4)}
+.loja-nome{font-size:1.15rem;font-weight:700;font-family:Arial,sans-serif;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.loja-badge{font-size:0.65rem;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.06em}
+.badge-entrega{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3)}
+.badge-sem{background:rgba(150,150,150,0.15);color:#999;border:1px solid rgba(150,150,150,0.3)}
+
+/* Falta de Produto */
+.indicador{display:flex;flex-direction:column;gap:6px}
+.ind-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#fff;font-weight:700;font-family:Arial,sans-serif}
+.ind-valor{font-size:1rem;font-weight:700;font-family:Arial,sans-serif;padding:10px 14px;border-radius:8px;display:flex;align-items:center;gap:8px}
+.ind-ok{background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);color:var(--green)}
+.ind-bad{background:rgba(255,68,68,0.12);border:1px solid rgba(255,68,68,0.3);color:var(--danger)}
+.ind-vazio{background:var(--surface);border:1px dashed var(--border);color:var(--muted);font-size:0.88rem}
+
+/* Motoboys */
+.moto-valor{font-size:2rem;font-weight:700;font-family:Arial,sans-serif;color:#fff;text-align:center;padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--border)}
+.moto-meta{font-size:0.72rem;color:var(--muted);text-align:center;margin-top:4px}
+
+/* Tempos */
+.tempos-list{display:flex;flex-direction:column;gap:8px}
+.tempo-item{background:var(--surface);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border)}
+.tempo-label{font-size:0.75rem;color:#fff;font-weight:700}
+.tempo-hora{font-size:0.65rem;color:var(--muted)}
+.tempo-vals{display:flex;gap:16px}
+.tempo-val{text-align:center}
+.tempo-num{font-size:1.1rem;font-weight:700;font-family:Arial,sans-serif}
+.tempo-tipo{font-size:0.62rem;color:var(--muted);text-transform:uppercase}
+.tempo-vazio{font-size:0.82rem;color:var(--muted);font-style:italic;padding:10px;text-align:center;background:var(--surface);border-radius:8px;border:1px dashed var(--border)}
+
+/* Separador entre seções */
+.divider{height:1px;background:var(--border);margin:4px 0}
+
+/* Countdown */
+.countdown-bar{position:fixed;bottom:0;left:0;right:0;background:var(--dark);border-top:2px solid var(--border);padding:10px 4vw;display:flex;align-items:center;justify-content:space-between;z-index:100}
+.countdown-text{font-size:0.82rem;color:#fff;font-weight:700;font-family:Arial,sans-serif}
+.countdown-timer{font-size:1rem;color:var(--gold);font-weight:700;font-family:Arial,sans-serif}
+.countdown-progress{height:4px;background:var(--border);border-radius:2px;flex:1;margin:0 16px;overflow:hidden}
+.countdown-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 1s linear}
+
+/* Loading */
+.loading{text-align:center;padding:60px 20px;color:var(--muted)}
+.loading div:first-child{font-size:2.5rem;margin-bottom:10px}
+.loading div:last-child{font-size:1.1rem}
+
+/* Lojas sem info */
+.sem-info{font-size:0.82rem;color:var(--muted);font-style:italic;padding:8px 0}
+
+@media(max-width:700px){
+  header{padding:0 5vw;height:62px}
+  .brand{font-size:1.15rem}
+  main{padding:16px 5vw 70px;gap:16px}
+  .lojas-grid{grid-template-columns:1fr}
+  .loja-card{padding:16px}
+  .loja-nome{font-size:1.05rem}
+  .bloco-sep{font-size:1.05rem}
+}
 </style>
+<link rel="icon" href="logo.png">
 </head>
 <body>
-<div id="carregando">⏳ Carregando o painel do call center...</div>
-<iframe id="quadro" title="Call Center"></iframe>
+<header>
+  <div class="brand">DINA <span>PIZZA</span></div>
+  <div class="header-right">
+    <div class="header-title">📞 Painel Call Center</div>
+    <div class="update-info" id="updateInfo">Carregando...</div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="loading">
+    <div>⏳</div>
+    <div>Carregando dados em tempo real...</div>
+  </div>
+</main>
+
+<div class="countdown-bar">
+  <div class="countdown-text">⚡ Tempo real — atualiza em</div>
+  <div class="countdown-progress"><div class="countdown-fill" id="countdownFill" style="width:100%"></div></div>
+  <div class="countdown-timer" id="countdownTimer">5:00</div>
+</div>
+
 <script>
-  // O painel é servido pelo Apps Script (action=serveCallCenter); esta página só dá um endereço fácil a ele.
-  const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
-  const f=document.getElementById('quadro');
-  f.onload=()=>{ document.getElementById('carregando').style.display='none'; };
-  f.src=SCRIPT_URL+'?action=serveCallCenter&t='+Date.now();
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec'; // endereço oficial (não muda)
+const LOJAS_ENTREGA = ['Expressa','Capão Raso','Água Verde','Uberaba','Colombo','Fazenda Rio Grande'];
+const TODAS_LOJAS = ['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
+const INTERVALO = 30; // 30 segundos
+
+let segundosRestantes = INTERVALO;
+let dadosAtual = null;
+
+function temEntrega(u){ return LOJAS_ENTREGA.includes(u); }
+
+function carregarDados(){
+  const cb = 'ccCb_' + Date.now();
+  const s = document.createElement('script');
+  const t = setTimeout(()=>{
+    delete window[cb];
+    if(s.parentNode) s.parentNode.removeChild(s);
+    if(dadosAtual) renderDados(dadosAtual); // mantém dados antigos
+  }, 15000);
+  window[cb] = (json) => {
+    clearTimeout(t); delete window[cb];
+    if(s.parentNode) s.parentNode.removeChild(s);
+    if(json && json.dados){
+      dadosAtual = json;
+      renderDados(json);
+      const agora = new Date();
+      document.getElementById('updateInfo').textContent = 'Atualizado às ' + agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      segundosRestantes = INTERVALO;
+    }
+  };
+  s.onerror = ()=>{ clearTimeout(t); delete window[cb]; };
+  s.src = SCRIPT_URL + '?action=getCallCenter&t=' + Date.now() + '&callback=' + cb;
+  document.head.appendChild(s);
+}
+
+function renderDados(json){
+  const dados = json.dados || [];
+  const main = document.getElementById('main');
+
+  // Lojas com entrega própria
+  const comEntrega = dados.filter(d=>temEntrega(d.unidade));
+  const semEntrega = dados.filter(d=>!temEntrega(d.unidade));
+
+  main.innerHTML = `
+    <div class="bloco-sep">🚗 Lojas com Entrega Própria</div>
+    <div class="lojas-grid">
+      ${comEntrega.map(d=>renderLojaEntrega(d)).join('')}
+    </div>
+    <div class="bloco-sep">🏪 Demais Lojas — Falta de Produto</div>
+    <div class="lojas-grid">
+      ${semEntrega.map(d=>renderLojaSemEntrega(d)).join('')}
+    </div>
+  `;
+}
+
+function renderFaltaProduto(d){
+  const falta = d.faltaProduto;
+  if(!falta) return `<div class="ind-valor ind-vazio">⏳ Aguardando preenchimento (17h-19h)</div>`;
+  if(falta.status === 'nao') return `<div class="ind-valor ind-ok">✅ Sem falta de produto</div>`;
+  if(falta.status === 'sim') return `<div class="ind-valor ind-bad">⚠️ Falta: ${falta.descricao||'—'}</div>`;
+  return `<div class="ind-valor ind-vazio">⏳ Não informado ainda</div>`;
+}
+
+function renderTempos(d){
+  const tempos = d.temposEntrega || [];
+  const nomes = ['1º Registro','2º Registro','3º Registro'];
+  if(tempos.length === 0) return `<div class="tempo-vazio">⏳ Nenhum tempo registrado ainda</div>`;
+  return tempos.slice(-3).map((t,i)=>{
+    const okApp = t.app <= 30;
+    const okIf = t.ifood <= 50;
+    return `<div class="tempo-item">
+      <div>
+        <div class="tempo-label">${nomes[i]}</div>
+        <div class="tempo-hora">${t.horario||'—'}</div>
+      </div>
+      <div class="tempo-vals">
+        <div class="tempo-val">
+          <div class="tempo-num" style="color:${okApp?'var(--green)':'var(--danger)'}">${t.app||0}<span style="font-size:0.6rem">min</span></div>
+          <div class="tempo-tipo">App</div>
+        </div>
+        <div class="tempo-val">
+          <div class="tempo-num" style="color:${okIf?'var(--green)':'var(--danger)'}">${t.ifood||0}<span style="font-size:0.6rem">min</span></div>
+          <div class="tempo-tipo">iFood</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLojaEntrega(d){
+  const temFalta = d.faltaProduto?.status === 'sim';
+  const cls = temFalta ? 'warn' : 'ok';
+  const moto = d.motoboys || 0;
+  const metaMoto = d.metaMotoboys || 0;
+  const motoOk = moto >= metaMoto;
+  return `<div class="loja-card ${cls}">
+    <div class="loja-nome">
+      ${d.unidade}
+      <span class="loja-badge badge-entrega">🚗 Entrega Própria</span>
+    </div>
+    <div class="divider"></div>
+    <div class="indicador">
+      <div class="ind-label">📦 Falta de Produto</div>
+      ${renderFaltaProduto(d)}
+    </div>
+    <div class="indicador">
+      <div class="ind-label">👥 Motoboys em Serviço</div>
+      <div class="moto-valor" style="color:${motoOk?'var(--green)':'var(--danger)'}">${moto} <span style="font-size:1rem">motoboys</span></div>
+      ${metaMoto>0?`<div class="moto-meta">Meta: ${metaMoto} motoboys</div>`:''}
+    </div>
+    <div class="indicador">
+      <div class="ind-label">🕐 Tempos de Entrega</div>
+      <div class="tempos-list">${renderTempos(d)}</div>
+    </div>
+  </div>`;
+}
+
+function renderLojaSemEntrega(d){
+  const temFalta = d.faltaProduto?.status === 'sim';
+  const cls = temFalta ? 'warn' : 'ok';
+  return `<div class="loja-card ${cls}">
+    <div class="loja-nome">
+      ${d.unidade}
+      <span class="loja-badge badge-sem">🏪 Sem entrega</span>
+    </div>
+    <div class="divider"></div>
+    <div class="indicador">
+      <div class="ind-label">📦 Falta de Produto</div>
+      ${renderFaltaProduto(d)}
+    </div>
+  </div>`;
+}
+
+// Countdown
+function tickCountdown(){
+  segundosRestantes--;
+  if(segundosRestantes <= 0){
+    segundosRestantes = INTERVALO;
+    carregarDados();
+  }
+  const min = Math.floor(segundosRestantes/60);
+  const seg = segundosRestantes%60;
+  document.getElementById('countdownTimer').textContent = `${min}:${seg.toString().padStart(2,'0')}`;
+  const pct = (segundosRestantes/INTERVALO)*100;
+  document.getElementById('countdownFill').style.width = pct+'%';
+}
+
+// Inicia
+carregarDados();
+setInterval(tickCountdown, 1000);
 </script>
 <script src="atualizador.js"></script>
 </body>
