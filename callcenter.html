@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Center — Dina Pizza</title>
+<link rel="icon" href="logo.png">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#0D0D0D;color:#fff;font-family:Arial,sans-serif}
+  body{display:flex;flex-direction:column}
+  iframe{flex:1;width:100%;border:0;background:#0D0D0D}
+  #carregando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#999;font-size:.95rem;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="carregando">⏳ Carregando o painel do call center...</div>
+<iframe id="quadro" title="Call Center"></iframe>
+<script>
+  // O painel é servido pelo Apps Script (action=serveCallCenter); esta página só dá um endereço fácil a ele.
+  const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+  const f=document.getElementById('quadro');
+  f.onload=()=>{ document.getElementById('carregando').style.display='none'; };
+  f.src=SCRIPT_URL+'?action=serveCallCenter&t='+Date.now();
+</script>
+<script src="atualizador.js"></script>
+</body>
+</html>
