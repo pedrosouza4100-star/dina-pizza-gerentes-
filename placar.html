@@ -1540,10 +1540,30 @@ function renderMetaMes(){
 document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys','fichas','buffets'].includes(e.target&&e.target.id)) renderMetaMes(); });
 
 // ── Celular autorizado: cada senha só funciona no celular que o administrador aprovou ──
+// O código do celular fica guardado em dois lugares (memória do site e cookie): se um deles for apagado,
+// o outro recupera e o celular não precisa pedir autorização de novo.
+let _aparIdMem=null;
+function aparCookie(){ try{ const m=document.cookie.match(/(?:^|; )dina_aparelho=([^;]+)/); return m?decodeURIComponent(m[1]):null; }catch(e){ return null; } }
 function aparelhoId(){
+  if(_aparIdMem) return _aparIdMem;
   let id=null; try{ id=localStorage.getItem('dina_aparelho'); }catch(e){}
-  if(!id){ id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('ap-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12)); try{ localStorage.setItem('dina_aparelho',id); }catch(e){} }
+  if(!id) id=aparCookie();
+  if(!id){ id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('ap-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12)); }
+  try{ localStorage.setItem('dina_aparelho',id); }catch(e){}
+  try{ document.cookie='dina_aparelho='+encodeURIComponent(id)+'; max-age=34560000; path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':''); }catch(e){}
+  _aparIdMem=id;
   return id;
+}
+// onde o placar foi aberto: navegador normal, app da tela inicial ou navegador de dentro de outro app (WhatsApp, Instagram...)
+function aparOndeAbriu(){
+  const ua=navigator.userAgent||'';
+  if(/Instagram/.test(ua)) return {app:'Instagram',interno:true};
+  if(/FBAN|FBAV|FB_IAB/.test(ua)) return {app:'Facebook',interno:true};
+  if(/WhatsApp/i.test(ua)) return {app:'WhatsApp',interno:true};
+  if(/Android/.test(ua) && /; wv\)/.test(ua)) return {app:'outro aplicativo',interno:true};
+  if(/iPhone|iPad/.test(ua) && !/Safari/.test(ua) && !(navigator.standalone)) return {app:'outro aplicativo',interno:true};
+  if(navigator.standalone || (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)) return {app:'App da tela inicial',interno:false,tela:true};
+  return {app:'',interno:false};
 }
 function aparelhoCodigo(){ return aparelhoId().replace(/[^a-z0-9]/gi,'').slice(0,6).toUpperCase(); }
 function aparelhoInfo(){
@@ -1551,7 +1571,9 @@ function aparelhoInfo(){
   const so=/iPhone|iPad/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'Outro';
   const m=ua.match(/Android [\d.]+; ([^;)]+)/);
   const nav=/SamsungBrowser/.test(ua)?'Samsung Internet':/CriOS|Chrome/.test(ua)?'Chrome':/Firefox|FxiOS/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'Navegador';
-  return so+(m&&!/^K$/.test(m[1].trim())?' '+m[1].trim():'')+' · '+nav+' · código '+aparelhoCodigo();
+  const onde=aparOndeAbriu(), tela=(screen&&screen.width?screen.width+'x'+screen.height:'');
+  const navTxt=onde.interno?('navegador de dentro do '+onde.app):onde.tela?'app da tela inicial':nav;
+  return so+(m&&!/^K$/.test(m[1].trim())?' '+m[1].trim():'')+(tela?' '+tela:'')+' · '+navTxt+' · código '+aparelhoCodigo();
 }
 let _aparTimer=null;
 function aplicarAparelho(sit){
@@ -1567,6 +1589,11 @@ function aplicarAparelho(sit){
     document.getElementById('aparIcone').textContent='📱';
     document.getElementById('aparTitulo').textContent='CELULAR AGUARDANDO AUTORIZAÇÃO';
     document.getElementById('aparTexto').innerHTML='Cada senha só funciona no celular aprovado pelo administrador.<br><br>O pedido para usar <b>este celular</b> no placar de <b>'+unidadeAtual+'</b> já foi enviado. Assim que ele aprovar, o placar abre sozinho.';
+    const onde=aparOndeAbriu();
+    if(onde.interno){
+      const android=/Android/.test(navigator.userAgent);
+      document.getElementById('aparTexto').innerHTML+='<div style="margin-top:14px;background:#2a1a00;border:1px solid #FFD000;border-radius:10px;padding:12px;font-size:14px;color:#ffe9a8;text-align:left">⚠️ Você abriu o placar <b>dentro do '+onde.app+'</b>. Esse navegador conta como outro celular e vai pedir autorização toda vez.<br><br>Abra sempre pelo <b>'+(android?'Chrome':'Safari')+'</b>: '+(android?'toque no botão abaixo.':'toque nos <b>···</b> ou no ícone de compartilhar e escolha <b>Abrir no Safari</b>.')+'</div>'+(android?'<a href="intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end" style="display:block;margin-top:10px;background:#FFD000;color:#000;font-weight:800;border-radius:10px;padding:13px;text-decoration:none;text-align:center">Abrir no Chrome</a>':'');
+    }
     _aparTimer=setTimeout(()=>{ if(unidadeAtual) verificarSessaoServidor(unidadeAtual); }, 20000);
   }
   ov.style.display='flex';
