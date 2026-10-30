@@ -312,6 +312,7 @@
 
   <main>
     <!-- Pendências do Checklist Regional -->
+    <div id="regRespWrap" style="display:none;margin-bottom:16px"></div>
     <div id="checklistPendenciasWrap" style="display:none;margin-bottom:20px">
       <div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:16px 18px">
         <div style="font-size:0.95rem;font-weight:700;color:var(--danger);margin-bottom:12px">📋 Pendências apontadas pelo Gerente Regional — corrija hoje</div>
@@ -1370,8 +1371,19 @@ async function carregarRegPend(){
     const r=await chkJsonp({action:'regPendLoja',unidade:u},15000);
     if(u!==unidadeAtual||!r||!r.ok) return;
     REG_PEND=r.abertas||[];
+    renderRegResp(r.respostas||[]);
   }catch(e){ return; }
   renderRegPend();
+}
+// o que o regional já confirmou (últimos 3 dias) — o gerente vê que a correção foi aceita
+function renderRegResp(lista){
+  const w=document.getElementById('regRespWrap'); if(!w) return;
+  const ok=lista.filter(x=>x.decisao==='confirmada');
+  if(!ok.length){ w.style.display='none'; w.innerHTML=''; return; }
+  const e=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  w.innerHTML='<div style="background:rgba(46,204,113,0.10);border:1px solid var(--green);border-radius:12px;padding:12px 14px"><div style="font-weight:800;color:var(--green);font-size:0.9rem;margin-bottom:6px">✔ O regional confirmou suas correções</div>'+
+    ok.map(x=>`<div style="font-size:0.82rem;color:#ddd;margin-top:4px">• ${e(x.itemLabel)} <span style="color:var(--muted);font-size:0.72rem">— ${e(x.quem||'regional')}, ${e(x.em)}</span></div>`).join('')+'</div>';
+  w.style.display='block';
 }
 function renderRegPend(){
   const ov=document.getElementById('regPendOverlay'); if(!ov) return;
