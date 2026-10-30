@@ -211,6 +211,7 @@ function trocarLoja(){
 // ── Correções que os gerentes justificaram: o regional confirma ou recusa em até 18 h (não precisa estar na loja) ──
 let CORR=[];
 const CORR_ALVO=new URLSearchParams(location.search).get('confirmar')||'';
+const CORR_LOJA=new URLSearchParams(location.search).get('loja')||''; // link do WhatsApp com todas as correções de uma loja
 function chaveGestao(){ try{ return localStorage.getItem('dina_gestao_hash')||sessionStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
 async function carregarCorrecoes(){
   const box=document.getElementById('corrBox');
@@ -227,12 +228,12 @@ async function carregarCorrecoes(){
 function renderCorrecoes(){
   const box=document.getElementById('corrBox');
   if(!CORR.length){
-    box.innerHTML=CORR_ALVO?'<div class="card"><div class="sel-label">✅ Correções para confirmar</div><div style="color:var(--muted);font-size:0.9rem">Nada esperando confirmação agora (essa correção já foi confirmada ou voltou para o gerente).</div></div>':'';
-    box.style.display=CORR_ALVO?'block':'none'; return;
+    box.innerHTML=(CORR_ALVO||CORR_LOJA)?'<div class="card"><div class="sel-label">✅ Correções para confirmar</div><div style="color:var(--muted);font-size:0.9rem">Nada esperando confirmação agora (essa correção já foi confirmada ou voltou para o gerente).</div></div>':'';
+    box.style.display=(CORR_ALVO||CORR_LOJA)?'block':'none'; return;
   }
   const atras=CORR.filter(c=>c.atrasada).length;
   box.innerHTML='<div class="card"><div class="sel-label">✅ Correções para confirmar ('+CORR.length+')</div><div style="font-size:0.8rem;color:var(--muted)">Os gerentes contaram o que fizeram nas pendências da sua visita. Você tem <b>18 horas</b> para confirmar ou recusar'+(atras?' — <b style="color:var(--danger)">'+atras+' já passou do prazo</b>':'')+'.</div>'+
-    CORR.map(c=>`<div class="corr${c.atrasada?' atrasada':''}${c.pendId===CORR_ALVO?' alvo':''}" id="corr_${c.pendId}">
+    CORR.map(c=>`<div class="corr${c.atrasada?' atrasada':''}${(c.pendId===CORR_ALVO||c.unidade===CORR_LOJA)?' alvo':''}" id="corr_${c.pendId}">
       <div style="font-weight:700">${esc(c.unidade)} · ${esc(c.itemLabel)}</div>
       <div class="pend-detail" style="margin-top:6px"><strong>Problema apontado:</strong> ${esc(c.descricao)||'—'}</div>
       <div class="pend-detail" style="background:rgba(46,204,113,0.08);border-left:3px solid var(--green);padding:8px 10px;border-radius:6px;margin:8px 0;color:#ddd"><strong>O que o gerente fez:</strong> ${esc(c.justificativa)||'(mandou só a foto)'}${c.foto&&/^https/.test(c.foto)?`<br><a href="${esc(c.foto)}" target="_blank" style="color:var(--gold);font-weight:700">📷 Ver a foto</a>`:''}</div>
@@ -242,7 +243,8 @@ function renderCorrecoes(){
       <div id="corrMsg_${c.pendId}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
     </div>`).join('')+'</div>';
   box.style.display='block';
-  if(CORR_ALVO){ const el=document.getElementById('corr_'+CORR_ALVO); if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),300); }
+  const alvo=CORR_ALVO?document.getElementById('corr_'+CORR_ALVO):(CORR_LOJA?document.querySelector('.corr.alvo'):null);
+  if(alvo) setTimeout(()=>alvo.scrollIntoView({behavior:'smooth',block:'center'}),300);
 }
 function abrirRecusa(id){ const el=document.getElementById('recusa_'+id); el.style.display=el.style.display==='none'?'block':'none'; }
 async function decidirCorr(id, decisao){

@@ -697,6 +697,11 @@
       if(!b.ultimo) add('av','Backup automático ainda não instalado. No editor do Apps Script, rode uma vez a função <b>instalarBackup</b>.');
       else if(b.dias!=null&&b.dias>8) add('err','Último backup foi há '+b.dias+' dias ('+b.ultimo+'). O agendamento parou: rode de novo a função instalarBackup no editor.');
       else if(!b.erro) add('ok','Último backup: '+b.ultimo+(b.agendado?' · automático '+b.agendado:''));
+      // robô de cobrança: a cada 2 min ele avisa o servidor que está ligado
+      if(ping.robo){ const rb=ping.robo, m=rb.minutos;
+        if(m==null) add('av','🤖 O robô de cobrança ainda não deu sinal. Confira se a janela do robô está aberta no computador (e se o robo.js é o novo).');
+        else if(m<=6) add('ok','🤖 Robô de cobrança ligado · última conferência '+escH(rb.ultimo.slice(11))+(m?' (há '+m+' min)':''));
+        else add(m>30?'err':'av','🤖 Robô de cobrança PARADO desde '+escH(rb.ultimo)+' (há '+(m>=120?Math.floor(m/60)+' h':m+' min')+'). Ninguém está sendo cobrado: confira se o computador está ligado e abra o INICIAR_ROBO.'); }
     }
     const pior=L.some(x=>x.includes('class="err"'))?'err':L.some(x=>x.includes('class="av"'))?'av':'ok';
     box.className='prot-box '+pior;
