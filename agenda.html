@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS só funciona em https */</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Agenda de Visitas — Dina Pizza</title>
+<link rel="icon" href="logo.png">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--red:#C0392B;--red2:#FF3B3B;--gold:#FFD000;--bg:#0D0D0D;--card:#1A1A1A;--surface:#232323;--border:#383838;--text:#fff;--muted:#9a9a9a;--green:#2ECC71;--danger:#FF4D4D;--blue:#4FA3FF}
+  body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;padding-bottom:40px}
+  header{background:#0A0A0A;border-bottom:4px solid var(--red);padding:0 16px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+  .brand{font-size:1.15rem;font-weight:800}.brand span{color:var(--gold)}
+  .quem{font-size:0.78rem;text-align:right;line-height:1.3}.quem b{color:var(--gold)}
+  .quem a{color:var(--muted);font-size:0.72rem;cursor:pointer;text-decoration:underline}
+  main{max-width:920px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .tit{font-size:0.78rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+  .btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px 16px;font-size:0.95rem;font-weight:800;cursor:pointer;width:100%}
+  .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+  .btn.sec{background:var(--surface);border:1px solid var(--border)}
+  .btn.verde{background:var(--green);color:#0A0A0A}
+  select,input,textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.92rem;padding:10px 12px;font-family:inherit}
+  textarea{min-height:64px;resize:vertical}
+  .abas{display:flex;gap:6px;flex-wrap:wrap}
+  .aba{flex:1;min-width:110px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 6px;font-size:0.8rem;font-weight:800;cursor:pointer;text-align:center}
+  .aba.on{border-color:var(--gold);color:var(--gold)}
+  .aba .bol{display:inline-block;background:var(--danger);color:#fff;border-radius:10px;padding:0 6px;font-size:0.7rem;margin-left:4px}
+  .dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .dia{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .dia.passado{opacity:0.55}
+  .dia.folga{border-color:rgba(79,163,255,0.6)}
+  .dia.hoje{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+  .dia-tit{font-weight:800;font-size:0.9rem;display:flex;justify-content:space-between;align-items:center}
+  .dia label{font-size:0.7rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .linha{display:flex;align-items:center;gap:8px;font-size:0.84rem;padding:7px 9px;border-radius:8px;background:#1d1d1d;border:1px solid var(--border)}
+  .linha .per{font-size:0.7rem;color:var(--muted);font-weight:800;width:46px;flex-shrink:0;text-transform:uppercase}
+  .linha .u{flex:1;font-weight:700}
+  .chip{font-size:0.66rem;font-weight:800;border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .c-feita{background:rgba(46,204,113,0.15);color:var(--green)}
+  .c-outro{background:rgba(46,204,113,0.10);color:#9be7b9}
+  .c-hoje{background:rgba(255,208,0,0.15);color:var(--gold)}
+  .c-futura{background:#2a2a2a;color:var(--muted)}
+  .c-atr{background:rgba(255,77,77,0.18);color:var(--danger)}
+  .c-just{background:rgba(79,163,255,0.15);color:var(--blue)}
+  .aviso{border-radius:10px;padding:11px 13px;font-size:0.85rem;line-height:1.5}
+  .aviso.err{background:rgba(255,77,77,0.12);border:1px solid var(--danger);color:#ffb3b3}
+  .aviso.ok{background:rgba(46,204,113,0.12);border:1px solid var(--green);color:#bff3d3}
+  .aviso.info{background:rgba(255,208,0,0.08);border:1px solid rgba(255,208,0,0.4);color:#ffe9a8}
+  .muted{color:var(--muted);font-size:0.78rem}
+  .mini-btn{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:0.72rem;cursor:pointer;white-space:nowrap}
+  #login{max-width:400px;margin:70px auto;padding:0 16px}
+  .tabela{width:100%;border-collapse:collapse;font-size:0.8rem}
+  .tabela th{color:var(--muted);font-size:0.68rem;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--border)}
+  .tabela td{padding:8px 6px;border-bottom:1px solid #262626}
+  .tabela td.n{text-align:center;font-weight:700}
+  .wrap-t{overflow-x:auto}
+  .num-grande{font-size:1.6rem;font-weight:800}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .kpi small{display:block;color:var(--muted);font-size:0.68rem;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+  .verm{color:var(--danger)}.amar{color:var(--gold)}.verde{color:var(--green)}
+  #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:#fff;padding:11px 16px;border-radius:10px;font-size:0.85rem;z-index:300;display:none;max-width:92%}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">DINA <span>PIZZA</span> · <span style="color:#fff;font-weight:600;font-size:0.85rem">Agenda de visitas</span></div>
+  <div class="quem" id="quem"></div>
+</header>
+
+<div id="login">
+  <div class="card" style="display:flex;flex-direction:column;gap:12px">
+    <div class="tit" style="text-align:center">📅 Agenda de visitas da gestão</div>
+    <div class="muted" style="text-align:center;line-height:1.5">Gerente regional, gestora de RH e nutricionista: entre com a sua senha da agenda. Para ver os números de todos, use a senha do Admin.</div>
+    <input type="password" id="senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')entrar()">
+    <div id="loginErro" style="color:var(--danger);font-size:0.85rem;min-height:1em"></div>
+    <button class="btn" onclick="entrar()">Entrar</button>
+    <a href="placar" class="muted" style="text-align:center">← Voltar ao placar</a>
+  </div>
+</div>
+
+<main id="app" style="display:none"></main>
+<div id="toast"></div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const K='dina_agenda_hash';
+const PER=[['manha','Manhã'],['tarde','Tarde'],['noite','Noite']];
+const NOMES_SIT={feita:['✅ Feita','c-feita'],feita_outro_dia:['🔁 Feita em outro dia','c-outro'],hoje:['⏳ Hoje','c-hoje'],futura:['🗓 Planejada','c-futura'],atrasada:['⚠️ Não feita','c-atr'],nao_cumprida:['❌ Não cumprida','c-atr'],justificada:['📝 Justificada','c-just']};
+let H='', E=null, ABA='atual', EDIT=null, PAINEL=null;
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4500);}
+function lerK(){try{return localStorage.getItem(K)||'';}catch(e){return '';}}
+function gravarK(v){try{v?localStorage.setItem(K,v):localStorage.removeItem(K);}catch(e){}}
+function jsonp(params,ms){
+  return new Promise((ok,falha)=>{
+    const cb='agCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
+    const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou. Tente de novo.'));},ms||30000);
+    function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=r=>{limpar();ok(r);};
+    s.onerror=()=>{limpar();falha(new Error('Sem conexão'));};
+    s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
+    document.head.appendChild(s);
+  });
+}
+async function post(o){
+  const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(o)});
+  let j=null; try{j=JSON.parse(await r.text());}catch(e){}
+  if(!j) throw new Error('Sem resposta do servidor');
+  if(j.sair){ sair(); throw new Error(j.erro); }
+  if(j.ok!==true) throw new Error(j.erro||'Não salvou');
+  return j;
+}
+function sair(){ gravarK(''); H=''; E=null; PAINEL=null; document.getElementById('app').style.display='none'; document.getElementById('login').style.display='block'; document.getElementById('quem').innerHTML=''; }
+
+async function entrar(){
+  const s=document.getElementById('senha').value, err=document.getElementById('loginErro');
+  if(!s){err.textContent='Digite a senha.';return;}
+  err.style.color='var(--muted)'; err.textContent='Conferindo...';
+  try{
+    const r=await post({action:'agendaLogin',hash:hash(s)});
+    err.textContent=''; H=hash(s); gravarK(H); document.getElementById('senha').value='';
+    if(r.painel) abrirPainel(); else carregar();
+  }catch(e){ err.style.color='var(--danger)'; err.textContent=/reconhecida/.test(e.message)?'O servidor ainda não tem a agenda. Peça para colar o código novo no Apps Script.':e.message; }
+}
+
+// ═════════ PESSOA ═════════
+async function carregar(){
+  document.getElementById('login').style.display='none';
+  const app=document.getElementById('app'); app.style.display='flex'; if(!E) app.innerHTML='<div class="card muted">Carregando a agenda...</div>';
+  try{
+    const r=await jsonp({action:'agendaEstado',chave:H});
+    if(!r||!r.ok){ if(r&&r.sair){ sair(); document.getElementById('loginErro').textContent=r.erro; return; } throw new Error((r&&r.erro)||'Erro'); }
+    E=r; if(ABA==='anterior'&&!(E.anterior.status&&E.anterior.status.abertas)) ABA='atual';
+    render();
+  }catch(e){ app.innerHTML='<div class="card aviso err">⚠ '+esc(e.message)+'</div>'; }
+}
+function render(){
+  document.getElementById('quem').innerHTML=`<b>${esc(E.nome)}</b><br>${esc(E.rotulo)} · <a onclick="sair()">sair</a>`;
+  const ant=E.anterior.status&&E.anterior.status.abertas;
+  let h=renderAgora();
+  h+=`<div class="abas">${ant?`<div class="aba${ABA==='anterior'?' on':''}" onclick="trocarAba('anterior')">Semana passada<span class="bol">${ant}</span></div>`:''}
+    <div class="aba${ABA==='atual'?' on':''}" onclick="trocarAba('atual')">Esta semana${!E.atual.enviada?'<span class="bol">!</span>':''}</div>
+    <div class="aba${ABA==='proxima'?' on':''}" onclick="trocarAba('proxima')">Próxima semana${!E.proxima.enviada?'<span class="bol" style="background:#555">nova</span>':''}</div></div>`;
+  const S=E[ABA];
+  h+=EDIT&&EDIT.semana===S.semana?renderEditor(S):renderSemana(S);
+  document.getElementById('app').innerHTML=h;
+}
+function trocarAba(a){ ABA=a; EDIT=null; render(); }
+
+// ── visita agora (check-in pelo GPS) ──
+function renderAgora(){
+  const hojeItens=(E.atual.status?E.atual.status.itens:[]).filter(x=>x.dia===E.hoje);
+  const proxima=hojeItens.find(x=>x.situacao==='hoje');
+  let h='<div class="card"><div class="tit">📍 Visita agora</div>';
+  if(E.visitaAberta){
+    h+=`<div class="aviso ok">Você está na <b>${esc(E.visitaAberta.unidade)}</b> desde <b>${esc(E.visitaAberta.entrada)}</b>.</div><div style="height:10px"></div><button class="btn sec" onclick="checkout('${E.visitaAberta.id}')">🚪 Saí da loja</button>`;
+  } else {
+    h+=`<div class="muted" style="margin-bottom:8px">Ao chegar na loja, toque em "Cheguei". O GPS confirma que você está lá — é isso que conta a visita.</div>
+      <select id="ciLoja">${E.lojas.map(u=>`<option ${proxima&&proxima.unidade===u?'selected':''}>${esc(u)}</option>`).join('')}</select>
+      <div style="height:10px"></div><button class="btn verde" id="ciBtn" onclick="checkin()">📍 Cheguei na loja</button>`;
+  }
+  if(E.visitasHoje&&E.visitasHoje.length) h+='<div class="muted" style="margin-top:10px">Hoje: '+E.visitasHoje.map(v=>esc(v.unidade)+' '+esc(v.entrada)+(v.saida?'–'+esc(v.saida):'')).join(' · ')+'</div>';
+  if(hojeItens.length) h+='<div class="muted" style="margin-top:6px">Planejado para hoje: '+hojeItens.map(x=>esc(x.unidade)+' ('+(PER.find(p=>p[0]===x.periodo)||['',''])[1]+')').join(' · ')+'</div>';
+  return h+'</div>';
+}
+function posicao(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res({erro:'Este celular não tem GPS disponível.'});
+    navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+      e=>res({erro:e.code===1?(/iPhone|iPad/.test(navigator.userAgent)?'Permita a localização: toque no ícone à esquerda do endereço › Ajustes do Site › Localização › Permitir.':'Permita a localização: toque no cadeado ao lado do endereço › Permissões › Localização.'):'Não consegui sua localização. Ligue o GPS e tente de novo.'}),
+      {enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  });
+}
+async function checkin(){
+  const b=document.getElementById('ciBtn'), u=document.getElementById('ciLoja').value;
+  b.disabled=true; b.textContent='Conferindo a localização...';
+  const p=await posicao();
+  if(p.erro){ toast(p.erro); b.disabled=false; b.textContent='📍 Cheguei na loja'; return; }
+  try{ const r=await post({action:'agendaCheckin',chave:H,unidade:u,lat:p.lat,lng:p.lng,acc:p.acc}); toast(r.jaEstava?'Você já estava com check-in na '+u+'.':'✅ Check-in na '+u+' registrado.'); await carregar(); }
+  catch(e){ toast(e.message); b.disabled=false; b.textContent='📍 Cheguei na loja'; }
+}
+async function checkout(id){ try{ await post({action:'agendaCheckout',chave:H,id}); toast('Saída registrada.'); await carregar(); }catch(e){ toast(e.message); } }
+
+// ── semana enviada: situação de cada visita ──
+function renderSemana(S){
+  const nomeSem=ABA==='anterior'?'Semana passada':ABA==='atual'?'Esta semana':'Próxima semana';
+  let h=`<div class="card"><div class="tit">${nomeSem} · ${esc(S.dias[0].rotulo.slice(4))} a ${esc(S.dias[6].rotulo.slice(4))}</div>`;
+  if(!S.enviada){
+    if(ABA==='anterior') return h+'<div class="muted">Sem agenda nesta semana.</div></div>';
+    h+=`<div class="aviso info">Agenda ainda não enviada. Prazo: <b>segunda ${esc(S.prazo)}</b> (pode mandar antes).</div><div style="height:10px"></div>`;
+    if(S.bloqueio) return h+`<div class="aviso err">🔒 ${esc(S.bloqueio)}</div>${E.anterior.status&&E.anterior.status.abertas?'<div style="height:10px"></div><button class="btn sec" onclick="trocarAba(\'anterior\')">Ver a semana passada</button>':''}</div>`;
+    return h+`<button class="btn" onclick="editar('${ABA}')">📝 Montar a agenda da semana</button></div>`;
+  }
+  const st=S.status||{itens:[],extras:[]};
+  h+=`<div class="muted" style="margin-bottom:10px">Enviada em ${esc(S.enviadaEm)}${S.atrasada?' · <span class="verm">enviada depois do prazo</span>':''} · ${st.feitas} de ${st.itens.length} visitas feitas</div><div class="dias">`;
+  S.dias.forEach(d=>{
+    const pl=(S.plano||{})[d.dia]||{}, its=st.itens.filter(x=>x.dia===d.dia), ex=st.extras.filter(x=>x.dia===d.dia);
+    h+=`<div class="dia${d.dia<E.hoje?' passado':''}${pl.tipo==='folga'?' folga':''}${d.dia===E.hoje?' hoje':''}"><div class="dia-tit">${esc(d.rotulo)}${pl.tipo==='folga'?'<span class="chip c-just">FOLGA</span>':pl.tipo==='escritorio'?'<span class="chip c-futura">ESCRITÓRIO</span>':''}</div>`;
+    its.forEach(it=>{
+      const [txt,cls]=NOMES_SIT[it.situacao]||[it.situacao,'c-futura'];
+      const per=(PER.find(p=>p[0]===it.periodo)||['',''])[1];
+      h+=`<div class="linha"><span class="per">${per}</span><span class="u">${esc(it.unidade)}${it.visita?`<br><span class="muted">${esc(it.visita.entrada)}${it.visita.saida?'–'+esc(it.visita.saida):''}${it.situacao==='feita_outro_dia'?' em '+esc(it.visita.dia.slice(8)+'/'+it.visita.dia.slice(5,7)):''}</span>`:''}${it.motivo?`<br><span class="muted">${esc(it.motivo)}</span>`:''}</span><span class="chip ${cls}">${txt}</span></div>`;
+      if(['atrasada','nao_cumprida'].includes(it.situacao)||(it.situacao==='hoje'&&ABA!=='proxima')) h+=`<button class="mini-btn" onclick="justificar('${S.semana}','${it.slot}','${esc(it.unidade)}')">📝 Justificar${it.situacao==='hoje'?' (não vou conseguir)':''}</button>`;
+    });
+    ex.forEach(x=>{ h+=`<div class="linha"><span class="per">Extra</span><span class="u">${esc(x.unidade)}<br><span class="muted">${esc(x.entrada)}${x.saida?'–'+esc(x.saida):''}</span></span><span class="chip c-feita">✅ Visita extra</span></div>`; });
+    if(!its.length&&!ex.length&&pl.tipo!=='folga'&&pl.tipo!=='escritorio') h+='<div class="muted">Sem visita</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  if(ABA!=='anterior'&&!st.acabou) h+=`<div style="height:12px"></div><button class="btn sec" onclick="editar('${ABA}')">🔁 Trocar visita (emergência)</button><div class="muted" style="margin-top:6px">Pode trocar o dia e a loja, mas as lojas que você prometeu continuam valendo nesta semana.</div>`;
+  if(S.historico&&S.historico.length>1) h+='<div class="muted" style="margin-top:10px">Trocas: '+S.historico.slice(1).map(x=>esc(x.em)+' — '+esc(x.motivo)).join(' · ')+'</div>';
+  return h+'</div>';
+}
+async function justificar(semana,slot,u){
+  const m=prompt('Por que a visita na '+u+' não foi (ou não vai ser) feita?');
+  if(m===null) return;
+  try{ await post({action:'agendaJustificar',chave:H,semana,slot,motivo:m}); toast('Justificativa registrada.'); await carregar(); }catch(e){ toast(e.message); }
+}
+
+// ── montar / trocar a semana ──
+function editar(aba){
+  const S=E[aba]; EDIT={semana:S.semana,dias:{}};
+  S.dias.forEach(d=>{ const p=(S.plano||{})[d.dia]; EDIT.dias[d.dia]=p?JSON.parse(JSON.stringify(p)):{tipo:'trabalho',manha:'',tarde:'',noite:''}; });
+  render(); window.scrollTo({top:document.getElementById('app').offsetTop,behavior:'smooth'});
+}
+function renderEditor(S){
+  const troca=S.enviada;
+  let h=`<div class="card"><div class="tit">${troca?'🔁 Trocar visitas':'📝 Montar a agenda'} · ${esc(S.dias[0].rotulo.slice(4))} a ${esc(S.dias[6].rotulo.slice(4))}</div>
+    <div class="muted" style="margin-bottom:10px;line-height:1.5">Escolha a loja de cada período (noite = 17h30 até o fechamento). Folgas iguais às dos funcionários: <b>${S.folgasExigidas} por semana</b> e <b>1 domingo de folga no mês</b>.${troca?' Dias que já passaram não mudam.':''}</div><div class="dias">`;
+  S.dias.forEach(d=>{
+    const x=EDIT.dias[d.dia], pass=d.dia<E.hoje, dis=pass?'disabled':'';
+    h+=`<div class="dia${pass?' passado':''}${x.tipo==='folga'?' folga':''}${d.dia===E.hoje?' hoje':''}"><div class="dia-tit">${esc(d.rotulo)}</div>
+      <select ${dis} onchange="mudaTipo('${d.dia}',this.value)"><option value="trabalho" ${x.tipo==='trabalho'?'selected':''}>Visitas</option><option value="folga" ${x.tipo==='folga'?'selected':''}>Folga</option><option value="escritorio" ${x.tipo==='escritorio'?'selected':''}>Escritório / reunião</option></select>`;
+    if(x.tipo==='trabalho') PER.forEach(([k,n])=>{ h+=`<label>${n}</label><select ${dis} onchange="EDIT.dias['${d.dia}'].${k}=this.value;contar()"><option value="">—</option>${E.lojas.map(u=>`<option ${x[k]===u?'selected':''}>${esc(u)}</option>`).join('')}</select>`; });
+    h+='</div>';
+  });
+  h+=`</div><div id="contador" class="muted" style="margin:12px 0 8px"></div>`;
+  if(troca) h+=`<label class="muted">Motivo da troca (obrigatório)</label><textarea id="motivo" placeholder="Ex.: emergência na Colombo, troquei a Uberaba para quinta"></textarea><div style="height:10px"></div>`;
+  h+=`<div id="edErro" class="aviso err" style="display:none;margin-bottom:10px"></div>
+    <button class="btn" id="edBtn" onclick="enviarAgenda()">${troca?'Salvar a troca':'Enviar a agenda da semana'}</button>
+    <div style="height:8px"></div><button class="btn sec" onclick="EDIT=null;render()">Cancelar</button></div>`;
+  setTimeout(contar,0);
+  return h;
+}
+function mudaTipo(dia,t){ EDIT.dias[dia].tipo=t; if(t!=='trabalho') PER.forEach(([k])=>EDIT.dias[dia][k]=''); render(); }
+function contar(){
+  const S=E[ABA], el=document.getElementById('contador'); if(!el) return;
+  const vis=Object.values(EDIT.dias).reduce((n,d)=>n+(d.tipo==='trabalho'?PER.filter(([k])=>d[k]).length:0),0);
+  const folg=Object.values(EDIT.dias).filter(d=>d.tipo==='folga').length;
+  el.innerHTML=`<b>${vis}</b> visita(s) · <b class="${folg>=S.folgasExigidas?'verde':'verm'}">${folg}</b> folga(s) de ${S.folgasExigidas}`;
+}
+async function enviarAgenda(){
+  const S=E[ABA], b=document.getElementById('edBtn'), er=document.getElementById('edErro');
+  const motivo=(document.getElementById('motivo')||{}).value||'';
+  b.disabled=true; b.textContent='Salvando...'; er.style.display='none';
+  try{
+    const r=await post({action:'agendaSalvar',chave:H,semana:S.semana,dias:EDIT.dias,motivo});
+    EDIT=null; toast(r.nova?(r.atrasada?'Agenda enviada (depois do prazo de segunda 10h).':'✅ Agenda da semana enviada.'):'✅ Troca salva.'); await carregar();
+  }catch(e){ er.textContent=e.message; er.style.display='block'; b.disabled=false; b.textContent=S.enviada?'Salvar a troca':'Enviar a agenda da semana'; }
+}
+
+// ═════════ PAINEL (Robson) ═════════
+async function abrirPainel(mes){
+  document.getElementById('login').style.display='none';
+  const app=document.getElementById('app'); app.style.display='flex';
+  document.getElementById('quem').innerHTML='<b>Painel da gestão</b><br><a onclick="sair()">sair</a>';
+  app.innerHTML='<div class="card muted">Carregando os números...</div>';
+  try{
+    const r=await jsonp({action:'agendaPainel',chave:H,mes:mes||''});
+    if(!r||!r.ok){ if(r&&r.sair){ sair(); return; } throw new Error((r&&r.erro)||'Erro'); }
+    PAINEL=r; renderPainel();
+  }catch(e){ app.innerHTML='<div class="card aviso err">⚠ '+esc(e.message)+'</div>'; }
+}
+function renderPainel(){
+  const P=PAINEL, NM=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const opts=[]; const [ay,am]=P.hoje.slice(0,7).split('-').map(Number);
+  for(let i=0;i<6;i++){ const d=new Date(ay,am-1-i,1); const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); opts.push(`<option value="${v}" ${v===P.mes?'selected':''}>${NM[d.getMonth()]} ${d.getFullYear()}</option>`); }
+  let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="tit" style="margin:0">📊 Agenda da gestão — números do mês</div><select style="width:auto" onchange="abrirPainel(this.value)">${opts.join('')}</select></div>
+    <div class="muted" style="margin-top:6px">Conta só as visitas planejadas até hoje. "Feita" = check-in pelo GPS dentro da loja.</div></div>`;
+  P.pessoas.forEach(p=>{
+    const c=p.cumprimento, cc=c==null?'':c>=90?'verde':c>=70?'amar':'verm';
+    h+=`<div class="card"><div class="tit">${esc(p.rotulo)} · <span style="color:#fff">${esc(p.nome)}</span></div><div class="kpis">
+      <div class="kpi"><small>Cumprimento</small><div class="num-grande ${cc}">${c==null?'—':c+'%'}</div><span class="muted">${p.feitas} de ${p.planejadas} planejadas</span></div>
+      <div class="kpi"><small>No dia combinado</small><div class="num-grande">${p.noDia}</div><span class="muted">${p.outroDia} em outro dia</span></div>
+      <div class="kpi"><small>Não cumpridas</small><div class="num-grande ${p.naoCumpridas?'verm':''}">${p.naoCumpridas}</div><span class="muted">${p.justificadas} justificada(s) · ${p.emAberto} em aberto</span></div>
+      <div class="kpi"><small>Visitas extras</small><div class="num-grande">${p.extras}</div><span class="muted">${p.visitasMes} check-ins no mês</span></div>
+      <div class="kpi"><small>Tempo médio na loja</small><div class="num-grande">${p.tempoMedio==null?'—':p.tempoMedio+' min'}</div></div>
+      <div class="kpi"><small>Trocas / atrasos</small><div class="num-grande ${p.trocas>4?'amar':''}">${p.trocas}</div><span class="muted">${p.enviosAtrasados} agenda(s) depois do prazo</span></div>
+    </div><div class="muted" style="margin-top:10px">Esta semana: ${p.semanaAtual?(p.semanaAtual.status.feitas+' de '+p.semanaAtual.status.itens.length+' feitas'+(p.semanaAtual.status.abertas?' · <span class="verm">'+p.semanaAtual.status.abertas+' não feita(s)</span>':'')):'<span class="verm">agenda não enviada</span>'} · Próxima semana: ${p.proximaEnviada?'<span class="verde">enviada</span>':'ainda não enviada'}</div></div>`;
+  });
+  h+='<div class="card"><div class="tit">🏪 Dias sem visita por loja</div><div class="wrap-t"><table class="tabela"><thead><tr><th>Loja</th>'+P.pessoas.map(p=>`<th>${esc(p.rotulo)}</th>`).join('')+'</tr></thead><tbody>';
+  P.lojas.forEach(u=>{
+    h+=`<tr><td>${esc(u)}</td>`+P.pessoas.map(p=>{ const x=p.diasSemVisita.find(y=>y.unidade===u)||{}; const cl=x.dias==null||x.dias>30?'verm':x.dias>15?'amar':'verde'; return `<td class="n ${cl}">${x.dias==null?'nunca':x.dias+' d'}<br><span class="muted" style="font-weight:400">${esc(x.ultima||'')}</span></td>`; }).join('')+'</tr>';
+  });
+  h+='</tbody></table></div><div class="muted" style="margin-top:8px">Verde até 15 dias · amarelo 16 a 30 · vermelho mais de 30 ou nunca.</div></div>';
+  document.getElementById('app').innerHTML=h;
+}
+
+// ── início ──
+window.addEventListener('DOMContentLoaded',async()=>{
+  H=lerK(); if(!H) return;
+  try{ const r=await post({action:'agendaLogin',hash:H}); if(r.painel) abrirPainel(); else carregar(); }
+  catch(e){ sair(); }
+});
+</script>
+<script src="atualizador.js"></script>
+</body>
+</html>
