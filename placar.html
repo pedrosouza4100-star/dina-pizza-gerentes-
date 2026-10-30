@@ -611,10 +611,11 @@ const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirD
 })();
 function entrarTeste(u){
   MODO_TESTE=true; TESTE_CHK={abertura:[],fechamento:[]};
+  try{ sessionStorage.setItem('dina_teste_loja',u); }catch(e){} // volta ao teste se sair para a escala e voltar
   try{ Object.keys(localStorage).filter(k=>k.indexOf('dinateste_')===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
   document.getElementById('testeFaixa').style.display='flex';
   document.body.style.paddingTop='38px';
-  const esc=document.querySelector('a[href*="escala.html"]'); if(esc) esc.style.display='none';
+  const esc=document.querySelector('a[href*="escala.html"]'); if(esc) esc.href='escala.html?teste=1&loja='+encodeURIComponent(u); // escala em modo teste (nada é salvo)
   iniciarApp(u);
   document.getElementById('unitBadge').textContent=u+' · 🧪 TESTE';
 }
@@ -1213,7 +1214,7 @@ async function entrar(){
     err.textContent='Conferindo...';
     try{
       const r=await authPost({action:'authVerificar',unidade:u,hash:h,aparelho:aparelhoId(),info:aparelhoInfo()});
-      if(r.situacao!=='ok' && await ehSenhaAdmin(h)){ err.textContent=''; document.getElementById('loginSenha').value=''; entrarTeste(u); return; }
+      if(r.situacao!=='ok' && await ehSenhaAdmin(h)){ err.textContent=''; document.getElementById('loginSenha').value=''; try{ sessionStorage.setItem('dina_teste_admin',h); }catch(e){} entrarTeste(u); return; }
       if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); aplicarAparelho(r.aparelho); return; }
       if(r.situacao==='sem'){
         // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
@@ -2159,6 +2160,9 @@ window.addEventListener('load',()=>{
   // 24/10/2026: login passou a pedir loja + senha; quem entrou antes disso entra de novo uma vez
   if(localStorage.getItem('dina_login_v')!=='2'){ localStorage.removeItem('dina_unidade_logada'); }
   const ultima=localStorage.getItem('dina_ultima_loja'); if(ultima) document.getElementById('loginUnidade').value=ultima;
+  // voltando da escala em modo teste: continua no modo teste (nesta aba)
+  let tLoja=null, tHash=null; try{ tLoja=sessionStorage.getItem('dina_teste_loja'); tHash=sessionStorage.getItem('dina_teste_admin'); }catch(e){}
+  if(tLoja&&tHash){ carregarMetas(); ehSenhaAdmin(tHash).then(ok=>{ if(ok) entrarTeste(tLoja); else { try{sessionStorage.removeItem('dina_teste_loja');}catch(e){} mostrar('telaEscolha'); } }); return; }
   const u=localStorage.getItem('dina_unidade_logada');
   if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
@@ -2824,7 +2828,7 @@ function limpar(){
 </script>
 <div id="testeFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:2147483000;background:#7a3cff;color:#fff;font:700 13px/1.2 system-ui,sans-serif;align-items:center;justify-content:center;gap:10px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.5)">
   <span>🧪 MODO TESTE — nada é gravado nem conta para a loja</span>
-  <button onclick="location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">Sair do teste</button>
+  <button onclick="try{sessionStorage.removeItem('dina_teste_loja');sessionStorage.removeItem('dina_teste_admin');}catch(e){} location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">Sair do teste</button>
 </div>
 <script src="atualizador.js"></script>
 </body>
