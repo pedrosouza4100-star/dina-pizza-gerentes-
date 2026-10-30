@@ -289,6 +289,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   const fs=document.getElementById('pesFuncao');
   ESCALA_FUNCOES.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; fs.appendChild(o); });
 
+  // Modo teste (Admin, vindo do placar em modo teste): mostra a escala real da loja, mas nada é salvo
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('teste')==='1'){ entrarTeste(qs.get('loja')||''); return; }
   document.getElementById('nomeGerente').value=lerLS('esc_gerente')||'';
   // Vindo do placar: usa a loja em que o gerente já entrou com a senha do placar
   const doPlacar=lerLS('dina_unidade_logada');
@@ -304,8 +307,32 @@ window.addEventListener('DOMContentLoaded',()=>{
     '<a class="btn" href="placar" style="text-align:center;text-decoration:none">Ir para o Placar</a>';
 });
 
-function lerLS(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-function gravarLS(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+let ESC_TESTE=false;
+// no modo teste, os rascunhos ficam separados (prefixo "teste_") para não misturar com os do gerente
+function chLS(k){ return ESC_TESTE&&/^esc_/.test(k)?'teste_'+k:k; }
+function lerLS(k){ try{ return localStorage.getItem(chLS(k)); }catch(e){ return null; } }
+function gravarLS(k,v){ try{ if(v==null) localStorage.removeItem(chLS(k)); else localStorage.setItem(chLS(k),v); }catch(e){} }
+async function entrarTeste(loja){
+  const card=document.querySelector('#telaLogin .card');
+  let ok=false;
+  try{
+    const h=sessionStorage.getItem('dina_teste_admin')||'';
+    const r=await fetch(ESCALA_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authGestaoLogin',hash:h})});
+    const j=JSON.parse(await r.text()); ok=!!(h&&j&&j.valido&&j.papel==='admin');
+  }catch(e){}
+  if(!ok||!ESCALA_UNIDADES.includes(loja)){ card.innerHTML='<div class="auth-logo">DINA <span>PIZZA</span></div><div class="muted" style="text-align:center">O modo teste da escala abre pelo placar: entre no placar com a senha do Admin e toque em "Escala da equipe".</div><a class="btn" href="placar" style="text-align:center;text-decoration:none">Ir para o Placar</a>'; return; }
+  ESC_TESTE=true;
+  // nada vai para o servidor: o salvamento finge que deu certo
+  window.ePost=async function(payload){ await new Promise(r=>setTimeout(r,400)); return {ok:true,teste:true}; };
+  const f=document.createElement('div');
+  f.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#7a3cff;color:#fff;font:700 12px/1.2 Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 10px';
+  f.innerHTML='<span>🧪 MODO TESTE — nada é salvo</span><a href="placar" style="background:#fff;color:#7a3cff;border-radius:6px;padding:4px 9px;text-decoration:none">Voltar ao placar</a>';
+  document.body.appendChild(f); document.body.style.paddingTop='38px'; document.querySelectorAll('header,.topo,.top').forEach(h=>{ if(getComputedStyle(h).position==='sticky') h.style.top='38px'; });
+  const sel=document.getElementById('selUnidade'); sel.value=loja; sel.disabled=true;
+  document.getElementById('nomeGerente').value='Teste (Admin)';
+  document.getElementById('btnSair').textContent='‹ Voltar ao placar';
+  entrar();
+}
 
 function entrar(){
   const u=document.getElementById('selUnidade').value;

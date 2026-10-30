@@ -83,13 +83,18 @@
 
 <main id="app" style="display:none"></main>
 <div id="toast"></div>
+<div id="testeFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:400;background:#7a3cff;color:#fff;font:700 12px/1.2 Arial,sans-serif;align-items:center;justify-content:center;gap:8px;padding:7px 10px;flex-wrap:wrap">
+  <span>🧪 MODO TESTE — dados separados, não contam nos números nem vão para o robô</span>
+  <button onclick="zerarTeste()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:4px 9px;font:700 11px Arial;cursor:pointer">Apagar teste</button>
+  <button onclick="sairTeste()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:4px 9px;font:700 11px Arial;cursor:pointer">Sair do teste</button>
+</div>
 
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 const K='dina_agenda_hash';
 const PER=[['manha','Manhã'],['tarde','Tarde'],['noite','Noite']];
 const NOMES_SIT={feita:['✅ Feita','c-feita'],feita_outro_dia:['🔁 Feita em outro dia','c-outro'],hoje:['⏳ Hoje','c-hoje'],futura:['🗓 Planejada','c-futura'],atrasada:['⚠️ Não feita','c-atr'],nao_cumprida:['❌ Não cumprida','c-atr'],justificada:['📝 Justificada','c-just']};
-let H='', E=null, ABA='atual', EDIT=null, PAINEL=null;
+let H='', E=null, ABA='atual', EDIT=null, PAINEL=null, TESTE=false;
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4500);}
@@ -102,11 +107,13 @@ function jsonp(params,ms){
     function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
     window[cb]=r=>{limpar();ok(r);};
     s.onerror=()=>{limpar();falha(new Error('Sem conexão'));};
+    if(TESTE) params=Object.assign({teste:'1'},params);
     s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
     document.head.appendChild(s);
   });
 }
 async function post(o){
+  if(TESTE) o=Object.assign({teste:'1'},o);
   const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(o)});
   let j=null; try{j=JSON.parse(await r.text());}catch(e){}
   if(!j) throw new Error('Sem resposta do servidor');
@@ -114,7 +121,7 @@ async function post(o){
   if(j.ok!==true) throw new Error(j.erro||'Não salvou');
   return j;
 }
-function sair(){ gravarK(''); H=''; E=null; PAINEL=null; document.getElementById('app').style.display='none'; document.getElementById('login').style.display='block'; document.getElementById('quem').innerHTML=''; }
+function sair(){ TESTE=false; document.getElementById('testeFaixa').style.display='none'; document.body.style.paddingTop=''; gravarK(''); H=''; E=null; PAINEL=null; document.getElementById('app').style.display='none'; document.getElementById('login').style.display='block'; document.getElementById('quem').innerHTML=''; }
 
 async function entrar(){
   const s=document.getElementById('senha').value, err=document.getElementById('loginErro');
@@ -139,7 +146,7 @@ async function carregar(){
   }catch(e){ app.innerHTML='<div class="card aviso err">⚠ '+esc(e.message)+'</div>'; }
 }
 function render(){
-  document.getElementById('quem').innerHTML=`<b>${esc(E.nome)}</b><br>${esc(E.rotulo)} · <a onclick="sair()">sair</a>`;
+  document.getElementById('quem').innerHTML=TESTE?'<b>🧪 Modo teste</b><br><a onclick="sairTeste()">voltar ao painel</a>':`<b>${esc(E.nome)}</b><br>${esc(E.rotulo)} · <a onclick="sair()">sair</a>`;
   const ant=E.anterior.status&&E.anterior.status.abertas;
   let h=renderAgora();
   h+=`<div class="abas">${ant?`<div class="aba${ABA==='anterior'?' on':''}" onclick="trocarAba('anterior')">Semana passada<span class="bol">${ant}</span></div>`:''}
@@ -178,7 +185,7 @@ function posicao(){
 async function checkin(){
   const b=document.getElementById('ciBtn'), u=document.getElementById('ciLoja').value;
   b.disabled=true; b.textContent='Conferindo a localização...';
-  const p=await posicao();
+  const p=TESTE?{lat:0,lng:0,acc:0}:await posicao();
   if(p.erro){ toast(p.erro); b.disabled=false; b.textContent='📍 Cheguei na loja'; return; }
   try{ const r=await post({action:'agendaCheckin',chave:H,unidade:u,lat:p.lat,lng:p.lng,acc:p.acc}); toast(r.jaEstava?'Você já estava com check-in na '+u+'.':'✅ Check-in na '+u+' registrado.'); await carregar(); }
   catch(e){ toast(e.message); b.disabled=false; b.textContent='📍 Cheguei na loja'; }
@@ -280,7 +287,8 @@ function renderPainel(){
   const opts=[]; const [ay,am]=P.hoje.slice(0,7).split('-').map(Number);
   for(let i=0;i<6;i++){ const d=new Date(ay,am-1-i,1); const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); opts.push(`<option value="${v}" ${v===P.mes?'selected':''}>${NM[d.getMonth()]} ${d.getFullYear()}</option>`); }
   let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="tit" style="margin:0">📊 Agenda da gestão — números do mês</div><select style="width:auto" onchange="abrirPainel(this.value)">${opts.join('')}</select></div>
-    <div class="muted" style="margin-top:6px">Conta só as visitas planejadas até hoje. "Feita" = check-in pelo GPS dentro da loja.</div></div>`;
+    <div class="muted" style="margin-top:6px">Conta só as visitas planejadas até hoje. "Feita" = check-in pelo GPS dentro da loja.</div>
+    <div style="height:12px"></div><button class="btn sec" onclick="entrarTeste()">🧪 Testar a agenda (ver como o regional, a RH e a nutricionista usam)</button></div>`;
   P.pessoas.forEach(p=>{
     const c=p.cumprimento, cc=c==null?'':c>=90?'verde':c>=70?'amar':'verm';
     h+=`<div class="card"><div class="tit">${esc(p.rotulo)} · <span style="color:#fff">${esc(p.nome)}</span></div><div class="kpis">
@@ -298,6 +306,15 @@ function renderPainel(){
   });
   h+='</tbody></table></div><div class="muted" style="margin-top:8px">Verde até 15 dias · amarelo 16 a 30 · vermelho mais de 30 ou nunca.</div></div>';
   document.getElementById('app').innerHTML=h;
+}
+
+// ── modo teste: o Admin usa a agenda de verdade, mas tudo fica num "usuário de teste" separado
+//    (não entra no painel nem nas mensagens do robô; o check-in não exige estar na loja) ──
+function entrarTeste(){ TESTE=true; E=null; ABA='atual'; EDIT=null; document.getElementById('testeFaixa').style.display='flex'; document.body.style.paddingTop='40px'; carregar(); }
+function sairTeste(){ TESTE=false; E=null; EDIT=null; document.getElementById('testeFaixa').style.display='none'; document.body.style.paddingTop=''; abrirPainel(); }
+async function zerarTeste(){
+  if(!confirm('Apagar tudo o que foi feito no modo teste (agendas e check-ins de teste)?')) return;
+  try{ await post({action:'agendaTesteZerar',chave:H}); toast('Teste apagado. Pode começar de novo.'); E=null; ABA='atual'; await carregar(); }catch(e){ toast(e.message); }
 }
 
 // ── início ──
