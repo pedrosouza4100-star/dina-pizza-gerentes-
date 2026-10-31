@@ -296,6 +296,24 @@
     </div>
   </div>
   <!-- Aviso de horário do checklist de abertura -->
+  <!-- Compromisso com a verdade: aparece ao iniciar cada checklist (abertura e fechamento), 1 vez por turno no dia -->
+  <div id="chkVerdade" style="display:none;position:fixed;inset:0;background:#160000;z-index:1150;flex-direction:column;align-items:center;justify-content:flex-start;padding:22px 18px;text-align:center;overflow-y:auto;">
+    <div style="font-size:46px;line-height:1;margin:6px 0 8px">⚠️</div>
+    <div style="font-size:23px;font-weight:900;color:#ff3b3b;letter-spacing:0.02em;margin-bottom:6px;text-transform:uppercase">Atenção, gerente</div>
+    <div style="font-size:17px;font-weight:900;color:#FFD000;margin-bottom:16px;text-transform:uppercase">Seja 100% verdadeiro neste checklist</div>
+    <div style="font-size:15px;color:#fff;max-width:360px;line-height:1.65;text-align:left;border:2px solid #ff3b3b;border-radius:12px;background:rgba(255,59,59,0.12);padding:14px 16px">
+      Tudo o que você marcar aqui <b style="color:#FFD000">será cruzado pelo sistema</b> e <b style="color:#FFD000">conferido pessoalmente pelo gerente regional e pelo gestor da rede</b> nas visitas.<br><br>
+      Marcar <b>✓ OK</b> em algo que não está OK é <b style="color:#ff6b6b">informação falsa</b> e será tratado com a seriedade que merece.<br><br>
+      Leia cada item com atenção e confira na loja antes de responder. <b>Não preencha de qualquer jeito.</b><br><br>
+      <b style="color:#FFD000">Ficou com dúvida em algum item? PERGUNTE</b> ao gerente regional antes de marcar. Melhor perguntar do que errar.
+    </div>
+    <label style="display:flex;gap:10px;align-items:flex-start;max-width:360px;margin:18px 0 14px;text-align:left;color:#fff;font-size:15px;font-weight:700;line-height:1.45;cursor:pointer">
+      <input type="checkbox" id="chkVerdadeOk" style="width:24px;height:24px;flex-shrink:0;margin-top:1px;accent-color:#C00000">
+      <span>Li e entendi. Vou conferir cada item e responder somente a verdade.</span>
+    </label>
+    <button id="chkVerdadeBtn" disabled style="background:#C00000;border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:800;padding:16px 22px;cursor:pointer;width:100%;max-width:360px;text-transform:uppercase;opacity:0.45">Aguarde...</button>
+  </div>
+
   <div id="chkHorarioAviso" style="display:none;position:fixed;inset:0;background:rgba(40,0,0,0.97);z-index:1100;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div id="chkHorTitulo" style="font-size:24px;font-weight:900;color:#ff4444;margin-bottom:14px;letter-spacing:0.02em"></div>
     <div id="chkHorTexto" style="font-size:15px;color:#fff;margin-bottom:24px;max-width:350px;line-height:1.65"></div>
@@ -1928,11 +1946,33 @@ function chkAvisoOk(){
   abrirChecklistForm('abertura');
 }
 
+// Compromisso com a verdade antes de cada checklist (1 vez por turno no dia; espera 8 s + caixa marcada)
+function chkPedirVerdade(turno, continuar){
+  const ch=chaveHoje('chk_verdade_'+turno);
+  try{ if(localStorage.getItem(ch)) return true; }catch(e){ }
+  const ov=document.getElementById('chkVerdade'), cb=document.getElementById('chkVerdadeOk'), bt=document.getElementById('chkVerdadeBtn');
+  cb.checked=false; ov.scrollTop=0;
+  let falta=8;
+  const atualizar=()=>{
+    const pode=falta<=0&&cb.checked;
+    bt.disabled=!pode; bt.style.opacity=pode?'1':'0.45';
+    bt.textContent=falta>0?('Leia com atenção... '+falta+' s'):(cb.checked?'✋ Assumo o compromisso — começar':'Marque a caixa acima');
+  };
+  clearInterval(window._chkVerdadeT);
+  window._chkVerdadeT=setInterval(()=>{ falta--; atualizar(); if(falta<=0) clearInterval(window._chkVerdadeT); },1000);
+  cb.onchange=atualizar;
+  bt.onclick=()=>{ if(bt.disabled) return; try{ localStorage.setItem(ch,String(Date.now())); }catch(e){} ov.style.display='none'; continuar(); };
+  atualizar();
+  ov.style.display='flex';
+  return false;
+}
+
 // O turno é decidido pelo placar (nunca pela hora): sem abertura completa = abertura; depois = fechamento
 function abrirChecklistForm(turnoForce, horarioConferido){
   let turno = turnoForce || (chkAberturaFeita ? 'fechamento' : 'abertura');
   if(turno==='fechamento' && !chkAberturaFeita) turno='abertura';
   if(turno==='abertura' && !horarioConferido && !chkConferirHorarioAbertura(()=>abrirChecklistForm('abertura', true))) return;
+  if(!chkPedirVerdade(turno, ()=>abrirChecklistForm(turno, true))) return;
   chkSelecionarTurno(turno);
   document.getElementById('chkModal').style.display='flex';
   document.body.style.overflow='hidden';
