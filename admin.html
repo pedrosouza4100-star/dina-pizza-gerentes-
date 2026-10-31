@@ -198,6 +198,7 @@
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Hoje na rede</span>
           <span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span></div>
         <div id="aparBox" style="display:none;margin-bottom:16px"></div>
+        <div id="excAdmBox" style="display:none;margin-bottom:16px"></div>
         <div id="regPendBox" style="display:none;margin-bottom:16px"></div>
         <div class="prot-box" id="protBox"><b>🛡️ Proteção do sistema</b> <span style="color:var(--muted)">conferindo...</span></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
@@ -685,6 +686,8 @@
       }
       if(('geo' in l) && !l.geo) h+=linha('av','Local','Localização da loja não cadastrada (aba Lojas e celulares)');
       else if(l.geo&&l.geo.foraHoje) h+=linha('err','Local',l.geo.foraHoje+' tentativa'+(l.geo.foraHoje>1?'s':'')+' de abrir o placar fora da loja hoje');
+      // selfie do envio final
+      if(l.selfie){ const sf=l.selfie; h+=linha(sf.dentro==='não'&&!sf.excecao?'err':'ok','Selfie','Fechou às '+escH(sf.hora)+' ('+(sf.papel==='assistente'?'assistente':'gerente')+')'+(sf.dentro==='não'?' · <b>fora da loja'+(sf.distancia?' ('+(sf.distancia>=1000?(sf.distancia/1000).toFixed(1).replace('.',',')+' km':sf.distancia+' m')+')':'')+'</b>'+(sf.excecao?' com autorização':''):'')+(/^https/.test(sf.url)?' · <a href="'+escH(sf.url)+'" target="_blank" style="color:var(--gold)">📸 ver foto</a>':'')); }
       // horário do checklist de abertura: bloqueio e atrasos do mês
       const ch=l.chkHorario;
       if(ch&&ch.bloqueio){
@@ -710,6 +713,7 @@
     document.getElementById('hojeLojas').innerHTML=cards.join('');
     renderAparPendentes(r.aparelhosPendentes);
     renderRegPendAdmin(r.regPendencias, r.regional);
+    renderExcAdmin(r.excecoes);
     renderCobranca(r);
     carregarProtecao();
     document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
@@ -759,6 +763,23 @@
     box.innerHTML=`<div class="cob-box" style="border-color:${atras?'var(--danger)':'var(--yellow)'};margin-bottom:0"><div class="cob-head"><div><b>📋 Correções esperando confirmação (${lista.length})</b><br><small>${atras?'<span style="color:var(--danger);font-weight:700">'+atras+' passou do prazo de 18 h</span> · ':''}O regional confirma em <a href="regional" target="_blank" style="color:var(--gold)">/regional</a> e a nutricionista em <a href="nutricionista" target="_blank" style="color:var(--gold)">/nutricionista</a></small></div></div>`+
       lista.map(p=>`<div class="cob-linha ${p.atrasada?'err':'av'}"><span class="nome">${escH(p.unidade)}<br><span style="font-size:0.7rem;color:var(--muted)">${p.origem==='nutri'?'🥗 Nutricionista':'📋 Regional'}</span></span><span class="st"><b>${escH(p.itemLabel)}</b><br>${escH(p.justificativa||'(só foto)')}${p.foto&&/^https/.test(p.foto)?' · <a href="'+escH(p.foto)+'" target="_blank" style="color:var(--gold)">ver foto</a>':''}<br><span style="color:var(--muted);font-size:0.75rem">justificado em ${escH(p.justificadaEm)} · ${p.atrasada?'<b style="color:var(--danger)">ATRASADA: '+p.horas+' h sem confirmação</b>':'prazo até '+escH(p.prazo)}</span></span></div>`).join('')+'</div>';
     box.style.display='block';
+  }
+
+  // ── Pedidos para continuar o placar fora da loja (o regional responde em /regional; o Admin também pode) ──
+  function renderExcAdmin(lista){
+    const box=document.getElementById('excAdmBox'); if(!box) return;
+    const pend=(lista||[]).filter(x=>x.situacao==='pendente'), feitas=(lista||[]).filter(x=>x.situacao==='aprovada'||x.situacao==='recusada');
+    if(!pend.length&&!feitas.length){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML=`<div class="cob-box" style="border-color:${pend.length?'var(--danger)':'var(--yellow)'};margin-bottom:0"><div class="cob-head"><div><b>🆘 Placar fora da loja: pedidos de autorização${pend.length?' ('+pend.length+' esperando)':''}</b><br><small>O regional responde em <a href="regional" target="_blank" style="color:var(--gold)">/regional</a>; você também pode responder aqui.</small></div></div>`+
+      pend.map(x=>`<div class="cob-linha err"><span class="nome">${escH(x.unidade)}</span><span class="st"><b>${escH(x.motivo)}</b><br><span style="color:var(--muted);font-size:0.75rem">pediu às ${escH(x.pedidoEm)}${x.distancia?' · a '+(x.distancia>=1000?(x.distancia/1000).toFixed(1).replace('.',',')+' km':x.distancia+' m')+' da loja':''}</span></span><button class="cob-btn" onclick="excAdmDecidir('${x.id}','aprovar','2')">✓ 2 h</button><button class="cob-btn" onclick="excAdmDecidir('${x.id}','aprovar','dia')">✓ Até fechar</button><button class="cob-btn off" onclick="excAdmDecidir('${x.id}','recusar')">Não autorizar</button></div>`).join('')+
+      feitas.map(x=>`<div class="cob-linha ${x.situacao==='aprovada'?'ok':'av'}"><span class="nome">${escH(x.unidade)}</span><span class="st">${x.situacao==='aprovada'?'✅ Autorizado até '+escH(x.validaAteTxt):'❌ Não autorizado'} por ${escH(x.por)} · ${escH(x.motivo)}</span></div>`).join('')+'</div>';
+    box.style.display='block';
+  }
+  async function excAdmDecidir(id,decisao,horas){
+    let motivo='';
+    if(decisao==='recusar'){ motivo=prompt('Por que não autorizar? (o gerente vê no placar)')||''; if(motivo.trim().length<5) return; }
+    try{ await admPost({action:'excDecidir',id,decisao,horas:horas||'',motivo,quem:'Robson (Admin)',chave:ADM.hash}); showToast(decisao==='aprovar'?'Autorizado.':'Não autorizado.','ok'); registrarLog('Placar fora da loja: '+(decisao==='aprovar'?'autorizado':'recusado')+' ('+id+')','ok'); carregarHoje(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
   }
 
   // datas que a planilha devolve por extenso ("Thu Oct 29 2026 22:47:00 GMT-0300") viram 29/10/2026 22:47
