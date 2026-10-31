@@ -268,7 +268,19 @@
     <div id="geoTitulo" style="font-size:20px;font-weight:800;color:#ff4444;margin-bottom:12px"></div>
     <div id="geoTexto" style="font-size:15px;color:#ddd;margin-bottom:22px;max-width:340px;line-height:1.6"></div>
     <button id="geoBtn" onclick="conferirLocal(true)" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;padding:16px 28px;cursor:pointer;width:100%;max-width:330px">📍 Conferir de novo</button>
+    <!-- Imprevisto: pedir autorização ao regional para continuar fora da loja -->
+    <div id="excBox" style="display:none;width:100%;max-width:330px;margin-top:16px;text-align:left">
+      <button id="excAbrirBtn" onclick="excAbrirForm()" style="background:transparent;border:1px solid #FFD000;border-radius:10px;color:#FFD000;font-size:14px;font-weight:700;padding:13px 16px;cursor:pointer;width:100%">🆘 Tive um imprevisto — pedir autorização ao regional</button>
+      <div id="excForm" style="display:none;margin-top:10px">
+        <div style="font-size:13px;color:#ccc;line-height:1.5;margin-bottom:8px">Explique o que aconteceu (ex.: precisei sair para buscar produto, emergência). O regional recebe no WhatsApp e decide. <b style="color:#FFD000">O pedido fica registrado.</b></div>
+        <textarea id="excMotivo" rows="3" placeholder="Motivo (obrigatório)" style="width:100%;background:#111;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-size:14px;padding:10px;font-family:inherit"></textarea>
+        <button id="excEnviarBtn" onclick="excPedir()" style="background:#FFD000;border:none;border-radius:10px;color:#111;font-size:14px;font-weight:800;padding:13px 16px;cursor:pointer;width:100%;margin-top:8px">Enviar pedido ao regional</button>
+      </div>
+      <div id="excStatus" style="display:none;margin-top:12px;font-size:14px;line-height:1.55;border-radius:10px;padding:12px 14px"></div>
+    </div>
   </div>
+  <!-- Autorizado fora da loja (faixa no topo) -->
+  <div id="excFaixa" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:840;background:#FFD000;color:#111;font:700 13px/1.35 Inter,Arial,sans-serif;padding:9px 12px;text-align:center"></div>
   <!-- Placar bloqueado por checklist de abertura fora do horário (só o admin libera) -->
   <div id="chkBloqPlacar" style="display:none;position:fixed;inset:0;background:#120000;z-index:800;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
     <div style="font-size:56px;margin-bottom:10px">🔒</div>
@@ -1644,13 +1656,16 @@ function mostrarGeo(tipo, r){
   if(tipo==='fora'){
     const km=r.distancia>=1000?(r.distancia/1000).toFixed(1).replace('.',',')+' km':r.distancia+' m';
     t.textContent='VOCÊ ESTÁ FORA DA LOJA';
+    excMostrarNaTela();
     x.innerHTML='O placar de <b>'+unidadeAtual+'</b> só pode ser preenchido <b>dentro da unidade</b>.<br><br>Você está a <b>'+km+'</b> da loja.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”. Esta tentativa fica registrada para o administrador.</span>';
   } else if(tipo==='negado'){
+    document.getElementById('excBox').style.display='none';
     t.textContent='PERMITA A LOCALIZAÇÃO';
     x.innerHTML='O placar precisa da sua localização para confirmar que você está na loja.<br><br>'+(/iPhone|iPad|iPod/.test(navigator.userAgent)
       ? '<b>No iPhone:</b><br>1) Toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Localização</b> › <b>Permitir</b>.<br>2) Se não resolver: <b>Ajustes</b> do iPhone › <b>Privacidade e Segurança</b> › <b>Serviços de Localização</b> (ligado) › <b>Sites do Safari</b> › <b>Durante o Uso do App</b>.<br>Depois toque em “Conferir de novo”.'
       : 'Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”.');
   } else {
+    document.getElementById('excBox').style.display='none';
     t.textContent='NÃO CONSEGUI SUA LOCALIZAÇÃO';
     x.innerHTML='Ligue a <b>localização (GPS)</b> do celular e toque em “Conferir de novo”.';
   }
@@ -1662,6 +1677,7 @@ function conferirLocal(agora){
   _geoConferindo=(async()=>{
     try{
       if(!unidadeAtual || !(await chkRecursos()).includes('geoLoja')) return true;
+      if(excValendo()){ document.getElementById('geoOverlay').style.display='none'; return true; } // autorizado pelo regional a ficar fora da loja
       // loja sem localização cadastrada no Admin: não confere (nem pede o GPS)
       try{ const c=await chkJsonp({action:'geoConferir',unidade:unidadeAtual},12000); if(c&&c.ok&&c.configurado===false){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){ return true; }
       const pos=await new Promise(res=>{
@@ -1684,7 +1700,71 @@ function conferirLocal(agora){
 // apagou a tela, saiu da loja e abriu de novo): fora da loja, a tela 📍 trava tudo e nada mais é salvo.
 let _geoUltima=0;
 function conferirLocalMarcado(agora){ _geoUltima=Date.now(); return conferirLocal(agora); }
-function iniciarGeo(){ clearInterval(_geoTimer); conferirLocalMarcado(); _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
+function iniciarGeo(){ clearInterval(_geoTimer); excAtualizar().finally(()=>conferirLocalMarcado()); _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
+
+// ── Autorização do regional para continuar fora da loja (imprevisto) ──
+let EXC={aprovada:null,pendente:null,recusada:null}, _excPoll=null, _excFim=null;
+function excValendo(){ return !!(EXC.aprovada && EXC.aprovada.validaAte>Date.now()); }
+async function excAtualizar(){
+  if(!unidadeAtual||MODO_TESTE) return;
+  try{
+    if(!(await chkRecursos()).includes('excecaoFora')) return;
+    const r=await chkJsonp({action:'excSituacao',unidade:unidadeAtual},12000);
+    if(!r||!r.ok) return;
+    // corrige o relógio do celular pelo do servidor
+    const dif=r.agoraMs?Date.now()-r.agoraMs:0;
+    if(r.aprovada) r.aprovada.validaAte+=dif;
+    const antes=excValendo();
+    EXC={aprovada:r.aprovada,pendente:r.pendente,recusada:r.recusada};
+    excFaixa();
+    if(!antes && excValendo()){ document.getElementById('geoOverlay').style.display='none'; }
+    excMostrarNaTela();
+  }catch(e){}
+}
+function excFaixa(){
+  const f=document.getElementById('excFaixa'); clearTimeout(_excFim);
+  if(!excValendo()){ f.style.display='none'; document.body.style.paddingBottom=''; return; }
+  const a=EXC.aprovada;
+  f.innerHTML='📍 Autorizado fora da loja por '+escR(a.por||'regional')+' até <b>'+escR(a.validaAteTxt)+'</b> — '+escR(a.motivo).slice(0,80);
+  f.style.display='block'; document.body.style.paddingBottom='46px';
+  _excFim=setTimeout(()=>{ EXC.aprovada=null; f.style.display='none'; conferirLocalMarcado(true); }, Math.max(1000,a.validaAte-Date.now()));
+}
+function escR(t){ return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function excMostrarNaTela(){
+  const box=document.getElementById('excBox'), st=document.getElementById('excStatus'), ab=document.getElementById('excAbrirBtn'), fm=document.getElementById('excForm');
+  if(!box) return;
+  box.style.display=MODO_TESTE?'none':'block';
+  clearInterval(_excPoll);
+  if(EXC.pendente){
+    ab.style.display='none'; fm.style.display='none';
+    st.style.display='block'; st.style.background='rgba(255,208,0,0.12)'; st.style.border='1px solid #FFD000'; st.style.color='#ffe9a8';
+    st.innerHTML='⏳ <b>Pedido enviado às '+escR(EXC.pendente.pedidoEm)+'.</b> Aguardando o regional responder. Esta tela libera sozinha quando ele aprovar.<br><span style="font-size:12px;color:#bbb">Motivo: '+escR(EXC.pendente.motivo)+'</span>';
+    _excPoll=setInterval(excAtualizar, 20000);
+  } else if(EXC.recusada){
+    ab.style.display='block'; fm.style.display='none';
+    st.style.display='block'; st.style.background='rgba(255,68,68,0.12)'; st.style.border='1px solid #ff4444'; st.style.color='#ffb3b3';
+    st.innerHTML='❌ <b>O regional não autorizou</b> ('+escR(EXC.recusada.decididoEm)+'): '+escR(EXC.recusada.motivoRecusa)+'<br>Volte para a loja para continuar o placar.';
+  } else {
+    ab.style.display='block'; st.style.display='none';
+  }
+}
+function excAbrirForm(){ const f=document.getElementById('excForm'); f.style.display=f.style.display==='none'?'block':'none'; if(f.style.display==='block') document.getElementById('excMotivo').focus(); }
+async function excPedir(){
+  const motivo=(document.getElementById('excMotivo').value||'').trim(), bt=document.getElementById('excEnviarBtn');
+  if(motivo.length<10){ alert('Explique o motivo (pelo menos 10 letras).'); return; }
+  bt.disabled=true; bt.textContent='Enviando...';
+  let pos={};
+  try{ pos=await new Promise(res=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),()=>res({}),{enableHighAccuracy:true,timeout:10000,maximumAge:60000}):res({})); }catch(e){}
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'excPedir',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo,lat:pos.lat||'',lng:pos.lng||'',acc:pos.acc||''})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    document.getElementById('excMotivo').value='';
+    logProva('PEDIU_AUTORIZACAO_FORA',motivo.slice(0,200));
+    await excAtualizar();
+  }catch(e){ alert('Não consegui enviar o pedido: '+e.message+'\nVerifique a internet e tente de novo.'); }
+  bt.disabled=false; bt.textContent='Enviar pedido ao regional';
+}
 function geoAoVoltar(){
   if(!unidadeAtual||MODO_TESTE||document.visibilityState==='hidden') return;
   if(Date.now()-_geoUltima<20000) return; // acabou de conferir
@@ -2081,17 +2161,20 @@ function renderItensChecklist(){
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
 // Câmera aberta dentro do placar: o gerente só consegue bater a foto na hora (não existe opção de galeria)
 let _chkCamStream=null, _chkCamItem=null, _camAoBater=null;
-async function chkAbrirCamera(id, aoBater){
-  _chkCamItem=id; _camAoBater=aoBater||null;
+let _camAoCancelar=null, _camFrente=false;
+async function chkAbrirCamera(id, aoBater, opcoes){
+  opcoes=opcoes||{};
+  _chkCamItem=id; _camAoBater=aoBater||null; _camAoCancelar=opcoes.aoCancelar||null; _camFrente=!!opcoes.frente;
   const modal=document.getElementById('chkCamModal'), msg=document.getElementById('chkCamMsg'), bt=document.getElementById('chkCamBater');
   modal.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera...';
   if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     msg.innerHTML='Não consegui abrir a câmera neste aparelho. Abra o placar pelo endereço <b>https://gerentes.dinapizza.com.br/placar</b> no Chrome ou no Safari.'; return;
   }
   try{
-    _chkCamStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});
+    _chkCamStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:_camFrente?'user':'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});
     const v=document.getElementById('chkCamVideo'); v.srcObject=_chkCamStream; await v.play().catch(()=>{});
-    msg.textContent='Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
+    v.style.transform=_camFrente?'scaleX(-1)':'';
+    msg.innerHTML=opcoes.msg||'Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
   }catch(e){
     msg.innerHTML='A câmera foi bloqueada. '+(/iPhone|iPad|iPod/.test(navigator.userAgent)
       ? 'No iPhone: toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Câmera</b> › <b>Permitir</b> e tente de novo.'
@@ -2099,6 +2182,7 @@ async function chkAbrirCamera(id, aoBater){
   }
 }
 function chkFecharCamera(){
+  if(_camAoCancelar){ const f=_camAoCancelar; _camAoCancelar=null; _camAoBater=null; setTimeout(()=>f(),0); }
   if(_chkCamStream){ _chkCamStream.getTracks().forEach(t=>t.stop()); _chkCamStream=null; }
   const v=document.getElementById('chkCamVideo'); if(v) v.srcObject=null;
   document.getElementById('chkCamModal').style.display='none';
@@ -2114,7 +2198,7 @@ function chkBaterFoto(){
   ctx.font='bold '+Math.max(16,Math.round(c.width/40))+'px sans-serif'; ctx.fillStyle='rgba(0,0,0,0.55)';
   const h=Math.round(c.width/40)+16; ctx.fillRect(0,c.height-h,c.width,h); ctx.fillStyle='#FFD000'; ctx.fillText(carimbo,10,c.height-8);
   const foto=c.toDataURL('image/jpeg',0.72);
-  if(_camAoBater){ const f=_camAoBater; _camAoBater=null; chkFecharCamera(); f(foto); return; }
+  if(_camAoBater){ const f=_camAoBater; _camAoBater=null; _camAoCancelar=null; chkFecharCamera(); f(foto); return; }
   chkFotos[id]=foto;
   chkFecharCamera(); renderItensChecklist();
 }
@@ -2727,6 +2811,20 @@ async function comprimirFoto(base64){
   }catch(e){return null;}
 }
 
+// Selfie do envio: o gerente aparece na foto; vai para o Drive com a localização (não bloqueia o envio se a internet falhar)
+async function selfieEnvio(){
+  if(!(await chkRecursos()).includes('selfieEnvio')) return true;
+  const foto=await new Promise(res=>chkAbrirCamera('selfie', f=>res(f), {frente:true, aoCancelar:()=>res(null), msg:'<b style="color:#FFD000">📸 Selfie do fechamento</b><br>Para enviar o placar, tire uma foto do seu rosto agora, dentro da loja. Ela fica registrada com data, hora e local.'}));
+  if(!foto){ alert('📸 A selfie é obrigatória para enviar o placar.\n\nToque em enviar de novo e tire a foto do seu rosto.'); return false; }
+  (async()=>{
+    let pos={};
+    try{ pos=await new Promise(res=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),()=>res({}),{enableHighAccuracy:true,timeout:15000,maximumAge:0}):res({})); }catch(e){}
+    try{ await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'excSelfie',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',momento:'envio',foto:{base64:foto.split(',')[1],tipo:'image/jpeg'},lat:pos.lat||'',lng:pos.lng||'',acc:pos.acc||''})}); }
+    catch(e){ logProva('SELFIE_FALHOU',String(e&&e.message||e).slice(0,100)); }
+  })();
+  return true;
+}
+
 async function registrar(){
   if(!(await conferirLocal(true))) return;
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
@@ -2740,6 +2838,8 @@ async function registrar(){
     const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
     if(!confirmou){logProva('ENVIO_CANCELADO_PELO_GERENTE','faturamento fora da faixa');return;}
   }
+  // selfie obrigatória no envio final (câmera da frente, só dentro do placar)
+  if(!(await selfieEnvio())){ logProva('ENVIO_SEM_SELFIE','cancelou a selfie'); return; }
   const btn=document.getElementById('saveBtn');
   btn.disabled=true;btn.textContent='Enviando...';
   const now=dataTurno();

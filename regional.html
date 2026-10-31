@@ -78,6 +78,7 @@
 </header>
 
 <div id="telaSelecao">
+  <div id="excBox" style="display:none;margin-bottom:16px"></div>
   <div id="corrBox" style="display:none;margin-bottom:16px"></div>
   <div class="card">
     <div class="sel-label">Selecione a unidade</div>
@@ -291,7 +292,57 @@ window.addEventListener('DOMContentLoaded', ()=>{
   try{ const n=localStorage.getItem('dina_regional_nome'); if(n) document.getElementById('nomeRegional').value=n; }catch(e){}
   recursos();
   carregarCorrecoes();
+  carregarExcecoes(); setInterval(carregarExcecoes, 60000);
 });
+
+// ── Pedidos dos gerentes para continuar o placar fora da loja (imprevisto) ──
+let EXCS=[];
+const EXC_ALVO=new URLSearchParams(location.search).get('excecao')||'';
+async function carregarExcecoes(){
+  try{
+    if(!(await recursos()).includes('excecaoFora')) return;
+    for(let i=0;i<120 && (document.getElementById('gGuard')||document.getElementById('gGuardCss')); i++) await new Promise(r=>setTimeout(r,500));
+    const r=await jsonp({action:'excAguardando',chave:chaveGestao()},20000);
+    if(!r||!r.ok) return;
+    EXCS=r.itens||[];
+  }catch(e){ return; }
+  renderExcecoes();
+}
+function renderExcecoes(){
+  const box=document.getElementById('excBox');
+  const pend=EXCS.filter(x=>x.situacao==='pendente'), feitas=EXCS.filter(x=>x.situacao==='aprovada'||x.situacao==='recusada');
+  if(!pend.length&&!feitas.length&&!EXC_ALVO){ box.style.display='none'; return; }
+  box.innerHTML='<div class="card" style="border-color:'+(pend.length?'var(--gold)':'var(--border)')+'"><div class="sel-label">🆘 Pedidos para continuar o placar fora da loja'+(pend.length?' ('+pend.length+')':'')+'</div>'+
+    (pend.length?'<div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px">O placar do gerente está travado esperando a sua resposta. Aprovado, ele preenche fora da loja até a hora escolhida.</div>':'<div style="font-size:0.85rem;color:var(--muted)">Nenhum pedido esperando resposta.</div>')+
+    pend.map(x=>`<div class="corr${x.id===EXC_ALVO?' alvo':''}" id="exc_${x.id}">
+      <div style="font-weight:700">${esc(x.unidade)} <span style="font-weight:400;color:var(--muted);font-size:0.8rem">· ${x.papel==='assistente'?'assistente':'gerente'} · pediu às ${esc(x.pedidoEm)}${x.distancia?' · a '+(x.distancia>=1000?(x.distancia/1000).toFixed(1).replace('.',',')+' km':x.distancia+' m')+' da loja':''}</span></div>
+      <div class="pend-detail" style="margin-top:6px;color:#ddd"><strong>Motivo:</strong> ${esc(x.motivo)}</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:8px">Liberar por:</div>
+      <div class="acoes" style="margin-top:4px">${[['1','1 hora'],['2','2 horas'],['4','4 horas'],['dia','Até fechar']].map(([v,t])=>`<button style="background:var(--green);color:#0A0A0A" onclick="decidirExc('${x.id}','aprovar','${v}')">${t}</button>`).join('')}</div>
+      <div class="acoes"><button style="background:var(--danger);color:#fff" onclick="abrirRecusa('exc${x.id}')">❌ Não autorizar</button></div>
+      <div id="recusa_exc${x.id}" style="display:none;margin-top:10px"><textarea id="motivo_exc${x.id}" placeholder="Por que não? (o gerente vê isso no placar)"></textarea><button class="btn" style="margin-top:8px" onclick="decidirExc('${x.id}','recusar')">Não autorizar</button></div>
+      <div id="excMsg_${x.id}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
+    </div>`).join('')+
+    (feitas.length?'<div style="font-size:0.75rem;color:var(--muted);margin-top:12px;text-transform:uppercase;font-weight:700">Decididos hoje</div>'+feitas.map(x=>`<div style="font-size:0.8rem;color:#ccc;margin-top:6px">${x.situacao==='aprovada'?'✅':'❌'} ${esc(x.unidade)} · ${esc(x.motivo).slice(0,60)} · ${x.situacao==='aprovada'?'até '+esc(x.validaAteTxt):'recusado'} (${esc(x.por)})</div>`).join(''):'')+
+    '</div>';
+  box.style.display='block';
+  if(EXC_ALVO){ const a=document.getElementById('exc_'+EXC_ALVO); if(a) setTimeout(()=>a.scrollIntoView({behavior:'smooth',block:'center'}),300); }
+}
+async function decidirExc(id, decisao, horas){
+  const m=document.getElementById('excMsg_'+id); m.textContent='';
+  const nome=(document.getElementById('nomeRegional').value||'').trim();
+  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (Gerente Regional)" abaixo antes de responder.'; return; }
+  const motivo=decisao==='recusar'?(document.getElementById('motivo_exc'+id).value||'').trim():'';
+  if(decisao==='recusar'&&motivo.length<5){ m.textContent='Escreva por que não autorizou.'; return; }
+  try{ localStorage.setItem('dina_regional_nome',nome); }catch(e){}
+  m.style.color='var(--muted)'; m.textContent='Salvando...';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'excDecidir',id,decisao,horas:horas||'',motivo,quem:nome,chave:chaveGestao()})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    await carregarExcecoes();
+  }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
+}
 
 async function iniciarChecklist(){
   unidadeAtual=document.getElementById('selUnidade').value;
