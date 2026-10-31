@@ -1370,7 +1370,25 @@ function iniciarApp(u){
   carregarMetaMes();
   carregarSituacaoChk();
   iniciarGeo();
+  fechRestaurar();
 }
+
+// ── Números do fechamento guardados no celular enquanto o gerente digita: se a página recarregar
+//    (celular fechou a aba em segundo plano, atualização do sistema, internet caiu), nada se perde.
+//    Apaga depois que o placar é enviado com sucesso. ──
+const FECH_CAMPOS=['fat','google','ifood','cancel','chamados','fichas','buffets','vendasCanceladas','vendasCanceladasMotivo','pedidosIfood','pedidosIfoodDetalhe','obs'];
+function fechGuardar(){
+  if(!unidadeAtual) return;
+  const v={}; let algum=false;
+  FECH_CAMPOS.forEach(id=>{ const e=document.getElementById(id); if(e&&e.value!==''){ v[id]=e.value; algum=true; } });
+  try{ algum?localStorage.setItem(chaveHoje('fech_rasc'),JSON.stringify(v)):localStorage.removeItem(chaveHoje('fech_rasc')); }catch(e){}
+}
+function fechRestaurar(){
+  let v=null; try{ v=JSON.parse(localStorage.getItem(chaveHoje('fech_rasc'))||'null'); }catch(e){}
+  if(!v) return;
+  FECH_CAMPOS.forEach(id=>{ const e=document.getElementById(id); if(e&&v[id]!==undefined&&e.value===''){ e.value=v[id]; try{ e.dispatchEvent(new Event('input',{bubbles:true})); }catch(x){} } });
+}
+document.addEventListener('input', ev=>{ if(ev.target&&FECH_CAMPOS.includes(ev.target.id)) fechGuardar(); }, true);
 
 function mostrarBloqueioAbertura(){
   const el = document.getElementById('chkBloqueioOverlay');
@@ -2913,6 +2931,7 @@ async function registrar(){
     localStorage.removeItem(chaveHoje('falta'));
     localStorage.removeItem(chaveHoje('motoboys_qtd'));
     localStorage.removeItem(chaveHoje('motoboys_salvo'));
+    localStorage.removeItem(chaveHoje('fech_rasc'));
     showMsg('savedMsg');
 
     // Mostra mensagem imediata baseada no pctMeta local
