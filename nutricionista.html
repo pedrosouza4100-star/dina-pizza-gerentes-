@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Checklist Nutricionista — Dina Pizza</title>
+<link rel="icon" href="logo.png">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--red:#C0392B;--red2:#FF3B3B;--gold:#FFD000;--bg:#0D0D0D;--card:#1A1A1A;--surface:#232323;--border:#383838;--text:#fff;--muted:#9a9a9a;--green:#2ECC71;--danger:#FF4D4D;--blue:#4FA3FF}
+  body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;padding-bottom:110px}
+  header{background:#0A0A0A;border-bottom:4px solid var(--red);padding:0 16px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+  .brand{font-size:1.15rem;font-weight:800}.brand span{color:var(--gold)}
+  .quem{font-size:0.78rem;text-align:right;line-height:1.3}.quem b{color:var(--gold)}
+  .quem a{color:var(--muted);font-size:0.72rem;cursor:pointer;text-decoration:underline}
+  main{max-width:860px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .tit{font-size:0.78rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+  .btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px 16px;font-size:0.95rem;font-weight:800;cursor:pointer;width:100%}
+  .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+  .btn.sec{background:var(--surface);border:1px solid var(--border)}
+  select,input,textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.92rem;padding:10px 12px;font-family:inherit}
+  textarea{min-height:60px;resize:vertical;line-height:1.4}
+  textarea.falta{border-color:var(--danger)}
+  .muted{color:var(--muted);font-size:0.78rem}
+  .secao{font-size:1rem;font-weight:800;color:var(--gold);padding:4px 0 8px;border-bottom:2px solid var(--border);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+  .item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px}
+  .item.falta{border-color:var(--danger)}
+  .item.pend{border-left:4px solid var(--danger)}
+  .item-txt{font-size:0.9rem;line-height:1.45;font-weight:600}
+  .peso{display:inline-block;background:#2d2d2d;color:var(--gold);font-size:0.68rem;font-weight:800;border-radius:6px;padding:2px 7px;margin-left:6px;white-space:nowrap}
+  .dica{font-size:0.76rem;color:#bbb;margin-top:5px}
+  .opts{display:flex;gap:8px;margin-top:10px}
+  .opts button{flex:1;padding:11px 6px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-weight:800;font-size:0.9rem;cursor:pointer}
+  .opts button.sim.on{background:var(--green);border-color:var(--green);color:#0A0A0A}
+  .opts button.nao.on{background:var(--danger);border-color:var(--danger);color:#fff}
+  .extra{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .extra label{font-size:0.7rem;color:var(--muted);font-weight:800;text-transform:uppercase}
+  .foto-btn{background:transparent;border:1px dashed var(--border);color:var(--text);border-radius:8px;padding:9px;font-size:0.82rem;cursor:pointer;width:100%}
+  .foto-prev{max-width:140px;border-radius:8px;border:1px solid var(--border)}
+  .reinc{font-size:0.76rem;color:#ffb3b3;background:rgba(255,77,77,0.10);border-radius:6px;padding:6px 8px;margin-bottom:8px;line-height:1.45}
+  .barra{position:fixed;bottom:0;left:0;right:0;background:#0A0A0A;border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:60}
+  .barra .info{font-size:0.78rem;color:var(--muted);white-space:nowrap;line-height:1.35}
+  .barra .info b{color:var(--gold);font-size:1rem}
+  .aviso{border-radius:10px;padding:11px 13px;font-size:0.85rem;line-height:1.5}
+  .aviso.err{background:rgba(255,77,77,0.12);border:1px solid var(--danger);color:#ffb3b3}
+  .aviso.ok{background:rgba(46,204,113,0.12);border:1px solid var(--green);color:#bff3d3}
+  .aviso.info{background:rgba(255,208,0,0.08);border:1px solid rgba(255,208,0,0.4);color:#ffe9a8}
+  .corr{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px;margin-top:10px}
+  .corr.atrasada{border-color:var(--danger)}
+  .corr.alvo{box-shadow:0 0 0 3px var(--gold)}
+  .corr .acoes{display:flex;gap:8px;margin-top:10px}
+  .corr .acoes button{flex:1;padding:11px;border-radius:8px;border:none;font-weight:800;font-size:0.85rem;cursor:pointer}
+  .nota-grande{font-size:3rem;font-weight:900;text-align:center}
+  .tabela{width:100%;border-collapse:collapse;font-size:0.8rem}
+  .tabela th{color:var(--muted);font-size:0.66rem;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--border)}
+  .tabela td{padding:8px 6px;border-bottom:1px solid #262626}
+  .tabela td.n{text-align:center;font-weight:700}
+  .tabela tr.clic{cursor:pointer}
+  .wrap-t{overflow-x:auto}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .kpi small{display:block;color:var(--muted);font-size:0.66rem;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+  .kpi b{font-size:1.5rem}
+  .verm{color:var(--danger)}.amar{color:var(--gold)}.verde{color:var(--green)}
+  #login{max-width:400px;margin:70px auto;padding:0 16px}
+  #geoTela{display:none;position:fixed;inset:0;z-index:200;background:#0A0A0A;align-items:center;justify-content:center;padding:24px}
+  #geoTela .box{max-width:440px;text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center}
+  #geoTela h2{color:var(--red2);font-size:1.2rem}
+  #geoTela p{color:#ddd;font-size:.95rem;line-height:1.5}
+  #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:#fff;padding:11px 16px;border-radius:10px;font-size:0.85rem;z-index:300;display:none;max-width:92%}
+  #testeFaixa{display:none;position:fixed;top:0;left:0;right:0;z-index:400;background:#7a3cff;color:#fff;font:700 12px/1.2 Arial,sans-serif;align-items:center;justify-content:center;gap:8px;padding:7px 10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">DINA <span>PIZZA</span> · <span style="color:#fff;font-weight:600;font-size:0.85rem">Nutricionista</span></div>
+  <div class="quem" id="quem"></div>
+</header>
+
+<div id="login">
+  <div class="card" style="display:flex;flex-direction:column;gap:12px">
+    <div class="tit" style="text-align:center">🥗 Checklist da nutricionista</div>
+    <div class="muted" style="text-align:center;line-height:1.5">Nutricionista: entre com a mesma senha da sua agenda. Para ver as notas de todas as lojas, use a senha do Admin ou da gestão.</div>
+    <input type="password" id="senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')entrar()">
+    <div id="loginErro" style="color:var(--danger);font-size:0.85rem;min-height:1em"></div>
+    <button class="btn" onclick="entrar()">Entrar</button>
+  </div>
+</div>
+
+<main id="app" style="display:none"></main>
+
+<div class="barra" id="barra" style="display:none">
+  <div class="info" id="barraInfo"></div>
+  <button class="btn" id="btnEnviar" onclick="enviar()" disabled>Enviar checklist</button>
+</div>
+
+<div id="geoTela"><div class="box">
+  <div style="font-size:3rem">📍</div>
+  <h2 id="geoTitulo">CONFERINDO SUA LOCALIZAÇÃO</h2>
+  <p id="geoTexto">Aguarde...</p>
+  <button class="btn" id="geoBtn" onclick="geoDeNovo()">📍 Conferir de novo</button>
+  <button class="btn sec" onclick="geoEsconder();inicio()">← Escolher outra loja</button>
+</div></div>
+
+<input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="fotoEscolhida(this)">
+<div id="toast"></div>
+<div id="testeFaixa">
+  <span>🧪 MODO TESTE — mostra a nota, mas nada é gravado e nenhum gerente é avisado</span>
+  <button onclick="sairTeste()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:4px 9px;font:700 11px Arial;cursor:pointer">Sair do teste</button>
+</div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const UNIDADES=['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
+const K='dina_nutri_hash';
+const Q=new URLSearchParams(location.search);
+const ALVO=Q.get('confirmar')||'', ALVO_LOJA=Q.get('loja')||''; // links do WhatsApp
+let H='', NOME='', TESTE=false, PAINEL_OK=false, ADMIN=false;
+let LOJA='', SECOES=[], INFO=null, R={}, FOTOS={}, CORR=[], fotoPara='', tentou=false, POS=null;
+
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4500);}
+function lerK(){try{return localStorage.getItem(K)||'';}catch(e){return '';}}
+function gravarK(v){try{v?localStorage.setItem(K,v):localStorage.removeItem(K);}catch(e){}}
+function jsonp(params,ms){
+  return new Promise((ok,falha)=>{
+    const cb='nuCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
+    const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou. Tente de novo.'));},ms||30000);
+    function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=r=>{limpar();ok(r);};
+    s.onerror=()=>{limpar();falha(new Error('Sem conexão'));};
+    if(TESTE) params=Object.assign({teste:'1'},params);
+    s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
+    document.head.appendChild(s);
+  });
+}
+async function post(o){
+  if(TESTE) o=Object.assign({teste:'1'},o);
+  const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(o)});
+  let j=null; try{j=JSON.parse(await r.text());}catch(e){}
+  if(!j) throw new Error('Sem resposta do servidor');
+  if(j.sair){ sair(); throw new Error(j.erro); }
+  if(j.ok!==true){ const e=new Error(j.erro||'Não salvou'); e.fora=j.fora; throw e; }
+  return j;
+}
+function app(){ return document.getElementById('app'); }
+function sair(){ TESTE=false; PAINEL_OK=false; document.getElementById('testeFaixa').style.display='none'; document.body.style.paddingTop=''; gravarK(''); H=''; app().style.display='none'; document.getElementById('barra').style.display='none'; document.getElementById('login').style.display='block'; document.getElementById('quem').innerHTML=''; }
+function cabecalho(){
+  document.getElementById('quem').innerHTML=TESTE?'<b>🧪 Modo teste</b><br><a onclick="sairTeste()">voltar ao painel</a>'
+    :PAINEL_OK?'<b>Painel da gestão</b><br><a onclick="sair()">sair</a>':`<b>${esc(NOME||'Nutricionista')}</b><br>Nutricionista · <a onclick="sair()">sair</a>`;
+}
+
+async function entrar(senhaHash){
+  const err=document.getElementById('loginErro');
+  let h=senhaHash;
+  if(!h){ const s=document.getElementById('senha').value; if(!s){err.textContent='Digite a senha.';return;} h=hash(s); }
+  err.style.color='var(--muted)'; err.textContent='Conferindo...';
+  try{
+    const r=await post({action:'nutriLogin',hash:h});
+    err.textContent=''; H=h; gravarK(H); document.getElementById('senha').value='';
+    document.getElementById('login').style.display='none';
+    if(r.painel){ PAINEL_OK=true; ADMIN=!!r.admin; abrirPainel(); }
+    else { NOME=r.nome||''; inicio(); }
+  }catch(e){ err.style.color='var(--danger)'; err.textContent=/reconhecida/.test(e.message)?'O servidor ainda não tem o checklist da nutricionista. Peça para colar o código novo no Apps Script.':e.message; if(senhaHash) gravarK(''); }
+}
+
+// ═════════ INÍCIO: correções para confirmar + escolher a loja ═════════
+function inicio(){
+  cabecalho(); LOJA=''; document.getElementById('barra').style.display='none';
+  app().style.display='flex';
+  app().innerHTML=`<div id="corrBox"></div>
+    <div class="card"><div class="tit">Nova visita</div>
+      <select id="selLoja" onchange="document.getElementById('btnIni').disabled=!this.value"><option value="">Escolha a loja...</option>${UNIDADES.map(u=>`<option>${esc(u)}</option>`).join('')}</select>
+      <div style="height:12px"></div>
+      <button class="btn" id="btnIni" disabled onclick="iniciar()">Iniciar checklist</button>
+      <div class="muted" style="margin-top:10px;line-height:1.5">O checklist só abre e só é enviado dentro da loja (GPS). Itens marcados NÃO viram pendência: o placar do gerente trava até ele mostrar o que fez, e você confirma por aqui.</div>
+    </div>`;
+  carregarCorrecoes();
+}
+async function carregarCorrecoes(){
+  try{
+    const r=await jsonp({action:'nutriAguardando',chave:H});
+    if(!r||!r.ok) return;
+    CORR=r.itens||[];
+  }catch(e){ return; }
+  renderCorrecoes();
+}
+function renderCorrecoes(){
+  const box=document.getElementById('corrBox'); if(!box) return;
+  if(!CORR.length){ box.innerHTML=(ALVO||ALVO_LOJA)?'<div class="card"><div class="tit">✅ Correções para confirmar</div><div class="muted">Nada esperando confirmação agora (já foi confirmada ou voltou para o gerente).</div></div>':''; return; }
+  const atras=CORR.filter(c=>c.atrasada).length;
+  box.innerHTML='<div class="card"><div class="tit">✅ Correções para confirmar ('+CORR.length+')</div><div class="muted">Os gerentes contaram o que fizeram nas pendências das suas visitas. Confirme ou recuse em até <b>18 horas</b>'+(atras?' — <b class="verm">'+atras+' passou do prazo</b>':'')+'. Não precisa estar na loja.</div>'+
+    CORR.map(c=>`<div class="corr${c.atrasada?' atrasada':''}${(c.pendId===ALVO||c.unidade===ALVO_LOJA)?' alvo':''}" id="corr_${c.pendId}">
+      <div style="font-weight:800">${esc(c.unidade)}</div>
+      <div style="font-size:0.85rem;margin-top:4px">${esc(c.itemLabel)}</div>
+      <div class="muted" style="margin-top:6px"><b style="color:#ddd">Problema:</b> ${esc(c.descricao)||'—'}</div>
+      <div style="background:rgba(46,204,113,0.08);border-left:3px solid var(--green);padding:8px 10px;border-radius:6px;margin:8px 0;color:#ddd;font-size:0.84rem"><b>O que o gerente fez:</b> ${esc(c.justificativa)||'(mandou só a foto)'}${c.foto&&/^https/.test(c.foto)?`<br><a href="${esc(c.foto)}" target="_blank" style="color:var(--gold);font-weight:700">📷 Ver a foto</a>`:''}</div>
+      <div style="font-size:0.74rem;color:${c.atrasada?'var(--danger)':'var(--muted)'}">Justificado em ${esc(c.justificadaEm)} por ${esc(c.justificadaPor)} · ${c.atrasada?'<b>passou do prazo ('+c.horas+' h)</b>':'confirmar até '+esc(c.prazo)}</div>
+      <div class="acoes"><button style="background:var(--green);color:#0A0A0A" onclick="decidir('${c.pendId}','confirmar')">✅ Confirmar</button><button style="background:var(--danger);color:#fff" onclick="abrirRecusa('${c.pendId}')">❌ Não está certo</button></div>
+      <div id="recusa_${c.pendId}" style="display:none;margin-top:10px"><textarea id="motivo_${c.pendId}" placeholder="O que ainda está errado? (o gerente vê isso e o placar dele trava de novo)"></textarea><button class="btn" style="margin-top:8px" onclick="decidir('${c.pendId}','recusar')">Devolver para o gerente</button></div>
+      <div id="corrMsg_${c.pendId}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
+    </div>`).join('')+'</div>';
+  const alvo=ALVO?document.getElementById('corr_'+ALVO):(ALVO_LOJA?document.querySelector('.corr.alvo'):null);
+  if(alvo) setTimeout(()=>alvo.scrollIntoView({behavior:'smooth',block:'center'}),300);
+}
+function abrirRecusa(id){ const el=document.getElementById('recusa_'+id); el.style.display=el.style.display==='none'?'block':'none'; }
+async function decidir(id,decisao){
+  const m=document.getElementById('corrMsg_'+id); m.textContent='';
+  const motivo=decisao==='recusar'?(document.getElementById('motivo_'+id).value||'').trim():'';
+  if(decisao==='recusar'&&motivo.length<5){ m.textContent='Escreva o que ainda está errado.'; return; }
+  m.style.color='var(--muted)'; m.textContent='Salvando...';
+  try{
+    await post({action:'nutriDecidir',chave:H,pendId:id,decisao,motivo});
+    CORR=CORR.filter(c=>c.pendId!==id); renderCorrecoes();
+    toast(decisao==='confirmar'?'✅ Correção confirmada. A pendência foi baixada.':'↩️ Devolvida para o gerente. O placar dele trava até ele justificar de novo.');
+  }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
+}
+
+// ═════════ LOCALIZAÇÃO ═════════
+function geoMostrar(titulo,html,botao){ document.getElementById('geoTitulo').textContent=titulo; document.getElementById('geoTexto').innerHTML=html; document.getElementById('geoBtn').style.display=botao?'block':'none'; document.getElementById('geoTela').style.display='flex'; }
+function geoEsconder(){ document.getElementById('geoTela').style.display='none'; }
+function textoPermissao(){
+  return /iPhone|iPad|iPod/.test(navigator.userAgent)
+    ? '<b>No iPhone:</b> toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Localização</b> › <b>Permitir</b>.'
+    : 'Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”.';
+}
+function pegarPosicao(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res({erro:'falhou'});
+    navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),e=>res({erro:e.code===1?'negado':'falhou'}),{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  });
+}
+let _geoAoOk=null;
+async function conferirLocal(){
+  if(TESTE) return true;
+  if(INFO&&INFO.geo===false) return true; // loja sem localização cadastrada
+  geoMostrar('CONFERINDO SUA LOCALIZAÇÃO','Confirmando que você está em <b>'+esc(LOJA)+'</b>...',false);
+  const pos=await pegarPosicao();
+  if(pos.erro==='negado'){ geoMostrar('PERMITA A LOCALIZAÇÃO','O checklist só abre dentro da loja.<br><br>'+textoPermissao(),true); return false; }
+  if(pos.erro){ geoMostrar('NÃO CONSEGUI SUA LOCALIZAÇÃO','Ligue a <b>localização (GPS)</b> do celular e toque em “Conferir de novo”.',true); return false; }
+  POS=pos;
+  let r=null;
+  try{ r=await jsonp({action:'geoConferir',unidade:LOJA,lat:pos.lat,lng:pos.lng,acc:pos.acc,papel:'agenda_nutri',aparelho:''},15000); }catch(e){ geoEsconder(); return true; }
+  if(!r||!r.ok||r.dentro){ geoEsconder(); return true; }
+  const km=r.distancia>=1000?(r.distancia/1000).toFixed(1).replace('.',',')+' km':r.distancia+' m';
+  geoMostrar('VOCÊ NÃO ESTÁ NA LOJA','O checklist de <b>'+esc(LOJA)+'</b> só pode ser feito <b>dentro da loja</b>.<br><br>Você está a <b>'+km+'</b>.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”.</span>',true);
+  return false;
+}
+async function geoDeNovo(){ const b=document.getElementById('geoBtn'); b.disabled=true; b.textContent='Conferindo...'; const ok=await conferirLocal(); b.disabled=false; b.textContent='📍 Conferir de novo'; if(ok&&_geoAoOk){ const f=_geoAoOk; _geoAoOk=null; f(); } }
+
+// ═════════ CHECKLIST ═════════
+function chaveRasc(){ return 'dina_nutri_rasc_'+(TESTE?'teste_':'')+LOJA; }
+function guardarRasc(){ try{ localStorage.setItem(chaveRasc(),JSON.stringify({dia:new Date().toDateString(),r:R})); }catch(e){} }
+function lerRasc(){ try{ const x=JSON.parse(localStorage.getItem(chaveRasc())||'null'); if(x&&x.dia===new Date().toDateString()) R=x.r||{}; }catch(e){} }
+async function iniciar(){
+  LOJA=document.getElementById('selLoja').value; if(!LOJA) return;
+  const bt=document.getElementById('btnIni'); bt.disabled=true; bt.textContent='Carregando...';
+  try{
+    const [itens,info]=await Promise.all([jsonp({action:'nutriItens'}),jsonp({action:'nutriLoja',chave:H,unidade:LOJA})]);
+    if(!itens||!itens.ok) throw new Error((itens&&itens.erro)||'Não carreguei os itens');
+    if(!info||!info.ok){ if(info&&info.sair){ sair(); return; } throw new Error((info&&info.erro)||'Erro'); }
+    INFO=info;
+    SECOES=itens.secoes.map(s=>({secao:s.secao,itens:s.itens.filter(it=>!(it.lojasExcluidas||[]).includes(LOJA))})).filter(s=>s.itens.length);
+  }catch(e){ bt.disabled=false; bt.textContent='Iniciar checklist'; toast('⚠ '+e.message); return; }
+  bt.textContent='Conferindo a localização...';
+  _geoAoOk=abrirForm;
+  const ok=await conferirLocal();
+  bt.disabled=false; bt.textContent='Iniciar checklist';
+  if(ok){ _geoAoOk=null; abrirForm(); }
+}
+function abrirForm(){
+  R={}; FOTOS={}; tentou=false; lerRasc();
+  render(); window.scrollTo(0,0);
+}
+function pendDo(id){ return (INFO.pendencias||[]).find(p=>p.itemId===id); }
+function render(){
+  const hoje=new Date(), dt=hoje.toLocaleDateString('pt-BR');
+  const pend=INFO.pendencias||[];
+  let h=`<div class="card"><div class="tit">Visitando</div><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><div style="font-size:1.15rem;font-weight:800">${esc(LOJA)}</div><div class="amar" style="font-weight:800;font-size:0.85rem">📅 ${dt}</div></div>
+    ${INFO.ultima?`<div class="muted" style="margin-top:6px">Última visita: ${esc(INFO.ultima.dia)} · nota <b class="${corNota(INFO.ultima.nota)}">${fmtNota(INFO.ultima.nota)}</b> · ${INFO.ultima.nc} item(ns) NÃO</div>`:'<div class="muted" style="margin-top:6px">Primeira visita registrada nesta loja.</div>'}
+    <button class="btn sec" style="margin-top:12px;padding:9px" onclick="inicio()">← Trocar de loja</button></div>`;
+  if(pend.length) h+=`<div class="aviso err">⚠️ <b>${pend.length} pendência(s) das suas visitas anteriores</b> estão marcadas em vermelho na lista. Confira hoje: <b>SIM</b> baixa a pendência; <b>NÃO</b> conta como reincidência e volta para o gerente.</div>`;
+  SECOES.forEach(s=>{
+    const pesoSec=s.itens.reduce((a,it)=>a+it.peso,0);
+    h+=`<div class="card"><div class="secao"><span>${esc(s.secao)}</span><span class="muted">${s.itens.length} itens · peso ${pesoSec}</span></div>`;
+    s.itens.forEach(it=>{
+      const r=R[it.id]||{}, p=pendDo(it.id);
+      const falta=tentou&&(!r.resp||(r.resp==='nao'&&(r.obs||'').trim().length<5));
+      h+=`<div class="item${falta?' falta':''}${p?' pend':''}" id="it_${it.id}">
+        ${p?`<div class="reinc">🔁 Pendência desde ${esc(p.dataAberta)}${p.vezes>=2?' · <b>reincidência '+p.vezes+'x</b>':''}: ${esc(p.descricao)||'—'}${p.situacao==='justificada'?`<br><b>O gerente disse que fez:</b> ${esc(p.justificativa)||'(só foto)'}${p.foto&&/^https/.test(p.foto)?` · <a href="${esc(p.foto)}" target="_blank" style="color:var(--gold)">ver foto</a>`:''}`:'<br><b>Ainda sem resposta do gerente.</b>'}</div>`:''}
+        <div class="item-txt">${esc(it.item)}<span class="peso">peso ${it.peso}</span></div>
+        ${it.dica?`<div class="dica">💡 ${esc(it.dica)}</div>`:''}
+        <div class="opts"><button class="sim${r.resp==='sim'?' on':''}" onclick="responder('${it.id}','sim')">✓ SIM</button><button class="nao${r.resp==='nao'?' on':''}" onclick="responder('${it.id}','nao')">✗ NÃO</button></div>
+        ${r.resp==='nao'?`<div class="extra">
+          <label>O que você encontrou (obrigatório)</label>
+          <textarea id="obs_${it.id}" class="${falta&&(r.obs||'').trim().length<5?'falta':''}" placeholder="Descreva o problema" oninput="texto('${it.id}')">${esc(r.obs||'')}</textarea>
+          <label>Plano de ação para o gerente</label>
+          <textarea id="plano_${it.id}" placeholder="O que deve ser feito para corrigir?" oninput="texto('${it.id}')">${esc(r.plano||'')}</textarea>
+          ${FOTOS[it.id]?`<div style="display:flex;gap:10px;align-items:center"><img class="foto-prev" src="${FOTOS[it.id].url}"><button class="foto-btn" style="width:auto" onclick="tirarFoto('${it.id}')">📷 Trocar foto</button><button class="foto-btn" style="width:auto" onclick="delete FOTOS['${it.id}'];render()">Tirar</button></div>`:`<button class="foto-btn" onclick="tirarFoto('${it.id}')">📷 Tirar foto (opcional)</button>`}
+        </div>`:''}
+      </div>`;
+    });
+    h+='</div>';
+  });
+  h+=`<div class="card"><div class="tit">Observações gerais da visita</div><textarea id="obsGeral" placeholder="Opcional" oninput="R.__obs=this.value;guardarRasc()">${esc(R.__obs||'')}</textarea></div><div id="msgFim"></div>`;
+  app().innerHTML=h;
+  document.getElementById('barra').style.display='flex';
+  atualizarBarra();
+}
+function itensTodos(){ return SECOES.flatMap(s=>s.itens); }
+function notaParcial(){
+  let p=0,t=0; itensTodos().forEach(it=>{ const r=R[it.id]; if(r&&(r.resp==='sim'||r.resp==='nao')){ t+=it.peso; if(r.resp==='sim') p+=it.peso; } });
+  return t?Math.round(p/t*1000)/10:null;
+}
+function fmtNota(n){ return n==null?'—':String(n).replace('.',',')+'%'; }
+function corNota(n){ return n==null?'':n>=90?'verde':n>=75?'amar':'verm'; }
+function valido(){ return itensTodos().every(it=>{ const r=R[it.id]; return r&&r.resp&&(r.resp==='sim'||(r.obs||'').trim().length>=5); }); }
+function atualizarBarra(){
+  const tot=itensTodos().length, resp=itensTodos().filter(it=>R[it.id]&&R[it.id].resp).length, n=notaParcial();
+  document.getElementById('barraInfo').innerHTML=`<b class="${corNota(n)}">${fmtNota(n)}</b> nota parcial<br>${resp} de ${tot} itens`;
+  document.getElementById('btnEnviar').disabled=false;
+}
+function responder(id,v){
+  R[id]=Object.assign(R[id]||{},{resp:v}); guardarRasc();
+  const y=window.scrollY; render(); window.scrollTo(0,y);
+  if(v==='nao') setTimeout(()=>{ const t=document.getElementById('obs_'+id); if(t&&!t.value) t.focus({preventScroll:true}); },50);
+}
+function texto(id){
+  R[id]=R[id]||{resp:'nao'}; R[id].obs=document.getElementById('obs_'+id).value; R[id].plano=document.getElementById('plano_'+id).value; guardarRasc();
+  const el=document.getElementById('obs_'+id); if(el&&el.value.trim().length>=5) el.classList.remove('falta');
+}
+function tirarFoto(id){ fotoPara=id; const i=document.getElementById('fotoInput'); i.value=''; i.click(); }
+function fotoEscolhida(inp){
+  const f=inp.files&&inp.files[0]; if(!f||!fotoPara) return;
+  const id=fotoPara, rd=new FileReader();
+  rd.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const max=1280, k=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement('canvas');
+    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    const g=c.getContext('2d'); g.drawImage(img,0,0,c.width,c.height);
+    g.fillStyle='rgba(0,0,0,0.55)'; g.fillRect(0,c.height-34,c.width,34); g.fillStyle='#fff'; g.font='bold 18px Arial';
+    g.fillText(LOJA+' · '+new Date().toLocaleString('pt-BR'),10,c.height-11);
+    const url=c.toDataURL('image/jpeg',0.7); FOTOS[id]={url,base64:url.split(',')[1]};
+    const y=window.scrollY; render(); window.scrollTo(0,y);
+  }; img.src=rd.result; };
+  rd.readAsDataURL(f);
+}
+async function enviar(){
+  tentou=true;
+  if(!valido()){
+    const y=window.scrollY; render(); window.scrollTo(0,y);
+    const prim=document.querySelector('.item.falta'); if(prim) prim.scrollIntoView({behavior:'smooth',block:'center'});
+    const faltam=itensTodos().filter(it=>!(R[it.id]&&R[it.id].resp)).length;
+    toast(faltam?'Faltam '+faltam+' item(ns) sem resposta.':'Descreva o problema dos itens marcados NÃO.'); return;
+  }
+  const bt=document.getElementById('btnEnviar'); bt.disabled=true; bt.textContent='Conferindo a localização...';
+  _geoAoOk=enviar;
+  if(!(await conferirLocal())){ bt.disabled=false; bt.textContent='Enviar checklist'; return; }
+  _geoAoOk=null;
+  bt.textContent='Enviando...';
+  const itens=itensTodos().map(it=>{ const r=R[it.id]; return {id:it.id,resp:r.resp,obs:r.resp==='nao'?r.obs:'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS[it.id]?{base64:FOTOS[it.id].base64,tipo:'image/jpeg'}:null}; });
+  try{
+    const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||''});
+    try{ localStorage.removeItem(chaveRasc()); }catch(e){}
+    document.getElementById('barra').style.display='none';
+    app().innerHTML=`<div class="card" style="text-align:center"><div class="tit">${r.teste?'🧪 Teste — nada foi gravado':'✅ Checklist enviado'}</div>
+      <div class="muted">${esc(LOJA)} · ${new Date().toLocaleDateString('pt-BR')}</div>
+      <div class="nota-grande ${corNota(r.nota)}" style="margin:14px 0 4px">${fmtNota(r.nota)}</div>
+      <div class="muted">${r.pontos} de ${r.total} pontos · ${r.nc} item(ns) NÃO</div>
+      ${r.nc&&!r.teste?`<div class="aviso info" style="margin-top:14px;text-align:left">O gerente de ${esc(LOJA)} vai ter que mostrar o que fez em cada item NÃO antes de usar o placar. Você recebe no WhatsApp e confirma aqui.</div>`:''}
+      <button class="btn" style="margin-top:16px" onclick="inicio()">Nova visita</button></div>`;
+    window.scrollTo(0,0);
+  }catch(e){
+    bt.disabled=false; bt.textContent='Enviar checklist';
+    document.getElementById('msgFim').innerHTML='<div class="aviso err">⚠ Não enviou: '+esc(e.message)+'<br>Suas respostas continuam aqui. Tente de novo.</div>';
+    if(e.fora) conferirLocal();
+  }
+}
+
+// ═════════ PAINEL DA GESTÃO ═════════
+async function abrirPainel(){
+  cabecalho(); TESTE=false; document.getElementById('testeFaixa').style.display='none'; document.body.style.paddingTop='';
+  document.getElementById('barra').style.display='none';
+  app().style.display='flex'; app().innerHTML='<div class="card muted">Carregando as notas...</div>';
+  try{
+    const r=await jsonp({action:'nutriPainel',chave:H});
+    if(!r||!r.ok) throw new Error((r&&r.erro)||'Erro');
+    const lojas=r.lojas.slice().sort((a,b)=>(a.ultima?a.ultima.nota:999)-(b.ultima?b.ultima.nota:999));
+    let h=`<div class="card"><div class="tit">🥗 Qualidade Dina — visitas da nutricionista (últimos 180 dias)</div>
+      <div class="kpis"><div class="kpi"><small>Nota média da rede</small><b class="${corNota(r.media)}">${fmtNota(r.media)}</b></div>
+      <div class="kpi"><small>Visitas</small><b>${r.totalVisitas}</b></div>
+      <div class="kpi"><small>Pendências abertas</small><b class="verm">${r.lojas.reduce((a,l)=>a+l.pendAbertas,0)}</b></div>
+      <div class="kpi"><small>Esperando confirmação</small><b class="amar">${r.lojas.reduce((a,l)=>a+l.pendAguardando,0)}</b></div></div>
+      ${ADMIN?'<button class="btn sec" style="margin-top:12px" onclick="entrarTeste()">🧪 Testar o checklist (não grava nada)</button>':''}</div>
+      <div class="card"><div class="tit">Notas por loja (pior primeiro)</div><div class="wrap-t"><table class="tabela"><tr><th>Loja</th><th>Última</th><th>Antes</th><th>Média</th><th>Visitas</th><th>Dias sem visita</th><th>Pend.</th></tr>
+      ${lojas.map(l=>`<tr${l.ultima?` class="clic" onclick="verVisita('${l.ultima.id}')"`:''}><td><b>${esc(l.unidade)}</b></td><td class="n ${l.ultima?corNota(l.ultima.nota):''}">${l.ultima?fmtNota(l.ultima.nota):'—'}</td><td class="n muted">${l.anterior?fmtNota(l.anterior.nota):'—'}</td><td class="n">${fmtNota(l.media)}</td><td class="n">${l.visitas}</td><td class="n ${l.diasSemVisita==null||l.diasSemVisita>14?'verm':''}">${l.diasSemVisita==null?'nunca':l.diasSemVisita}</td><td class="n">${l.pendAbertas?'<span class="verm">'+l.pendAbertas+'</span>':''}${l.pendAguardando?' <span class="amar">'+l.pendAguardando+'⏳</span>':''}${!l.pendAbertas&&!l.pendAguardando?'—':''}</td></tr>`).join('')}
+      </table></div><div class="muted" style="margin-top:8px">Toque numa loja para ver a última visita. Pend.: vermelho = gerente ainda não respondeu; ⏳ = esperando a nutricionista confirmar.</div></div>`;
+    if(r.itensMaisNao.length) h+=`<div class="card"><div class="tit">Itens que mais deram NÃO</div>${r.itensMaisNao.map(x=>`<div style="padding:8px 0;border-bottom:1px solid #262626;font-size:0.84rem"><b class="verm">${x.vezes}x</b> · ${esc(x.item)}<div class="muted">${esc(x.secao)} · ${x.lojas.map(esc).join(', ')}</div></div>`).join('')}</div>`;
+    h+=`<div class="card"><div class="tit">Visitas</div>${r.visitas.length?`<div class="wrap-t"><table class="tabela"><tr><th>Dia</th><th>Loja</th><th>Nota</th><th>NÃO</th></tr>${r.visitas.map(v=>`<tr class="clic" onclick="verVisita('${v.id}')"><td>${v.dia.split('-').reverse().join('/')} ${esc(v.hora)}</td><td>${esc(v.unidade)}</td><td class="n ${corNota(v.nota)}">${fmtNota(v.nota)}</td><td class="n">${v.nc}</td></tr>`).join('')}</table></div>`:'<div class="muted">Nenhuma visita ainda.</div>'}</div><div id="detalhe"></div>`;
+    app().innerHTML=h;
+  }catch(e){ app().innerHTML='<div class="card aviso err">⚠ '+esc(/reconhecida/.test(e.message)?'O servidor ainda não tem o checklist da nutricionista. Cole o código novo no Apps Script.':e.message)+'</div>'; }
+}
+async function verVisita(id){
+  const d=document.getElementById('detalhe'); d.innerHTML='<div class="card muted">Carregando a visita...</div>'; d.scrollIntoView({behavior:'smooth'});
+  try{
+    const r=await jsonp({action:'nutriVisita',chave:H,id});
+    if(!r||!r.ok) throw new Error((r&&r.erro)||'Erro');
+    const v=r.visita; let sec='';
+    d.innerHTML=`<div class="card"><div class="tit">${esc(v.unidade)} · ${v.dia.split('-').reverse().join('/')} ${esc(v.hora)}</div>
+      <div class="nota-grande ${corNota(v.nota)}" style="font-size:2.2rem">${fmtNota(v.nota)}</div><div class="muted" style="text-align:center;margin-bottom:10px">${v.pontos} de ${v.total} pontos · ${esc(v.por)}</div>
+      ${(v.itens||[]).map(it=>{ const t=it.secao!==sec?`<div class="secao" style="margin-top:10px"><span>${esc(it.secao)}</span></div>`:''; sec=it.secao;
+        return t+`<div style="padding:7px 0;border-bottom:1px solid #262626;font-size:0.82rem"><b class="${it.resp==='sim'?'verde':'verm'}">${it.resp==='sim'?'✓':'✗'}</b> ${esc(it.item)} <span class="peso">peso ${it.peso}</span>${it.resp==='nao'?`<div style="color:#ffb3b3;margin-top:4px">${esc(it.obs)}</div>${it.plano?`<div class="muted">Plano: ${esc(it.plano)}</div>`:''}${it.foto?`<a href="${esc(it.foto)}" target="_blank" style="color:var(--gold);font-size:0.78rem">📷 ver foto</a>`:''}`:''}</div>`; }).join('')}
+      ${v.obs?`<div class="aviso info" style="margin-top:10px">${esc(v.obs)}</div>`:''}</div>`;
+  }catch(e){ d.innerHTML='<div class="card aviso err">⚠ '+esc(e.message)+'</div>'; }
+}
+function entrarTeste(){ TESTE=true; document.getElementById('testeFaixa').style.display='flex'; document.body.style.paddingTop='36px'; inicio(); }
+function sairTeste(){ TESTE=false; abrirPainel(); }
+
+(function(){ const h=lerK(); if(h) entrar(h); })();
+</script>
+<script src="atualizador.js"></script>
+</body>
+</html>
