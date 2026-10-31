@@ -858,6 +858,7 @@ let _ultimoLogTravado='';
 // ── SALVAR TEMPO ──
 // ── Envia dado em tempo real para o Call Center ──
 function enviarTempoReal(tipo, dados, aoResponder){
+  if(!/^LOG\|/.test(String(tipo)) && geoForaAgora()) return; // fora da loja: não grava Start Dina, motoboys, tempos nem falta de produto
   const cb='trCb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);},8000);
@@ -1679,7 +1680,20 @@ function conferirLocal(agora){
   })();
   return _geoConferindo;
 }
-function iniciarGeo(){ clearInterval(_geoTimer); conferirLocal(); _geoTimer=setInterval(conferirLocal, 10*60000); }
+// Confere ao abrir, a cada 3 min com o placar aberto e SEMPRE que o gerente volta para o placar (trocou de app,
+// apagou a tela, saiu da loja e abriu de novo): fora da loja, a tela 📍 trava tudo e nada mais é salvo.
+let _geoUltima=0;
+function conferirLocalMarcado(agora){ _geoUltima=Date.now(); return conferirLocal(agora); }
+function iniciarGeo(){ clearInterval(_geoTimer); conferirLocalMarcado(); _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
+function geoAoVoltar(){
+  if(!unidadeAtual||MODO_TESTE||document.visibilityState==='hidden') return;
+  if(Date.now()-_geoUltima<20000) return; // acabou de conferir
+  conferirLocalMarcado(true); // posição nova (não usa a guardada)
+}
+document.addEventListener('visibilitychange', geoAoVoltar);
+window.addEventListener('pageshow', e=>{ if(e.persisted) geoAoVoltar(); });
+window.addEventListener('focus', geoAoVoltar);
+function geoForaAgora(){ const g=document.getElementById('geoOverlay'); return !!g&&g.style.display==='flex'&&/FORA DA LOJA/.test(document.getElementById('geoTitulo').textContent||''); }
 
 // ── Status do Checklist (Abertura/Fechamento) para esta loja ──
 // Ordem do dia: 1) checklist de abertura (bloqueia o placar até estar completo) → 2) Start Dina / motoboys →
