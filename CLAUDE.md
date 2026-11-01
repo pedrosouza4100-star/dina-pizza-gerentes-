@@ -75,7 +75,7 @@ Confira também que as ações antigas (por exemplo `getMetas`) continuam respon
 
 ## ⛔ Outro projeto hospedado aqui por enquanto: Sistema de Reservas
 
-`reservar.html` e `painel-reservas.html` **não fazem parte deste sistema**. São do **Sistema de Reservas** (reserva de mesa, fidelidade, robôs de WhatsApp), um projeto separado:
+`reservar.html`, `painel-reservas.html` e `fila.html` **não fazem parte deste sistema**. São do **Sistema de Reservas** (reserva de mesa, fidelidade, robôs de WhatsApp), um projeto separado:
 Apps Script e planilha próprios ("Reservas Dina Pizza"), outra URL `/exec`, chaves locais `res_*`, sem `atualizador.js` e sem `versao.json`.
-- Nas conversas do placar/gestão: **não altere, não renomeie e não apague esses dois arquivos**, e não os inclua nas trocas de `versao.json`.
-- Eles estão aqui só temporariamente. O destino é um endereço próprio (`reservas.dinapizza.com.br`, em repositório separado). Quando a mudança for feita, os dois arquivos saem deste repositório.
+- Nas conversas do placar/gestão: **não altere, não renomeie e não apague esses três arquivos**, e não os inclua nas trocas de `versao.json`.
+- Eles estão aqui só temporariamente. O destino é um endereço próprio (`reservas.dinapizza.com.br`, em repositório separado). Quando a mudança for feita, os três arquivos saem deste repositório.
