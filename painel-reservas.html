@@ -386,9 +386,13 @@ header .esp{flex:1}
 
     <div class="secao">WhatsApp e PIX</div>
     <label>WhatsApp da unidade</label><input class="campo" id="ljZap" inputmode="tel" placeholder="(41) 99999-9999">
+    <label>Endereço (vai na mensagem de confirmação)</label><input class="campo" id="ljEnd" placeholder="Rua, número - bairro">
+    <label>Tolerância de atraso (minutos)</label><input class="campo" type="number" min="0" id="ljTol" placeholder="15">
+    <span class="rotulo">Dias que sempre exigem taxa de pré-reserva</span>
+    <div class="dias" id="ljDiasTaxa"></div>
     <div class="g2">
-      <div><label>Sinal a partir de (pessoas)</label><input class="campo" type="number" min="0" id="ljSinalPes"><div class="dica">0 = sem sinal</div></div>
-      <div><label>Valor do sinal (R$)</label><input class="campo" id="ljSinalVal" inputmode="decimal"></div>
+      <div><label>Taxa também a partir de (pessoas)</label><input class="campo" type="number" min="0" id="ljSinalPes"><div class="dica">0 = sem sinal</div></div>
+      <div><label>Valor da taxa de pré-reserva (R$)</label><input class="campo" id="ljSinalVal" inputmode="decimal"></div>
     </div>
     <label>Chave PIX</label><input class="campo" id="ljPix" placeholder="CNPJ, e-mail, telefone ou chave aleatória">
     <label>Favorecido do PIX</label><input class="campo" id="ljPixNome" placeholder="Dina Pizza Gastronomia">
@@ -441,7 +445,7 @@ async function api(action,extra){
 /* ======== DEMONSTRAÇÃO ======== */
 const Demo=(()=>{
   const H='18:30;19:00;19:30;20:00;20:30;21:00'.split(';');
-  const mk=(id,nome,sal)=>({id,nome,ativo:true,whatsapp:'',saloes:sal.map(([n,l])=>({nome:n,lugares:l})),horarios:H.slice(),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'1234',senha_assistente:'',link_avaliacao:'',fila_ativa:true});
+  const mk=(id,nome,sal)=>({id,nome,ativo:true,whatsapp:'',saloes:sal.map(([n,l])=>({nome:n,lugares:l})),horarios:H.slice(),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'1234',senha_assistente:'',link_avaliacao:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:[6]});
   let lojas=[mk('sitio','Sítio Cercado',[['Salão com Espaço Kids',140],['Salão Entrada da Loja',50],['Salão Música ao Vivo',100]]),mk('sao-jose','São José dos Pinhais',[['Salão Principal',100]]),
     mk('fazenda','Fazenda Rio Grande',[['Salão Principal',60],['Área Kids',40]]),mk('colombo','Colombo',[['Salão Principal',40],['Salão Superior',110]]),
     mk('campo-largo','Campo Largo',[['Salão Principal',80],['Salão Espaço Kids',100]]),mk('agua-verde','Água Verde',[['Salão Principal',50]]),
@@ -679,10 +683,38 @@ function atualizarFidMesmoCliente(r){const k=String(r.telefone).replace(/\D/g,''
 
 function chamarZap(id){
   const r=reservas.find(x=>x.id===id);
-  const loja=(lojaDe(r.loja_id)||{}).nome||r.loja_nome;
-  const msg=`Olá, ${String(r.nome).split(' ')[0]}! Aqui é da Dina Pizza ${loja} 🍕\n\nSobre sua reserva (código ${r.id}):\n📅 ${brData(r.data)} às ${r.hora}\n👥 ${r.pessoas} pessoas${r.salao?`\n📍 ${r.salao}`:''}${r.fidelidade?(r.fidelidade.cortesias>0?'\n\n🎁 Fidelidade Dina Pizza: esta pode ser a sua visita de cortesia! É só avisar na chegada.':'\n\n⭐ Fidelidade Dina Pizza: você está com '+r.fidelidade.pontos+' de '+r.fidelidade.meta+' visitas. Faltam '+r.fidelidade.faltam+' e a próxima é cortesia!'):''}\n\nPodemos confirmar sua presença? Responda SIM para confirmar.`;
-  window.open(`https://wa.me/${String(r.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank','noopener');
+  window.open(`https://wa.me/${String(r.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msgConfirmacao(r))}`,'_blank','noopener');
   if(r.status==='pendente')salvarCampo(id,{status:'notificado'});
+}
+
+/** Mensagem de confirmação no mesmo texto que as lojas já usam (endereço, tolerância e taxa de pré-reserva). */
+function msgConfirmacao(r){
+  const l=lojaDe(r.loja_id)||{},loja=l.nome||r.loja_nome;
+  const dia=new Date(r.data+'T12:00:00').getDay();
+  const taxa=l.sinal_valor>0&&(((l.sinal_dias||[]).includes(dia))||(l.sinal_a_partir_de>0&&r.pessoas>=l.sinal_a_partir_de));
+  const pago=Number(r.valor_pago||0)>0;
+  const dias=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  const linhas=[
+    `Olá ${String(r.nome).split(' ')[0]}!`,'',
+    `Recebemos a sua reserva na Dina Pizza – ${loja}! Agradecemos por escolher nosso espaço e já estamos preparando tudo para que sua experiência seja incrível. 🍕`,'',
+    `📅 Data e horário: ${brData(r.data)} às ${r.hora}h`,
+    `👥 Número de pessoas: ${r.pessoas}`];
+  if(r.salao)linhas.push(`📌 Ambiente: ${r.salao}`);
+  if(l.endereco)linhas.push(`📍 Endereço: ${l.endereco}`);
+  linhas.push('');
+  if(l.tolerancia_min)linhas.push(`⏳ Tolerância de ${l.tolerancia_min} minutos: após o horário, sua reserva poderá ser cancelada.`,'');
+  if(taxa&&!pago){
+    const motivo=(l.sinal_dias||[]).includes(dia)?`Como sua reserva é para ${dias[dia]}, a data`:'Para o seu grupo, a data';
+    linhas.push(`⚠️ ${motivo} só será confirmada mediante pagamento da taxa de pré-reserva de ${brl(l.sinal_valor)} (abatida da conta).${l.pix_chave?` PIX: ${l.pix_chave}${l.pix_nome?' ('+l.pix_nome+')':''}.`:''} Envie o comprovante por aqui.`,'');
+  }else if(taxa&&pago){
+    linhas.push(`✅ Taxa de pré-reserva recebida. Sua reserva está garantida!`,'');
+  }
+  if(r.fidelidade){
+    linhas.push(r.fidelidade.cortesias>0?'🎁 Fidelidade Dina Pizza: esta pode ser a sua visita de cortesia! É só avisar na chegada.'
+      :`⭐ Fidelidade Dina Pizza: você está com ${r.fidelidade.pontos} de ${r.fidelidade.meta} visitas. Faltam ${r.fidelidade.faltam} e a próxima é cortesia!`,'');
+  }
+  linhas.push('Se precisar ajustar a data da sua reserva, é só nos chamar por aqui. Até breve!');
+  return linhas.join('\n');
 }
 
 /* ======== NOVA RESERVA ======== */
@@ -890,7 +922,7 @@ function desenharLojas(){
       <h3>${esc(l.nome)} <span class="tag ${l.ativo?'':'off'}">${l.ativo?'ativa':'pausada'}</span></h3>
       ${l.saloes.map(s=>`<div class="sal"><span>${esc(s.nome)}</span><b>${s.lugares} lugares</b></div>`).join('')}
       <div class="info"><b style="color:var(--ink)">${total} lugares</b> · ${l.horarios.length} horários (${esc(l.horarios[0]||'')}–${esc(l.horarios[l.horarios.length-1]||'')})${l.dias_fechados.length?' · sem reserva: '+l.dias_fechados.map(d=>DIAS[d]).join(', '):''}</div>
-      <div class="info">📱 ${l.whatsapp?telFmt(l.whatsapp):'—'} · Sinal: ${l.sinal_valor>0&&l.sinal_a_partir_de>0?brl(l.sinal_valor)+' a partir de '+l.sinal_a_partir_de+' pessoas':'não cobra'}</div>
+      <div class="info">📱 ${l.whatsapp?telFmt(l.whatsapp):'—'} · Taxa de pré-reserva: ${l.sinal_valor>0&&((l.sinal_dias||[]).length||l.sinal_a_partir_de>0)?brl(l.sinal_valor)+[(l.sinal_dias||[]).length?' '+(l.sinal_dias||[]).map(d=>DIAS[d].toLowerCase()).join('/'):'',l.sinal_a_partir_de>0?' grupos '+l.sinal_a_partir_de+'+':''].filter(Boolean).join(' ·'):'não cobra'}</div>
       ${pend.length?`<div><span class="tag alerta">falta: ${pend.join(', ')}</span></div>`:''}
       <div class="acoesL"><button class="btn peq prim" data-editar="${esc(l.id)}">Editar</button><button class="btn peq" data-link="${esc(l.id)}">Copiar link de reserva</button><button class="btn peq" data-qr="${esc(l.id)}">🔳 QR codes</button></div>
     </div>`;
@@ -899,13 +931,14 @@ function desenharLojas(){
 
 let lojaEd=null;
 function abrirLoja(id){
-  const l=id?JSON.parse(JSON.stringify(lojasAdmin.find(x=>x.id===id))):{id:'',nome:'',ativo:true,whatsapp:'',saloes:[{nome:'Salão Principal',lugares:50}],horarios:'18:30;19:00;19:30;20:00;20:30;21:00'.split(';'),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'',senha_assistente:'',fila_ativa:true};
+  const l=id?JSON.parse(JSON.stringify(lojasAdmin.find(x=>x.id===id))):{id:'',nome:'',ativo:true,whatsapp:'',saloes:[{nome:'Salão Principal',lugares:50}],horarios:'18:30;19:00;19:30;20:00;20:30;21:00'.split(';'),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'',senha_assistente:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:[6]};
   lojaEd=Object.assign(l,{id_original:id||''});
   $('lgTitulo').textContent=id?'Editar loja · '+l.nome:'Nova loja';
   $('ljNome').value=l.nome;$('ljId').value=l.id;$('ljId').readOnly=!!id;delete $('ljId').dataset.mexeu;$('ljAtivo').checked=l.ativo!==false;$('ljFila').checked=l.fila_ativa!==false;
   $('ljZap').value=mascaraTel(l.whatsapp||'');$('ljMin').value=l.min_pessoas;$('ljMax').value=l.max_pessoas;
   $('ljAnt').value=l.antecedencia_horas;$('ljDiasMax').value=l.dias_maximo;$('ljSinalPes').value=l.sinal_a_partir_de;
-  $('ljSinalVal').value=String(l.sinal_valor||'').replace('.',',');$('ljPix').value=l.pix_chave;$('ljPixNome').value=l.pix_nome;
+  $('ljSinalVal').value=String(l.sinal_valor||'').replace('.',',');$('ljPix').value=l.pix_chave;$('ljPixNome').value=l.pix_nome;$('ljEnd').value=l.endereco||'';$('ljTol').value=l.tolerancia_min==null?15:l.tolerancia_min;
+  $('ljDiasTaxa').innerHTML=DIAS.map((d,i)=>`<label><input type="checkbox" value="${i}" ${(l.sinal_dias||[]).includes(i)?'checked':''}> ${d}</label>`).join('');
   $('ljSenhaG').value=l.senha_gerente;$('ljSenhaA').value=l.senha_assistente;$('ljLinkAv').value=l.link_avaliacao||'';$('ljErro').textContent='';
   $('ljDias').innerHTML=DIAS.map((d,i)=>`<label><input type="checkbox" value="${i}" ${l.dias_fechados.includes(i)?'checked':''}> ${d}</label>`).join('');
   desenharSaloesEd();desenharHorasEd();atualizarLink();
@@ -927,7 +960,7 @@ async function salvarLoja(){
     saloes:lojaEd.saloes.map(s=>({nome:String(s.nome).trim(),lugares:parseInt(s.lugares,10)||0})).filter(s=>s.nome),
     dias_fechados:[...$('ljDias').querySelectorAll('input:checked')].map(x=>+x.value),
     min_pessoas:+$('ljMin').value||1,max_pessoas:+$('ljMax').value||40,antecedencia_horas:+$('ljAnt').value||0,dias_maximo:+$('ljDiasMax').value||60,
-    sinal_a_partir_de:+$('ljSinalPes').value||0,sinal_valor:$('ljSinalVal').value,pix_chave:$('ljPix').value.trim(),pix_nome:$('ljPixNome').value.trim(),
+    sinal_a_partir_de:+$('ljSinalPes').value||0,sinal_valor:$('ljSinalVal').value,pix_chave:$('ljPix').value.trim(),pix_nome:$('ljPixNome').value.trim(),endereco:$('ljEnd').value.trim(),tolerancia_min:$('ljTol').value===''?15:+$('ljTol').value,sinal_dias:[...$('ljDiasTaxa').querySelectorAll('input:checked')].map(x=>+x.value),
     senha_gerente:$('ljSenhaG').value.trim(),senha_assistente:$('ljSenhaA').value.trim(),link_avaliacao:$('ljLinkAv').value.trim()});
   if(l.min_pessoas>l.max_pessoas)return $('ljErro').textContent='O mínimo de pessoas é maior que o máximo.';
   const b=$('ljSalvar');b.disabled=true;$('ljErro').textContent='';

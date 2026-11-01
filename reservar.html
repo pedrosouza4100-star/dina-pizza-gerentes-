@@ -167,7 +167,7 @@ async function apiPost(body){
 const Demo=(()=>{
   const H=['18:30','19:00','19:30','20:00','20:30','21:00'];
   const lojas=[
-    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150},
+    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,sinal_dias:[6],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
     {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150},
     {id:'agua-verde',nome:'Água Verde',whatsapp:'5541977777777',saloes:[{nome:'Salão Principal',lugares:50}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:30,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:0}];
   const w=v=>new Promise(r=>setTimeout(()=>r(v),300));
@@ -181,7 +181,7 @@ const Demo=(()=>{
     post(b){
       const l=lojas.find(x=>x.id===b.loja_id);
       return w({reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
-        sinal:l.sinal_valor&&b.pessoas>=l.sinal_a_partir_de?{valor:l.sinal_valor,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
+        sinal:l.sinal_valor&&(b.pessoas>=l.sinal_a_partir_de||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{valor:l.sinal_valor,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
     }
   };
 })();
@@ -279,10 +279,16 @@ function desenharSaloes(){
   }).join('');
 }
 
+const NOMES_DIA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 function atualizarSinal(){
   const l=estado.loja,p=pessoas(),a=$('avisoSinal');
-  if(l&&l.sinal_valor>0&&l.sinal_a_partir_de>0&&p>=l.sinal_a_partir_de){
-    a.hidden=false;a.innerHTML=`Para grupos a partir de <b>${l.sinal_a_partir_de} pessoas</b>, a reserva é garantida com um sinal de <b>${brl(l.sinal_valor)}</b> via PIX, abatido da conta. Os dados do PIX aparecem ao final.`;
+  if(!l||!(l.sinal_valor>0)){a.hidden=true;return}
+  const dia=$('data').value?new Date($('data').value+'T12:00:00').getDay():-1;
+  const porDia=(l.sinal_dias||[]).includes(dia),porGrupo=l.sinal_a_partir_de>0&&p>=l.sinal_a_partir_de;
+  if(porDia){
+    a.hidden=false;a.innerHTML=`Reservas para <b>${NOMES_DIA[dia]}</b> só são confirmadas mediante pagamento da <b>taxa de pré-reserva de ${brl(l.sinal_valor)}</b> via PIX, abatida da conta. Os dados do PIX aparecem ao final.`;
+  }else if(porGrupo){
+    a.hidden=false;a.innerHTML=`Para grupos a partir de <b>${l.sinal_a_partir_de} pessoas</b>, a reserva é garantida com uma taxa de pré-reserva de <b>${brl(l.sinal_valor)}</b> via PIX, abatida da conta. Os dados do PIX aparecem ao final.`;
   }else a.hidden=true;
 }
 
@@ -343,10 +349,12 @@ function mostrarSucesso(res){
       <div><span>Data</span><b>${brData(r.data)} às ${esc(r.hora)}</b></div>
       <div><span>Pessoas</span><b>${r.pessoas}</b></div>
       <div><span>Salão</span><b>${esc(r.salao)}</b></div>
+      ${estado.loja&&estado.loja.endereco?`<div><span>Endereço</span><b>${esc(estado.loja.endereco)}</b></div>`:''}
       <div><span>Nome</span><b>${esc(r.nome)}</b></div>
     </div>
+    ${estado.loja&&estado.loja.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${estado.loja.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
-    ${s?`<div class="pix"><h3>Garanta sua reserva com o sinal</h3>
+    ${s?`<div class="pix"><h3>Garanta sua reserva com a pré-reserva</h3>
       <div>Faça um PIX de <b>${brl(s.valor)}</b> para <b>${esc(s.pix_nome)}</b> e envie o comprovante pelo WhatsApp da unidade. O valor é abatido da conta.</div>
       <div class="chave"><input readonly value="${esc(s.pix_chave)}" id="chavePix"><button type="button" id="copiar">Copiar</button></div></div>`:''}
     ${res.loja.whatsapp?`<a class="btn zap" href="${zap}" target="_blank" rel="noopener">${s?'Enviar comprovante no WhatsApp':'Falar com a unidade no WhatsApp'}</a>`:''}
@@ -357,7 +365,7 @@ function mostrarSucesso(res){
 
 /* ======== EVENTOS ======== */
 $('loja').onchange=trocarLoja;
-$('data').onchange=carregarHorarios;
+$('data').onchange=()=>{atualizarSinal();carregarHorarios()};
 $('pessoas').oninput=()=>{atualizarSinal();if(estado.disp)desenharHorarios()};
 $('menos').onclick=()=>{$('pessoas').value=Math.max(1,pessoas()-1);$('pessoas').oninput()};
 $('mais').onclick=()=>{$('pessoas').value=pessoas()+1;$('pessoas').oninput()};
