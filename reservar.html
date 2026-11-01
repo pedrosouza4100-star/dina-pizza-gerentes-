@@ -167,7 +167,7 @@ async function apiPost(body){
 const Demo=(()=>{
   const H=['18:30','19:00','19:30','20:00','20:30','21:00'];
   const lojas=[
-    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150,sinal_dias:[6],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
+    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:150,sinal_dias:[6],sinal_datas:['12/06'],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
     {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150},
     {id:'agua-verde',nome:'Água Verde',whatsapp:'5541977777777',saloes:[{nome:'Salão Principal',lugares:50}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:30,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:0}];
   const w=v=>new Promise(r=>setTimeout(()=>r(v),300));
@@ -181,7 +181,7 @@ const Demo=(()=>{
     post(b){
       const l=lojas.find(x=>x.id===b.loja_id);
       return w({reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
-        sinal:l.sinal_valor&&(b.pessoas>=l.sinal_a_partir_de||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{valor:l.sinal_valor,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
+        sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
     }
   };
 })();
@@ -280,16 +280,17 @@ function desenharSaloes(){
 }
 
 const NOMES_DIA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+/* Pré-reserva: texto acolhedor, explicando o porquê (casa cheia), nunca como ameaça. */
 function atualizarSinal(){
   const l=estado.loja,p=pessoas(),a=$('avisoSinal');
-  if(!l||!(l.sinal_valor>0)){a.hidden=true;return}
-  const dia=$('data').value?new Date($('data').value+'T12:00:00').getDay():-1;
-  const porDia=(l.sinal_dias||[]).includes(dia),porGrupo=l.sinal_a_partir_de>0&&p>=l.sinal_a_partir_de;
-  if(porDia){
-    a.hidden=false;a.innerHTML=`Reservas para <b>${NOMES_DIA[dia]}</b> só são confirmadas mediante pagamento da <b>taxa de pré-reserva de ${brl(l.sinal_valor)}</b> via PIX, abatida da conta. Os dados do PIX aparecem ao final.`;
-  }else if(porGrupo){
-    a.hidden=false;a.innerHTML=`Para grupos a partir de <b>${l.sinal_a_partir_de} pessoas</b>, a reserva é garantida com uma taxa de pré-reserva de <b>${brl(l.sinal_valor)}</b> via PIX, abatida da conta. Os dados do PIX aparecem ao final.`;
-  }else a.hidden=true;
+  if(!l||!(l.sinal_valor>0)||!$('data').value){a.hidden=true;return}
+  const iso=$('data').value,dia=new Date(iso+'T12:00:00').getDay(),dm=iso.slice(8,10)+'/'+iso.slice(5,7);
+  const fim=` pedimos uma <b>pré-reserva de ${brl(l.sinal_valor)}</b> via PIX, que é <b>descontada da sua conta</b>. Os dados do PIX aparecem no final. 😉`;
+  let txt='';
+  if((l.sinal_datas||[]).includes(dm))txt=`💛 <b>${dm}</b> é uma data especial e a casa fica cheia! Para guardar a sua mesa,`+fim;
+  else if((l.sinal_dias||[]).includes(dia))txt=`💛 <b>${NOMES_DIA[dia].charAt(0).toUpperCase()+NOMES_DIA[dia].slice(1)}</b> é o nosso dia mais disputado! Para guardar a sua mesa,`+fim;
+  else if(l.sinal_a_partir_de>0&&p>=l.sinal_a_partir_de)txt=`💛 Para guardar as mesas do seu grupo de <b>${p} pessoas</b>,`+fim;
+  a.hidden=!txt;a.innerHTML=txt;
 }
 
 function mascaraTel(v){v=v.replace(/\D/g,'').slice(0,11);if(v.length>6)return `(${v.slice(0,2)}) ${v.slice(2,v.length-4)}-${v.slice(-4)}`;if(v.length>2)return `(${v.slice(0,2)}) ${v.slice(2)}`;return v}
@@ -354,8 +355,8 @@ function mostrarSucesso(res){
     </div>
     ${estado.loja&&estado.loja.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${estado.loja.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
-    ${s?`<div class="pix"><h3>Garanta sua reserva com a pré-reserva</h3>
-      <div>Faça um PIX de <b>${brl(s.valor)}</b> para <b>${esc(s.pix_nome)}</b> e envie o comprovante pelo WhatsApp da unidade. O valor é abatido da conta.</div>
+    ${s?`<div class="pix"><h3>💛 Falta só um passo para guardar a sua mesa</h3>
+      <div>${s.motivo==='dia'?'Este é o nosso dia mais disputado. ':s.motivo==='data'?'Esta é uma data especial e a casa fica cheia. ':''}Faça a pré-reserva de <b>${brl(s.valor)}</b> por PIX para <b>${esc(s.pix_nome)}</b> e envie o comprovante pelo WhatsApp da unidade. O valor é <b>descontado da sua conta</b>.</div>
       <div class="chave"><input readonly value="${esc(s.pix_chave)}" id="chavePix"><button type="button" id="copiar">Copiar</button></div></div>`:''}
     ${res.loja.whatsapp?`<a class="btn zap" href="${zap}" target="_blank" rel="noopener">${s?'Enviar comprovante no WhatsApp':'Falar com a unidade no WhatsApp'}</a>`:''}
     <button class="btn claro" type="button" onclick="location.reload()">Fazer outra reserva</button>`;
