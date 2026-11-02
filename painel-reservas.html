@@ -530,7 +530,7 @@ async function api(action,extra){
 /* ======== DEMONSTRAÇÃO ======== */
 const Demo=(()=>{
   const H='18:30;19:00;19:30;20:00;20:30;21:00'.split(';');
-  const mk=(id,nome,sal)=>({id,nome,ativo:true,whatsapp:'',saloes:sal.map(([n,l])=>({nome:n,lugares:l})),horarios:H.slice(),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'1234',senha_assistente:'',link_avaliacao:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:id==='sitio'?[6]:[],sinal_datas:[],texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.'});
+  const mk=(id,nome,sal)=>({id,nome,ativo:true,whatsapp:'',saloes:sal.map(([n,l])=>({nome:n,lugares:l})),horarios:H.slice(),dias_fechados:[],min_pessoas:4,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'1234',senha_assistente:'',link_avaliacao:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:id==='sitio'?[6]:[],sinal_datas:[],texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.'});
   let lojas=[mk('sitio','Sítio Cercado',[['Salão com Espaço Kids',140],['Salão Entrada da Loja',50],['Salão Música ao Vivo',100]]),mk('sao-jose','São José dos Pinhais',[['Salão Principal',100]]),
     mk('fazenda','Fazenda Rio Grande',[['Salão Principal',60],['Área Kids',40]]),mk('colombo','Colombo',[['Salão Principal',40],['Salão Superior',110]]),
     mk('campo-largo','Campo Largo',[['Salão Principal',80],['Salão Espaço Kids',100]]),mk('agua-verde','Água Verde',[['Salão Principal',50]]),
@@ -1175,7 +1175,7 @@ function desenharLojas(){
 
 let lojaEd=null;
 function abrirLoja(id){
-  const l=id?JSON.parse(JSON.stringify(lojasAdmin.find(x=>x.id===id))):{id:'',nome:'',ativo:true,whatsapp:'',saloes:[{nome:'Salão Principal',lugares:50}],horarios:'18:30;19:00;19:30;20:00;20:30;21:00'.split(';'),dias_fechados:[],min_pessoas:2,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'',senha_assistente:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:[],sinal_datas:[]};
+  const l=id?JSON.parse(JSON.stringify(lojasAdmin.find(x=>x.id===id))):{id:'',nome:'',ativo:true,whatsapp:'',saloes:[{nome:'Salão Principal',lugares:50}],horarios:'18:30;19:00;19:30;20:00;20:30;21:00'.split(';'),dias_fechados:[],min_pessoas:4,max_pessoas:40,antecedencia_horas:2,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,pix_chave:'',pix_nome:'Dina Pizza Gastronomia',senha_gerente:'',senha_assistente:'',fila_ativa:true,endereco:'',tolerancia_min:15,sinal_dias:[],sinal_datas:[]};
   lojaEd=Object.assign(l,{id_original:id||''});
   $('lgTitulo').textContent=id?'Editar loja · '+l.nome:'Nova loja';
   $('ljNome').value=l.nome;$('ljId').value=l.id;$('ljId').readOnly=!!id;delete $('ljId').dataset.mexeu;$('ljAtivo').checked=l.ativo!==false;$('ljFila').checked=l.fila_ativa!==false;
