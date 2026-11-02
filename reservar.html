@@ -178,8 +178,8 @@ async function apiPost(body){
 const Demo=(()=>{
   const H=['18:30','19:00','19:30','20:00','20:30','21:00'];
   const lojas=[
-    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:150,sinal_dias:[6],sinal_datas:['12/06'],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
-    {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:150},
+    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,sinal_dias:[6],sinal_datas:['12/06'],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
+    {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:2,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:10},
     {id:'agua-verde',nome:'Água Verde',whatsapp:'5541977777777',saloes:[{nome:'Salão Principal',lugares:50}],horarios:H,dias_fechados:[],min_pessoas:2,max_pessoas:30,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:0}];
   const w=v=>new Promise(r=>setTimeout(()=>r(v),300));
   const demoRes={id:'DEMO42',nome:'Maria',data:new Date(Date.now()+3*864e5).toISOString().slice(0,10),hora:'19:30',pessoas:4,salao:'Salão com Espaço Kids',status:'notificado',passou:false,loja:{id:'sitio',nome:'Sítio Cercado',endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado',whatsapp:'5541999999999',tolerancia_min:15,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.'},taxa:null};
@@ -195,7 +195,7 @@ const Demo=(()=>{
       const l=lojas.find(x=>x.id===b.loja_id);
       if(b.action==='clienteConfirmar'||b.action==='clienteCancelar'){demoRes.status=b.action==='clienteConfirmar'?'confirmado':'cancelado';return w(demoRes)}
       return w({texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
-        sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
+        sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor*b.pessoas,por_pessoa:l.sinal_valor,pessoas:b.pessoas,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
     }
   };
 })();
@@ -302,7 +302,7 @@ function atualizarSinal(){
   const l=estado.loja,p=pessoas(),a=$('avisoSinal');
   if(!l||!(l.sinal_valor>0)||!$('data').value){a.hidden=true;return}
   const iso=$('data').value,dia=new Date(iso+'T12:00:00').getDay(),dm=iso.slice(8,10)+'/'+iso.slice(5,7);
-  const fim=` pedimos uma <b>pré-reserva de ${brl(l.sinal_valor)}</b> via PIX, que é <b>descontada da sua conta</b>. Os dados do PIX aparecem no final. 😉`;
+  const fim=` pedimos uma <b>pré-reserva de ${brl(l.sinal_valor)} por pessoa</b>${p>0?` (${brl(l.sinal_valor*p)} para ${p} ${p>1?'pessoas':'pessoa'})`:''} via PIX, que é <b>descontada da conta de quem fez a reserva</b>. Os dados do PIX aparecem no final. 😉`;
   let txt='';
   if((l.sinal_datas||[]).includes(dm))txt=`💛 <b>${dm}</b> é uma data especial e a casa fica cheia! Para guardar a sua mesa,`+fim;
   else if((l.sinal_dias||[]).includes(dia))txt=`💛 <b>${NOMES_DIA[dia].charAt(0).toUpperCase()+NOMES_DIA[dia].slice(1)}</b> é o nosso dia mais disputado! Para guardar a sua mesa,`+fim;
@@ -393,7 +393,7 @@ function blocoPix(s,loja,r){
   if(!s||s.pago)return '';
   const msg=`Olá! Segue o comprovante da pré-reserva da reserva ${r.id} (${brData(r.data)} às ${r.hora}, ${r.pessoas} pessoas).`;
   return `<div class="pix"><h3>💛 Para guardar a sua mesa</h3>
-    <div>${s.motivo==='dia'?'Este é o nosso dia mais disputado. ':s.motivo==='data'?'Esta é uma data especial e a casa fica cheia. ':''}Faça a pré-reserva de <b>${brl(s.valor)}</b> por PIX para <b>${esc(s.pix_nome||'')}</b>. O valor é <b>descontado da sua conta</b>.</div>
+    <div>${s.motivo==='dia'?'Este é o nosso dia mais disputado. ':s.motivo==='data'?'Esta é uma data especial e a casa fica cheia. ':''}Faça a pré-reserva de <b>${brl(s.valor)}</b>${s.por_pessoa?` (${brl(s.por_pessoa)} por pessoa)`:''} por PIX para <b>${esc(s.pix_nome||'')}</b>. O valor é <b>descontado da conta de quem fez a reserva</b>.</div>
     <div class="chave"><input readonly value="${esc(s.pix_chave||'')}" id="chavePix"><button type="button" id="copiar">Copiar</button></div>
     ${loja&&loja.whatsapp?`<a class="btn zap" style="margin-top:12px" href="https://wa.me/${loja.whatsapp}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Enviar comprovante no WhatsApp</a>`:''}</div>`;
 }
