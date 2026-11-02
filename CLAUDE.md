@@ -37,6 +37,12 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
    O Admin (faixa "🛡️ Proteção do sistema" no Hoje na rede) e o robô de cobrança comparam os dois e avisam se o código publicado for outro,
    se faltar parte do código ou se o backup semanal parar.
 
+10. **A cada mudança que os gerentes, o regional ou a nutricionista percebem** (placar, escala, regional, nutricionista, agenda, mensagens do robô),
+   no mesmo dia: (a) adicione uma linha no topo da tabela "Histórico de atualizações" do **Manual do Placar Dina Pizza** (Claude Docs,
+   https://claude.ai/artifact/Lu5ASfQx2xjrjJHKuPktfG, doc id `a122e041-56ee-4472-a181-88b5f740c0ef`) e ajuste as seções afetadas;
+   (b) entregue ao Robson uma **mensagem pronta para o grupo dos gerentes** ("📢 Placar atualizado — o que mudou: 1)… 2)…", curta,
+   linguagem simples, com o que o gerente precisa fazer diferente), com botão de copiar. Pedido do Robson em 02/11/2026.
+
 ## Mapa das telas
 
 | Arquivo | O que é | Ações no Apps Script |
