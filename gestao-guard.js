@@ -3,6 +3,8 @@
 (function(){
   var SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
   var CHAVE='dina_gestao_hash';
+  // página do regional: a senha da agenda do gerente regional também abre (antes do script: window.GESTAO_PAGINA='regional')
+  var PAGINA=window.GESTAO_PAGINA||'';
   function hash(s){var h=0;for(var i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
   function ler(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k);}catch(e){return null;}}
   function gravar(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -12,12 +14,12 @@
   document.head.appendChild(st);
   function liberar(){ var g=document.getElementById('gGuard'); if(g) g.remove(); var c=document.getElementById('gGuardCss'); if(c) c.remove(); }
   function conferir(h){
-    return fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authGestaoLogin',hash:h})})
+    return fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authGestaoLogin',hash:h,pagina:PAGINA})})
       .then(function(r){return r.text();}).then(function(t){ var j=null; try{j=JSON.parse(t);}catch(e){} return j; });
   }
   function montar(){
     var d=document.createElement('div'); d.id='gGuard';
-    d.innerHTML='<div class="b"><h1>DINA <span>PIZZA</span></h1><p>Área da gestão. Entre com a senha do administrador ou da gestão.</p><input type="password" id="gGuardSenha" placeholder="Senha"><div class="e" id="gGuardErro"></div><button id="gGuardBtn">Entrar</button><a href="./">← Voltar ao início</a></div>';
+    d.innerHTML='<div class="b"><h1>DINA <span>PIZZA</span></h1><p>'+(PAGINA==='regional'?'Gerente regional: entre com a sua senha (a mesma da agenda).':'Área da gestão. Entre com a senha do administrador ou da gestão.')+'</p><input type="password" id="gGuardSenha" placeholder="Senha"><div class="e" id="gGuardErro"></div><button id="gGuardBtn">Entrar</button><a href="./">← Voltar ao início</a></div>';
     document.body.appendChild(d);
     var inp=document.getElementById('gGuardSenha'), err=document.getElementById('gGuardErro');
     function tentar(){

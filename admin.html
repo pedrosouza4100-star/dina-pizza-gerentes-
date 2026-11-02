@@ -277,7 +277,7 @@
       </div>
       <div>
         <div class="section-title">Metas de Fichas de Fliperama e Buffets por Loja</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Meta do <b>mês</b>, em quantidade. O sistema divide sozinho: 50% nos dias de domingo a quinta e 50% nas sextas e sábados do mês. Capão Raso e Expressa não têm esses serviços. Deixe 0 (ou em branco) para "sem meta".</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Meta do <b>mês</b>, em quantidade. O sistema divide sozinho: 50% nos dias de domingo a quinta e 50% nas sextas e sábados do mês. Capão Raso e Expressa não têm esses serviços. Deixe 0 (ou em branco) para "sem meta".<br><b style="color:var(--gold)">Aumento automático:</b> em novembro, o valor digitado aqui <b>+3%</b> (meta) e <b>+5%</b> (🏆 desafio). A partir de dezembro, sobre o que a loja vendeu no mês anterior; o valor daqui só vale para loja sem venda no mês anterior.</div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Unidade</th><th>🕹️ Fichas de fliperama — meta do mês</th><th>🍽️ Buffets — meta do mês</th></tr></thead>
@@ -445,6 +445,8 @@
         <textarea class="modal-input" id="msgAviso" rows="4" oninput="previaMsg()"></textarea>
         <div class="modal-label" style="margin-top:14px">2ª cobrança — no horário de atraso (padrão 19h), se continuar sem iniciar</div>
         <textarea class="modal-input" id="msgAtraso" rows="4" oninput="previaMsg()"></textarea>
+        <div class="modal-label" style="margin-top:14px">⏱️ Tempos de entrega — 5 min antes de fechar cada horário (19h55, 21h25 e 22h55), se aquele tempo não foi registrado (só lojas com entrega). Use também <b>{n}</b> (1º, 2º ou 3º tempo) e <b>{janela}</b> (ex.: 18h às 20h)</div>
+        <textarea class="modal-input" id="msgTempo" rows="4" oninput="previaMsg()"></textarea>
         <div class="modal-label" style="margin-top:14px">Como o gerente vai receber (exemplo)</div>
         <div id="msgPrevia" style="background:#0b2e1e;border:1px solid #1f5c3f;border-radius:10px;padding:12px 14px;font-size:0.85rem;line-height:1.5;white-space:pre-wrap;color:#e8ffe8"></div>
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
@@ -903,23 +905,24 @@
     }catch(e){ document.getElementById('gmBody').innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+escH(e.message)+'</td></tr>'; return; }
     document.getElementById('gmBody').innerHTML=linhasContatos(ULTIMO_HOJE);
     const m=ULTIMO_HOJE.mensagens;
-    if(m){ MSG_PADRAO=m.padrao; document.getElementById('msgAviso').value=m.aviso; document.getElementById('msgAtraso').value=m.atraso; document.getElementById('msgInfo').textContent=m.personalizada?'Usando as suas mensagens.':'Usando o texto padrão.'; }
+    if(m){ MSG_PADRAO=m.padrao; document.getElementById('msgAviso').value=m.aviso; document.getElementById('msgAtraso').value=m.atraso; document.getElementById('msgTempo').value=m.tempo||(m.padrao&&m.padrao.tempo)||''; document.getElementById('msgTempo').disabled=!m.tempo; document.getElementById('msgInfo').textContent=m.personalizada?'Usando as suas mensagens.':'Usando o texto padrão.'; }
     else document.getElementById('msgInfo').innerHTML='<span style="color:var(--yellow)">⚠ Falta colar no Apps Script o código novo para salvar as mensagens aqui.</span>';
     previaMsg();
   }
   function montarMsg(t){
     const l=ULTIMO_HOJE&&ULTIMO_HOJE.lojas.find(x=>(x.contato||{}).gerente)||{unidade:'Uberaba',contato:{gerente:'Neusa'}};
     const nome=String((l.contato||{}).gerente||'Gerente').trim().split(/\s+/)[0];
-    return String(t||'').replace(/\{gerente\}/g,nome).replace(/\{loja\}/g,l.unidade).replace(/\{hora\}/g,'17:30');
+    return String(t||'').replace(/\{gerente\}/g,nome).replace(/\{loja\}/g,l.unidade).replace(/\{hora\}/g,'17:30').replace(/\{n\}/g,'1').replace(/\{janela\}/g,'18h às 20h');
   }
-  function previaMsg(){ document.getElementById('msgPrevia').textContent='1ª: '+montarMsg(document.getElementById('msgAviso').value)+'\n\n2ª: '+montarMsg(document.getElementById('msgAtraso').value); }
-  function padraoMensagens(){ if(!MSG_PADRAO) return; document.getElementById('msgAviso').value=MSG_PADRAO.aviso; document.getElementById('msgAtraso').value=MSG_PADRAO.atraso; previaMsg(); showToast('Texto padrão colocado. Toque em Salvar mensagens para valer.','ok'); }
+  function previaMsg(){ const t=document.getElementById('msgTempo').value; document.getElementById('msgPrevia').textContent='1ª: '+montarMsg(document.getElementById('msgAviso').value)+'\n\n2ª: '+montarMsg(document.getElementById('msgAtraso').value)+(t?'\n\n⏱️ Tempo: '+montarMsg(t):''); }
+  function padraoMensagens(){ if(!MSG_PADRAO) return; document.getElementById('msgAviso').value=MSG_PADRAO.aviso; document.getElementById('msgAtraso').value=MSG_PADRAO.atraso; if(MSG_PADRAO.tempo) document.getElementById('msgTempo').value=MSG_PADRAO.tempo; previaMsg(); showToast('Texto padrão colocado. Toque em Salvar mensagens para valer.','ok'); }
   async function salvarMensagens(){
-    const aviso=document.getElementById('msgAviso').value.trim(), atraso=document.getElementById('msgAtraso').value.trim();
+    const aviso=document.getElementById('msgAviso').value.trim(), atraso=document.getElementById('msgAtraso').value.trim(), tempo=document.getElementById('msgTempo').value.trim();
     if(aviso.length<10||atraso.length<10){ showToast('Escreva as duas mensagens.','warn'); return; }
-    const p=MSG_PADRAO||{};
+    const p=MSG_PADRAO||{}, msgs={aviso:aviso===p.aviso?'':aviso,atraso:atraso===p.atraso?'':atraso};
+    if(p.tempo){ if(tempo.length<10){ showToast('Escreva a mensagem dos tempos de entrega.','warn'); return; } msgs.tempo=tempo===p.tempo?'':tempo; }
     try{
-      await admPost({action:'authSalvarMensagens',mensagens:{aviso:aviso===p.aviso?'':aviso,atraso:atraso===p.atraso?'':atraso}});
+      await admPost({action:'authSalvarMensagens',mensagens:msgs});
       showToast('Mensagens salvas. O robô já usa na próxima cobrança.','ok'); registrarLog('Mensagens do robô alteradas.','ok'); carregarGerentes();
     }catch(e){ showToast('Não salvou: '+e.message+(/reconhecida/.test(e.message)?' — cole o código novo no Apps Script.':''),'warn'); }
   }
@@ -945,8 +948,8 @@
 
   // ── Senhas geradas pelo admin (6 dígitos, diferentes por loja) ──
   function senhaAleatoria(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return String(100000+(a[0]%900000)); }
-  function mostrarLista(pares){
-    document.getElementById('listaSenhas').value='Senhas do placar — gerentes.dinapizza.com.br\n\n'+pares.map(([u,sn])=>u+': '+sn).join('\n');
+  function mostrarLista(pares,cabecalho){
+    document.getElementById('listaSenhas').value=(cabecalho||'Senhas do placar — gerentes.dinapizza.com.br/placar')+'\n\n'+pares.map(([u,sn])=>u+': '+sn).join('\n');
     document.getElementById('modalLista').style.display='flex';
   }
   function copiarLista(){ const t=document.getElementById('listaSenhas'); t.select(); try{ navigator.clipboard.writeText(t.value); }catch(e){ document.execCommand('copy'); } showToast('Lista copiada','ok'); }
@@ -976,7 +979,14 @@
     if(gerar){ if(!confirm('Gerar senha nova da agenda para '+rotulo+'? A senha atual deixa de valer.')) return; sn=senhaAleatoria(); }
     else { sn=prompt('Nova senha da agenda para '+rotulo+' (mínimo 4 caracteres):'); if(sn==null) return; if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; } }
     try{ await admPost({action:'authDefinirSenhaAgenda',pessoa,hash:hash(sn)}); }catch(e){ showToast('Não salvou: '+e.message,'warn'); return; }
-    registrarLog('Senha da agenda definida: '+rotulo+'.','ok'); renderTabela(); mostrarLista([[rotulo+' (agenda)',sn]]);
+    registrarLog('Senha da agenda definida: '+rotulo+'.','ok'); renderTabela();
+    // cada pessoa recebe o link certo (a página inicial só tem o placar e a escala das lojas)
+    const cab=pessoa==='nutri'
+      ? 'Sua senha (vale para as duas páginas):\n📅 Agenda: gerentes.dinapizza.com.br/agenda\n🥗 Checklist: gerentes.dinapizza.com.br/nutricionista'
+      : pessoa==='regional'
+        ? 'Sua senha (vale para as duas páginas):\n📅 Agenda: gerentes.dinapizza.com.br/agenda\n📋 Checklist da visita: gerentes.dinapizza.com.br/regional'
+        : 'Sua senha da agenda:\n📅 gerentes.dinapizza.com.br/agenda';
+    mostrarLista([[rotulo,sn]],cab);
   }
   async function definirGestao(){
     if(!(await admServidor())){ showToast('O Apps Script publicado ainda não tem a senha da gestão.','warn'); return; }
@@ -1209,9 +1219,11 @@
     const tbody=document.getElementById('tabelaFliperBuffet'); if(!tbody) return; tbody.innerHTML='';
     UNIDADES.filter(u=>!LOJAS_SEM_FLIPER_BUFFET.includes(u)).forEach(u=>{
       const f=metasFichas[u]||{}, b=metasBuffet[u]||{}, k=u.replace(/\s/g,'_');
-      const inp=(id,v)=>`<td><input class="meta-input" type="number" min="0" id="${id}_${k}" value="${v?v:''}" placeholder="sem meta" style="width:110px"></td>`;
+      const inp=(id,x)=>x.auto
+        ? `<td><input class="meta-input" type="number" id="${id}_${k}" value="${x.mensal}" disabled style="width:110px;opacity:0.7"><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">automática: mês passado ${x.base} +3% · 🏆 ${x.desafio}</div></td>`
+        : `<td><input class="meta-input" type="number" min="0" id="${id}_${k}" value="${(x.base!=null?x.base:x.mensal)||''}" placeholder="sem meta" style="width:110px">${x.desafio?`<div style="font-size:0.7rem;color:var(--muted);margin-top:3px">com o aumento: meta ${x.mensal} (+3%) · 🏆 ${x.desafio} (+5%)</div>`:''}</td>`;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="font-weight:600">${u}</td>`+inp('fi_m',f.mensal)+inp('bu_m',b.mensal);
+      tr.innerHTML=`<td style="font-weight:600">${u}</td>`+inp('fi_m',f)+inp('bu_m',b);
       tbody.appendChild(tr);
     });
   }
