@@ -160,6 +160,8 @@
 .chk-salvar-btn:disabled{background:#444;cursor:not-allowed;}
 .chk-modal-msg{font-size:12px;text-align:center;margin-top:8px;min-height:16px;color:#888;}
 
+  .atencao-campo{background:rgba(255,208,0,0.12);border:1px solid #FFD000;border-radius:8px;color:#ffe9a8;font-size:0.8rem;line-height:1.4;padding:7px 10px;margin:6px 0 8px}
+  .atencao-campo b{color:#FFD000}
 </style>
 </head>
 <body>
@@ -527,14 +529,16 @@
       <!-- Fichas de fliperama e buffets (quantidade) — não aparecem no Capão Raso e na Expressa -->
       <div class="card card-full" id="cardFichas" style="display:none">
         <div class="card-label">🕹️ Fichas de Fliperama Vendidas</div>
+        <div class="atencao-campo">⚠️ <b>Combo conta 1</b> (não 3). <b>Avulsa conta 1.</b><br>Ex.: 10 combos + 10 avulsas = <b>20</b></div>
         <div class="card-meta" id="metaFichasDisplay"></div>
-        <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">fichas</span></div>
+        <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_fichas"></div>
       </div>
       <div class="card card-full" id="cardBuffets" style="display:none">
         <div class="card-label">🍽️ Buffets Vendidos</div>
+        <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b></div>
         <div class="card-meta" id="metaBuffetsDisplay"></div>
-        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">buffets</span></div>
+        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_buffets"></div>
       </div>
       <!-- Vendas Canceladas no Caixa -->
@@ -1820,7 +1824,7 @@ async function chkRecursos(){
 }
 async function chkServidorV2(){ if(_chkV2===null){ const rc=await chkRecursos(); if(_chkRecursos===null) return false; _chkV2=rc.includes('checklistV2'); } return _chkV2; }
 
-// ── Horário do checklist de abertura e do Start Dina (17h00–19h20; Isaac Manhã 9h30–11h20) ──
+// ── Horário do checklist de abertura e do Start Dina (17h00–19h20; Isaac Manhã 9h30–11h50) ──
 // Antes do horário: não abre. Depois: libera com aviso. 1º atraso do mês = aviso; do 2º em diante o placar
 // fica bloqueado a partir do dia seguinte até o administrador liberar. Quem decide e registra é o servidor.
 let CHK_SIT=null, CHK_OFFSET=0, _chkSitTimer=null;
@@ -1846,7 +1850,7 @@ function chkPosicao(){
   const m=chkMinH(chkHoraSP());
   return m<240 ? 'depois' : m<chkMinH(CHK_SIT.janela.ini) ? 'antes' : m<=chkMinH(CHK_SIT.janela.fim) ? 'dentro' : 'depois';
 }
-const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:20'}};
+const CHK_JANELAS_TELA={'Isaac Manhã':{ini:'09:30',fim:'11:50'}};
 function chkJanelaAtual(){ return (CHK_SIT&&CHK_SIT.janela)||CHK_JANELAS_TELA[unidadeAtual]||{ini:'17:00',fim:'19:20'}; }
 function chkJanelaTxt(){ const j=chkJanelaAtual(); return j.ini.replace(':','h')+' às '+j.fim.replace(':','h'); }
 function renderAvisoHorario(){
@@ -2363,8 +2367,9 @@ function atualizarMetas(){
   const fb=temFliperBuffet(unidadeAtual), hojeT=dataTurno();
   [['cardFichas','metaFichasDisplay',METAS_FICHAS],['cardBuffets','metaBuffetsDisplay',METAS_BUFFET]].forEach(([c,m,metas])=>{
     const card=document.getElementById(c); if(!card) return; card.style.display=fb?'flex':'none';
-    const mensal=(metas[unidadeAtual]||{}).mensal, md=metaDiaMensal(mensal,hojeT);
-    document.getElementById(m).textContent=mensal?`Meta de hoje: ${Math.round(md)} · Meta do mês: ${Number(mensal).toLocaleString('pt-BR')}`:'Sem meta definida';
+    const cfg=metas[unidadeAtual]||{}, mensal=cfg.mensal, md=metaDiaMensal(mensal,hojeT);
+    // a partir de dezembro: meta = vendido no mês passado +3%; desafio = +5%
+    document.getElementById(m).textContent=mensal?`Meta de hoje: ${Math.round(md)} · Meta do mês: ${Number(mensal).toLocaleString('pt-BR')}`+(cfg.desafio?` · 🏆 Desafio: ${Number(cfg.desafio).toLocaleString('pt-BR')}`:''):'Sem meta definida';
   });
 }
 
