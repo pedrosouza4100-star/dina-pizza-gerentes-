@@ -263,6 +263,7 @@ header .esp{flex:1}
     <div><div class="titulo" id="hdTitulo">Reservas</div><div class="sub" id="hdSub"></div></div>
     <div class="esp"></div>
     <div class="menu" id="menu"><button data-tela="reservas" class="on">Reservas</button><button data-tela="fila">Fila</button><button data-tela="envios">Envios</button><button data-tela="avaliacoes">Avaliações</button><button data-tela="clientes">Clientes</button><button data-tela="lojas" id="mnLojas">Lojas</button></div>
+    <select class="campo selWhats" id="selWhats" title="Onde abrir o WhatsApp neste aparelho" style="width:auto;padding:8px 10px;font-size:13px"><option value="app">📱 Abrir no app do WhatsApp</option><option value="web">💻 WhatsApp Web (mesma aba)</option></select>
     <button class="btn" id="btAtualizar" title="Atualizar">↻</button>
     <button class="btn prim" id="btNova">+ Nova reserva</button>
     <button class="btn" id="btSair">Sair</button>
@@ -319,7 +320,7 @@ header .esp{flex:1}
   <!-- ENVIOS DO DIA -->
   <div class="wrap hidden" id="telaEnvios">
     <div class="topoFila">
-      <div><h2>Envios do dia</h2><p style="margin:0;color:var(--muted)">Lista pronta para a central mandar pelo WhatsApp. Toque em <b>Enviar</b>: abre o WhatsApp com a mensagem pronta e o item é marcado como enviado.</p></div>
+      <div><h2>Envios do dia</h2><p style="margin:0;color:var(--muted)">Lista pronta para a central mandar pelo WhatsApp. Toque em <b>Enviar</b>: abre o WhatsApp com a mensagem pronta e o item é marcado como enviado. Para não abrir janelas novas, escolha no topo <b>📱 app do WhatsApp</b> (mais rápido, com o WhatsApp Desktop instalado) ou <b>💻 WhatsApp Web (mesma aba)</b>.</p></div>
       <div class="acoesF">
         <div class="grp"><label>Unidade</label><select class="campo" id="evLoja"><option value="">Todas</option><option value="__sem">Sem unidade</option></select></div>
       </div>
@@ -606,6 +607,29 @@ const Demo=(()=>{
 })();
 
 /* ======== UTIL ======== */
+/*
+ * Abre a conversa no WhatsApp sem ficar abrindo janelas novas:
+ *  - 'app' → aplicativo do WhatsApp (Desktop no computador ou app no celular), direto na conversa;
+ *  - 'web' → WhatsApp Web, sempre na MESMA aba (reaproveitada a cada clique).
+ * A escolha fica guardada neste aparelho.
+ */
+const ehCelular=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function modoWhats(){try{return localStorage.getItem('res_whats_modo')||(ehCelular?'app':'web')}catch(e){return ehCelular?'app':'web'}}
+function setModoWhats(m){try{localStorage.setItem('res_whats_modo',m)}catch(e){}document.querySelectorAll('.selWhats').forEach(x=>x.value=m)}
+let janelaWhats=null;
+function abrirWhats(tel,msg){
+  const n=String(tel||'').replace(/\D/g,''),t=encodeURIComponent(msg||'');
+  if(!n)return toast('Cliente sem WhatsApp cadastrado',true);
+  if(modoWhats()==='app'){
+    const a=document.createElement('a');a.href=`whatsapp://send?phone=${n}&text=${t}`;document.body.appendChild(a);a.click();a.remove();return;
+  }
+  const url=`https://web.whatsapp.com/send?phone=${n}&text=${t}`;
+  try{
+    if(janelaWhats&&!janelaWhats.closed){janelaWhats.location.href=url;janelaWhats.focus();return}
+  }catch(e){}
+  janelaWhats=window.open(url,'dinaWhatsApp');
+  try{janelaWhats&&janelaWhats.focus()}catch(e){}
+}
 const $=id=>document.getElementById(id);
 function hojeISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function somaDias(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
@@ -795,7 +819,7 @@ function atualizarFidMesmoCliente(r){const k=String(r.telefone).replace(/\D/g,''
 
 function chamarZap(id){
   const r=reservas.find(x=>x.id===id);
-  window.open(`https://wa.me/${String(r.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msgConfirmacao(r))}`,'_blank','noopener');
+  abrirWhats(r.telefone,msgConfirmacao(r));
   if(r.status==='pendente')salvarCampo(id,{status:'notificado'});
 }
 
@@ -934,7 +958,7 @@ function msgVez(f){
 async function acaoFila(id,acao){
   const f=filaDados.fila.find(x=>x.id===id);if(!f)return;
   if(acao==='chamar'||acao==='rechamar'){
-    if(f.telefone)window.open(`https://wa.me/${String(f.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msgVez(f))}`,'_blank','noopener');
+    if(f.telefone)abrirWhats(f.telefone,msgVez(f));
     if(acao==='rechamar')return;
     acao='chamado';
   }
@@ -1043,7 +1067,7 @@ async function acaoEnvio(k,acao){
   const todos=[...envios.aniversarios,...envios.atrasados,...envios.avaliacoes],x=todos.find(i=>chaveEnv(i)===k);if(!x)return;
   if(acao==='enviar'){
     const msg=x.tipo==='aniversario'?msgAniversario(x):msgAvaliacaoEnv(x);
-    window.open(`https://wa.me/${String(x.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank','noopener');
+    abrirWhats(x.telefone,msg);
   }else{let ok=true;try{ok=window.confirm(primeiro(x.nome)+' não vai mais receber mensagens de aniversário. Confirmar?')}catch(e){}if(!ok)return}
   enviados.add(k);desenharEnvios();
   try{await api('envioMarcar',{tipo:x.tipo,ref:x.ref,origem:x.origem,acao:acao==='nao'?'nao_receber':'enviado'})}
@@ -1088,7 +1112,7 @@ async function acaoAvaliacao(id,acao,box){
   const a=avDetCache.find(x=>x.id===id);if(!a)return;
   if(acao==='zap'){
     const msg=`Olá, ${primeiro(a.nome)}! Aqui é da gerência da Dina Pizza ${a.loja_nome}. Vimos a sua avaliação e sentimos muito que a experiência não foi como esperado. Pode nos contar o que aconteceu? Queremos resolver e te receber de novo do jeito que você merece. 🍕`;
-    window.open(`https://wa.me/${String(a.telefone).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank','noopener');return;
+    abrirWhats(a.telefone,msg);return;
   }
   try{await api('avaliacaoTratar',{id,obs:box.querySelector('[data-obs]').value.trim()});toast('✓ Marcado como resolvido');carregarNps()}
   catch(e){toast(e.message,true)}
@@ -1198,6 +1222,8 @@ async function copiar(txt){try{await navigator.clipboard.writeText(txt);toast('L
 $('btEntrar').onclick=()=>entrar($('lgLoja').value,$('lgSenha').value).catch(()=>{});
 $('lgSenha').onkeydown=e=>{if(e.key==='Enter')$('btEntrar').click()};
 $('btSair').onclick=sair;
+$('selWhats').value=modoWhats();
+$('selWhats').onchange=e=>{setModoWhats(e.target.value);toast(e.target.value==='app'?'O WhatsApp vai abrir no aplicativo deste aparelho':'O WhatsApp vai abrir sempre na mesma aba do WhatsApp Web')};
 $('btAtualizar').onclick=()=>telaAtual==='lojas'?carregarLojas():telaAtual==='clientes'?carregarClientes():telaAtual==='fila'?carregarFila():telaAtual==='envios'?carregarEnvios():telaAtual==='avaliacoes'?carregarNps():carregar();
 $('btNova').onclick=abrirNova;
 $('menu').onclick=e=>{const b=e.target.closest('button');if(b)trocarTela(b.dataset.tela)};
