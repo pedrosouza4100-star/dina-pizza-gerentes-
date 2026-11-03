@@ -96,6 +96,10 @@
   .foto-small-preview{width:100%;border-radius:6px;object-fit:cover;max-height:90px;display:none;}
 
 /* ── Widget Status Checklist ── */
+.ggl-conf{display:none;margin-top:10px;border-radius:10px;padding:12px 14px;font-size:0.86rem;line-height:1.5;border:2px solid var(--border);}
+.ggl-conf.ok{background:rgba(46,204,113,0.10);border-color:rgba(46,204,113,0.5);}
+.ggl-conf.info{background:rgba(255,255,255,0.04);color:var(--muted);}
+.ggl-conf.nao{background:rgba(255,68,68,0.14);border-color:#FF4444;color:#fff;font-weight:600;}
 .meta-mes{display:none;margin-top:10px;border-radius:10px;padding:12px 14px;font-size:0.84rem;line-height:1.5;border:2px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text);}
 .meta-mes.mini{font-size:0.76rem;padding:8px 10px;border-width:1px;}
 .meta-mes.ok{border-color:var(--green);background:rgba(46,204,113,0.1);}
@@ -516,6 +520,7 @@
         <div class="card-meta" id="metaGoogleDisplay"></div>
         <div class="input-wrap"><input class="val" id="google" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
         <span class="tag" id="googleTag"></span>
+        <div class="ggl-conf" id="googleConf"></div>
         <div class="meta-mes" id="mm_google"></div>
       </div>
       <!-- iFood -->
@@ -1654,6 +1659,26 @@ function renderMetaMes(){
     else { const v=ival('motoboys'); mb.className='meta-mes mini '+(v>=metaMb?'ok':'err'); mb.innerHTML=v>=metaMb?`✓ Meta mínima de hoje (${metaMb}) atingida`:`🚨 ABAIXO da meta mínima de hoje: faltam <b>${metaMb-v} motoboy${metaMb-v>1?'s':''}</b> (meta ${metaMb})`; mb.style.display='block'; }
   }
 }
+// ── Avaliações do Google: confere o número informado com o Google (contagem pública da loja) ──
+let _gglT=null, _gglSeq=0;
+function gglAgendar(){ clearTimeout(_gglT); _gglT=setTimeout(gglConferir,1500); }
+async function gglConferir(){
+  const box=document.getElementById('googleConf'), inp=document.getElementById('google');
+  if(!box||!inp||!unidadeAtual) return;
+  if(inp.value===''){ box.style.display='none'; return; }
+  const rc=await chkRecursos(); if(!rc.includes('googleConferir')) return;
+  const seq=++_gglSeq, informado=ival('google');
+  let r=null;
+  try{ r=await chkJsonp({action:'googleConferir',unidade:unidadeAtual,informado:informado,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',gravar:MODO_TESTE?0:1},15000); }catch(e){ return; }
+  if(seq!==_gglSeq) return; // o gerente mudou o número enquanto conferia
+  if(!r||!r.ok||!r.ativo||r.erroGoogle){ box.style.display='none'; return; }
+  const av=n=>n+' avaliaç'+(n===1?'ão':'ões');
+  if(r.semBase){ box.className='ggl-conf info'; box.innerHTML='⭐ A conferência com o Google começa no próximo dia (hoje a loja tem '+av(r.total)+' no Google).'; }
+  else if(r.coerente){ box.className='ggl-conf ok'; box.innerHTML='✅ Confere com o Google: entraram '+av(r.novasHoje)+' novas desde '+r.desde+'.'; }
+  else{ box.className='ggl-conf nao'; box.innerHTML='⚠️ NÃO ESTÁ COERENTE COM O GOOGLE.<br>Você informou <b>'+informado+'</b>, mas no Google entraram só <b>'+av(r.novasHoje)+'</b> novas desde '+r.desde+' (contando todas as notas).<br><span style="font-weight:400">Confira no Google e corrija o número. Se enviar assim, fica registrado para o GDI e a gestão.</span>'; }
+  box.style.display='block';
+}
+document.addEventListener('input',e=>{ if(e.target&&e.target.id==='google') gglAgendar(); });
 document.addEventListener('input',e=>{ if(['fat','google','ifood','chamados','cancel','pedidosIfood','motoboys','fichas','buffets'].includes(e.target&&e.target.id)) renderMetaMes(); });
 
 // ── Celular autorizado: cada senha só funciona no celular que o administrador aprovou ──
@@ -3036,6 +3061,7 @@ async function registrar(){
   }
   // selfie obrigatória no envio final (câmera da frente, só dentro do placar)
   if(!(await selfieEnvio())){ logProva('ENVIO_SEM_SELFIE','cancelou a selfie'); return; }
+  try{ clearTimeout(_gglT); gglConferir(); }catch(e){} // registra a conferência do Google com o número enviado
   const btn=document.getElementById('saveBtn');
   btn.disabled=true;btn.textContent='Enviando...';
   const now=dataTurno();
