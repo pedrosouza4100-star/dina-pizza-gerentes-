@@ -105,7 +105,7 @@ function jsonp(params,ms){
     const cb='agCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
     const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou. Tente de novo.'));},ms||30000);
     function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
-    window[cb]=r=>{limpar();ok(r);};
+    window[cb]=r=>{limpar();try{ r=JSON.parse(JSON.stringify(r).replace(/Gerente regional/g,'GDI')); }catch(e){} ok(r);}; // cargo do regional = GDI
     s.onerror=()=>{limpar();falha(new Error('Sem conexão'));};
     if(TESTE) params=Object.assign({teste:'1'},params);
     s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&t='+Date.now()+'&callback='+cb;
