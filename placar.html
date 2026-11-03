@@ -731,11 +731,24 @@ const LOJAS_ENTREGA=["Expressa","Capão Raso","Água Verde","Uberaba","Colombo",
 let METAS_TEMPO=[30,50,30];
 let tempoRegistros=[];
 
+// 03/11/2026 (Robson): cada tempo só pode ser registrado de 30 min antes a 30 min depois do horário combinado
+// (19h, 20h30 e 22h). Tempo que passou da janela fica "não feito" e o placar pode ser enviado assim mesmo.
+// Iguais a TEMPO_JANELAS do servidor (o robô avisa 5 min antes de cada janela fechar).
 const JANELAS_TEMPO=[
-  {inicio:'18:00', fim:'20:00', label:'18h às 20h'},
-  {inicio:'20:00', fim:'21:30', label:'20h às 21h30'},
-  {inicio:'21:30', fim:'23:00', label:'21h30 às 23h'},
+  {inicio:'18:30', fim:'19:30', label:'18h30 às 19h30', hora:'19h'},
+  {inicio:'20:00', fim:'21:00', label:'20h às 21h', hora:'20h30'},
+  {inicio:'21:30', fim:'22:30', label:'21h30 às 22h30', hora:'22h'},
 ];
+const MOTO_TRAVA_MIN=20*60; // motoboys: pode incluir/corrigir até as 20h
+function minAgoraTurno(){ const a=new Date(); const m=a.getHours()*60+a.getMinutes(); return a.getHours()<4?m+1440:m; } // madrugada conta como depois da meia-noite do turno
+function janelaMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function tempoJanelaAgora(){ const m=minAgoraTurno(); return JANELAS_TEMPO.findIndex(j=>m>=janelaMin(j.inicio)&&m<janelaMin(j.fim)); }
+function tempoJanelaPassou(i){ return minAgoraTurno()>=janelaMin(JANELAS_TEMPO[i].fim); }
+function tempoRegDe(i){ return tempoRegistros.find(r=>r.idx===i); }
+// 3 tempos resolvidos = registrado ou janela já passou (não feito)
+function temposResolvidos(){ return [0,1,2].every(i=>tempoRegDe(i)||tempoJanelaPassou(i)); }
+function temposPerdidos(){ return [0,1,2].filter(i=>!tempoRegDe(i)&&tempoJanelaPassou(i)); }
+function motoTravado(){ return motoboySalvo && minAgoraTurno()>=MOTO_TRAVA_MIN; }
 
 function temLoja(u){return LOJAS_ENTREGA.includes(u);}
 
@@ -941,8 +954,14 @@ function enviarTempoReal(tipo, dados, aoResponder){
 }
 
 function salvarTempoEntrega(){
-  const idx=tempoRegistros.length;
-  if(idx>=3){alert('Você já registrou os 3 tempos de entrega do dia.');return;}
+  if(temLoja(unidadeAtual) && !motoboySalvo){ alert('👥 Antes do tempo de entrega, informe e salve quantos MOTOBOYS estão em serviço (com a foto da lista).'); const c=document.getElementById('cardMotoboys'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  const idx=tempoJanelaAgora();
+  if(idx<0){
+    const prox=JANELAS_TEMPO.findIndex((j,i)=>!tempoRegDe(i)&&!tempoJanelaPassou(i));
+    alert(prox<0?'⏰ Os horários dos tempos de entrega de hoje já passaram.':'⏰ Fora do horário. O '+(prox+1)+'º tempo de entrega só pode ser registrado das '+JANELAS_TEMPO[prox].label+' (combinado: '+JANELAS_TEMPO[prox].hora+').');
+    return;
+  }
+  if(tempoRegDe(idx)){alert('Você já registrou o '+(idx+1)+'º tempo. O próximo abre no horário dele.');return;}
   const app=parseInt(document.getElementById('tempoApp').value)||0;
   const ifoodT=parseInt(document.getElementById('tempoIfood').value)||0;
   if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
@@ -956,6 +975,7 @@ function salvarTempoEntrega(){
   }
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64,just:motivosJust.length?just:''});
+  tempoRegistros.sort((a,b)=>a.idx-b.idx);
   localStorage.setItem(chaveHoje('tempo'), JSON.stringify(tempoRegistros.map(r=>({app:r.app,ifood:r.ifood,horario:r.horario,idx:r.idx,just:r.just||''}))));
   // Envia tempo em tempo real para o Call Center
   enviarTempoReal('tempo', Object.assign({app:app, ifood:ifoodT, horario:horario, registro:idx+1}, motivosJust.length?{justificativa:just}:{}));
@@ -979,7 +999,9 @@ function salvarTempoEntrega(){
 function renderTempoRegistros(){
   const container=document.getElementById('tempoRegistros');
   const nomes=['1º registro','2º registro','3º registro'];
-  container.innerHTML=tempoRegistros.map((r,i)=>{
+  container.innerHTML=[0,1,2].map(i=>{
+    const r=tempoRegDe(i);
+    if(!r) return tempoJanelaPassou(i)?`<div style="background:rgba(255,68,68,0.1);border:1px solid var(--danger);border-radius:6px;padding:8px 12px;font-size:0.78rem;color:var(--danger)">❌ ${nomes[i]} NÃO feito no horário (${JANELAS_TEMPO[i].label})</div>`:'';
     const metaT=METAS_TEMPO[i]||30;
     const okApp=r.app<=metaT||r.app===0;
     const okIf=r.ifood<=metaT||r.ifood===0;
@@ -992,14 +1014,21 @@ function renderTempoRegistros(){
   const inputArea=document.getElementById('tempoInputArea');
   const statusTempo=document.getElementById('statusTempo');
 
-  if(tempoRegistros.length===3){
-    info.textContent='✓ 3 registros completos';info.style.color='var(--green)';
+  const agoraJ=tempoJanelaAgora(), prox=JANELAS_TEMPO.findIndex((j,i)=>!tempoRegDe(i)&&!tempoJanelaPassou(i));
+  if(temposResolvidos()){
+    const perd=temposPerdidos().length;
+    info.textContent=perd?`Tempos do dia encerrados (${3-perd}/3 feitos)`:'✓ 3 registros completos';info.style.color=perd?'var(--danger)':'var(--green)';
+    inputArea.style.display='none';
+    if(statusTempo)statusTempo.style.display='none';
+  } else if(agoraJ<0 || tempoRegDe(agoraJ)){
+    info.textContent=`⏰ ${prox+1}º registro abre das ${JANELAS_TEMPO[prox].label} (combinado: ${JANELAS_TEMPO[prox].hora})`;
+    info.style.color='var(--muted)';
     inputArea.style.display='none';
     if(statusTempo)statusTempo.style.display='none';
   } else {
-    const idx=tempoRegistros.length;
+    const idx=agoraJ;
     const proxMeta=METAS_TEMPO[idx]||30;
-    info.textContent=`${idx+1}º registro — sempre disponível`;
+    info.textContent=`${idx+1}º registro — aberto até ${JANELAS_TEMPO[idx].fim.replace(':','h')}`;
     info.style.color='var(--gold)';
     inputArea.style.display='block';
     document.getElementById('tempoApp').placeholder=`Meta ≤${proxMeta} min`;
@@ -2483,6 +2512,7 @@ function salvarStartDinaAgora(){
 
 // ── Salvar Motoboys ──
 function salvarMotoboys(){
+  if(motoTravado()){alert('🔒 Depois das 20h a quantidade de motoboys fica travada.');motoAplicarTrava();return;}
   if(!filled('motoboys')){alert('Informe a quantidade de motoboys.');return;}
   if(!fotoMotoBase64){alert('📋 Fotografe a lista de motoboys antes de salvar!');return;}
   motoboySalvo=true;
@@ -2496,8 +2526,20 @@ function salvarMotoboys(){
   if(btn){btn.textContent='✓ Salvo — toque para regravar';btn.style.background='var(--green)';}
   const tag=document.getElementById('motoboysTag');
   if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  motoAplicarTrava();
+  renderTempoRegistros();
   verificarBotaoRegistrar();
 }
+// motoboys: até as 20h pode incluir quem chegou depois (regravar); depois disso fica travado
+function motoAplicarTrava(){
+  const inp=document.getElementById('motoboys'), btn=document.getElementById('btnSalvarMoto'), cam=document.getElementById('cameraBtnMoto'), info=document.getElementById('motoSalvoInfo');
+  if(!inp) return;
+  if(motoTravado()){
+    inp.disabled=true; if(cam) cam.disabled=true;
+    if(btn){btn.style.display='block';btn.disabled=true;btn.textContent='🔒 Travado às 20h';btn.style.background='var(--surface)';}
+  } else if(motoboySalvo && info && !/até as 20h/.test(info.textContent)) info.textContent+=' · chegou mais motoboy? Atualize até as 20h';
+}
+setInterval(()=>{ try{ motoAplicarTrava(); if(typeof renderTempoRegistros==='function' && unidadeAtual && temLoja(unidadeAtual)){ renderTempoRegistros(); verificarBotaoRegistrar(); } }catch(e){} },60000);
 
 // ── Camera / Start Dina ──
 function abrirCamera(){document.getElementById('cameraInput').click();}
@@ -2578,6 +2620,7 @@ function carregarStartDinaLocal(){
     if(btn){btn.style.display='block';btn.textContent='✓ Salvo — toque para regravar';btn.style.background='var(--green)';}
     const tag=document.getElementById('motoboysTag');
     if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+    motoAplicarTrava();
   }
   const pauta=localStorage.getItem(chaveHoje('startdina_pauta'));
   if(pauta) document.getElementById('pautaStartDina').value=pauta;
@@ -2638,6 +2681,7 @@ function avaliar(){
   if(temLoja(unidadeAtual)){
     const tag=document.getElementById('tempoTag');
     if(tempoRegistros.length===3){tag.className='tag ok';tag.textContent='3/3 Completo';}
+    else if(temposResolvidos()){tag.className='tag bad';tag.textContent=`${tempoRegistros.length}/3 — ${temposPerdidos().length} não feito(s)`;prob++;}
     else if(tempoRegistros.length>0){tag.className='tag warn';tag.textContent=`${tempoRegistros.length}/3 registros`;prob++;}
     else{tag.className='tag bad';tag.textContent='Sem registros';prob++;}
   }
@@ -2765,7 +2809,7 @@ function verificarBotaoRegistrar(){
   if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
   if(temLoja(unidadeAtual)){
     if(!motoboySalvo) faltando.push('👥 Motoboys');
-    if(tempoRegistros.length<3) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
+    if(!temposResolvidos()) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
   }
   if(!chkFechamentoFeito) faltando.push('🌙 Checklist de Fechamento (último passo)');
 
@@ -2840,7 +2884,7 @@ function verificarPremiacao(){
   const bateuC=ival('chamados')===0&&filled('chamados');
   const bateuCancel=ival('cancel')===0&&filled('cancel');
   const bateuStart=!!fotoBase64;
-  const bateuTempo=!temLoja(unidadeAtual)||tempoRegistros.length>=3;
+  const bateuTempo=!temLoja(unidadeAtual)||temposResolvidos();
   const bateuMobo=!temLoja(unidadeAtual)||(filled('motoboys')&&ival('motoboys')>=(metaMotoboysHoje(unidadeAtual)||0));
   const bateuFalta=!!faltaStatus;
 
