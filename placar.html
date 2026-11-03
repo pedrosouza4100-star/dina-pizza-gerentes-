@@ -489,6 +489,7 @@
               <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto App">
             </div>
           </div>
+          <div id="tempoIgualAviso" style="display:none;margin:4px 0 10px;background:rgba(255,68,68,0.14);border:2px solid #FF4444;border-radius:8px;padding:10px;font-size:0.85rem;color:#fff"></div>
           <div id="tempoJustArea" style="display:none;margin:4px 0 10px;background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:10px">
             <div id="tempoJustMotivo" style="font-size:0.82rem;color:#ffe9a8;line-height:1.45;margin-bottom:6px"></div>
             <textarea id="tempoJust" placeholder="Explique o motivo (mínimo 10 letras)" style="width:100%;box-sizing:border-box;min-height:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:0.88rem"></textarea>
@@ -817,14 +818,21 @@ function tempoMotivosJust(app,ifood){
   const m=[];
   [['App Próprio',app,ant.app],['iFood',ifood,ant.ifood]].forEach(([nome,v,a])=>{
     if(!v||!a) return;
-    if(v===a) m.push(nome+': '+v+' min, <b>igual</b> ao registro anterior');
-    else if(v>a+TEMPO_SUBIDA_MAX) m.push(nome+': '+v+' min, <b>'+(v-a)+' min acima</b> do registro anterior ('+a+' min)');
+    if(v===a) return; // igual ao anterior agora é BLOQUEADO (tempoIguais), não justificado
+    if(v>a+TEMPO_SUBIDA_MAX) m.push(nome+': '+v+' min, <b>'+(v-a)+' min acima</b> do registro anterior ('+a+' min)');
   });
   return m;
+}
+// 03/11/2026 (Robson): tempo IGUAL ao registro anterior não é aceito, nem com justificativa
+function tempoIguais(app,ifood){
+  const ant=tempoRegistros[tempoRegistros.length-1]; if(!ant) return [];
+  return [['App Próprio',app,ant.app],['iFood',ifood,ant.ifood]].filter(([n,v,a])=>v&&a&&v===a).map(([n,v])=>n+' '+v+' min');
 }
 function tempoConferirJust(){
   const app=parseInt(document.getElementById('tempoApp').value)||0, ifood=parseInt(document.getElementById('tempoIfood').value)||0;
   const m=tempoMotivosJust(app,ifood), area=document.getElementById('tempoJustArea');
+  const ig=tempoIguais(app,ifood), aviso=document.getElementById('tempoIgualAviso');
+  if(aviso){ aviso.style.display=ig.length?'block':'none'; if(ig.length) aviso.innerHTML='⛔ <b>Tempo igual ao registro anterior não é aceito</b> ('+ig.join(', ')+'). Confira no App e no iFood e registre o tempo de AGORA.'; }
   if(!area) return m;
   area.style.display=m.length?'block':'none';
   if(m.length) document.getElementById('tempoJustMotivo').innerHTML='✍️ Justifique: '+m.join('; ')+'. Por que o tempo ficou assim?';
@@ -968,6 +976,8 @@ function salvarTempoEntrega(){
   if(!fotoTempoAppBase64){alert('📸 Foto do iFood é obrigatória. Tire a foto agora!');return;}
   if(!fotoTempoIfoodBase64){alert('📸 Foto do App Próprio é obrigatória. Tire a foto agora!');return;}
   const motivosJust=tempoConferirJust(), just=(document.getElementById('tempoJust').value||'').trim();
+  const iguais=tempoIguais(app,ifoodT);
+  if(iguais.length){ alert('⛔ Tempo IGUAL ao registro anterior não é aceito ('+iguais.join(', ')+').\n\nConfira no App Próprio e no iFood e registre o tempo de agora.'); return; }
   if(motivosJust.length && (just.length<10 || /^(.)\1+$/.test(just))){
     alert('✍️ Este tempo precisa de justificativa.\n\n'+motivosJust.map(x=>x.replace(/<[^>]+>/g,'')).join('\n')+'\n\nEscreva o motivo no campo amarelo (mínimo 10 letras).');
     const t=document.getElementById('tempoJust'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth',block:'center'}); }
