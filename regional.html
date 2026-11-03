@@ -78,6 +78,7 @@
 </header>
 
 <div id="telaSelecao">
+  <div id="eqAlertaBox" style="display:none;margin-bottom:16px"></div>
   <div id="excBox" style="display:none;margin-bottom:16px"></div>
   <div id="corrBox" style="display:none;margin-bottom:16px"></div>
   <div class="card">
@@ -293,7 +294,52 @@ window.addEventListener('DOMContentLoaded', ()=>{
   recursos();
   carregarCorrecoes();
   carregarExcecoes(); setInterval(carregarExcecoes, 60000);
+  carregarAlertasEquipe(); setInterval(carregarAlertasEquipe, 60000);
 });
+
+// ── Alerta vermelho de equipe (03/11/2026): loja com 60% ou menos da equipe ou sem pizzaiolo/caixa/cozinheira.
+//    O GDI resolve no dia e registra o que fez (link ?equipe=<id> do WhatsApp). ──
+let EQALS=[];
+const EQ_ALVO=new URLSearchParams(location.search).get('equipe')||'';
+async function carregarAlertasEquipe(){
+  try{
+    if(!(await recursos()).includes('equipeAlerta')) return;
+    for(let i=0;i<120 && (document.getElementById('gGuard')||document.getElementById('gGuardCss')); i++) await new Promise(r=>setTimeout(r,500));
+    const r=await jsonp({action:'equipeAlertas',chave:chaveGestao()},20000);
+    if(!r||!r.ok) return;
+    EQALS=r.itens||[];
+  }catch(e){ return; }
+  const box=document.getElementById('eqAlertaBox');
+  const ab=EQALS.filter(x=>x.situacao==='aberto'), feitos=EQALS.filter(x=>x.situacao!=='aberto');
+  if(!ab.length&&!feitos.length&&!EQ_ALVO){ box.style.display='none'; return; }
+  const desc=x=>x.presentes+' de '+x.ideal+' pessoas ('+x.pct+'%)'+(x.zeradas.length?' — <b>sem '+x.zeradas.map(esc).join(', ').toLowerCase()+'</b>':'');
+  box.innerHTML='<div class="card" style="border-color:'+(ab.length?'var(--danger)':'var(--border)')+'"><div class="sel-label" style="color:'+(ab.length?'var(--danger)':'')+'">🚨 Equipe incompleta hoje'+(ab.length?' ('+ab.length+')':'')+'</div>'+
+    (ab.length?'<div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px">Resolva no dia para a loja não pagar o preço (remanejar de outra loja, folguista, extra) e registre o que fez.</div>':'<div style="font-size:0.85rem;color:var(--muted)">Nenhuma loja com alerta aberto.</div>')+
+    ab.map(x=>`<div class="corr${x.id===EQ_ALVO?' alvo':''}" id="eqal_${x.id}">
+      <div style="font-weight:700">${esc(x.unidade)} <span style="font-weight:400;color:var(--muted);font-size:0.8rem">· informado às ${esc(x.em)}</span></div>
+      <div class="pend-detail" style="margin-top:6px;color:#ffb3b3">${desc(x)}</div>
+      <textarea id="eqalAcao_${x.id}" placeholder="O que você fez? Ex.: remanejei 1 pizzaiolo da Uberaba até o fechamento" style="margin-top:8px"></textarea>
+      <button class="btn" style="margin-top:8px;background:var(--green);color:#0A0A0A" onclick="resolverAlertaEquipe('${x.id}')">✅ Resolvido</button>
+      <div id="eqalMsg_${x.id}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
+    </div>`).join('')+
+    (feitos.length?'<div style="font-size:0.75rem;color:var(--muted);margin-top:12px;text-transform:uppercase;font-weight:700">Hoje</div>'+feitos.map(x=>`<div style="font-size:0.8rem;color:#ccc;margin-top:6px">${x.situacao==='resolvido'?'✅':'🟢'} ${esc(x.unidade)} · ${x.pct}% · ${x.situacao==='resolvido'?esc(x.por)+': '+esc(x.acao).slice(0,90):'o gerente completou a equipe'}</div>`).join(''):'')+
+    '</div>';
+  box.style.display='block';
+  if(EQ_ALVO){ const a=document.getElementById('eqal_'+EQ_ALVO); if(a) setTimeout(()=>a.scrollIntoView({behavior:'smooth',block:'center'}),300); }
+}
+async function resolverAlertaEquipe(id){
+  const m=document.getElementById('eqalMsg_'+id); m.textContent='';
+  const acao=(document.getElementById('eqalAcao_'+id).value||'').trim();
+  const nome=(document.getElementById('nomeRegional').value||'').trim();
+  if(acao.length<10){ m.textContent='Escreva o que foi feito (pelo menos 10 letras).'; return; }
+  m.style.color='var(--muted)'; m.textContent='Salvando...';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'equipeAlertaResolver',id,acao,quem:nome||'GDI',chave:chaveGestao()})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    await carregarAlertasEquipe();
+  }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
+}
 
 // ── Pedidos dos gerentes para continuar o placar fora da loja (imprevisto) ──
 let EXCS=[];
