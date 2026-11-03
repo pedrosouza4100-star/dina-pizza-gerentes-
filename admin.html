@@ -518,6 +518,15 @@
         <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">O placar e o checklist do GDI só abrem dentro do raio de cada loja. Confira cada ponto em “ver no mapa”. Se o ponto estiver errado, abra o Google Maps na loja, copie as coordenadas (ex.: <b>-25.4722, -49.2361</b>), cole em “Coordenadas” e salve. Loja sem localização não é conferida.</div>
         <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Endereço</th><th>Coordenadas</th><th>Raio (m)</th><th>Ação</th></tr></thead><tbody id="geoTabela"><tr><td colspan="5" style="color:var(--muted)">Carregando...</td></tr></tbody></table></div>
       </div>
+      <div id="gglSecao" style="display:none">
+        <div class="section-title">⭐ Avaliações do Google — conferência do placar</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">O sistema lê no Google quantas avaliações cada loja tem e compara com o número que o gerente informa no placar. Se ele informar mais do que entrou no Google, o placar avisa “não está coerente” e sai no relatório das 04h10. A chave fica guardada só no servidor (não aparece aqui depois de salva). Para achar o Place ID de cada loja use “Procurar”.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><b style="font-size:0.85rem">Chave da API do Google:</b> <span id="gglChaveSt" style="font-size:0.8rem"></span>
+          <input class="cont-in" id="gglChave" type="password" autocomplete="off" style="min-width:260px" placeholder="AIza... (cole para cadastrar ou trocar)">
+          <button class="action-btn btn-nova" onclick="gglSalvar(true)">Salvar chave</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Place ID do Google</th><th>Última leitura</th><th>Ação</th></tr></thead><tbody id="gglTabela"></tbody></table></div>
+        <button class="save-metas-btn" style="margin-top:10px" onclick="gglSalvar(false)">💾 Salvar Place IDs</button>
+      </div>
       <div>
         <div class="section-title">📱 Celulares autorizados</div>
         <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Cada senha (gerente e assistente) só funciona em um celular aprovado aqui. Pedidos novos aparecem também em “Hoje na rede”. Remover um celular faz ele parar de abrir o placar na hora.</div>
@@ -901,6 +910,7 @@
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r;
     }
     catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; at.innerHTML=''; return; }
+    gglCarregar();
     gt.innerHTML=LOJAS_HOJE.lojas.map((l,i)=>{ const g=l.geo;
       const coord=g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}`:'';
       return `<tr data-u="${escH(l.unidade)}"><td style="font-weight:600;white-space:nowrap">${escH(l.unidade)}</td>
@@ -910,6 +920,39 @@
         <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="geoLocalizar(this)">Localizar endereço</button> <button class="action-btn btn-nova" onclick="geoSalvarCoord(this)">Salvar coordenadas</button></td></tr>`; }).join('');
     const cel=(l,p)=>{ const ap=l.aparelhos||{}; const lista=(ap.lista||[]).filter(x=>x.papel===p); const todos=lista.length?lista:(ap[p]?[ap[p]]:[]); return todos.length?'<td>'+todos.map(a=>`<div style="margin-bottom:8px"><span class="badge ok">✓ ${escH(a.info||'autorizado')}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">desde ${escH(dataBR(a.desde))}</div><button class="action-btn btn-reset" style="margin-top:6px" onclick="aparDecidir(${a.linha},'remover')">Remover</button></div>`).join('')+'</td>':`<td><span class="badge sem">Nenhum</span></td>`; };
     at.innerHTML=LOJAS_HOJE.lojas.map(l=>`<tr><td style="font-weight:600">${escH(l.unidade)}${l.aparelhos&&l.aparelhos.pendentes?` <span class="badge sem">${l.aparelhos.pendentes} aguardando</span>`:''}</td>${cel(l,'gerente')}${cel(l,'assistente')}</tr>`).join('');
+  }
+  // ── Avaliações do Google (Place ID de cada loja e chave da API) ──
+  async function gglCarregar(){
+    const sec=document.getElementById('gglSecao'), tb=document.getElementById('gglTabela');
+    let r; try{ r=await admJsonp({action:'googleConfig'}); }catch(e){ return; }
+    if(!r||r.ok!==true){ sec.style.display='none'; return; } // servidor ainda sem esta parte
+    sec.style.display='block';
+    document.getElementById('gglChaveSt').innerHTML=r.temChave?'<span class="badge ok">✓ cadastrada</span>':'<span class="badge sem">não cadastrada</span>';
+    tb.innerHTML=Object.keys(r.lojas).map(u=>{ const x=r.lojas[u];
+      return `<tr data-u="${escH(u)}"><td style="font-weight:600;white-space:nowrap">${escH(u)}</td><td><input class="cont-in gPid" style="min-width:230px" value="${escH(x.placeId)}" placeholder="ChIJ..."><div class="gRes" style="font-size:0.75rem"></div></td>
+        <td style="font-size:0.8rem;white-space:nowrap">${x.ultima?`${x.ultima.total} avaliações · nota ${String(x.ultima.nota).replace('.',',')}<br><small style="color:var(--muted)">${escH(x.ultima.quando)}</small>`:'<span style="color:var(--muted)">—</span>'}</td>
+        <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="gglProcurar(this)">🔎 Procurar</button> <button class="action-btn btn-nova" onclick="gglTestar(this)">Testar</button></td></tr>`; }).join('');
+  }
+  async function gglSalvar(soChave){
+    const o={action:'googleAdmSalvar'};
+    if(soChave){ const c=document.getElementById('gglChave').value.trim(); if(!c){ showToast('Cole a chave do Google.','warn'); return; } o.chave=c; }
+    else{ o.places={}; document.querySelectorAll('#gglTabela tr').forEach(tr=>{ o.places[tr.dataset.u]=tr.querySelector('.gPid').value.trim(); }); }
+    try{ await admPost(o); document.getElementById('gglChave').value=''; showToast(soChave?'Chave do Google salva.':'Place IDs salvos.','ok'); registrarLog(soChave?'Chave do Google cadastrada.':'Place IDs do Google salvos.','ok'); gglCarregar(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
+  async function gglProcurar(bt){
+    const tr=bt.closest('tr'), u=tr.dataset.u, box=tr.querySelector('.gRes');
+    const texto=prompt('Procurar no Google:','Dina Pizza '+u); if(!texto) return;
+    box.textContent='Procurando...';
+    try{ const r=await admPost({action:'googleBuscar',texto});
+      box.innerHTML=r.itens.length?r.itens.map(x=>`<div style="margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:6px"><b>${escH(x.nome)}</b> · ${x.total} avaliações<br><small style="color:var(--muted)">${escH(x.endereco)}</small><br><button class="action-btn btn-nova" style="margin-top:4px" data-id="${escH(x.id)}" onclick="gglUsar(this)">Usar esta</button></div>`).join(''):'<span style="color:var(--muted)">Nada encontrado.</span>';
+    }catch(e){ box.innerHTML='<span style="color:var(--danger)">'+escH(e.message)+'</span>'; }
+  }
+  function gglUsar(bt){ const tr=bt.closest('tr'); tr.querySelector('.gPid').value=bt.dataset.id; tr.querySelector('.gRes').innerHTML='<span style="color:var(--yellow)">Escolhido. Toque em “Salvar Place IDs”.</span>'; }
+  async function gglTestar(bt){
+    const u=bt.closest('tr').dataset.u;
+    try{ const r=await admPost({action:'googleTestar',unidade:u}); showToast(u+': '+r.total+' avaliações no Google (nota '+String(r.nota).replace('.',',')+').','ok'); gglCarregar(); }
+    catch(e){ showToast(u+': '+e.message+' (salvou o Place ID?)','warn'); }
   }
   async function geoLocalizar(bt){
     const tr=bt.closest('tr'), u=tr.dataset.u; bt.disabled=true; bt.textContent='Localizando...';
@@ -982,8 +1025,10 @@
     const rg=H.regional||{}, rb=H.robson;
     return (rb?`<tr data-u="__robson__" style="background:rgba(46,204,113,0.08)"><td style="white-space:nowrap"><b>📱 Meu celular pessoal</b><br><small style="color:var(--muted)">relatório das lojas (04h10), avisos graves e a pauta de segunda</small></td><td><input class="cg" value="${escH(rb.nome||'Robson')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(rb.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = número do config do robô<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`:'')+`<tr data-u="__regional__" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>👔 GDI</b><br><small style="color:var(--muted)">recebe cópia das cobranças, o resumo, atrasos e as correções para confirmar</small></td><td><input class="cg" value="${escH(rg.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(rg.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`+
       (H.supRh?[['__sup_rh__','🧑‍💼 Responsável pelo RH','recebe tudo da RH: agenda enviada, check-in/saída, visitas não feitas e vagas',H.supRh],['__sup_qualidade__','🧪 Responsável pela qualidade','recebe tudo da nutricionista: agenda, check-in/saída, notas das visitas e correções',H.supQualidade]].map(([k,n,d,c])=>{ c=c||{}; return `<tr data-u="${k}" style="background:rgba(155,89,182,0.10)"><td style="white-space:nowrap"><b>${n}</b><br><small style="color:var(--muted)">${d}</small></td><td><input class="cg" value="${escH(c.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = vai para você<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`; }).join(''):'')+
-      [['__agenda_rh__','👩‍💼 Gestora de RH',H.agendaRh],['__agenda_nutri__','🥗 Nutricionista',H.agendaNutri]].map(([k,n,c])=>{ c=c||{}; return `<tr data-u="${k}" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>${n}</b><br><small style="color:var(--muted)">recebe a cobrança e o lembrete da agenda de visitas</small></td><td><input class="cg" value="${escH(c.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`; }).join('')+ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{};
-      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`; }).join('');
+      [['__agenda_rh__','👩‍💼 Gestora de RH',H.agendaRh],['__agenda_nutri__','🥗 Nutricionista',H.agendaNutri]].map(([k,n,c])=>{ c=c||{}; return `<tr data-u="${k}" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>${n}</b><br><small style="color:var(--muted)">recebe a cobrança e o lembrete da agenda de visitas</small></td><td><input class="cg" value="${escH(c.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`; }).join('')+ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{}, F=H.folgas&&H.folgas.lojas?H.folgas.lojas[l.unidade]:null;
+      const esc=F?(F.situacao==='sem escala'?'<span style="color:var(--muted)">sem escala desta semana</span>':F.situacao==='gerente não achado na escala'?'<span style="color:var(--yellow)">nome não achado na escala</span>':'escala: '+escH(F.achado)+' · hoje <b style="color:'+(F.folga?'var(--yellow)':'var(--green)')+'">'+escH(F.situacao)+'</b>'):'';
+      const ass=F?`<tr data-u="${escH(l.unidade)}#assistente" style="background:rgba(255,255,255,0.02)"><td style="white-space:nowrap;padding-left:18px">↳ Assistente<br><small style="color:var(--muted)">recebe as mensagens na folga do gerente</small></td><td><input class="cg" value="${escH((F.assistente||{}).nome)}" placeholder="Nome do assistente"></td><td><input class="cw" inputmode="tel" value="${escH((F.assistente||{}).whats)}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = na folga do gerente ninguém recebe<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`:'';
+      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}${esc?'<br><small style="font-size:0.7rem">'+esc+'</small>':''}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`+ass; }).join('');
   }
   // ── Aba Gerentes e mensagens ──
   let MSG_PADRAO=null;
@@ -1020,7 +1065,7 @@
     corpo=corpo||'contBody';
     const contatos=[...document.querySelectorAll('#'+corpo+' tr')].map(tr=>({unidade:tr.dataset.u,gerente:tr.querySelector('.cg').value.trim(),whats:tr.querySelector('.cw').value.replace(/\D/g,''),hora:tr.querySelector('.ch').value||'17:30',limite:tr.querySelector('.cl').value||'19:00'}));
     const ruim=contatos.filter(c=>c.whats&&(c.whats.length<10||c.whats.length>13));
-    if(ruim.length){ showToast('WhatsApp inválido em: '+ruim.map(c=>({'__regional__':'GDI','__agenda_rh__':'Gestora de RH','__agenda_nutri__':'Nutricionista'})[c.unidade]||c.unidade).join(', ')+' (use DDD + número)','warn'); return; }
+    if(ruim.length){ showToast('WhatsApp inválido em: '+ruim.map(c=>({'__regional__':'GDI','__agenda_rh__':'Gestora de RH','__agenda_nutri__':'Nutricionista'})[c.unidade]||c.unidade.replace('#assistente',' (assistente)')).join(', ')+' (use DDD + número)','warn'); return; }
     try{ await admPost({action:'authSalvarContatos',contatos}); showToast('Gerentes salvos.','ok'); fecharModal('modalContatos'); if(corpo==='gmBody') carregarGerentes(); else carregarHoje(); }
     catch(e){ showToast('Não salvou: '+e.message+(/reconhecida|inválid/.test(e.message)?'':' — o Apps Script publicado é a versão nova?'),'warn'); }
   }
