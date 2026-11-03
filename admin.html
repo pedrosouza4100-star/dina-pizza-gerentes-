@@ -187,6 +187,7 @@
     <div class="tab" onclick="mudarTab(event,'regional')">Checklist regional</div>
     <div class="tab" onclick="mudarTab(event,'nutri')">Checklist nutricionista</div>
     <div class="tab" onclick="mudarTab(event,'lojas')">Lojas e celulares</div>
+    <div class="tab" onclick="mudarTab(event,'equipe')">Equipe e feriados</div>
     <div class="tab" onclick="mudarTab(event,'log')">Registro</div>
   </div>
   <main>
@@ -199,6 +200,7 @@
           <span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span></div>
         <div id="aparBox" style="display:none;margin-bottom:16px"></div>
         <div id="excAdmBox" style="display:none;margin-bottom:16px"></div>
+        <div id="vagasAdmBox" style="display:none;margin-bottom:16px"></div>
         <div id="regPendBox" style="display:none;margin-bottom:16px"></div>
         <div class="prot-box" id="protBox"><b>🛡️ Proteção do sistema</b> <span style="color:var(--muted)">conferindo...</span></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
@@ -485,6 +487,29 @@
       </div>
     </div>
 
+    <!-- EQUIPE E FERIADOS -->
+    <div class="tab-content" id="tab-equipe">
+      <div>
+        <div class="section-title">👥 Quadro ideal de cada loja</div>
+        <p style="color:var(--muted);font-size:0.82rem;margin-bottom:10px">Quantas pessoas cada loja precisa em cada função (os mesmos números da planilha da RH). O gerente informa no placar (junto com o Start Dina) quantas estão trabalhando hoje e explica quem falta: folga, férias, atestado, falta ou <b>vaga aberta</b>. Vaga aberta avisa a gestora de RH no WhatsApp, com prazo de <b>10 dias úteis</b>; se ela não conseguir ou o prazo vencer, você e o regional são avisados. Sexta a domingo e feriados usam o quadro de fim de semana. Função com 0 não aparece no placar.</p>
+        <div class="table-wrap"><table id="eqTabela"><tr><td style="color:var(--muted)">Carregando...</td></tr></table></div>
+        <button class="save-metas-btn" style="margin-top:12px" onclick="eqAdmSalvarQuadros()">Salvar quadros</button>
+      </div>
+      <div style="margin-top:26px">
+        <div class="section-title">📢 Vagas abertas</div>
+        <div id="eqVagasAdm" style="color:var(--muted);font-size:0.85rem">Carregando...</div>
+      </div>
+      <div style="margin-top:26px">
+        <div class="section-title">🎉 Feriados</div>
+        <p style="color:var(--muted);font-size:0.82rem;margin-bottom:10px">Um dia antes de cada feriado o placar avisa o gerente para reforçar a equipe. Os nacionais, o Carnaval, a Sexta-feira Santa, o Corpus Christi e os municipais de cada cidade das lojas já estão incluídos. Acrescente aqui os que faltarem (data dd/mm vale todo ano; dd/mm/aaaa vale só naquele ano).</p>
+        <div id="eqExtras"></div>
+        <button class="action-btn btn-nova" style="padding:8px 14px;margin-top:8px" onclick="eqExtraNovo()">+ Acrescentar feriado</button>
+        <button class="save-metas-btn" style="margin-top:8px" onclick="eqAdmSalvarExtras()">Salvar feriados</button>
+        <div class="section-title" style="margin-top:18px;font-size:0.8rem">Próximos feriados</div>
+        <div id="eqFeriadosLista" style="font-size:0.84rem"></div>
+      </div>
+    </div>
+
     <!-- LOJAS E CELULARES -->
     <div class="tab-content" id="tab-lojas">
       <div>
@@ -680,6 +705,13 @@
       // escala
       if(!l.escala) h+=linha('av','Escala','Semana não salva');
       else{ nEsc++; h+=l.escala.erros?linha('err','Escala',l.escala.erros+' problema'+(l.escala.erros>1?'s':'')+' nas regras'):l.escala.vazios?linha('av','Escala','Incompleta ('+l.escala.vazios+' dias)'):linha('ok','Escala','Salva e dentro das regras'); }
+      // equipe do dia (quadro ideal x quem está trabalhando)
+      if(l.equipe&&l.equipe.configurado){
+        const eq=l.equipe, mt=eq.motivos||{}, det=[['folga','folga'],['ferias','férias'],['atestado','atestado'],['falta','faltou'],['vaga','vaga aberta']].filter(([k])=>mt[k]).map(([k,n])=>mt[k]+' '+n).join(', ');
+        if(!eq.feito) h+=linha('av','Equipe','Não informada hoje (ideal '+eq.ideal+')');
+        else h+=linha(mt.vaga||mt.falta?'err':eq.presentes<eq.ideal?'av':'ok','Equipe',eq.presentes+' de '+eq.ideal+(det?' · '+det:''));
+      }
+      if(l.equipe&&l.equipe.feriadoAmanha) h+=linha('av','Feriado','Amanhã: '+escH(l.equipe.feriadoAmanha));
       // celulares e localização
       if(l.aparelhos){
         const ap=l.aparelhos, sem=[!ap.gerente?'gerente':'',!ap.assistente?'assistente':''].filter(Boolean);
@@ -716,6 +748,7 @@
     renderAparPendentes(r.aparelhosPendentes);
     renderRegPendAdmin(r.regPendencias, r.regional);
     renderExcAdmin(r.excecoes);
+    renderVagasHoje(r.vagas);
     renderCobranca(r);
     carregarProtecao();
     document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
@@ -765,6 +798,62 @@
     box.innerHTML=`<div class="cob-box" style="border-color:${atras?'var(--danger)':'var(--yellow)'};margin-bottom:0"><div class="cob-head"><div><b>📋 Correções esperando confirmação (${lista.length})</b><br><small>${atras?'<span style="color:var(--danger);font-weight:700">'+atras+' passou do prazo de 18 h</span> · ':''}O regional confirma em <a href="regional" target="_blank" style="color:var(--gold)">/regional</a> e a nutricionista em <a href="nutricionista" target="_blank" style="color:var(--gold)">/nutricionista</a></small></div></div>`+
       lista.map(p=>`<div class="cob-linha ${p.atrasada?'err':'av'}"><span class="nome">${escH(p.unidade)}<br><span style="font-size:0.7rem;color:var(--muted)">${p.origem==='nutri'?'🥗 Nutricionista':'📋 Regional'}</span></span><span class="st"><b>${escH(p.itemLabel)}</b><br>${escH(p.justificativa||'(só foto)')}${p.foto&&/^https/.test(p.foto)?' · <a href="'+escH(p.foto)+'" target="_blank" style="color:var(--gold)">ver foto</a>':''}<br><span style="color:var(--muted);font-size:0.75rem">apontado na visita de ${escH(p.dataAberta)} · justificado em ${escH(p.justificadaEm)} · ${p.atrasada?'<b style="color:var(--danger)">ATRASADA: '+p.horas+' h sem confirmação</b>':'prazo até '+escH(p.prazo)}</span></span></div>`).join('')+'</div>';
     box.style.display='block';
+  }
+
+  // ── Equipe do dia, vagas e feriados (02/11/2026) ──
+  const EQ_SET=[['pizzaiolo','Pizzaiolo','Cozinha'],['masseiro','Masseiro','Cozinha'],['cozinheira','Cozinheira','Cozinha'],['fritadeira','Fritadeira','Cozinha'],['louca','Lavagem de louças','Cozinha'],['buffet','Atendente de buffet','Buffet'],['caixa','Caixa','Caixa'],['salao','Atendente de salão','Salão']];
+  let EQ_ADM=null;
+  function vagaLinha(v,botoes){
+    const prazo=v.situacao!=='aberta'?(v.situacao==='preenchida'?'✅ preenchida':'cancelada')+' por '+escH(v.fechadaPor):v.atrasada?'<b style="color:var(--danger)">PRAZO VENCIDO ('+escH(v.prazo.slice(0,5))+')</b>':'prazo '+escH(v.prazo.slice(0,5))+' · faltam '+v.uteisRestantes+' dia(s) útil(eis)';
+    return `<div class="cob-linha ${v.situacao!=='aberta'?'ok':v.atrasada||v.naoConsigo?'err':'av'}"><span class="nome">${escH(v.unidade)}</span><span class="st"><b>${escH(v.setorNome)}: ${v.qtd} vaga(s)</b> · aberta ${escH(v.abertaEm)} · ${prazo}${v.naoConsigo?'<br><span style="color:var(--danger);font-size:0.78rem">RH: não vai conseguir no prazo — '+escH(v.naoConsigo)+'</span>':''}</span>${botoes&&v.situacao==='aberta'?`<button class="cob-btn" onclick="eqVagaAdm('${v.id}','preenchida')">✓ Preenchida</button><button class="cob-btn off" onclick="eqVagaAdm('${v.id}','cancelar')">Cancelar</button>`:''}</div>`;
+  }
+  function renderVagasHoje(lista){
+    const box=document.getElementById('vagasAdmBox'); if(!box) return;
+    const ab=(lista||[]).filter(v=>v.situacao==='aberta');
+    if(!ab.length){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML=`<div class="cob-box" style="border-color:${ab.some(v=>v.atrasada||v.naoConsigo)?'var(--danger)':'var(--yellow)'};margin-bottom:0"><div class="cob-head"><div><b>📢 Vagas abertas nas lojas (${ab.length})</b><br><small>A gestora de RH resolve na agenda dela; prazo de 10 dias úteis.</small></div></div>`+ab.map(v=>vagaLinha(v,true)).join('')+'</div>';
+    box.style.display='block';
+  }
+  async function eqVagaAdm(id,acao){
+    if(acao==='cancelar'&&!confirm('Cancelar esta vaga? (use quando a loja não precisa mais da pessoa)')) return;
+    try{ await admPost({action:'equipeVagaAcao',id,acao,chave:ADM.hash}); showToast(acao==='preenchida'?'Vaga marcada como preenchida.':'Vaga cancelada.','ok'); registrarLog('Vaga '+acao+' ('+id+')','ok'); carregarHoje(); if(EQ_ADM) eqAdmCarregar(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
+  async function eqAdmCarregar(){
+    const t=document.getElementById('eqTabela');
+    try{
+      const r=await admJsonp({action:'equipeConfig'});
+      if(r&&r.ok!==true&&/reconhecida/i.test(r.erro||'')) throw new Error('O Apps Script publicado ainda é o antigo. Cole o código novo e publique em Nova versão.');
+      if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro');
+      EQ_ADM=r;
+    }catch(e){ t.innerHTML='<tr><td style="color:var(--danger)">'+escH(e.message)+'</td></tr>'; return; }
+    const inp=(u,tp,k,v)=>`<input type="number" min="0" max="99" data-u="${escH(u)}" data-t="${tp}" data-k="${k}" value="${v}" style="width:46px;text-align:center">`;
+    const cabG=()=>[['Cozinha',5],['Buffet',1],['Caixa',1],['Salão',1]].map(([g,n])=>'<th colspan="'+n+'" style="font-size:0.7rem">'+g+'</th>').join('');
+    const cabF=()=>EQ_SET.map(s=>'<th style="font-size:0.68rem;white-space:normal;min-width:58px">'+s[1]+'</th>').join('');
+    t.innerHTML='<tr><th rowspan="3">Loja</th><th colspan="8">Segunda a quinta</th><th colspan="8">Sexta a domingo e feriados</th></tr><tr>'+cabG()+cabG()+'</tr><tr>'+cabF()+cabF()+'</tr>'+
+      Object.keys(EQ_ADM.quadros).map(u=>{ const q=EQ_ADM.quadros[u]; return '<tr><td style="white-space:nowrap">'+escH(u)+'</td>'+EQ_SET.map(s=>'<td>'+inp(u,'semana',s[0],q.semana[s[0]])+'</td>').join('')+EQ_SET.map(s=>'<td>'+inp(u,'fds',s[0],q.fds[s[0]])+'</td>').join('')+'</tr>'; }).join('');
+    eqRenderExtras();
+    document.getElementById('eqFeriadosLista').innerHTML=EQ_ADM.feriados.slice(0,25).map(f=>'<div style="padding:3px 0;border-bottom:1px solid var(--border)"><b>'+escH(f.data)+'</b> · '+escH(f.nome)+' <span style="color:var(--muted)">('+escH(f.cidades)+')</span></div>').join('');
+    try{ const h=await admJsonp({action:'equipeVagas',chave:ADM.hash}); const v=document.getElementById('eqVagasAdm');
+      v.innerHTML=(h&&h.ok&&h.itens.length)?h.itens.map(x=>vagaLinha(x,true)).join(''):'Nenhuma vaga aberta.'; }catch(e){}
+  }
+  function eqRenderExtras(){
+    const cid=['Todas'].concat(EQ_ADM.cidades||[]);
+    document.getElementById('eqExtras').innerHTML=(EQ_ADM.extras||[]).map((f,i)=>`<div class="eq-extra" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><input class="exD" value="${escH(f.data)}" placeholder="dd/mm" style="width:96px"><input class="exN" value="${escH(f.nome)}" placeholder="Nome do feriado" style="flex:1;min-width:160px"><select class="exC">${cid.map(c=>`<option ${c===f.cidade?'selected':''}>${escH(c)}</option>`).join('')}</select><button class="cob-btn off" onclick="EQ_ADM.extras.splice(${i},1);eqRenderExtras()">Remover</button></div>`).join('')||'<div style="color:var(--muted);font-size:0.82rem">Nenhum feriado extra.</div>';
+  }
+  function eqLerExtras(){ return [...document.querySelectorAll('.eq-extra')].map(d=>({data:d.querySelector('.exD').value.trim(),nome:d.querySelector('.exN').value.trim(),cidade:d.querySelector('.exC').value})); }
+  function eqExtraNovo(){ EQ_ADM.extras=eqLerExtras().concat([{data:'',nome:'',cidade:'Todas'}]); eqRenderExtras(); }
+  async function eqAdmSalvarQuadros(){
+    const quadros={};
+    document.querySelectorAll('#eqTabela input').forEach(i=>{ const u=i.dataset.u; quadros[u]=quadros[u]||{semana:{},fds:{}}; quadros[u][i.dataset.t][i.dataset.k]=Number(i.value)||0; });
+    try{ await admPost({action:'equipeAdmSalvar',senhaAdmin:ADM.hash,quadros}); showToast('Quadros salvos.','ok'); registrarLog('Quadro ideal das lojas salvo','ok'); eqAdmCarregar(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
+  async function eqAdmSalvarExtras(){
+    const extras=eqLerExtras().filter(f=>f.data||f.nome);
+    if(extras.some(f=>!/^\d{2}\/\d{2}(\/\d{4})?$/.test(f.data)||!f.nome)){ showToast('Use a data assim: 25/12 (todo ano) ou 25/12/2026, e dê um nome.','warn'); return; }
+    try{ await admPost({action:'equipeAdmSalvar',senhaAdmin:ADM.hash,extras}); showToast('Feriados salvos.','ok'); registrarLog('Feriados extras salvos','ok'); eqAdmCarregar(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
   }
 
   // ── Pedidos para continuar o placar fora da loja (o regional responde em /regional; o Admin também pode) ──
@@ -1108,6 +1197,7 @@
     if(nome==='log') carregarLogServidor();
     if(nome==='senhas') renderTabela();
     if(nome==='lojas') carregarLojas();
+    if(nome==='equipe') eqAdmCarregar();
   }
 
   // ── Senhas ──
