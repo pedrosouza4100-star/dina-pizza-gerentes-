@@ -194,6 +194,11 @@ function renderAgora(){
   const hojeItens=(E.atual.status?E.atual.status.itens:[]).filter(x=>x.dia===E.hoje);
   const proxima=hojeItens.find(x=>x.situacao==='hoje');
   let h='<div class="card"><div class="tit">📍 Visita agora</div>';
+  // GDI travado: correções da visita sem resposta há mais de 24 h (servidor 2026-11-03-f)
+  if(E.travaCorrecoes && !E.visitaAberta){
+    const t=E.travaCorrecoes;
+    return h+`<div class="aviso err">🔒 <b>Check-in bloqueado.</b> Você tem <b>${t.qtd} correção(ões)</b> da sua visita sem resposta há mais de ${t.horas} h (${esc(t.lojas.join(', '))}). Confirme ou recuse para liberar.</div><div style="height:10px"></div><a class="btn" style="display:block;text-align:center;text-decoration:none" href="regional?loja=${encodeURIComponent(t.lojas[0])}">✅ Responder as correções agora</a></div>`;
+  }
   if(E.visitaAberta){
     h+=`<div class="aviso ok">Você está na <b>${esc(E.visitaAberta.unidade)}</b> desde <b>${esc(E.visitaAberta.entrada)}</b>.</div><div style="height:10px"></div><button class="btn sec" onclick="checkout('${E.visitaAberta.id}')">🚪 Saí da loja</button>`;
   } else {

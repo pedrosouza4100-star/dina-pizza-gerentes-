@@ -234,7 +234,8 @@ function renderCorrecoes(){
     box.style.display=(CORR_ALVO||CORR_LOJA)?'block':'none'; return;
   }
   const atras=CORR.filter(c=>c.atrasada).length;
-  box.innerHTML='<div class="card"><div class="sel-label">✅ Correções para confirmar ('+CORR.length+')</div><div style="font-size:0.8rem;color:var(--muted)">Os gerentes contaram o que fizeram nas pendências da sua visita. Você tem <b>18 horas</b> para confirmar ou recusar'+(atras?' — <b style="color:var(--danger)">'+atras+' já passou do prazo</b>':'')+'.</div>'+
+  const trav=CORR.filter(c=>c.horas>=24).length;
+  box.innerHTML='<div class="card"><div class="sel-label">✅ Correções para confirmar ('+CORR.length+')</div>'+(trav?'<div style="background:rgba(255,68,68,0.15);border:2px solid var(--danger);border-radius:8px;padding:10px;margin:8px 0;font-weight:700">🔒 '+trav+' correção(ões) passaram de 24 h: a visita nova e o check-in da agenda ficam BLOQUEADOS até você responder.</div>':'')+'<div style="font-size:0.8rem;color:var(--muted)">Os gerentes contaram o que fizeram nas pendências da sua visita. Você tem <b>18 horas</b> para confirmar ou recusar'+(atras?' — <b style="color:var(--danger)">'+atras+' já passou do prazo</b>':'')+'.</div>'+
     CORR.map(c=>`<div class="corr${c.atrasada?' atrasada':''}${(c.pendId===CORR_ALVO||c.unidade===CORR_LOJA)?' alvo':''}" id="corr_${c.pendId}">
       <div style="font-weight:700">${esc(c.unidade)} · ${esc(c.itemLabel)}</div>
       <div class="pend-detail" style="margin-top:6px"><strong>Problema apontado:</strong> ${esc(c.descricao)||'—'}</div>
@@ -391,6 +392,13 @@ async function decidirExc(id, decisao, horas){
 }
 
 async function iniciarChecklist(){
+  // GDI travado: correções sem resposta há mais de 24 h (pedido do Robson, 03/11/2026)
+  const travadas=(CORR||[]).filter(c=>c.horas>=24);
+  if(travadas.length){
+    alert('🔒 Visita nova bloqueada.\n\nVocê tem '+travadas.length+' correção(ões) das lojas sem resposta há mais de 24 h ('+[...new Set(travadas.map(c=>c.unidade))].join(', ')+').\n\nConfirme ou recuse no quadro "Correções para confirmar", no topo desta página, para liberar.');
+    const b=document.getElementById('corrBox'); if(b) b.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
   unidadeAtual=document.getElementById('selUnidade').value;
   nomeRegionalAtual=document.getElementById('nomeRegional').value.trim();
   if(!unidadeAtual) return;
