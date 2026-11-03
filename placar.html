@@ -179,7 +179,7 @@
       <div class="auth-error" id="authAviso"></div>
       <button class="auth-btn" onclick="mostrar('telaLogin')">Entrar</button>
       <div class="auth-link" style="text-decoration:none;cursor:default">Não tem a senha da loja? Peça ao administrador.</div>
-      <a href="agenda" style="display:block;text-align:center;margin-top:6px;padding:12px;border:1px solid #444;border-radius:10px;color:#FFD000;font-weight:700;font-size:0.85rem;text-decoration:none">📅 Agenda de visitas (regional, RH e nutricionista)</a>
+      <a href="agenda" style="display:block;text-align:center;margin-top:6px;padding:12px;border:1px solid #444;border-radius:10px;color:#FFD000;font-weight:700;font-size:0.85rem;text-decoration:none">📅 Agenda de visitas (GDI, RH e nutricionista)</a>
     </div>
 
     <!-- Tela login -->
@@ -270,13 +270,13 @@
     <div id="geoTitulo" style="font-size:20px;font-weight:800;color:#ff4444;margin-bottom:12px"></div>
     <div id="geoTexto" style="font-size:15px;color:#ddd;margin-bottom:22px;max-width:340px;line-height:1.6"></div>
     <button id="geoBtn" onclick="conferirLocal(true)" style="background:#C00000;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;padding:16px 28px;cursor:pointer;width:100%;max-width:330px">📍 Conferir de novo</button>
-    <!-- Imprevisto: pedir autorização ao regional para continuar fora da loja -->
+    <!-- Imprevisto: pedir autorização ao GDI para continuar fora da loja -->
     <div id="excBox" style="display:none;width:100%;max-width:330px;margin-top:16px;text-align:left">
-      <button id="excAbrirBtn" onclick="excAbrirForm()" style="background:transparent;border:1px solid #FFD000;border-radius:10px;color:#FFD000;font-size:14px;font-weight:700;padding:13px 16px;cursor:pointer;width:100%">🆘 Tive um imprevisto — pedir autorização ao regional</button>
+      <button id="excAbrirBtn" onclick="excAbrirForm()" style="background:transparent;border:1px solid #FFD000;border-radius:10px;color:#FFD000;font-size:14px;font-weight:700;padding:13px 16px;cursor:pointer;width:100%">🆘 Tive um imprevisto — pedir autorização ao GDI</button>
       <div id="excForm" style="display:none;margin-top:10px">
-        <div style="font-size:13px;color:#ccc;line-height:1.5;margin-bottom:8px">Explique o que aconteceu (ex.: precisei sair para buscar produto, emergência). O regional recebe no WhatsApp e decide. <b style="color:#FFD000">O pedido fica registrado.</b></div>
+        <div style="font-size:13px;color:#ccc;line-height:1.5;margin-bottom:8px">Explique o que aconteceu (ex.: precisei sair para buscar produto, emergência). O GDI recebe no WhatsApp e decide. <b style="color:#FFD000">O pedido fica registrado.</b></div>
         <textarea id="excMotivo" rows="3" placeholder="Motivo (obrigatório)" style="width:100%;background:#111;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-size:14px;padding:10px;font-family:inherit"></textarea>
-        <button id="excEnviarBtn" onclick="excPedir()" style="background:#FFD000;border:none;border-radius:10px;color:#111;font-size:14px;font-weight:800;padding:13px 16px;cursor:pointer;width:100%;margin-top:8px">Enviar pedido ao regional</button>
+        <button id="excEnviarBtn" onclick="excPedir()" style="background:#FFD000;border:none;border-radius:10px;color:#111;font-size:14px;font-weight:800;padding:13px 16px;cursor:pointer;width:100%;margin-top:8px">Enviar pedido ao GDI</button>
       </div>
       <div id="excStatus" style="display:none;margin-top:12px;font-size:14px;line-height:1.55;border-radius:10px;padding:12px 14px"></div>
     </div>
@@ -300,12 +300,12 @@
       <button type="button" id="chkCamBater" onclick="chkBaterFoto()" style="flex:2;background:#C00000;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:800;padding:16px;cursor:pointer">📸 Bater foto</button>
     </div>
   </div>
-  <!-- Pendências da visita do gerente regional: o placar só libera depois de justificar todas -->
+  <!-- Pendências da visita do GDI: o placar só libera depois de justificar todas -->
   <div id="regPendOverlay" style="display:none;position:fixed;inset:0;background:#0A0A0A;z-index:700;overflow-y:auto;padding:22px 16px 40px">
     <div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px">
       <div style="text-align:center;font-size:2.4rem">📋</div>
-      <div id="regPendTitulo" style="text-align:center;font-size:20px;font-weight:900;color:#ff4444;letter-spacing:0.02em">PENDÊNCIAS DA VISITA DO REGIONAL</div>
-      <div id="regPendSub" style="text-align:center;font-size:14px;color:#ddd;line-height:1.55">O gerente regional apontou os problemas abaixo. Para liberar o placar, conte <b>o que foi feito</b> em cada um, por escrito ou com uma <b>foto</b>. O regional vai conferir.</div>
+      <div id="regPendTitulo" style="text-align:center;font-size:20px;font-weight:900;color:#ff4444;letter-spacing:0.02em">PENDÊNCIAS DA VISITA DO GDI</div>
+      <div id="regPendSub" style="text-align:center;font-size:14px;color:#ddd;line-height:1.55">O GDI apontou os problemas abaixo. Para liberar o placar, conte <b>o que foi feito</b> em cada um, por escrito ou com uma <b>foto</b>. O GDI vai conferir.</div>
       <div id="regPendLista"></div>
     </div>
   </div>
@@ -316,10 +316,10 @@
     <div style="font-size:23px;font-weight:900;color:#ff3b3b;letter-spacing:0.02em;margin-bottom:6px;text-transform:uppercase">Atenção, gerente</div>
     <div style="font-size:17px;font-weight:900;color:#FFD000;margin-bottom:16px;text-transform:uppercase">Seja 100% verdadeiro neste checklist</div>
     <div style="font-size:15px;color:#fff;max-width:360px;line-height:1.65;text-align:left;border:2px solid #ff3b3b;border-radius:12px;background:rgba(255,59,59,0.12);padding:14px 16px">
-      Tudo o que você marcar aqui <b style="color:#FFD000">será cruzado pelo sistema</b> e <b style="color:#FFD000">conferido pessoalmente pelo gerente regional e pelo gestor da rede</b> nas visitas.<br><br>
+      Tudo o que você marcar aqui <b style="color:#FFD000">será cruzado pelo sistema</b> e <b style="color:#FFD000">conferido pessoalmente pelo GDI e pelo gestor da rede</b> nas visitas.<br><br>
       Marcar <b>✓ OK</b> em algo que não está OK é <b style="color:#ff6b6b">informação falsa</b> e será tratado com a seriedade que merece.<br><br>
       Leia cada item com atenção e confira na loja antes de responder. <b>Não preencha de qualquer jeito.</b><br><br>
-      <b style="color:#FFD000">Ficou com dúvida em algum item? PERGUNTE</b> ao gerente regional antes de marcar. Melhor perguntar do que errar.
+      <b style="color:#FFD000">Ficou com dúvida em algum item? PERGUNTE</b> ao GDI antes de marcar. Melhor perguntar do que errar.
     </div>
     <label style="display:flex;gap:10px;align-items:flex-start;max-width:360px;margin:18px 0 14px;text-align:left;color:#fff;font-size:15px;font-weight:700;line-height:1.45;cursor:pointer">
       <input type="checkbox" id="chkVerdadeOk" style="width:24px;height:24px;flex-shrink:0;margin-top:1px;accent-color:#C00000">
@@ -344,11 +344,11 @@
   </div>
 
   <main>
-    <!-- Pendências do Checklist Regional -->
+    <!-- Pendências do Checklist do GDI -->
     <div id="regRespWrap" style="display:none;margin-bottom:16px"></div>
     <div id="checklistPendenciasWrap" style="display:none;margin-bottom:20px">
       <div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:16px 18px">
-        <div style="font-size:0.95rem;font-weight:700;color:var(--danger);margin-bottom:12px">📋 Pendências apontadas pelo Gerente Regional — corrija hoje</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--danger);margin-bottom:12px">📋 Pendências apontadas pelo GDI — corrija hoje</div>
         <div id="checklistPendenciasLista"></div>
       </div>
     </div>
@@ -422,6 +422,18 @@
       <div class="meta-mes mini" id="mm_motoboys"></div>
     </div>
 
+    <!-- Equipe do dia: quantas pessoas trabalham hoje em cada setor e por que falta alguém (vaga aberta avisa a RH) -->
+    <div class="card card-full" id="cardEquipe" style="display:none">
+      <div class="card-label">👥 Equipe do dia</div>
+      <div class="card-meta" id="eqMeta"></div>
+      <div id="eqFeriado"></div>
+      <div id="eqSetores"></div>
+      <div id="eqVagas"></div>
+      <div id="eqMsg" style="font-size:0.82rem;margin-top:6px;min-height:14px"></div>
+      <button class="camera-btn" id="eqSalvarBtn" onclick="eqSalvarEquipe()" style="margin-top:8px">💾 Salvar equipe do dia</button>
+      <span class="tag" id="eqTag"></span>
+    </div>
+
 
     <!-- Etapa 3: durante a noite -->
     <div class="etapa-titulo"><b>3</b> Durante o turno</div>
@@ -472,6 +484,10 @@
               <button class="camera-btn" id="cameraBtnTempoIfood" onclick="abrirCameraTempoIfood()" style="font-size:0.78rem;padding:10px 8px">📷 App Próprio</button>
               <img class="foto-small-preview" id="fotoTempoIfoodPreview" alt="Foto App">
             </div>
+          </div>
+          <div id="tempoJustArea" style="display:none;margin:4px 0 10px;background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:10px">
+            <div id="tempoJustMotivo" style="font-size:0.82rem;color:#ffe9a8;line-height:1.45;margin-bottom:6px"></div>
+            <textarea id="tempoJust" placeholder="Explique o motivo (mínimo 10 letras)" style="width:100%;box-sizing:border-box;min-height:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:0.88rem"></textarea>
           </div>
           <button class="camera-btn" id="btnSalvarTempo" onclick="salvarTempoEntrega()" style="margin-top:4px;background:var(--red)">💾 Salvar registro de tempo</button>
         </div>
@@ -773,8 +789,28 @@ function registroDisponivel(){
 
 // ── CÂMERAS TEMPO ──
 function onTempoInput(){
-  // Apenas atualiza o botão registrar
+  tempoConferirJust();
   verificarBotaoRegistrar();
+}
+// Tempo de entrega (02/11/2026): igual ao registro anterior ou mais de 5 min acima dele exige justificativa
+const TEMPO_SUBIDA_MAX=5;
+function tempoMotivosJust(app,ifood){
+  const ant=tempoRegistros[tempoRegistros.length-1]; if(!ant) return [];
+  const m=[];
+  [['App Próprio',app,ant.app],['iFood',ifood,ant.ifood]].forEach(([nome,v,a])=>{
+    if(!v||!a) return;
+    if(v===a) m.push(nome+': '+v+' min, <b>igual</b> ao registro anterior');
+    else if(v>a+TEMPO_SUBIDA_MAX) m.push(nome+': '+v+' min, <b>'+(v-a)+' min acima</b> do registro anterior ('+a+' min)');
+  });
+  return m;
+}
+function tempoConferirJust(){
+  const app=parseInt(document.getElementById('tempoApp').value)||0, ifood=parseInt(document.getElementById('tempoIfood').value)||0;
+  const m=tempoMotivosJust(app,ifood), area=document.getElementById('tempoJustArea');
+  if(!area) return m;
+  area.style.display=m.length?'block':'none';
+  if(m.length) document.getElementById('tempoJustMotivo').innerHTML='✍️ Justifique: '+m.join('; ')+'. Por que o tempo ficou assim?';
+  return m;
 }
 
 function abrirCameraTempoApp(){document.getElementById('cameraTempoAppInput').click();}
@@ -893,6 +929,7 @@ function enviarTempoReal(tipo, dados, aoResponder){
   if(dados.ifood!==undefined) params+='&ifood='+dados.ifood;
   if(dados.horario!==undefined) params+='&horario='+encodeURIComponent(dados.horario);
   if(dados.registro!==undefined) params+='&registro='+dados.registro;
+  if(dados.justificativa) params+='&justificativa='+encodeURIComponent(String(dados.justificativa).slice(0,300));
   params+='&t='+Date.now()+'&callback='+cb;
   s.src=SCRIPT_URL+'?'+params;
   document.head.appendChild(s);
@@ -906,13 +943,20 @@ function salvarTempoEntrega(){
   if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
   if(!fotoTempoAppBase64){alert('📸 Foto do iFood é obrigatória. Tire a foto agora!');return;}
   if(!fotoTempoIfoodBase64){alert('📸 Foto do App Próprio é obrigatória. Tire a foto agora!');return;}
+  const motivosJust=tempoConferirJust(), just=(document.getElementById('tempoJust').value||'').trim();
+  if(motivosJust.length && (just.length<10 || /^(.)\1+$/.test(just))){
+    alert('✍️ Este tempo precisa de justificativa.\n\n'+motivosJust.map(x=>x.replace(/<[^>]+>/g,'')).join('\n')+'\n\nEscreva o motivo no campo amarelo (mínimo 10 letras).');
+    const t=document.getElementById('tempoJust'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth',block:'center'}); }
+    return;
+  }
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64});
-  localStorage.setItem(chaveHoje('tempo'), JSON.stringify(tempoRegistros.map(r=>({app:r.app,ifood:r.ifood,horario:r.horario,idx:r.idx}))));
+  tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64,just:motivosJust.length?just:''});
+  localStorage.setItem(chaveHoje('tempo'), JSON.stringify(tempoRegistros.map(r=>({app:r.app,ifood:r.ifood,horario:r.horario,idx:r.idx,just:r.just||''}))));
   // Envia tempo em tempo real para o Call Center
-  enviarTempoReal('tempo', {app:app, ifood:ifoodT, horario:horario, registro:idx+1});
+  enviarTempoReal('tempo', Object.assign({app:app, ifood:ifoodT, horario:horario, registro:idx+1}, motivosJust.length?{justificativa:just}:{}));
   document.getElementById('tempoApp').value='';
   document.getElementById('tempoIfood').value='';
+  document.getElementById('tempoJust').value=''; document.getElementById('tempoJustArea').style.display='none';
   // Reset fotos
   fotoTempoAppBase64=null;fotoTempoIfoodBase64=null;
   const p1=document.getElementById('fotoTempoAppPreview');p1.style.display='none';p1.src='';
@@ -935,7 +979,7 @@ function renderTempoRegistros(){
     const okApp=r.app<=metaT||r.app===0;
     const okIf=r.ifood<=metaT||r.ifood===0;
     return `<div style="background:var(--surface);border-radius:6px;padding:8px 12px;font-size:0.78rem;display:flex;justify-content:space-between;align-items:center">
-      <span style="color:var(--muted)">${nomes[i]} <span style="color:var(--text);font-size:0.65rem">(${r.horario})</span></span>
+      <span style="color:var(--muted)">${nomes[i]} <span style="color:var(--text);font-size:0.65rem">(${r.horario})</span>${r.just?' <span title="'+escR(r.just)+'">📝</span>':''}</span>
       <span>App: <strong style="color:${okApp?'var(--green)':'var(--danger)'}">${r.app}min</strong> &nbsp; iFood: <strong style="color:${okIf?'var(--green)':'var(--danger)'}">${r.ifood}min</strong></span>
     </div>`;
   }).join('');
@@ -1363,6 +1407,7 @@ function iniciarApp(u){
   verificarCumprimento();
   carregarPendenciasChecklist();
   REG_PEND=[]; REG_PEND_FOTO={}; carregarRegPend();
+  eqCarregar();
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
   if(!chkAberturaFeita){
@@ -1416,7 +1461,7 @@ function carregarPendenciasChecklist(){
   document.head.appendChild(s);
 }
 
-// ── Pendências da visita do regional: justificativa obrigatória antes de usar o placar ──
+// ── Pendências da visita do GDI: justificativa obrigatória antes de usar o placar ──
 let REG_PEND=[], REG_PEND_FOTO={}, _regPendTimer=null;
 async function carregarRegPend(){
   clearInterval(_regPendTimer); _regPendTimer=setInterval(carregarRegPend, 10*60000);
@@ -1430,13 +1475,13 @@ async function carregarRegPend(){
   }catch(e){ return; }
   renderRegPend();
 }
-// o que o regional já confirmou (últimos 3 dias) — o gerente vê que a correção foi aceita
+// o que o GDI já confirmou (últimos 3 dias) — o gerente vê que a correção foi aceita
 function renderRegResp(lista){
   const w=document.getElementById('regRespWrap'); if(!w) return;
   const ok=lista.filter(x=>x.decisao==='confirmada');
   if(!ok.length){ w.style.display='none'; w.innerHTML=''; return; }
   const e=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const quem=ok.every(x=>x.origem==='nutri')?'A nutricionista confirmou':ok.some(x=>x.origem==='nutri')?'O regional e a nutricionista confirmaram':'O regional confirmou';
+  const quem=ok.every(x=>x.origem==='nutri')?'A nutricionista confirmou':ok.some(x=>x.origem==='nutri')?'O GDI e a nutricionista confirmaram':'O GDI confirmou';
   w.innerHTML='<div style="background:rgba(46,204,113,0.10);border:1px solid var(--green);border-radius:12px;padding:12px 14px"><div style="font-weight:800;color:var(--green);font-size:0.9rem;margin-bottom:6px">✔ '+quem+' suas correções</div>'+
     ok.map(x=>`<div style="font-size:0.82rem;color:#ddd;margin-top:4px">• ${e(x.itemLabel)} <span style="color:var(--muted);font-size:0.72rem">— ${e(x.quem||(x.origem==='nutri'?'nutricionista':'regional'))}, ${e(x.em)}</span></div>`).join('')+'</div>';
   w.style.display='block';
@@ -1446,17 +1491,17 @@ function renderRegPend(){
   if(!REG_PEND.length){ ov.style.display='none'; return; }
   const e=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const temNut=REG_PEND.some(p=>p.origem==='nutri'), temReg=REG_PEND.some(p=>p.origem!=='nutri');
-  document.getElementById('regPendTitulo').textContent=temNut&&temReg?'PENDÊNCIAS DAS VISITAS DA GESTÃO':temNut?'PENDÊNCIAS DA VISITA DA NUTRICIONISTA':'PENDÊNCIAS DA VISITA DO REGIONAL';
-  document.getElementById('regPendSub').innerHTML=(temNut&&temReg?'O gerente regional e a nutricionista apontaram':temNut?'A nutricionista apontou':'O gerente regional apontou')+' os problemas abaixo. Para liberar o placar, conte <b>o que foi feito</b> em cada um, por escrito ou com uma <b>foto</b>. '+(temNut&&!temReg?'A nutricionista':temNut?'Quem apontou':'O regional')+' vai conferir.';
+  document.getElementById('regPendTitulo').textContent=temNut&&temReg?'PENDÊNCIAS DAS VISITAS DA GESTÃO':temNut?'PENDÊNCIAS DA VISITA DA NUTRICIONISTA':'PENDÊNCIAS DA VISITA DO GDI';
+  document.getElementById('regPendSub').innerHTML=(temNut&&temReg?'O GDI e a nutricionista apontaram':temNut?'A nutricionista apontou':'O GDI apontou')+' os problemas abaixo. Para liberar o placar, conte <b>o que foi feito</b> em cada um, por escrito ou com uma <b>foto</b>. '+(temNut&&!temReg?'A nutricionista':temNut?'Quem apontou':'O GDI')+' vai conferir.';
   document.getElementById('regPendLista').innerHTML=REG_PEND.map(p=>{
     const id=p.pendId, foto=REG_PEND_FOTO[id];
     return `<div class="regp" data-id="${id}" style="background:#1A1A1A;border:1px solid ${p.motivoRecusa?'#ff4444':'#3A3A3A'};border-radius:12px;padding:14px;margin-bottom:12px">
       ${temNut&&temReg?`<div style="font-size:11px;font-weight:800;color:#FFD000;margin-bottom:4px">${p.origem==='nutri'?'🥗 NUTRICIONISTA':'📋 REGIONAL'}</div>`:''}
       <div style="font-weight:800;font-size:15px;margin-bottom:6px;color:#fff">${e(p.itemLabel)}${p.vezes>=2?` <span style="background:#ff4444;color:#fff;font-size:11px;padding:2px 7px;border-radius:5px">REINCIDÊNCIA ${p.vezes}x</span>`:''}</div>
       <div style="font-size:13px;color:#bbb;margin-bottom:4px"><b style="color:#fff">Problema apontado:</b> ${e(p.descricao)||'—'}</div>
-      <div style="font-size:13px;color:#bbb;margin-bottom:4px"><b style="color:#fff">${p.origem==='nutri'?'Plano de ação da nutricionista':'Sugestão do regional'}:</b> ${e(p.sugestao)||'—'}</div>
+      <div style="font-size:13px;color:#bbb;margin-bottom:4px"><b style="color:#fff">${p.origem==='nutri'?'Plano de ação da nutricionista':'Sugestão do GDI'}:</b> ${e(p.sugestao)||'—'}</div>
       <div style="font-size:11px;color:#888;margin-bottom:8px">Visita de ${e(p.dataAberta)}</div>
-      ${p.motivoRecusa?`<div style="background:rgba(255,68,68,0.12);border:1px solid #ff4444;border-radius:8px;padding:9px 11px;font-size:13px;color:#ffb3b3;margin-bottom:10px">❌ <b>${p.origem==='nutri'?'A nutricionista':'O regional'} não aceitou a correção:</b> ${e(p.motivoRecusa)}</div>`:''}
+      ${p.motivoRecusa?`<div style="background:rgba(255,68,68,0.12);border:1px solid #ff4444;border-radius:8px;padding:9px 11px;font-size:13px;color:#ffb3b3;margin-bottom:10px">❌ <b>${p.origem==='nutri'?'A nutricionista':'O GDI'} não aceitou a correção:</b> ${e(p.motivoRecusa)}</div>`:''}
       <textarea id="regpTxt_${id}" rows="3" placeholder="O que foi feito para corrigir?" style="width:100%;background:#111;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-size:14px;padding:10px;font-family:inherit" oninput="regPendBotao('${id}')"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
         <button type="button" onclick="regPendFoto('${id}')" style="flex:1;background:#252525;border:1px solid #3A3A3A;border-radius:8px;color:#fff;font-weight:700;padding:11px;font-size:13px;cursor:pointer">📷 ${foto?'Tirar outra foto':'Tirar foto'}</button>
@@ -1507,7 +1552,7 @@ function renderPendenciasChecklist(pendencias){
       <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px">${p.itemLabel}${reinc}</div>
       <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px"><strong style="color:var(--text)">Problema apontado:</strong> ${p.descricaoProblema||'—'}</div>
       <div style="font-size:0.8rem;color:var(--muted)"><strong style="color:var(--text)">Sugestão de melhoria:</strong> ${p.sugestaoMelhoria||'—'}</div>
-      <div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Apontado em: ${p.dataAberta||'—'}${p.situacao==='justificada'?' · <b style="color:#FFD000">✔ justificado — aguardando o regional confirmar</b>':''}</div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Apontado em: ${p.dataAberta||'—'}${p.situacao==='justificada'?' · <b style="color:#FFD000">✔ justificado — aguardando o GDI confirmar</b>':''}</div>
     </div>`;
   });
   lista.innerHTML=html;
@@ -1699,7 +1744,7 @@ function conferirLocal(agora){
   _geoConferindo=(async()=>{
     try{
       if(!unidadeAtual || !(await chkRecursos()).includes('geoLoja')) return true;
-      if(excValendo()){ document.getElementById('geoOverlay').style.display='none'; return true; } // autorizado pelo regional a ficar fora da loja
+      if(excValendo()){ document.getElementById('geoOverlay').style.display='none'; return true; } // autorizado pelo GDI a ficar fora da loja
       // loja sem localização cadastrada no Admin: não confere (nem pede o GPS)
       try{ const c=await chkJsonp({action:'geoConferir',unidade:unidadeAtual},12000); if(c&&c.ok&&c.configurado===false){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){ return true; }
       const pos=await new Promise(res=>{
@@ -1724,7 +1769,7 @@ let _geoUltima=0;
 function conferirLocalMarcado(agora){ _geoUltima=Date.now(); return conferirLocal(agora); }
 function iniciarGeo(){ clearInterval(_geoTimer); excAtualizar().finally(()=>conferirLocalMarcado()); _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
 
-// ── Autorização do regional para continuar fora da loja (imprevisto) ──
+// ── Autorização do GDI para continuar fora da loja (imprevisto) ──
 let EXC={aprovada:null,pendente:null,recusada:null}, _excPoll=null, _excFim=null;
 function excValendo(){ return !!(EXC.aprovada && EXC.aprovada.validaAte>Date.now()); }
 async function excAtualizar(){
@@ -1760,12 +1805,12 @@ function excMostrarNaTela(){
   if(EXC.pendente){
     ab.style.display='none'; fm.style.display='none';
     st.style.display='block'; st.style.background='rgba(255,208,0,0.12)'; st.style.border='1px solid #FFD000'; st.style.color='#ffe9a8';
-    st.innerHTML='⏳ <b>Pedido enviado às '+escR(EXC.pendente.pedidoEm)+'.</b> Aguardando o regional responder. Esta tela libera sozinha quando ele aprovar.<br><span style="font-size:12px;color:#bbb">Motivo: '+escR(EXC.pendente.motivo)+'</span>';
+    st.innerHTML='⏳ <b>Pedido enviado às '+escR(EXC.pendente.pedidoEm)+'.</b> Aguardando o GDI responder. Esta tela libera sozinha quando ele aprovar.<br><span style="font-size:12px;color:#bbb">Motivo: '+escR(EXC.pendente.motivo)+'</span>';
     _excPoll=setInterval(excAtualizar, 20000);
   } else if(EXC.recusada){
     ab.style.display='block'; fm.style.display='none';
     st.style.display='block'; st.style.background='rgba(255,68,68,0.12)'; st.style.border='1px solid #ff4444'; st.style.color='#ffb3b3';
-    st.innerHTML='❌ <b>O regional não autorizou</b> ('+escR(EXC.recusada.decididoEm)+'): '+escR(EXC.recusada.motivoRecusa)+'<br>Volte para a loja para continuar o placar.';
+    st.innerHTML='❌ <b>O GDI não autorizou</b> ('+escR(EXC.recusada.decididoEm)+'): '+escR(EXC.recusada.motivoRecusa)+'<br>Volte para a loja para continuar o placar.';
   } else {
     ab.style.display='block'; st.style.display='none';
   }
@@ -1785,7 +1830,7 @@ async function excPedir(){
     logProva('PEDIU_AUTORIZACAO_FORA',motivo.slice(0,200));
     await excAtualizar();
   }catch(e){ alert('Não consegui enviar o pedido: '+e.message+'\nVerifique a internet e tente de novo.'); }
-  bt.disabled=false; bt.textContent='Enviar pedido ao regional';
+  bt.disabled=false; bt.textContent='Enviar pedido ao GDI';
 }
 function geoAoVoltar(){
   if(!unidadeAtual||MODO_TESTE||document.visibilityState==='hidden') return;
@@ -2692,6 +2737,7 @@ function verificarBotaoRegistrar(){
   if(!filled('vendasCanceladas')) faltando.push('💳 Vendas Canceladas no Caixa');
   if(!startDinaSalvo) faltando.push('⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
+  if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
   if(temLoja(unidadeAtual)){
     if(!motoboySalvo) faltando.push('👥 Motoboys');
     if(tempoRegistros.length<3) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
@@ -2851,6 +2897,128 @@ async function selfieEnvio(){
     catch(e){ logProva('SELFIE_FALHOU',String(e&&e.message||e).slice(0,100)); }
   })();
   return true;
+}
+
+// ── Equipe do dia (02/11/2026): quadro ideal da loja (Admin) x quem está trabalhando hoje, por setor ──
+let EQ=null, eqSalvo=false;
+const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['falta','Faltou'],['vaga','Vaga aberta']];
+async function eqCarregar(){
+  EQ=null; eqSalvo=false;
+  const card=document.getElementById('cardEquipe'); if(!card||!unidadeAtual) return;
+  try{
+    if(!(await chkRecursos()).includes('equipeDia')) return;
+    const r=await chkJsonp({action:'equipeDia',unidade:unidadeAtual},12000);
+    if(!r||!r.ok) return;
+    EQ=r; eqSalvo=!!r.feito||!r.setores.length;
+    if(!r.setores.length && !r.feriadoAmanha && !r.feriadoHoje){ card.style.display='none'; verificarBotaoRegistrar(); return; }
+    card.style.display='flex'; eqRender();
+    if(r.feriadoHoje && !r.feriadoConf && (await chkRecursos()).includes('feriadoConf')) setTimeout(()=>ferAbrir(r.feriadoHoje),1800);
+    if(r.feriadoAmanha){
+      const k=(MODO_TESTE?'dinateste_':'')+'eq_feriado_'+unidadeAtual+'_'+r.feriadoAmanha.data;
+      let visto=false; try{ visto=!!localStorage.getItem(k); localStorage.setItem(k,'1'); }catch(e){}
+      if(!visto) setTimeout(()=>chkMostrarAviso('🎉 AMANHÃ É FERIADO',
+        'Amanhã, <b>'+escR(r.feriadoAmanha.data)+'</b>, é feriado: <b>'+escR(r.feriadoAmanha.nome)+'</b>.<br><br>Nós trabalhamos em <b>todos os feriados</b> e o movimento costuma ser maior. Confira a escala e <b>reforce a sua equipe</b> para amanhã não ter problema.','Entendi',null),2500);
+    }
+  }catch(e){}
+  verificarBotaoRegistrar();
+}
+function eqRender(){
+  const r=EQ; if(!r) return;
+  document.getElementById('eqMeta').textContent=r.setores.length?('Quadro de '+(r.tipoDia==='fds'?'sexta a domingo / feriado':'segunda a quinta')+': '+r.setores.reduce((a,s)=>a+s.ideal,0)+' pessoas. Informe quantas estão trabalhando hoje em cada função.'):'';
+  let fer='';
+  if(r.feriadoAmanha) fer+='<div style="background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:9px;margin:6px 0;color:#ffe9a8;font-size:0.84rem">🎉 <b>Amanhã ('+escR(r.feriadoAmanha.data)+') é feriado: '+escR(r.feriadoAmanha.nome)+'.</b> Reforce a equipe para amanhã.</div>';
+  if(r.feriadoHoje) fer+='<div style="background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:9px;margin:6px 0;color:#ffe9a8;font-size:0.84rem">🎉 Hoje é feriado: <b>'+escR(r.feriadoHoje)+'</b>. Vale o quadro de fim de semana.</div>';
+  document.getElementById('eqFeriado').innerHTML=fer;
+  const inp='background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.95rem;padding:7px;width:56px;text-align:center';
+  let _grp='';
+  document.getElementById('eqSetores').innerHTML=r.setores.map(s=>{
+    const g=s.registro||{}, cab=s.grupo&&s.grupo!==_grp?'<div style="margin-top:12px;font-weight:800;font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold,#FFD700)">'+escR(s.grupo)+'</div>':''; _grp=s.grupo||_grp;
+    return cab+'<div class="eq-setor" data-s="'+s.setor+'" style="border:1px solid var(--border);border-radius:8px;padding:9px;margin-top:8px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b>'+escR(s.nome)+'</b><span style="font-size:0.8rem;color:var(--muted)">ideal '+s.ideal+'</span>'+
+      '<label style="font-size:0.82rem;display:flex;align-items:center;gap:6px">trabalhando hoje <input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_pres" value="'+(s.registro?g.presentes:'')+'" style="'+inp+'" oninput="eqAtualizar()"></label></div>'+
+      '<div id="eq_'+s.setor+'_mot" style="display:none;margin-top:8px"><div id="eq_'+s.setor+'_aviso" style="font-size:0.8rem;margin-bottom:6px"></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar()"></label>').join('')+'</div>'+
+      '<input id="eq_'+s.setor+'_obs" placeholder="Observação (opcional)" value="'+escR(g.obs||'')+'" style="margin-top:8px;width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px;font-size:0.85rem"></div></div>';
+  }).join('');
+  document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
+  document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
+  eqAtualizar();
+}
+// ── Conferência do dia do feriado (03/11/2026): 3 perguntas SIM/NÃO; NÃO exige o que está errado e vai para o GDI ──
+const FER_PERG=[['equipe','Sua equipe está completa, conforme orientado ontem?'],['precos','Os valores do buffet e do boliche estão corretos no sistema?'],['promo','As promoções de hoje são válidas para o feriado?']];
+let FER_RESP={};
+function ferAbrir(nome){
+  let ov=document.getElementById('ferOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='ferOverlay'; ov.style.cssText='position:fixed;inset:0;background:#0b1a00;z-index:690;overflow-y:auto;padding:22px 16px 40px;display:none'; document.body.appendChild(ov); }
+  FER_RESP={};
+  ov.innerHTML='<div style="max-width:520px;margin:0 auto"><div style="text-align:center;font-size:42px">🎉</div><div style="text-align:center;font-size:20px;font-weight:900;color:#FFD000">HOJE É FERIADO</div><div style="text-align:center;color:#ddd;margin:6px 0 16px">'+escR(nome)+'. Antes de começar, confira:</div>'+
+    FER_PERG.map(([k,t])=>'<div style="background:#152a05;border:1px solid #3c5a1a;border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-weight:700;color:#fff;margin-bottom:8px">'+t+'</div><div style="display:flex;gap:8px"><button id="fer_'+k+'_sim" onclick="ferMarcar(\''+k+'\',\'sim\')" style="flex:1;padding:11px;border-radius:8px;border:1px solid #2ecc71;background:transparent;color:#2ecc71;font-weight:800">SIM</button><button id="fer_'+k+'_nao" onclick="ferMarcar(\''+k+'\',\'nao\')" style="flex:1;padding:11px;border-radius:8px;border:1px solid #ff4444;background:transparent;color:#ff4444;font-weight:800">NÃO</button></div><textarea id="fer_'+k+'_obs" placeholder="O que está errado? (o GDI recebe agora)" style="display:none;width:100%;box-sizing:border-box;margin-top:8px;min-height:56px;background:#0a0a0a;border:1px solid #555;border-radius:6px;color:#fff;padding:8px"></textarea></div>').join('')+
+    '<div id="ferMsg" style="color:#ff6b6b;font-size:13px;min-height:16px;margin:4px 0 8px;text-align:center"></div><button onclick="ferSalvar()" style="width:100%;padding:14px;border:none;border-radius:10px;background:#FFD000;color:#111;font-weight:900;font-size:15px">Confirmar e continuar</button></div>';
+  ov.style.display='block';
+}
+function ferMarcar(k,v){
+  FER_RESP[k]=v;
+  document.getElementById('fer_'+k+'_sim').style.background=v==='sim'?'#2ecc71':'transparent'; document.getElementById('fer_'+k+'_sim').style.color=v==='sim'?'#000':'#2ecc71';
+  document.getElementById('fer_'+k+'_nao').style.background=v==='nao'?'#ff4444':'transparent'; document.getElementById('fer_'+k+'_nao').style.color=v==='nao'?'#fff':'#ff4444';
+  document.getElementById('fer_'+k+'_obs').style.display=v==='nao'?'block':'none';
+}
+async function ferSalvar(){
+  const m=document.getElementById('ferMsg'), obs={};
+  for(const [k] of FER_PERG){
+    if(!FER_RESP[k]){ m.textContent='Responda SIM ou NÃO nas 3 perguntas.'; return; }
+    obs[k]=(document.getElementById('fer_'+k+'_obs').value||'').trim();
+    if(FER_RESP[k]==='nao' && obs[k].length<10){ m.textContent='Explique o que está errado (pelo menos 10 letras).'; return; }
+  }
+  m.style.color='#aaa'; m.textContent='Salvando...';
+  let r=null;
+  try{ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'equipeFeriado',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',respostas:FER_RESP,obs})}); r=JSON.parse(await resp.text()); }catch(e){ r=null; }
+  if(!(r&&r.ok)){ m.style.color='#ff6b6b'; m.textContent='Não salvou ('+((r&&r.erro)||'sem conexão')+'). Tente de novo.'; return; }
+  if(typeof logProva==='function') logProva('FERIADO_CONF', Object.values(FER_RESP).join(','));
+  document.getElementById('ferOverlay').style.display='none';
+  if(Object.values(FER_RESP).includes('nao')) alert('O GDI foi avisado do que está errado. Corrija o quanto antes.');
+}
+function eqNum(id){ const e=document.getElementById(id); return e&&e.value!==''?Math.max(0,Math.floor(Number(e.value)||0)):null; }
+// confere cada setor: quem falta precisa ter motivo; devolve a lista para salvar ou null
+function eqAtualizar(){
+  if(!EQ) return null;
+  let tudo=true; const out=[];
+  EQ.setores.forEach(s=>{
+    const pres=eqNum('eq_'+s.setor+'_pres'), box=document.getElementById('eq_'+s.setor+'_mot'), aviso=document.getElementById('eq_'+s.setor+'_aviso'); // (o campo "Faltou" usa o id eq_<setor>_falta)
+    if(pres===null){ tudo=false; if(box) box.style.display='none'; return; }
+    const item={setor:s.setor,presentes:pres,obs:(document.getElementById('eq_'+s.setor+'_obs')||{}).value||''};
+    EQ_MOT.forEach(([k])=>item[k]=eqNum('eq_'+s.setor+'_'+k)||0);
+    const falta=s.ideal-pres, soma=EQ_MOT.reduce((a,[k])=>a+item[k],0);
+    if(falta>0){
+      box.style.display='block';
+      const ok=soma===falta;
+      aviso.innerHTML=ok?'<span style="color:var(--green)">✓ '+falta+' pessoa(s) explicada(s)'+(item.vaga?' · a RH será avisada da vaga':'')+'</span>'
+        :'<span style="color:#ff6b6b">Faltam <b>'+falta+'</b> pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').</span>';
+      if(!ok) tudo=false;
+    } else if(box){ box.style.display='none'; EQ_MOT.forEach(([k])=>item[k]=0); }
+    out.push(item);
+  });
+  const b=document.getElementById('eqSalvarBtn'); if(b) b.disabled=!tudo;
+  return tudo?out:null;
+}
+async function eqSalvarEquipe(){
+  const lista=eqAtualizar(), msg=document.getElementById('eqMsg'), b=document.getElementById('eqSalvarBtn');
+  if(!lista){ msg.innerHTML='<span style="color:#ff6b6b">Preencha todos os setores e explique quem está faltando.</span>'; return; }
+  if(!(await conferirLocal(true))){ msg.innerHTML='<span style="color:#ff6b6b">📍 Não salvou: o placar não confirmou que você está dentro da loja.</span>'; return; }
+  b.disabled=true; msg.style.color='#888'; msg.textContent='Salvando...';
+  let r=null;
+  try{ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'equipeSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',setores:lista})}); r=JSON.parse(await resp.text()); }catch(e){ r=null; }
+  b.disabled=false;
+  if(!(r&&r.ok)){ msg.innerHTML='<span style="color:#ff6b6b">Não salvou ('+escR((r&&r.erro)||'sem conexão')+'). Tente de novo.</span>'; return; }
+  eqSalvo=true;
+  if(r.alerta && r.alerta.situacao==='aberto'){
+    msg.innerHTML='<div style="background:#3a0000;border:1px solid #ff4444;border-radius:8px;padding:10px;color:#ffb3b3;font-weight:700">🚨 Equipe abaixo do mínimo hoje ('+r.alerta.presentes+' de '+r.alerta.ideal+', '+r.alerta.pct+'%'+(r.alerta.zeradas.length?' — sem '+escR(r.alerta.zeradas.join(', ').toLowerCase()):'')+'). O GDI foi avisado agora para ajudar a resolver.</div>';
+    document.getElementById('eqTag').textContent='✓ Salvo'; if(typeof logProva==='function') logProva('EQUIPE_ALERTA', r.alerta.pct+'%'); verificarBotaoRegistrar(); if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1500); return;
+  }
+  msg.innerHTML='<span style="color:var(--green)">✓ Equipe do dia salva.'+((r.novasVagas||[]).length?' A gestora de RH foi avisada da vaga ('+r.novasVagas.map(v=>escR(v.setor)+' '+v.qtd).join(', ')+'). Prazo para preencher: '+escR(String(r.prazo).slice(0,5))+'.':'')+'</span>';
+  document.getElementById('eqTag').textContent='✓ Salvo';
+  if(typeof logProva==='function') logProva('EQUIPE_SALVA', lista.map(x=>x.setor+':'+x.presentes).join(','));
+  verificarBotaoRegistrar();
+  if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1500);
 }
 
 async function registrar(){
