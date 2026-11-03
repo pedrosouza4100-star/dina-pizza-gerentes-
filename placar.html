@@ -3083,6 +3083,12 @@ async function eqSalvarEquipe(){
   const lista=eqAtualizar(), msg=document.getElementById('eqMsg'), b=document.getElementById('eqSalvarBtn');
   if(!lista){ msg.innerHTML='<span style="color:#ff6b6b">Preencha todos os setores e explique quem está faltando.</span>'; return; }
   if(!(await conferirLocal(true))){ msg.innerHTML='<span style="color:#ff6b6b">📍 Não salvou: o placar não confirmou que você está dentro da loja.</span>'; return; }
+  // confere com a escala da semana (03/11/2026): informou mais gente trabalhando do que a escala tem para hoje → confirma
+  if(EQ && EQ.escala && EQ.escala.completa){
+    const porG={}; lista.forEach(x=>{ const s=(EQ.setores||[]).find(y=>y.setor===x.setor); const g=s?s.grupo:''; if(g) porG[g]=(porG[g]||0)+(x.presentes||0); });
+    const dif=Object.keys(porG).filter(g=>EQ.escala.grupos[g]!==undefined && porG[g]>EQ.escala.grupos[g]).map(g=>'• '+g+': você informou '+porG[g]+' trabalhando, a escala de hoje tem '+EQ.escala.grupos[g]);
+    if(dif.length && !confirm('⚠️ NÃO BATE COM A ESCALA DE HOJE\n\n'+dif.join('\n')+'\n\nConfira quem está trabalhando. Se alguém veio fora da escala (troca, extra), está certo; se não, corrija.\n\nO que for diferente da escala aparece para a gestão.\n\nEstá certo assim?')){ msg.innerHTML='<span style="color:#ff6b6b">Confira a equipe e salve de novo.</span>'; return; }
+  }
   b.disabled=true; msg.style.color='#888'; msg.textContent='Salvando...';
   let r=null;
   try{ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'equipeSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',setores:lista})}); r=JSON.parse(await resp.text()); }catch(e){ r=null; }
