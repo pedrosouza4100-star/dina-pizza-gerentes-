@@ -347,6 +347,11 @@
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px">
           <div id="pedidosDesbloqueio" style="font-size:0.82rem;color:var(--muted)">Carregando...</div>
         </div>
+
+        <div class="section-title" style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>🧮 Conferência dos números do placar</span>
+          <button class="action-btn btn-nova" style="padding:8px 14px" onclick="dupCarregar()">Conferir últimos 45 dias</button></div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Mostra os dias em que uma loja tem o placar gravado mais de uma vez (soma em dobro no dashboard e nas metas) e os números fora do normal (fichas, buffets ou Google acima de 3 vezes a meta do dia). Na linha repetida, fique com a certa e toque em “Apagar esta” na outra.</div>
+        <div id="dupBox" style="font-size:0.82rem"></div>
       </div>
     </div>
     <div class="tab-content" id="tab-premiacao">
@@ -493,6 +498,7 @@
         <div class="section-title">👥 Quadro ideal de cada loja</div>
         <p style="color:var(--muted);font-size:0.82rem;margin-bottom:10px">Quantas pessoas cada loja precisa em cada função (os mesmos números da planilha da RH). O gerente informa no placar (junto com o Start Dina) quantas estão trabalhando hoje e explica quem falta: folga, férias, atestado, falta ou <b>vaga aberta</b>. Vaga aberta avisa a gestora de RH no WhatsApp, com prazo de <b>10 dias úteis</b>; se ela não conseguir ou o prazo vencer, você e o GDI são avisados. Sexta a domingo e feriados usam o quadro de fim de semana. Função com 0 não aparece no placar.</p>
         <div class="table-wrap"><table id="eqTabela"><tr><td style="color:var(--muted)">Carregando...</td></tr></table></div>
+        <button class="save-metas-btn outline" style="margin-top:12px" onclick="eqUsarPlanilhaRH()">📥 Preencher com a planilha da RH (03/11)</button>
         <button class="save-metas-btn" style="margin-top:12px" onclick="eqAdmSalvarQuadros()">Salvar quadros</button>
       </div>
       <div style="margin-top:26px">
@@ -837,10 +843,13 @@
       EQ_ADM=r;
     }catch(e){ t.innerHTML='<tr><td style="color:var(--danger)">'+escH(e.message)+'</td></tr>'; return; }
     const inp=(u,tp,k,v)=>`<input type="number" min="0" max="99" data-u="${escH(u)}" data-t="${tp}" data-k="${k}" value="${v}" style="width:46px;text-align:center">`;
-    const cabG=()=>[['Cozinha',5],['Buffet',1],['Caixa',1],['Salão',1]].map(([g,n])=>'<th colspan="'+n+'" style="font-size:0.7rem">'+g+'</th>').join('');
-    const cabF=()=>EQ_SET.map(s=>'<th style="font-size:0.68rem;white-space:normal;min-width:58px">'+s[1]+'</th>').join('');
-    t.innerHTML='<tr><th rowspan="3">Loja</th><th colspan="8">Segunda a quinta</th><th colspan="8">Sexta a domingo e feriados</th></tr><tr>'+cabG()+cabG()+'</tr><tr>'+cabF()+cabF()+'</tr>'+
-      Object.keys(EQ_ADM.quadros).map(u=>{ const q=EQ_ADM.quadros[u]; return '<tr><td style="white-space:nowrap">'+escH(u)+'</td>'+EQ_SET.map(s=>'<td>'+inp(u,'semana',s[0],q.semana[s[0]])+'</td>').join('')+EQ_SET.map(s=>'<td>'+inp(u,'fds',s[0],q.fds[s[0]])+'</td>').join('')+'</tr>'; }).join('');
+    // as funções vêm do servidor (03/11: entrou Auxiliar de cozinha); servidor antigo = lista fixa
+    const SET=(EQ_ADM.setores&&EQ_ADM.setores.length)?EQ_ADM.setores.map(s=>[s.id,s.nome,s.grupo]):EQ_SET;
+    const grupos=[]; SET.forEach(s=>{ const g=grupos.find(x=>x[0]===s[2]); if(g) g[1]++; else grupos.push([s[2],1]); });
+    const cabG=()=>grupos.map(([g,n])=>'<th colspan="'+n+'" style="font-size:0.7rem">'+g+'</th>').join('');
+    const cabF=()=>SET.map(s=>'<th style="font-size:0.68rem;white-space:normal;min-width:58px">'+s[1]+'</th>').join('');
+    t.innerHTML='<tr><th rowspan="3">Loja</th><th colspan="'+SET.length+'">Segunda a quinta</th><th colspan="'+SET.length+'">Sexta a domingo e feriados</th></tr><tr>'+cabG()+cabG()+'</tr><tr>'+cabF()+cabF()+'</tr>'+
+      Object.keys(EQ_ADM.quadros).map(u=>{ const q=EQ_ADM.quadros[u]; return '<tr><td style="white-space:nowrap">'+escH(u)+'</td>'+SET.map(s=>'<td>'+inp(u,'semana',s[0],q.semana[s[0]]||0)+'</td>').join('')+SET.map(s=>'<td>'+inp(u,'fds',s[0],q.fds[s[0]]||0)+'</td>').join('')+'</tr>'; }).join('');
     eqRenderExtras();
     document.getElementById('eqFeriadosLista').innerHTML=EQ_ADM.feriados.slice(0,25).map(f=>'<div style="padding:3px 0;border-bottom:1px solid var(--border)"><b>'+escH(f.data)+'</b> · '+escH(f.nome)+' <span style="color:var(--muted)">('+escH(f.cidades)+')</span></div>').join('');
     try{ const h=await admJsonp({action:'equipeVagas',chave:ADM.hash}); const v=document.getElementById('eqVagasAdm');
@@ -852,6 +861,14 @@
   }
   function eqLerExtras(){ return [...document.querySelectorAll('.eq-extra')].map(d=>({data:d.querySelector('.exD').value.trim(),nome:d.querySelector('.exN').value.trim(),cidade:d.querySelector('.exC').value})); }
   function eqExtraNovo(){ EQ_ADM.extras=eqLerExtras().concat([{data:'',nome:'',cidade:'Todas'}]); eqRenderExtras(); }
+  // Quadro preenchido pela RH na planilha "Quadro de Equipe Dina Pizza" (03/11/2026)
+  const EQ_QUADRO_RH={"Isaac Manhã": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 0, "cozinheira": 1, "fritadeira": 1, "louca": 2, "buffet": 1, "caixa": 1, "salao": 1}, "fds": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 1, "salao": 2}}, "Isaac Noite": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 3, "buffet": 1, "caixa": 2, "salao": 8}, "fds": {"pizzaiolo": 3, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 5, "buffet": 1, "caixa": 2, "salao": 12}}, "Água Verde": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 0, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 1, "salao": 1}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 0, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 2, "salao": 2}}, "Uberaba": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 0, "louca": 1, "buffet": 1, "caixa": 1, "salao": 1}, "fds": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 0, "louca": 1, "buffet": 1, "caixa": 1, "salao": 2}}, "Campo Largo": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 0, "louca": 1, "buffet": 1, "caixa": 1, "salao": 3}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 1, "salao": 5}}, "Capão Raso": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 0, "fritadeira": 1, "louca": 1, "buffet": 0, "caixa": 2, "salao": 0}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 0, "fritadeira": 0, "louca": 1, "buffet": 0, "caixa": 2, "salao": 0}}, "São José dos Pinhais": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 1, "salao": 1}, "fds": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 0, "louca": 1, "buffet": 1, "caixa": 1, "salao": 2}}, "Expressa": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 0, "caixa": 1, "salao": 0}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 0, "fritadeira": 1, "louca": 1, "buffet": 0, "caixa": 1, "salao": 0}}, "Fazenda Rio Grande": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 2, "salao": 5}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 2, "buffet": 1, "caixa": 2, "salao": 8}}, "Colombo": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 2, "salao": 3}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 2, "salao": 5}}, "Araucária": {"semana": {"pizzaiolo": 1, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 1, "louca": 1, "buffet": 1, "caixa": 2, "salao": 3}, "fds": {"pizzaiolo": 2, "auxiliar": 1, "masseiro": 1, "cozinheira": 1, "fritadeira": 0, "louca": 1, "buffet": 1, "caixa": 2, "salao": 5}}};
+  function eqUsarPlanilhaRH(){
+    let n=0, sem=new Set();
+    document.querySelectorAll('#eqTabela input').forEach(i=>{ const v=((EQ_QUADRO_RH[i.dataset.u]||{})[i.dataset.t]||{})[i.dataset.k]; if(v!==undefined){ i.value=v; n++; } });
+    Object.values(EQ_QUADRO_RH).forEach(q=>Object.keys(q.semana).forEach(k=>{ if(!document.querySelector('#eqTabela input[data-k="'+k+'"]')&&(q.semana[k]||q.fds[k])) sem.add(k); }));
+    showToast(n+' campos preenchidos com a planilha da RH. Confira e toque em "Salvar quadros".'+(sem.size?' Falta no servidor a função: '+[...sem].join(', ')+' (cole o código novo).':''),sem.size?'warn':'ok');
+  }
   async function eqAdmSalvarQuadros(){
     const quadros={};
     document.querySelectorAll('#eqTabela input').forEach(i=>{ const u=i.dataset.u; quadros[u]=quadros[u]||{semana:{},fds:{}}; quadros[u][i.dataset.t][i.dataset.k]=Number(i.value)||0; });
@@ -920,6 +937,26 @@
         <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="geoLocalizar(this)">Localizar endereço</button> <button class="action-btn btn-nova" onclick="geoSalvarCoord(this)">Salvar coordenadas</button></td></tr>`; }).join('');
     const cel=(l,p)=>{ const ap=l.aparelhos||{}; const lista=(ap.lista||[]).filter(x=>x.papel===p); const todos=lista.length?lista:(ap[p]?[ap[p]]:[]); return todos.length?'<td>'+todos.map(a=>`<div style="margin-bottom:8px"><span class="badge ok">✓ ${escH(a.info||'autorizado')}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">desde ${escH(dataBR(a.desde))}</div><button class="action-btn btn-reset" style="margin-top:6px" onclick="aparDecidir(${a.linha},'remover')">Remover</button></div>`).join('')+'</td>':`<td><span class="badge sem">Nenhum</span></td>`; };
     at.innerHTML=LOJAS_HOJE.lojas.map(l=>`<tr><td style="font-weight:600">${escH(l.unidade)}${l.aparelhos&&l.aparelhos.pendentes?` <span class="badge sem">${l.aparelhos.pendentes} aguardando</span>`:''}</td>${cel(l,'gerente')}${cel(l,'assistente')}</tr>`).join('');
+  }
+  // ── Conferência dos números do placar (duplicados e valores fora do normal) ──
+  async function dupCarregar(){
+    const box=document.getElementById('dupBox'); box.innerHTML='<span style="color:var(--muted)">Conferindo...</span>';
+    let r; try{ r=await admJsonp({action:'dupListar',dias:45}); }catch(e){ box.innerHTML='<span style="color:var(--danger)">'+escH(e.message)+'</span>'; return; }
+    if(!r||r.ok!==true){ box.innerHTML='<span style="color:var(--danger)">'+escH(/reconhecida/i.test((r&&r.erro)||'')?'Cole o código novo do servidor (2026-11-03-d) para usar a conferência.':(r&&r.erro)||'Erro')+'</span>'; return; }
+    const n=v=>v===null||v===undefined?'—':v;
+    let h='<div style="font-weight:700;margin:6px 0">'+(r.duplicados.length?'🔴 '+r.duplicados.length+' dia(s) com o placar gravado mais de uma vez':'✅ Nenhum dia com placar repetido')+'</div>';
+    h+=r.duplicados.map(d=>`<div style="border:1px solid var(--danger);border-radius:8px;padding:8px;margin-bottom:8px"><b>${escH(d.unidade)} · ${escH(d.dia)}</b>`+d.linhas.map(x=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0;border-top:1px solid var(--border)"><span>enviado ${escH(x.registrado||'?')} · fat R$ ${x.faturamento.toLocaleString('pt-BR')} · Google ${x.google} · fichas ${n(x.fichas)} · buffets ${n(x.buffets)}</span><button class="action-btn btn-reset" onclick="dupRemover('${escH(d.unidade)}',${x.linha},${x.ms},this)">Apagar esta</button></div>`).join('')+'</div>').join('');
+    h+='<div style="font-weight:700;margin:12px 0 6px">'+(r.fora.length?'🟡 '+r.fora.length+' número(s) fora do normal':'✅ Nenhum número fora do normal')+'</div>';
+    h+=r.fora.map(x=>`<div style="padding:4px 0;border-bottom:1px solid var(--border)"><b>${escH(x.unidade)} · ${escH(x.dia)}</b>: ${escH(x.motivos.join('; '))}</div>`).join('');
+    if(r.reenvios&&r.reenvios.length) h+='<div style="margin-top:12px;color:var(--muted)">Reenvios que substituíram o anterior (desde hoje o sistema não duplica mais): '+r.reenvios.map(x=>escH(x.unidade+' '+x.dia.slice(0,5)+' ('+x.vezes+'x)')).join(', ')+'</div>';
+    box.innerHTML=h;
+  }
+  async function dupRemover(u,linha,ms,bt){
+    if(!confirm('Apagar esta linha do placar de '+u+'? Fica a outra do mesmo dia.')) return;
+    bt.disabled=true;
+    try{ await admPost({action:'dupRemover',unidade:u,linha,ms}); showToast('Linha repetida apagada.','ok'); registrarLog('Linha repetida do placar apagada: '+u,'ok'); }
+    catch(e){ showToast('Não apagou: '+e.message,'warn'); }
+    dupCarregar();
   }
   // ── Avaliações do Google (Place ID de cada loja e chave da API) ──
   async function gglCarregar(){
