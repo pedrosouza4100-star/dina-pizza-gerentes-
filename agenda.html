@@ -73,7 +73,7 @@
 <div id="login">
   <div class="card" style="display:flex;flex-direction:column;gap:12px">
     <div class="tit" style="text-align:center">📅 Agenda de visitas da gestão</div>
-    <div class="muted" style="text-align:center;line-height:1.5">Gerente regional, gestora de RH e nutricionista: entre com a sua senha da agenda. Para ver os números de todos, use a senha do Admin.</div>
+    <div class="muted" style="text-align:center;line-height:1.5">GDI, gestora de RH e nutricionista: entre com a sua senha da agenda. Para ver os números de todos, use a senha do Admin.</div>
     <input type="password" id="senha" placeholder="Sua senha" onkeydown="if(event.key==='Enter')entrar()">
     <div id="loginErro" style="color:var(--danger);font-size:0.85rem;min-height:1em"></div>
     <button class="btn" onclick="entrar()">Entrar</button>
@@ -165,7 +165,7 @@ let VAGAS=null;
 function renderVagas(){
   if(!VAGAS) return '';
   const ab=VAGAS.filter(v=>v.situacao==='aberta'), fe=VAGAS.filter(v=>v.situacao!=='aberta').slice(0,5);
-  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">O gerente informa no placar quando a equipe está incompleta. Prazo: 10 dias úteis. Se não for conseguir, avise aqui: o Robson e o regional recebem na hora.</div>';
+  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">O gerente informa no placar quando a equipe está incompleta. Prazo: 10 dias úteis. Se não for conseguir, avise aqui: o Robson e o GDI recebem na hora.</div>';
   if(!ab.length) h+='<div class="muted">Nenhuma vaga aberta. 👏</div>';
   ab.forEach(v=>{
     const cor=v.atrasada?'var(--danger)':v.uteisRestantes<=3?'#FFD000':'var(--green)';
@@ -184,7 +184,7 @@ async function vagaAcao(id,acao,motivo){
   try{ await post({action:'equipeVagaAcao',chave:H,id,acao,motivo:motivo||''}); toast(acao==='preenchida'?'Vaga preenchida. Obrigado!':'Aviso enviado ao Robson e ao regional.'); await carregar(); }catch(e){ toast(e.message); }
 }
 function vagaNaoConsigo(id){
-  const m=prompt('Por que não vai conseguir preencher no prazo? (o Robson e o regional recebem esta mensagem)');
+  const m=prompt('Por que não vai conseguir preencher no prazo? (o Robson e o GDI recebem esta mensagem)');
   if(m===null) return; if(m.trim().length<10){ toast('Explique com pelo menos 10 letras.'); return; }
   vagaAcao(id,'naoConsigo',m.trim());
 }
@@ -319,7 +319,7 @@ function renderPainel(){
   for(let i=0;i<6;i++){ const d=new Date(ay,am-1-i,1); const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); opts.push(`<option value="${v}" ${v===P.mes?'selected':''}>${NM[d.getMonth()]} ${d.getFullYear()}</option>`); }
   let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="tit" style="margin:0">📊 Agenda da gestão — números do mês</div><select style="width:auto" onchange="abrirPainel(this.value)">${opts.join('')}</select></div>
     <div class="muted" style="margin-top:6px">Conta só as visitas planejadas até hoje. "Feita" = check-in pelo GPS dentro da loja.</div>
-    <div style="height:12px"></div><button class="btn sec" onclick="entrarTeste()">🧪 Testar a agenda (ver como o regional, a RH e a nutricionista usam)</button></div>`;
+    <div style="height:12px"></div><button class="btn sec" onclick="entrarTeste()">🧪 Testar a agenda (ver como o GDI, a RH e a nutricionista usam)</button></div>`;
   P.pessoas.forEach(p=>{
     const c=p.cumprimento, cc=c==null?'':c>=90?'verde':c>=70?'amar':'verm';
     h+=`<div class="card"><div class="tit">${esc(p.rotulo)} · <span style="color:#fff">${esc(p.nome)}</span></div><div class="kpis">

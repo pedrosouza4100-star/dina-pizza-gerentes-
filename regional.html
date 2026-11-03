@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
 <script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
-<script>window.GESTAO_PAGINA="regional";</script><script src="gestao-guard.js?v=2"></script>
+<script>window.GESTAO_PAGINA="regional";</script><script src="gestao-guard.js?v=3"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Checklist Regional — Dina Pizza</title>
+<title>Checklist do GDI — Dina Pizza</title>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -74,7 +74,7 @@
 <body>
 <header>
   <div class="brand">DINA <span>PIZZA</span></div>
-  <div class="header-title">📋 Checklist Regional</div>
+  <div class="header-title">📋 Checklist do GDI</div>
 </header>
 
 <div id="telaSelecao">
@@ -86,7 +86,7 @@
       <option value="">Escolha a loja...</option>
     </select>
     <div style="height:14px"></div>
-    <div class="sel-label">Seu nome (Gerente Regional)</div>
+    <div class="sel-label">Seu nome (GDI)</div>
     <input type="text" id="nomeRegional" placeholder="Digite seu nome">
     <div style="height:18px"></div>
     <button class="btn" id="btnIniciar" disabled onclick="iniciarChecklist()">Iniciar Checklist</button>
@@ -134,7 +134,7 @@ const ESTRUTURA = [
   {cat:"Cumprimento de Metas", itens:["A loja está cumprindo as metas diárias (conforme placar diário)"]},
 ];
 
-// Itens: vêm do servidor (Admin > Checklist regional). Esta lista fixa só é usada se o servidor ainda não tiver a edição.
+// Itens: vêm do servidor (Admin > Checklist do GDI). Esta lista fixa só é usada se o servidor ainda não tiver a edição.
 let SECOES=[]; // [{cat, itens:[{id,label,tipo}]}]
 function secoesReserva(){ return ESTRUTURA.map(s=>({cat:s.cat,itens:s.itens.map(it=>({id:slugify(s.cat,it),label:itemLabel(it),tipo:itemTipo(it)}))})); }
 function jsonp(params, ms){
@@ -209,7 +209,7 @@ function trocarLoja(){
   respostasItens={}; respostasPendencias={};
 }
 
-// ── Correções que os gerentes justificaram: o regional confirma ou recusa em até 18 h (não precisa estar na loja) ──
+// ── Correções que os gerentes justificaram: o GDI confirma ou recusa em até 18 h (não precisa estar na loja) ──
 let CORR=[];
 const CORR_ALVO=new URLSearchParams(location.search).get('confirmar')||'';
 const CORR_LOJA=new URLSearchParams(location.search).get('loja')||''; // link do WhatsApp com todas as correções de uma loja
@@ -251,7 +251,7 @@ function abrirRecusa(id){ const el=document.getElementById('recusa_'+id); el.sty
 async function decidirCorr(id, decisao){
   const m=document.getElementById('corrMsg_'+id); m.textContent='';
   const nome=(document.getElementById('nomeRegional').value||'').trim();
-  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (Gerente Regional)" abaixo antes de confirmar.'; return; }
+  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (GDI)" abaixo antes de confirmar.'; return; }
   const motivo=decisao==='recusar'?(document.getElementById('motivo_'+id).value||'').trim():'';
   if(decisao==='recusar' && motivo.length<5){ m.textContent='Escreva o que ainda está errado.'; return; }
   try{ localStorage.setItem('dina_regional_nome',nome); }catch(e){}
@@ -331,7 +331,7 @@ function renderExcecoes(){
 async function decidirExc(id, decisao, horas){
   const m=document.getElementById('excMsg_'+id); m.textContent='';
   const nome=(document.getElementById('nomeRegional').value||'').trim();
-  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (Gerente Regional)" abaixo antes de responder.'; return; }
+  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (GDI)" abaixo antes de responder.'; return; }
   const motivo=decisao==='recusar'?(document.getElementById('motivo_exc'+id).value||'').trim():'';
   if(decisao==='recusar'&&motivo.length<5){ m.textContent='Escreva por que não autorizou.'; return; }
   try{ localStorage.setItem('dina_regional_nome',nome); }catch(e){}

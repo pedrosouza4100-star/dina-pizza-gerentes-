@@ -43,6 +43,8 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
    (b) entregue ao Robson uma **mensagem pronta para o grupo dos gerentes** ("📢 Placar atualizado — o que mudou: 1)… 2)…", curta,
    linguagem simples, com o que o gerente precisa fazer diferente), com botão de copiar. Pedido do Robson em 02/11/2026.
 
+11. **Nome do cargo:** o gerente regional (Marco) é chamado de **GDI** em todas as telas e mensagens (pedido do Robson em 02/11/2026). Os nomes técnicos (`regional.html`, `/regional`, `regPend*`, `__regional__`) continuam iguais.
+
 ## Mapa das telas
 
 | Arquivo | O que é | Ações no Apps Script |
