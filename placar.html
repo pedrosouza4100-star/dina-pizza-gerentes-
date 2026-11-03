@@ -3054,6 +3054,21 @@ async function registrar(){
     const c=document.getElementById('cardChkFechamento'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  // placar de hoje já enviado: avisa que enviar de novo substitui (o servidor guarda 1 por dia)
+  const jaEnviado=localStorage.getItem(chaveHoje('enviado_em'));
+  if(jaEnviado && !confirm('⚠️ O placar de hoje já foi enviado às '+jaEnviado+'.\n\nEnviar de novo SUBSTITUI os números enviados antes (não soma).\n\nQuer enviar de novo?')){ logProva('REENVIO_CANCELADO','já enviado às '+jaEnviado); return; }
+  // fichas e buffets: quantidade muito acima da meta do dia (ex.: digitou o valor em R$ em vez da quantidade)
+  if(temFliperBuffet(unidadeAtual)){
+    const dtH=dataTurno(), altos=[];
+    [['buffets',(METAS_BUFFET[unidadeAtual]||{}).mensal,'buffets vendidos','Some cada buffet (inteiro ou meia) como 1 — é QUANTIDADE, não valor em R$'],['fichas',(METAS_FICHAS[unidadeAtual]||{}).mensal,'fichas de fliperama','Combo = 1, avulsa = 1 — é QUANTIDADE, não valor em R$']].forEach(([id,mensal,nome,dica])=>{
+      const md=mensal&&dtH>=FLIPER_BUFFET_INICIO?metaDiaMensal(mensal,dtH):0, v=ival(id);
+      // sem meta: compara com a média da loja no mês (até ontem)
+      const A=MES_ATE_ONTEM||{}, media=A.dias>=3&&A[id]>0?A[id]/A.dias:0;
+      if(md>0 && v>md*3) altos.push('• '+v+' '+nome+' (a meta do dia é '+Math.round(md)+'). '+dica+'.');
+      else if(!md && media>0 && v>=20 && v>media*3) altos.push('• '+v+' '+nome+' (a média da loja no mês é '+Math.round(media)+' por dia). '+dica+'.');
+    });
+    if(altos.length && !confirm('⚠️ CONFIRA ANTES DE ENVIAR\n\n'+altos.join('\n')+'\n\nEstá muito acima do normal. Se estiver errado, toque em Cancelar e corrija.\n\nEstá certo assim?')){ logProva('ENVIO_CANCELADO_PELO_GERENTE','fichas/buffets acima do normal'); return; }
+  }
   if(faturamentoForaDaFaixa()){
     const fatAtual=valFat();
     const confirmou=confirm(`⚠️ ATENÇÃO!\n\nVocê tem certeza que foi isso mesmo que você vendeu?\n\nO valor R$ ${fatAtual.toLocaleString('pt-BR',{minimumFractionDigits:2})} está muito fora da meta. Reveja o valor, pois isso pode impactar no teu resultado e você pode ser punido por isso.\n\nTem certeza que quer enviar assim mesmo?`);
@@ -3136,6 +3151,7 @@ async function registrar(){
     localStorage.removeItem(chaveHoje('motoboys_qtd'));
     localStorage.removeItem(chaveHoje('motoboys_salvo'));
     localStorage.removeItem(chaveHoje('fech_rasc'));
+    try{ const h=new Date(); localStorage.setItem(chaveHoje('enviado_em'),String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0')); }catch(e){}
     showMsg('savedMsg');
 
     // Mostra mensagem imediata baseada no pctMeta local
