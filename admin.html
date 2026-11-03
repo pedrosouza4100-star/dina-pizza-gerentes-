@@ -500,6 +500,8 @@
         <div class="table-wrap"><table id="eqTabela"><tr><td style="color:var(--muted)">Carregando...</td></tr></table></div>
         <button class="save-metas-btn outline" style="margin-top:12px" onclick="eqUsarPlanilhaRH()">📥 Preencher com a planilha da RH (03/11)</button>
         <button class="save-metas-btn" style="margin-top:12px" onclick="eqAdmSalvarQuadros()">Salvar quadros</button>
+        <button class="save-metas-btn outline" style="margin-top:12px" onclick="eqImportarRH()">👥 Carregar colaboradores da planilha da RH e abrir as vagas</button>
+        <div id="eqImportMsg" style="font-size:0.8rem;margin-top:8px;line-height:1.5"></div>
       </div>
       <div style="margin-top:26px">
         <div class="section-title">📢 Vagas abertas</div>
@@ -868,6 +870,15 @@
     document.querySelectorAll('#eqTabela input').forEach(i=>{ const v=((EQ_QUADRO_RH[i.dataset.u]||{})[i.dataset.t]||{})[i.dataset.k]; if(v!==undefined){ i.value=v; n++; } });
     Object.values(EQ_QUADRO_RH).forEach(q=>Object.keys(q.semana).forEach(k=>{ if(!document.querySelector('#eqTabela input[data-k="'+k+'"]')&&(q.semana[k]||q.fds[k])) sem.add(k); }));
     showToast(n+' campos preenchidos com a planilha da RH. Confira e toque em "Salvar quadros".'+(sem.size?' Falta no servidor a função: '+[...sem].join(', ')+' (cole o código novo).':''),sem.size?'warn':'ok');
+  }
+  // Colaboradores da planilha da RH (03/11): vão para a equipe da escala de cada loja e abrem as vagas (os nomes ficam só no servidor)
+  async function eqImportarRH(){
+    if(!confirm('Carregar os colaboradores da planilha da RH na escala de cada loja e abrir as vagas das lojas com menos gente que o quadro?\n\nSalve os quadros ANTES. Quem já está na escala não é duplicado. A RH recebe UMA mensagem com todas as vagas.')) return;
+    const m=document.getElementById('eqImportMsg'); m.textContent='Carregando...';
+    try{ const r=await admPost({action:'equipeImportarRH'});
+      m.innerHTML='✅ '+r.adicionados+' colaboradores colocados na escala'+(r.jaEstavam?' ('+r.jaEstavam+' já estavam)':'')+'. '+(r.vagas.length?r.vagas.length+' vaga(s) aberta(s): '+r.vagas.map(v=>escH(v.unidade+' — '+v.setor+(v.qtd>1?' ('+v.qtd+')':''))).join('; ')+'.':'Nenhuma vaga nova.')+(r.semQuadro.length?'<br><span style="color:var(--yellow)">Sem quadro salvo (vagas não conferidas): '+escH(r.semQuadro.join(', '))+'</span>':'');
+      registrarLog('Planilha da RH carregada ('+r.adicionados+' colaboradores, '+r.vagas.length+' vagas)','ok'); eqAdmCarregar(); }
+    catch(e){ m.innerHTML='<span style="color:var(--danger)">Não carregou: '+escH(e.message)+(/reconhecida/i.test(e.message)?' — cole o código novo do servidor (2026-11-03-e).':'')+'</span>'; }
   }
   async function eqAdmSalvarQuadros(){
     const quadros={};
