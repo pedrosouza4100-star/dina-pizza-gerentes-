@@ -2390,7 +2390,17 @@ function chkResponder(id, status){
   renderItensChecklist();
 }
 
+// 04/11/2026: um salvamento por vez. Antes, enquanto o GPS era conferido o botão continuava ativo e cada toque
+// gravava o checklist de novo (até 50 vezes no mesmo minuto), enchendo a planilha.
+let _chkSalvando=false;
 async function salvarChecklist(){
+  if(_chkSalvando) return;
+  _chkSalvando=true;
+  const b0=document.getElementById('chkSalvarBtn'); if(b0) b0.disabled=true;
+  let salvou=false;
+  try{ salvou=(await _salvarChecklist())===true; } finally { _chkSalvando=false; if(salvou){ const b1=document.getElementById('chkSalvarBtn'); if(b1) b1.disabled=true; } else atualizarBotaoSalvarChk(); }
+}
+async function _salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
   if(msg){ msg.textContent='📍 Conferindo se você está na loja...'; msg.style.color='#888'; }
@@ -2450,6 +2460,7 @@ async function salvarChecklist(){
     setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm, 'checklist de abertura'), 'Entendi', null), 1600);
   }
   setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
+  return true;
 }
 
 window.addEventListener('load',()=>{
