@@ -478,7 +478,7 @@
           </div>
         </div>
         <div id="tempoFotoArea">
-          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
+          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias da TELA do computador (câmera do placar, sem galeria):</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
             <div style="display:flex;flex-direction:column;gap:4px">
               <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.78rem;padding:10px 8px">📷 iFood</button>
@@ -839,8 +839,31 @@ function tempoConferirJust(){
   return m;
 }
 
-function abrirCameraTempoApp(){document.getElementById('cameraTempoAppInput').click();}
-function abrirCameraTempoIfood(){document.getElementById('cameraTempoIfoodInput').click();}
+// 04/11/2026: fotos do tempo SÓ pela câmera aberta dentro do placar (sem galeria), com carimbo de data/hora/loja.
+// cameraBtnTempoApp = tela do iFood (fotoTempoAppBase64) · cameraBtnTempoIfood = tela do App Próprio (fotoTempoIfoodBase64)
+function _tempoFotoPronta(qual, foto){
+  if(qual==='ifood'){ fotoTempoAppBase64=foto; const p=document.getElementById('fotoTempoAppPreview'); p.src=foto; p.style.display='block'; const b=document.getElementById('cameraBtnTempoApp'); b.className='camera-btn captured'; b.textContent='✓ iFood fotografado'; }
+  else { fotoTempoIfoodBase64=foto; const p=document.getElementById('fotoTempoIfoodPreview'); p.src=foto; p.style.display='block'; const b=document.getElementById('cameraBtnTempoIfood'); b.className='camera-btn captured'; b.textContent='✓ App fotografado'; }
+}
+function abrirCameraTempoApp(){ chkAbrirCamera('tempo_ifood', f=>_tempoFotoPronta('ifood',f), {msg:'📺 Fotografe a <b>TELA DO COMPUTADOR</b> mostrando o <b>tempo do iFood</b> agora (o número tem que aparecer na foto).'}); }
+function abrirCameraTempoIfood(){ chkAbrirCamera('tempo_app', f=>_tempoFotoPronta('app',f), {msg:'📺 Fotografe a <b>TELA DO COMPUTADOR</b> mostrando o <b>tempo do App Próprio</b> agora (o número tem que aparecer na foto).'}); }
+// manda as 2 fotos ao servidor; o tempo só é registrado se as duas chegarem
+async function tempoEnviarFotos(reg, app, ifoodT){
+  if(!(await chkRecursos()).includes('tempoFoto')) return true; // servidor antigo: segue como antes
+  const papel=localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente';
+  for(const [qual,foto] of [['ifood',fotoTempoAppBase64],['app',fotoTempoIfoodBase64]]){
+    let ok=false, erro='';
+    for(let t=0;t<2&&!ok;t++){
+      try{
+        const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),45000);
+        const r=await fetch(SCRIPT_URL,{method:'POST',signal:ctl.signal,body:JSON.stringify({action:'excTempoFoto',unidade:unidadeAtual,papel,registro:reg,qual,app,ifood:ifoodT,foto:{base64:String(foto).split(',')[1],tipo:'image/jpeg'}})});
+        clearTimeout(to); const j=JSON.parse(await r.text()); ok=!!(j&&j.ok); if(!ok) erro=(j&&j.erro)||'';
+      }catch(e){ erro=e.name==='AbortError'?'o servidor demorou':'sem internet'; }
+    }
+    if(!ok){ if(typeof logProva==='function') logProva('TEMPO_FOTO_FALHOU', reg+'º tempo '+qual+': '+erro); return false; }
+  }
+  return true;
+}
 
 function processarFotoTempoApp(input){
   if(!input.files||!input.files[0])return;
@@ -961,7 +984,9 @@ function enviarTempoReal(tipo, dados, aoResponder){
   document.head.appendChild(s);
 }
 
-function salvarTempoEntrega(){
+let _tempoSalvando=false;
+async function salvarTempoEntrega(){
+  if(_tempoSalvando) return;
   if(temLoja(unidadeAtual) && !motoboySalvo){ alert('👥 Antes do tempo de entrega, informe e salve quantos MOTOBOYS estão em serviço (com a foto da lista).'); const c=document.getElementById('cardMotoboys'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const idx=tempoJanelaAgora();
   if(idx<0){
@@ -973,8 +998,8 @@ function salvarTempoEntrega(){
   const app=parseInt(document.getElementById('tempoApp').value)||0;
   const ifoodT=parseInt(document.getElementById('tempoIfood').value)||0;
   if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
-  if(!fotoTempoAppBase64){alert('📸 Foto do iFood é obrigatória. Tire a foto agora!');return;}
-  if(!fotoTempoIfoodBase64){alert('📸 Foto do App Próprio é obrigatória. Tire a foto agora!');return;}
+  if(!fotoTempoAppBase64){alert('📸 Foto da TELA do iFood é obrigatória.\n\nToque em "📷 iFood" e fotografe a tela do computador com o tempo do iFood.');return;}
+  if(!fotoTempoIfoodBase64){alert('📸 Foto da TELA do App Próprio é obrigatória.\n\nToque em "📷 App Próprio" e fotografe a tela do computador com o tempo do App Próprio.');return;}
   const motivosJust=tempoConferirJust(), just=(document.getElementById('tempoJust').value||'').trim();
   const iguais=tempoIguais(app,ifoodT);
   if(iguais.length){ alert('⛔ Tempo IGUAL ao registro anterior não é aceito ('+iguais.join(', ')+').\n\nConfira no App Próprio e no iFood e registre o tempo de agora.'); return; }
@@ -983,6 +1008,11 @@ function salvarTempoEntrega(){
     const t=document.getElementById('tempoJust'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth',block:'center'}); }
     return;
   }
+  // as 2 fotos precisam chegar ao servidor antes de registrar o tempo
+  _tempoSalvando=true; const btS=document.getElementById('btnSalvarTempo'), txS=btS?btS.textContent:''; if(btS){ btS.disabled=true; btS.textContent='⏳ Enviando as fotos...'; }
+  let fotosOk=false; try{ fotosOk=await tempoEnviarFotos(idx+1, app, ifoodT); }finally{ _tempoSalvando=false; if(btS){ btS.disabled=false; btS.textContent=txS; } }
+  if(!fotosOk){ alert('⛔ As fotos do tempo não chegaram ao sistema (internet fraca?).\n\nO tempo NÃO foi registrado. Confira a internet e toque em "Salvar registro de tempo" de novo (as fotos continuam aqui).'); return; }
+  if(tempoRegDe(idx)) return; // já registrado enquanto as fotos subiam
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64,just:motivosJust.length?just:''});
   tempoRegistros.sort((a,b)=>a.idx-b.idx);
