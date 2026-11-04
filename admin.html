@@ -213,7 +213,9 @@
           <select class="cont-in" id="audLoja" style="min-width:200px"></select>
           <input class="cont-in" id="audDia" type="date">
           <button class="action-btn btn-nova" onclick="audCarregar()">Ver linha do tempo</button>
+          <button class="action-btn btn-nova" onclick="refCarregar()">🔁 Lojas que refizeram o checklist (7 dias)</button>
         </div>
+        <div id="refBox" style="font-size:0.84rem;margin-bottom:10px"></div>
         <div id="audBox" style="font-size:0.84rem"></div>
       </div>
     </div>
@@ -976,6 +978,16 @@
     box.innerHTML='<div style="margin-bottom:8px"><b>'+escH(r.unidade)+' · '+escH(r.dia)+'</b>'+(r.janela?' <span style="color:var(--muted)">· horário do checklist de abertura e Start Dina: '+escH(r.janela)+'</span>':'')+'</div>'+
       (r.eventos.length?'<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">'+r.eventos.map((e,i)=>`<div style="display:flex;gap:10px;padding:7px 10px;${i?'border-top:1px solid var(--border);':''}background:${e.nivel==='err'?'rgba(255,68,68,0.07)':'transparent'}"><span style="font-family:monospace;min-width:64px;color:var(--gold)">${escH(e.hora||'—')}</span><span style="min-width:90px;color:var(--muted);font-size:0.75rem">${escH(e.tipo)}</span><span style="color:${cor[e.nivel]||'var(--text)'}">${escH(e.txt)}</span></div>`).join('')+'</div>':'<span style="color:var(--muted)">Nada registrado nesse dia.</span>');
   }
+  // ── Lojas que salvaram o checklist mais de 1 vez no mesmo dia (o placar pediu de novo) ──
+  async function refCarregar(){
+    const box=document.getElementById('refBox'); box.innerHTML='<span style="color:var(--muted)">Conferindo as 11 lojas...</span>';
+    let r; try{ r=await admJsonp({action:'chkRefeitos',dias:7}); }catch(e){ box.innerHTML='<span style="color:var(--danger)">'+escH(e.message)+'</span>'; return; }
+    if(!r||r.ok!==true){ box.innerHTML='<span style="color:var(--danger)">'+escH(/reconhecida|desconhecida/i.test((r&&r.erro)||'')?'Cole o código novo do servidor (2026-11-04-c) para usar esta conferência.':(r&&r.erro)||'Erro')+'</span>'; return; }
+    if(!r.lista.length){ box.innerHTML='✅ Nenhuma loja precisou refazer o checklist nos últimos 7 dias.'; return; }
+    box.innerHTML='<div style="font-weight:700;margin:6px 0">🔁 '+r.lista.length+' dia(s) em que a loja salvou o checklist mais de uma vez · toque para ver a linha do tempo</div>'+
+      '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">'+r.lista.map((x,i)=>`<div onclick="refAbrir('${escH(x.unidade)}','${escH(x.dia)}')" style="cursor:pointer;display:flex;gap:10px;flex-wrap:wrap;padding:7px 10px;${i?'border-top:1px solid var(--border);':''}"><b style="min-width:170px">${escH(x.unidade)}</b><span style="font-family:monospace;color:var(--gold)">${escH(x.dia.slice(0,5))}</span><span>${x.aberturas>1?'abertura '+x.aberturas+'x ('+escH(x.horasAbertura.join(', '))+')':'abertura '+x.aberturas+'x'}${x.fechamentos>1?' · fechamento '+x.fechamentos+'x ('+escH(x.horasFechamento.join(', '))+')':''}</span><span style="color:${x.placarEnviado===false?'var(--danger)':'var(--green)'}">${x.placarEnviado===false?'placar NÃO enviado':x.placarEnviado?'placar enviado':''}</span></div>`).join('')+'</div>';
+  }
+  function refAbrir(u,dia){ document.getElementById('audLoja').value=u; const p=dia.split('/'); document.getElementById('audDia').value=p[2]+'-'+p[1]+'-'+p[0]; audCarregar(); document.getElementById('audBox').scrollIntoView({behavior:'smooth',block:'start'}); }
   // ── Conferência dos números do placar (duplicados e valores fora do normal) ──
   async function dupCarregar(){
     const box=document.getElementById('dupBox'); box.innerHTML='<span style="color:var(--muted)">Conferindo...</span>';
