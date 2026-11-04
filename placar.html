@@ -2077,12 +2077,19 @@ function renderEtapasChecklist(info){
   if(typeof verificarBotaoRegistrar==='function') verificarBotaoRegistrar();
 }
 
+function chkOkLocal(turno){ try{ return !!localStorage.getItem(chaveHoje('chk_ok_'+turno)); }catch(e){ return false; } }
 async function carregarStatusChecklist(){
   if(!unidadeAtual) return;
-  let dados;
-  try{ dados=await chkJsonp({action:'getChecklistStatus'},12000); }
-  catch(e){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
-  if(!dados||!dados.ok){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
+  // já salvo hoje neste celular: libera na hora (a conferência no servidor continua abaixo)
+  const okAbLocal=chkOkLocal('abertura'), okFeLocal=chkOkLocal('fechamento');
+  if(okAbLocal) _liberarAbertura();
+  if(okFeLocal) chkFechamentoFeito=true;
+  let dados=null;
+  for(const t of [15000,25000]){ try{ dados=await chkJsonp({action:'getChecklistStatus'},t); if(dados&&dados.ok) break; }catch(e){ dados=null; } }
+  if(!dados||!dados.ok){
+    if(typeof logProva==='function') logProva('CHECKLIST_STATUS_FALHOU', (okAbLocal?'abertura salva neste celular; ':'')+'sem resposta do servidor');
+    _exibirBloqueioAbertura('Não consegui conferir o checklist no servidor. Verifique a internet e toque em atualizar.'); renderEtapasChecklist(); return;
+  }
   const slug=slugLoja(unidadeAtual);
   let r=dados.resumo&&(dados.resumo[slug]||dados.resumo[unidadeAtual]);
   // Isaac Manhã e Isaac Noite usam a mesma loja "isaac": cada turno só conta o que ele mesmo preencheu
@@ -2095,8 +2102,13 @@ async function carregarStatusChecklist(){
   try{ itAb=await chkItensDoTurno('abertura'); }catch(e){ _exibirBloqueioAbertura('Não consegui conferir o checklist. Verifique a internet.'); renderEtapasChecklist(); return; }
   try{ itFe=await chkItensDoTurno('fechamento'); }catch(e){ itFe=null; }
   // abertura completa = todos os itens de abertura conferidos hoje (se a loja não tem itens, não bloqueia)
-  if(!itAb.length || itAb.every(it=>idsAb.has(String(it.id)))) _liberarAbertura();
-  else _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
+  const faltamAb=itAb.filter(it=>!idsAb.has(String(it.id).trim()));
+  if(!faltamAb.length) _liberarAbertura();
+  else {
+    // servidor diz que falta, mas este celular salvou: não manda refazer, só registra para conferirmos
+    if(typeof logProva==='function') logProva(okAbLocal?'CHECKLIST_STATUS_DIVERGE':'CHECKLIST_STATUS_INCOMPLETO','abertura: servidor tem '+idsAb.size+' de '+itAb.length+'; faltam '+faltamAb.length+' ('+faltamAb.slice(0,5).map(it=>it.id).join(',')+')');
+    _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
+  }
   // fechamento completo = todos os itens de fechamento conferidos hoje (loja sem itens de fechamento não trava o envio)
   if(itFe && (!itFe.length || itFe.every(it=>idsFe.has(String(it.id))))) chkFechamentoFeito = true;
   renderEtapasChecklist({nokAb:r&&r.abertura?r.abertura.nok:0});
@@ -2426,6 +2438,9 @@ async function salvarChecklist(){
   try{ localStorage.removeItem(chkChaveRasc()); }catch(e){}
   msg.textContent='✓ Checklist salvo com sucesso!'; msg.style.color='#2ecc71';
   if(typeof logProva==='function') logProva('CHECKLIST_SALVO', turno);
+  // 04/11/2026: lembra no celular que o checklist do turno foi salvo hoje (se a conferência no servidor falhar
+  // depois — internet ruim, servidor lento — o gerente não precisa refazer o checklist inteiro)
+  try{ localStorage.setItem(chaveHoje('chk_ok_'+turno), String(Date.now())); }catch(e){}
   if(turno==='abertura') _liberarAbertura();
   else chkFechamentoFeito=true;
   renderEtapasChecklist();
