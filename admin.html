@@ -197,7 +197,7 @@
     <div class="tab-content active" id="tab-hoje">
       <div>
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Hoje na rede</span>
-          <span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span></div>
+          <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span><button class="action-btn btn-nova btnAtualizarHoje" onclick="atualizarAgora(this)">↻ Atualizar agora</button></span></div>
         <div id="aparBox" style="display:none;margin-bottom:16px"></div>
         <div id="excAdmBox" style="display:none;margin-bottom:16px"></div>
         <div id="vagasAdmBox" style="display:none;margin-bottom:16px"></div>
@@ -206,7 +206,7 @@
         <div class="hoje-resumo" id="hojeResumo"></div>
         <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
         <div class="hoje-grid" id="hojeLojas"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
-        <div style="margin-top:14px"><button class="save-metas-btn outline" onclick="carregarHoje()">↻ Atualizar agora</button></div>
+        <div style="margin-top:14px"><button class="save-metas-btn outline btnAtualizarHoje" onclick="atualizarAgora(this)">↻ Atualizar agora</button></div>
         <div class="section-title" style="margin-top:24px">🔎 Linha do tempo da loja</div>
         <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Tudo o que chegou ao sistema de uma loja num dia, na ordem da hora: checklist salvo (ou que não salvou e por quê), atrasos, tentativas fora da loja pelo GPS, Start Dina, motoboys, tempos, equipe, selfie e envio do placar. Use para conferir o que o gerente diz.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -781,6 +781,20 @@
     document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
   }
 
+  // Botão "Atualizar agora": mostra que está atualizando e confere a proteção (robô) na hora, junto com as lojas
+  let _atualizando=false;
+  async function atualizarAgora(){
+    if(_atualizando) return; _atualizando=true;
+    const bts=[...document.querySelectorAll('.btnAtualizarHoje')];
+    bts.forEach(b=>{ b.disabled=true; b.textContent='⏳ Atualizando...'; });
+    const pb=document.getElementById('protBox'); if(pb) pb.style.opacity='0.5';
+    try{ await Promise.all([carregarProtecao(), carregarHoje()]); }catch(e){}
+    if(pb) pb.style.opacity='';
+    const h=new Date(), hh=String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0')+':'+String(h.getSeconds()).padStart(2,'0');
+    bts.forEach(b=>{ b.disabled=false; b.textContent='✓ Atualizado às '+hh; });
+    setTimeout(()=>bts.forEach(b=>{ if(!b.disabled) b.textContent='↻ Atualizar agora'; }),8000);
+    _atualizando=false;
+  }
   // ── Proteção: versão do servidor, partes do código e backup ──
   async function carregarProtecao(){
     const box=document.getElementById('protBox');
