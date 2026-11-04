@@ -43,6 +43,12 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
    (b) entregue ao Robson uma **mensagem pronta para o grupo dos gerentes** ("📢 Placar atualizado — o que mudou: 1)… 2)…", curta,
    linguagem simples, com o que o gerente precisa fazer diferente), com botão de copiar. Pedido do Robson em 02/11/2026.
 
+12. **Regras fixas do Robson (04/11/2026) — nunca parar de fazer** (detalhes na seção 0 do `ESTADO_DO_PROJETO.md`):
+   (a) manter o ESTADO, os dois CLAUDE.md e o "Guia do Sistema Dina Pizza — como continuar" (https://claude.ai/artifact/TzgTtJBaEoPaSxunb2A8Mf) atualizados a cada entrega, para outra conversa continuar sem perder nada;
+   (b) antes de entregar, testar no simulador comparando com a versão anterior — nada que funciona pode parar; se a mudança ALTERA algo que já funciona, avisar o Robson ANTES;
+   (c) a cada 4 ou 5 mudanças percebidas pelos gerentes, mensagem pronta "Como era → Como ficou" para o grupo (lista na seção 5 do ESTADO);
+   (d) todo dia 1 do mês, documento geral das mudanças do mês para o grupo (tarefa agendada).
+
 11. **Nome do cargo:** o gerente regional (Marco) é chamado de **GDI** em todas as telas e mensagens (pedido do Robson em 02/11/2026). Os nomes técnicos (`regional.html`, `/regional`, `regPend*`, `__regional__`) continuam iguais.
 
 ## Mapa das telas
