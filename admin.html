@@ -207,6 +207,14 @@
         <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
         <div class="hoje-grid" id="hojeLojas"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
         <div style="margin-top:14px"><button class="save-metas-btn outline" onclick="carregarHoje()">↻ Atualizar agora</button></div>
+        <div class="section-title" style="margin-top:24px">🔎 Linha do tempo da loja</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Tudo o que chegou ao sistema de uma loja num dia, na ordem da hora: checklist salvo (ou que não salvou e por quê), atrasos, tentativas fora da loja pelo GPS, Start Dina, motoboys, tempos, equipe, selfie e envio do placar. Use para conferir o que o gerente diz.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <select class="cont-in" id="audLoja" style="min-width:200px"></select>
+          <input class="cont-in" id="audDia" type="date">
+          <button class="action-btn btn-nova" onclick="audCarregar()">Ver linha do tempo</button>
+        </div>
+        <div id="audBox" style="font-size:0.84rem"></div>
       </div>
     </div>
 
@@ -948,6 +956,25 @@
         <td style="white-space:nowrap"><button class="action-btn btn-nova" onclick="geoLocalizar(this)">Localizar endereço</button> <button class="action-btn btn-nova" onclick="geoSalvarCoord(this)">Salvar coordenadas</button></td></tr>`; }).join('');
     const cel=(l,p)=>{ const ap=l.aparelhos||{}; const lista=(ap.lista||[]).filter(x=>x.papel===p); const todos=lista.length?lista:(ap[p]?[ap[p]]:[]); return todos.length?'<td>'+todos.map(a=>`<div style="margin-bottom:8px"><span class="badge ok">✓ ${escH(a.info||'autorizado')}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">desde ${escH(dataBR(a.desde))}</div><button class="action-btn btn-reset" style="margin-top:6px" onclick="aparDecidir(${a.linha},'remover')">Remover</button></div>`).join('')+'</td>':`<td><span class="badge sem">Nenhum</span></td>`; };
     at.innerHTML=LOJAS_HOJE.lojas.map(l=>`<tr><td style="font-weight:600">${escH(l.unidade)}${l.aparelhos&&l.aparelhos.pendentes?` <span class="badge sem">${l.aparelhos.pendentes} aguardando</span>`:''}</td>${cel(l,'gerente')}${cel(l,'assistente')}</tr>`).join('');
+  }
+  // ── Linha do tempo da loja (auditoria do dia) ──
+  (function audIniciar(){
+    try{ const sel=document.getElementById('audLoja'); if(!sel) return;
+      ['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'].forEach(u=>sel.add(new Option(u,u)));
+      const a=new Date(); if(a.getHours()<4) a.setDate(a.getDate()-1);
+      document.getElementById('audDia').value=a.getFullYear()+'-'+String(a.getMonth()+1).padStart(2,'0')+'-'+String(a.getDate()).padStart(2,'0');
+    }catch(e){}
+  })();
+  async function audCarregar(){
+    const box=document.getElementById('audBox'), u=document.getElementById('audLoja').value, d=document.getElementById('audDia').value;
+    if(!d){ showToast('Escolha o dia.','warn'); return; }
+    const p=d.split('-'), dia=p[2]+'/'+p[1]+'/'+p[0];
+    box.innerHTML='<span style="color:var(--muted)">Buscando...</span>';
+    let r; try{ r=await admJsonp({action:'auditoriaLoja',unidade:u,dia}); }catch(e){ box.innerHTML='<span style="color:var(--danger)">'+escH(e.message)+'</span>'; return; }
+    if(!r||r.ok!==true){ box.innerHTML='<span style="color:var(--danger)">'+escH(/reconhecida|desconhecida/i.test((r&&r.erro)||'')?'Cole o código novo do servidor (2026-11-03-i) para usar a linha do tempo.':(r&&r.erro)||'Erro')+'</span>'; return; }
+    const cor={ok:'var(--green)',err:'var(--danger)'};
+    box.innerHTML='<div style="margin-bottom:8px"><b>'+escH(r.unidade)+' · '+escH(r.dia)+'</b>'+(r.janela?' <span style="color:var(--muted)">· horário do checklist de abertura e Start Dina: '+escH(r.janela)+'</span>':'')+'</div>'+
+      (r.eventos.length?'<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">'+r.eventos.map((e,i)=>`<div style="display:flex;gap:10px;padding:7px 10px;${i?'border-top:1px solid var(--border);':''}background:${e.nivel==='err'?'rgba(255,68,68,0.07)':'transparent'}"><span style="font-family:monospace;min-width:64px;color:var(--gold)">${escH(e.hora||'—')}</span><span style="min-width:90px;color:var(--muted);font-size:0.75rem">${escH(e.tipo)}</span><span style="color:${cor[e.nivel]||'var(--text)'}">${escH(e.txt)}</span></div>`).join('')+'</div>':'<span style="color:var(--muted)">Nada registrado nesse dia.</span>');
   }
   // ── Conferência dos números do placar (duplicados e valores fora do normal) ──
   async function dupCarregar(){
