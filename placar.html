@@ -2206,6 +2206,7 @@ function abrirChecklistForm(turnoForce, horarioConferido){
   chkSelecionarTurno(turno);
   document.getElementById('chkModal').style.display='flex';
   document.body.style.overflow='hidden';
+  if(typeof logProva==='function') logProva('CHECKLIST_ABERTO', turno);
 }
 
 function fecharChecklistForm(){
@@ -2383,6 +2384,7 @@ async function salvarChecklist(){
   if(msg){ msg.textContent='📍 Conferindo se você está na loja...'; msg.style.color='#888'; }
   if(!(await conferirLocal(true))){ // a tela 📍 aparece por cima do checklist (as respostas continuam guardadas)
     if(msg){ msg.textContent='📍 Não salvou: o placar não confirmou que você está dentro da loja. Veja a tela da localização.'; msg.style.color='#ff4444'; }
+    if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', chkTurnoAtual+': fora da loja (GPS)');
     return;
   }
   if(msg) msg.textContent='';
@@ -2414,8 +2416,9 @@ async function salvarChecklist(){
     }
   }catch(e){ r=null; }
   atualizarBotaoSalvarChk();
-  if(r&&r.antes){ msg.textContent='⏰ '+r.erro; msg.style.color='#FFD000'; return; }
+  if(r&&r.antes){ msg.textContent='⏰ '+r.erro; msg.style.color='#FFD000'; if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', turno+': antes do horário'); return; }
   if(!(r&&r.ok===true)){
+    if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', turno+': '+((r&&r.erro)||'sem conexão'));
     msg.textContent='Não salvou ('+((r&&r.erro)||'sem conexão')+'). Suas respostas continuam aqui — tente de novo.';
     msg.style.color='#ff4444';
     return;
