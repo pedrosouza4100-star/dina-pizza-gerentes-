@@ -170,6 +170,37 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
 <script>
 /* ======== CONFIGURAÇÃO ======== */
 const API_URL = 'https://script.google.com/macros/s/AKfycbyoDkB5Iew8XfaNvsh-Tpk81vzKJ5tNXmNJlxGNMJEnvybu-O7tC1K0HPfEUxcsGhrXFw/exec'; // URL /exec do Apps Script. Vazio = modo demonstração.
+/* ======== DE ONDE VEIO A RESERVA + PIXEL ========
+   Preencha os IDs para ligar: Pixel do Meta (Gerenciador de Eventos) e, se usar, Google Analytics 4 (G-XXXX) / Google Ads (AW-XXXX). */
+const META_PIXEL_ID = '';
+const GOOGLE_TAG_ID = '';          // ex.: 'G-ABC123' (GA4) ou 'AW-123456789' (Google Ads)
+const GOOGLE_ADS_CONVERSAO = '';   // ex.: 'AW-123456789/AbCdEfGh' (rótulo da conversão "Reserva" no Google Ads)
+const ORIGEM=(()=>{
+  const q=new URLSearchParams(location.search),o={};
+  ['utm_source','utm_medium','utm_campaign','utm_content'].forEach(k=>{if(q.get(k))o[k]=q.get(k).slice(0,120)});
+  if(q.get('fbclid'))o.click_id='fb:'+q.get('fbclid').slice(0,180);else if(q.get('gclid'))o.click_id='g:'+q.get('gclid').slice(0,180);
+  if(document.referrer&&!document.referrer.includes(location.host))o.referencia=document.referrer.slice(0,200);
+  try{if(Object.keys(o).length)sessionStorage.setItem('res_origem',JSON.stringify(o));else return JSON.parse(sessionStorage.getItem('res_origem')||'{}')}catch(e){}
+  return o;
+})();
+if(API_URL&&META_PIXEL_ID){
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init',META_PIXEL_ID);fbq('track','PageView');
+}
+if(API_URL&&GOOGLE_TAG_ID){
+  const g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(GOOGLE_TAG_ID);document.head.appendChild(g);
+  window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config',GOOGLE_TAG_ID);
+}
+/** Conversão: chamada uma vez quando a reserva é criada. O id da reserva evita contar duas vezes. */
+function medirReserva(r,loja){
+  try{
+    const dados={content_name:'Reserva '+loja,content_category:r.ocasiao||'Reserva',num_people:r.pessoas,value:0,currency:'BRL'};
+    if(window.fbq){fbq('track','Schedule',dados,{eventID:'res-'+r.id});fbq('track','Lead',dados,{eventID:'lead-'+r.id})}
+    if(window.gtag){gtag('event','generate_lead',{event_category:'reserva',event_label:loja,value:r.pessoas,transaction_id:r.id});
+      if(GOOGLE_ADS_CONVERSAO)gtag('event','conversion',{send_to:GOOGLE_ADS_CONVERSAO,transaction_id:r.id})}
+  }catch(e){}
+}
+
 
 /* ======== API ======== */
 async function apiGet(params){
@@ -349,6 +380,7 @@ async function enviar(){
   const corpo={action:'criarReserva',loja_id:l.id,data:$('data').value,hora:estado.hora,salao:estado.salao,pessoas:pessoas(),
     nome:$('nome').value.trim(),telefone:$('tel').value,aniversario:$('anivDia').value+'/'+$('anivMes').value,
     aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value};
+  Object.assign(corpo,ORIGEM);
   if(corpo.telefone.replace(/\D/g,'').length<10)return erro('Informe o WhatsApp com DDD.');
   const conhecido=estado.cliente&&estado.cliente.tel===corpo.telefone.replace(/\D/g,'')?estado.cliente:null;
   if(conhecido&&$('blocoNome').hidden)corpo.nome=conhecido.primeiro_nome;
@@ -386,6 +418,7 @@ function blocoFidelidade(f){
 
 function mostrarSucesso(res){
   const r=res.reserva,s=res.sinal,l=estado.loja||{};
+  medirReserva(r,res.loja.nome);
   minhaReserva={id:r.id,t:r.token};
   $('okCard').innerHTML=`
     <div class="selo">🎉</div>

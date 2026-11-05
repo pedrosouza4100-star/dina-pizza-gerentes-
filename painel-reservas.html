@@ -384,7 +384,7 @@ header .esp{flex:1}
       <div class="desBox"><h3>🎉 Ocasião da visita</h3><div id="dsOcasiao"></div></div>
       <div class="desBox"><h3>👥 Tamanho dos grupos</h3><div id="dsTamanho"></div></div>
       <div class="desBox"><h3>🕖 Horários</h3><div id="dsHoras"></div></div>
-      <div class="desBox"><h3>📲 De onde vieram</h3><div id="dsOrigem"></div><div class="dica" id="dsAntec" style="margin-top:10px"></div></div>
+      <div class="desBox"><h3>📲 De onde vieram as reservas</h3><div id="dsOrigem"></div><div id="dsCampanhas"></div><div class="dica" id="dsAntec" style="margin-top:10px"></div></div>
     </div>
     <div class="desGrid">
       <div class="desBox"><h3>🎂 Grupos grandes chegando (7 dias) <span class="dica" id="dsGrN"></span></h3><div class="dica" style="margin:-6px 0 8px">Ligue antes: bolo, decoração, cadeirinha, mesa pronta.</div><div class="lst" id="dsGrupos"></div></div>
@@ -659,7 +659,7 @@ if(b.action==='fidelidadePainel'){const nomes=['Ana Souza','Bruno Lima','Carla M
           por_loja:s.loja_id==='*'&&(!b.filtro_loja||b.filtro_loja==='todas')?lojas.map((l,i)=>Object.assign({id:l.id,nome:l.nome},{reservas:60-i*6,pessoas:390-i*40,chegou:50-i*5,no_show:4-i%3,canceladas:5-i%4,comparecimento:92-i,grupos_grandes:28-i*3})):[],
           semana:[q(41,290),q(14,80),q(15,88),q(18,105),q(22,130),q(54,350),q(50,343)].map((x,i)=>Object.assign({dia:i},x)),horas:[{hora:'18:30',...q(40,250)},{hora:'19:00',...q(62,410)},{hora:'19:30',...q(55,360)},{hora:'20:00',...q(35,230)},{hora:'20:30',...q(15,96)},{hora:'21:00',...q(7,40)}],
           ocasioes:[{ocasiao:'Aniversário',...q(118,890)},{ocasiao:'Família',...q(41,210)},{ocasiao:'Confraternização',...q(25,190)},{ocasiao:'Jantar a dois',...q(18,36)},{ocasiao:'Outro',...q(12,60)}],
-          origem:[{origem:'Site',...q(170,1120)},{origem:'Feita pela loja',...q(44,266)}],tamanhos:[{faixa:'até 5',...q(118,460)},{faixa:'6-9',...q(60,420)},{faixa:'10-14',...q(24,270)},{faixa:'15-19',...q(8,136)},{faixa:'20+',...q(4,100)}],
+          origem:[{origem:'Anúncio Meta (Instagram/Facebook)',...q(78,520)},{origem:'Instagram',...q(41,260)},{origem:'Google (perfil / busca)',...q(32,198)},{origem:'Feita pela loja',...q(44,266)},{origem:'Direto / sem origem',...q(19,142)}],campanhas:[{campanha:'aniversario-novembro',...q(52,380)},{campanha:'sabado-sitio',...q(26,140)}],tamanhos:[{faixa:'até 5',...q(118,460)},{faixa:'6-9',...q(60,420)},{faixa:'10-14',...q(24,270)},{faixa:'15-19',...q(8,136)},{faixa:'20+',...q(4,100)}],
           antecedencia_media:6.4,meses:ms,grupos_chegando:[cl('G1','Juliana Ramos',2,12,'Aniversário'),cl('G2','Carlos Mendes',5,8,'Confraternização')],no_shows:[cl('N1','Patrícia Lima',-4,6,'Família')],sumidos:[Object.assign(cl('S1','Marcos Vieira',-95,5,'Aniversário'),{visitas:7,status:'chegou'})]})}
       if(b.action==='npsPainel'){const mkL=(l,nps,n,c)=>({id:l.id,nome:l.nome,nps,nps_anterior:nps==null?null:nps-6,respostas:n,promotores:0,neutros:0,detratores:0,criterios:c==null?{atendimento:null,comida:null,sabor:null,ambiente:null}:{atendimento:c,comida:c-0.2,sabor:c+0.1,ambiente:c-0.3},google:Math.round(n/3)});
         const vals=[[78,64,4.7],[61,23,4.4],[55,31,4.3],[42,18,4.1],[70,40,4.6],[null,0,null],[-8,12,3.6],[66,27,4.5]];
@@ -1396,6 +1396,7 @@ async function carregarDesempenho(){
     $('dsTamanho').innerHTML=barras(d.tamanhos,x=>x.faixa+' pessoas');
     $('dsHoras').innerHTML=barras(d.horas,x=>esc(x.hora));
     $('dsOrigem').innerHTML=barras(d.origem,x=>esc(x.origem));
+    $('dsCampanhas').innerHTML=(d.campanhas||[]).length?'<div class="rotulo" style="margin-top:12px">Campanhas (utm_campaign)</div>'+barras(d.campanhas,x=>esc(x.campanha)):'';
     $('dsAntec').textContent=d.antecedencia_media==null?'':`Em média, o cliente reserva com ${String(d.antecedencia_media).replace('.',',')} dia${d.antecedencia_media===1?'':'s'} de antecedência.`;
     const it=(r,linha,bt)=>`<div class="it"><div><b>${esc(r.nome)}</b><small>${linha}</small></div><button class="btn chamar peq" data-ds="${bt}" data-id="${esc(r.id)}">📲 Chamar</button></div>`;
     const lj=r=>admin?' · '+esc(r.loja_nome):'';
