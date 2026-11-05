@@ -401,9 +401,10 @@ function mostrarSucesso(res){
     ${s?blocoPix(s,res.loja,r):''}
     <div class="confirmar" id="boxConfirmar">
       <h3>Falta só confirmar</h3>
-      <p>Toque no botão para confirmar a sua reserva. Se mudar de planos, use o link que vai no seu WhatsApp para cancelar com um toque.</p>
+      <p>Toque no botão para confirmar a sua reserva.</p>
       <button class="btn verde" type="button" id="btConfirmarAgora">✅ Confirmar minha reserva</button>
     </div>
+    <div class="aviso" style="text-align:left">${res.lembrete_whats?`📲 No dia da reserva, entre 9h e 14h, você recebe uma mensagem no WhatsApp para confirmar a sua presença.<br><br>`:''}🙏 <b>Se acontecer algum imprevisto</b>, pedimos que cancele a reserva para liberar a mesa: <a href="${location.pathname}?r=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}" style="color:var(--yellow)">ver ou cancelar minha reserva</a>${res.loja.whatsapp?` ou <a href="https://wa.me/${res.loja.whatsapp}" target="_blank" rel="noopener" style="color:var(--yellow)">fale com a unidade</a>`:''}. Guarde este link.</div>
     ${l.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${l.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
     <button class="btn claro" type="button" onclick="location.href=location.pathname+(estado.loja?'?loja='+estado.loja.id:'')">Fazer outra reserva</button>
