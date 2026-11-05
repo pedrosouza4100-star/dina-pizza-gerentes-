@@ -152,6 +152,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
       <select id="anivMes" aria-label="Mês do aniversário"><option value="">Mês</option></select>
     </div>
     </div>
+    <label for="ocasiao">Qual é a ocasião?</label>
+    <select id="ocasiao"><option value="">Escolha</option><option>Aniversário</option><option>Confraternização</option><option>Jantar a dois</option><option>Família</option><option>Negócios</option><option>Outro</option></select>
     <label class="aceite"><input type="checkbox" id="aceite">
       <span>Quero receber pelo WhatsApp mensagens e presentes da Dina Pizza no meu aniversário e promoções. Posso cancelar quando quiser.</span></label>
     <label for="obs">Observações (opcional)</label>
@@ -346,13 +348,14 @@ async function enviar(){
   if(!estado.salao)return erro('Escolha o salão.');
   const corpo={action:'criarReserva',loja_id:l.id,data:$('data').value,hora:estado.hora,salao:estado.salao,pessoas:pessoas(),
     nome:$('nome').value.trim(),telefone:$('tel').value,aniversario:$('anivDia').value+'/'+$('anivMes').value,
-    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim()};
+    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value};
   if(corpo.telefone.replace(/\D/g,'').length<10)return erro('Informe o WhatsApp com DDD.');
   const conhecido=estado.cliente&&estado.cliente.tel===corpo.telefone.replace(/\D/g,'')?estado.cliente:null;
   if(conhecido&&$('blocoNome').hidden)corpo.nome=conhecido.primeiro_nome;
   if(corpo.nome.length<3&&!conhecido)return erro('Informe seu nome completo.');
   if(conhecido&&$('blocoAniv').hidden)corpo.aniversario='';
   else if(!$('anivDia').value||!$('anivMes').value)return erro('Informe o dia e o mês do seu aniversário.');
+  if(!corpo.ocasiao)return erro('Conte pra gente qual é a ocasião da visita. 😊');
   if(corpo.pessoas<(l.min_pessoas||1))return erro(`As reservas são a partir de ${l.min_pessoas} pessoas. Para grupos menores é só chegar, sem reserva. 😉`);
   const b=$('enviar');b.disabled=true;b.textContent='Enviando…';
   try{mostrarSucesso(await apiPost(corpo))}
