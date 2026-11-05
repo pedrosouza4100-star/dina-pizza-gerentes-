@@ -203,6 +203,7 @@
         <div id="vagasAdmBox" style="display:none;margin-bottom:16px"></div>
         <div id="regPendBox" style="display:none;margin-bottom:16px"></div>
         <div class="prot-box" id="protBox"><b>🛡️ Proteção do sistema</b> <span style="color:var(--muted)">conferindo...</span></div>
+        <div id="arqBox" style="display:none;font-size:0.84rem;margin:-4px 0 14px;padding:12px 14px;border:1px solid var(--border);border-radius:10px"></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
         <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
         <div class="hoje-grid" id="hojeLojas"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
@@ -823,13 +824,36 @@
     }
     const pior=L.some(x=>x.includes('class="err"'))?'err':L.some(x=>x.includes('class="av"'))?'av':'ok';
     box.className='prot-box '+pior;
-    box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><b>🛡️ Proteção do sistema</b>${ping&&ping.ok&&ping.versao?'<button class="save-metas-btn outline" style="padding:6px 12px;font-size:0.78rem" id="btnBackup" onclick="fazerBackup()">💾 Fazer backup agora</button>':''}</div>`+L.join('');
+    box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><b>🛡️ Proteção do sistema</b>${ping&&ping.ok&&ping.versao?'<span style="display:flex;gap:6px;flex-wrap:wrap"><button class="save-metas-btn outline" style="padding:6px 12px;font-size:0.78rem" onclick="arqAbrir()">🗄️ Arquivo dos registros antigos</button><button class="save-metas-btn outline" style="padding:6px 12px;font-size:0.78rem" id="btnBackup" onclick="fazerBackup()">💾 Fazer backup agora</button></span>':''}</div>`+L.join('');
   }
   async function fazerBackup(){
     const bt=document.getElementById('btnBackup'); if(bt){ bt.disabled=true; bt.textContent='Fazendo backup...'; }
     try{ const r=await admPost({action:'authBackupAgora'}); showToast('Backup feito às '+r.quando+' (pasta "Backups Sistema Dina Pizza" no seu Drive)','ok'); registrarLog('Backup manual feito.','ok'); }
     catch(e){ showToast(e.message,'warn'); }
     carregarProtecao();
+  }
+
+  // ── Arquivo dos registros antigos (mais de 60 dias saem das planilhas e vão para "Arquivo Sistema Dina Pizza") ──
+  const ARQ_NOMES={'Registros_Checklist':'Checklist (itens respondidos)','__tempo_real__':'Start Dina, motoboys, tempos e falta','__geo_log__':'Tentativas fora da loja (GPS)','__selfies__':'Selfies do envio','__tempo_fotos__':'Fotos dos tempos','__google_leituras__':'Leituras do Google'};
+  async function arqAbrir(){
+    const box=document.getElementById('arqBox'); box.style.display='block'; box.innerHTML='<span style="color:var(--muted)">Conferindo as planilhas...</span>';
+    let r; try{ r=await admPost({action:'authArquivoSituacao'}); }catch(e){ box.innerHTML='<span style="color:var(--danger)">'+escH(/reconhecida|desconhecida/i.test(e.message)?'Cole o código novo do servidor (2026-11-05-a) para usar o arquivo.':e.message)+'</span>'; return; }
+    const usoTxt=Object.entries(r.uso||{}).map(([k,v])=>v.erro?k+': erro':`${k}: ${(v.celulas/1e6).toFixed(2).replace('.',',')} mi de células (${String(v.pct).replace('.',',')}% do limite do Google)`).join(' · ');
+    const tot=r.abas.reduce((s,a)=>s+(a.velhas||0),0);
+    const u=r.ultimo;
+    box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><b>🗄️ Arquivo dos registros antigos</b><button class="action-btn btn-nova" onclick="document.getElementById('arqBox').style.display='none'">Fechar</button></div>
+      <div style="color:var(--muted);margin:6px 0 10px">Todo domingo, depois do backup das 4h, o que tem mais de ${r.dias} dias (antes de ${escH(r.corte)}) sai das planilhas e vai para a planilha "Arquivo Sistema Dina Pizza" no seu Drive. Nada some: é copiado e conferido antes. O placar, o Dashboard e o Admin continuam iguais (eles só usam os dias recentes). As abas das lojas, a equipe do dia, a agenda, as pendências e as escalas não entram.</div>
+      <div style="margin-bottom:8px">${escH(usoTxt)}</div>
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">${r.abas.map((a,i)=>`<div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 10px;${i?'border-top:1px solid var(--border)':''}"><span style="min-width:250px">${escH(ARQ_NOMES[a.aba]||a.aba)}</span><span style="min-width:110px">${(a.linhas||0).toLocaleString('pt-BR')} linhas</span><span style="color:${a.velhas?'var(--yellow)':'var(--muted)'}">${a.erro?escH(a.erro):a.velhas?a.velhas.toLocaleString('pt-BR')+' para arquivar':'nada para arquivar'}${a.maisAntiga?' · mais antiga: '+escH(a.maisAntiga):''}</span></div>`).join('')}</div>
+      <div style="margin-top:8px;color:var(--muted)">${u?'Última vez: '+escH(u.quando)+' ('+escH(u.origem)+')'+(u.arquivo?' · <a href="'+escH(u.arquivo)+'" target="_blank" style="color:var(--gold)">abrir o arquivo</a>':'')+(u.ok?'':' · <span style="color:var(--danger)">teve erro</span>'):'Ainda não rodou.'}</div>
+      <div style="margin-top:10px">${tot?`<button class="action-btn btn-nova" id="btnArquivar" onclick="arqAgora()">🗄️ Arquivar agora (${tot.toLocaleString('pt-BR')} linha${tot>1?'s':''})</button>`:'<span style="color:var(--green)">✅ Nada com mais de '+r.dias+' dias. Não precisa arquivar agora.</span>'}</div>`;
+  }
+  async function arqAgora(){
+    if(!confirm('Mover para o arquivo os registros com mais de 60 dias? (o backup de domingo já guarda uma cópia de tudo)')) return;
+    const bt=document.getElementById('btnArquivar'); if(bt){ bt.disabled=true; bt.textContent='Arquivando... (pode levar alguns minutos)'; }
+    try{ const r=await admPost({action:'authArquivarAgora'}); const n=Object.values(r.movidas||{}).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0); showToast(n.toLocaleString('pt-BR')+' linhas arquivadas.','ok'); registrarLog('Arquivo: '+n+' linhas movidas.','ok'); }
+    catch(e){ showToast(e.message,'warn'); }
+    arqAbrir();
   }
 
   // ── Correções das pendências do GDI esperando confirmação (18 h) ──
