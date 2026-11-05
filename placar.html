@@ -478,7 +478,7 @@
           </div>
         </div>
         <div id="tempoFotoArea">
-          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias (câmera na hora):</div>
+          <div class="card-label" style="margin-bottom:6px;color:var(--danger)">📸 Fotos obrigatórias da TELA do computador (câmera do placar, sem galeria):</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
             <div style="display:flex;flex-direction:column;gap:4px">
               <button class="camera-btn" id="cameraBtnTempoApp" onclick="abrirCameraTempoApp()" style="font-size:0.78rem;padding:10px 8px">📷 iFood</button>
@@ -839,8 +839,31 @@ function tempoConferirJust(){
   return m;
 }
 
-function abrirCameraTempoApp(){document.getElementById('cameraTempoAppInput').click();}
-function abrirCameraTempoIfood(){document.getElementById('cameraTempoIfoodInput').click();}
+// 04/11/2026: fotos do tempo SÓ pela câmera aberta dentro do placar (sem galeria), com carimbo de data/hora/loja.
+// cameraBtnTempoApp = tela do iFood (fotoTempoAppBase64) · cameraBtnTempoIfood = tela do App Próprio (fotoTempoIfoodBase64)
+function _tempoFotoPronta(qual, foto){
+  if(qual==='ifood'){ fotoTempoAppBase64=foto; const p=document.getElementById('fotoTempoAppPreview'); p.src=foto; p.style.display='block'; const b=document.getElementById('cameraBtnTempoApp'); b.className='camera-btn captured'; b.textContent='✓ iFood fotografado'; }
+  else { fotoTempoIfoodBase64=foto; const p=document.getElementById('fotoTempoIfoodPreview'); p.src=foto; p.style.display='block'; const b=document.getElementById('cameraBtnTempoIfood'); b.className='camera-btn captured'; b.textContent='✓ App fotografado'; }
+}
+function abrirCameraTempoApp(){ chkAbrirCamera('tempo_ifood', f=>_tempoFotoPronta('ifood',f), {msg:'📺 Fotografe a <b>TELA DO COMPUTADOR</b> mostrando o <b>tempo do iFood</b> agora (o número tem que aparecer na foto).'}); }
+function abrirCameraTempoIfood(){ chkAbrirCamera('tempo_app', f=>_tempoFotoPronta('app',f), {msg:'📺 Fotografe a <b>TELA DO COMPUTADOR</b> mostrando o <b>tempo do App Próprio</b> agora (o número tem que aparecer na foto).'}); }
+// manda as 2 fotos ao servidor; o tempo só é registrado se as duas chegarem
+async function tempoEnviarFotos(reg, app, ifoodT){
+  if(!(await chkRecursos()).includes('tempoFoto')) return true; // servidor antigo: segue como antes
+  const papel=localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente';
+  for(const [qual,foto] of [['ifood',fotoTempoAppBase64],['app',fotoTempoIfoodBase64]]){
+    let ok=false, erro='';
+    for(let t=0;t<2&&!ok;t++){
+      try{
+        const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),45000);
+        const r=await fetch(SCRIPT_URL,{method:'POST',signal:ctl.signal,body:JSON.stringify({action:'excTempoFoto',unidade:unidadeAtual,papel,registro:reg,qual,app,ifood:ifoodT,foto:{base64:String(foto).split(',')[1],tipo:'image/jpeg'}})});
+        clearTimeout(to); const j=JSON.parse(await r.text()); ok=!!(j&&j.ok); if(!ok) erro=(j&&j.erro)||'';
+      }catch(e){ erro=e.name==='AbortError'?'o servidor demorou':'sem internet'; }
+    }
+    if(!ok){ if(typeof logProva==='function') logProva('TEMPO_FOTO_FALHOU', reg+'º tempo '+qual+': '+erro); return false; }
+  }
+  return true;
+}
 
 function processarFotoTempoApp(input){
   if(!input.files||!input.files[0])return;
@@ -961,7 +984,9 @@ function enviarTempoReal(tipo, dados, aoResponder){
   document.head.appendChild(s);
 }
 
-function salvarTempoEntrega(){
+let _tempoSalvando=false;
+async function salvarTempoEntrega(){
+  if(_tempoSalvando) return;
   if(temLoja(unidadeAtual) && !motoboySalvo){ alert('👥 Antes do tempo de entrega, informe e salve quantos MOTOBOYS estão em serviço (com a foto da lista).'); const c=document.getElementById('cardMotoboys'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const idx=tempoJanelaAgora();
   if(idx<0){
@@ -973,8 +998,8 @@ function salvarTempoEntrega(){
   const app=parseInt(document.getElementById('tempoApp').value)||0;
   const ifoodT=parseInt(document.getElementById('tempoIfood').value)||0;
   if(!app&&!ifoodT){alert('Informe pelo menos um tempo.');return;}
-  if(!fotoTempoAppBase64){alert('📸 Foto do iFood é obrigatória. Tire a foto agora!');return;}
-  if(!fotoTempoIfoodBase64){alert('📸 Foto do App Próprio é obrigatória. Tire a foto agora!');return;}
+  if(!fotoTempoAppBase64){alert('📸 Foto da TELA do iFood é obrigatória.\n\nToque em "📷 iFood" e fotografe a tela do computador com o tempo do iFood.');return;}
+  if(!fotoTempoIfoodBase64){alert('📸 Foto da TELA do App Próprio é obrigatória.\n\nToque em "📷 App Próprio" e fotografe a tela do computador com o tempo do App Próprio.');return;}
   const motivosJust=tempoConferirJust(), just=(document.getElementById('tempoJust').value||'').trim();
   const iguais=tempoIguais(app,ifoodT);
   if(iguais.length){ alert('⛔ Tempo IGUAL ao registro anterior não é aceito ('+iguais.join(', ')+').\n\nConfira no App Próprio e no iFood e registre o tempo de agora.'); return; }
@@ -983,6 +1008,11 @@ function salvarTempoEntrega(){
     const t=document.getElementById('tempoJust'); if(t){ t.focus(); t.scrollIntoView({behavior:'smooth',block:'center'}); }
     return;
   }
+  // as 2 fotos precisam chegar ao servidor antes de registrar o tempo
+  _tempoSalvando=true; const btS=document.getElementById('btnSalvarTempo'), txS=btS?btS.textContent:''; if(btS){ btS.disabled=true; btS.textContent='⏳ Enviando as fotos...'; }
+  let fotosOk=false; try{ fotosOk=await tempoEnviarFotos(idx+1, app, ifoodT); }finally{ _tempoSalvando=false; if(btS){ btS.disabled=false; btS.textContent=txS; } }
+  if(!fotosOk){ alert('⛔ As fotos do tempo não chegaram ao sistema (internet fraca?).\n\nO tempo NÃO foi registrado. Confira a internet e toque em "Salvar registro de tempo" de novo (as fotos continuam aqui).'); return; }
+  if(tempoRegDe(idx)) return; // já registrado enquanto as fotos subiam
   const horario=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64,just:motivosJust.length?just:''});
   tempoRegistros.sort((a,b)=>a.idx-b.idx);
@@ -2077,12 +2107,19 @@ function renderEtapasChecklist(info){
   if(typeof verificarBotaoRegistrar==='function') verificarBotaoRegistrar();
 }
 
+function chkOkLocal(turno){ try{ return !!localStorage.getItem(chaveHoje('chk_ok_'+turno)); }catch(e){ return false; } }
 async function carregarStatusChecklist(){
   if(!unidadeAtual) return;
-  let dados;
-  try{ dados=await chkJsonp({action:'getChecklistStatus'},12000); }
-  catch(e){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
-  if(!dados||!dados.ok){ _exibirBloqueioAbertura(); renderEtapasChecklist(); return; }
+  // já salvo hoje neste celular: libera na hora (a conferência no servidor continua abaixo)
+  const okAbLocal=chkOkLocal('abertura'), okFeLocal=chkOkLocal('fechamento');
+  if(okAbLocal) _liberarAbertura();
+  if(okFeLocal) chkFechamentoFeito=true;
+  let dados=null;
+  for(const t of [15000,25000]){ try{ dados=await chkJsonp({action:'getChecklistStatus'},t); if(dados&&dados.ok) break; }catch(e){ dados=null; } }
+  if(!dados||!dados.ok){
+    if(typeof logProva==='function') logProva('CHECKLIST_STATUS_FALHOU', (okAbLocal?'abertura salva neste celular; ':'')+'sem resposta do servidor');
+    _exibirBloqueioAbertura('Não consegui conferir o checklist no servidor. Verifique a internet e toque em atualizar.'); renderEtapasChecklist(); return;
+  }
   const slug=slugLoja(unidadeAtual);
   let r=dados.resumo&&(dados.resumo[slug]||dados.resumo[unidadeAtual]);
   // Isaac Manhã e Isaac Noite usam a mesma loja "isaac": cada turno só conta o que ele mesmo preencheu
@@ -2095,8 +2132,13 @@ async function carregarStatusChecklist(){
   try{ itAb=await chkItensDoTurno('abertura'); }catch(e){ _exibirBloqueioAbertura('Não consegui conferir o checklist. Verifique a internet.'); renderEtapasChecklist(); return; }
   try{ itFe=await chkItensDoTurno('fechamento'); }catch(e){ itFe=null; }
   // abertura completa = todos os itens de abertura conferidos hoje (se a loja não tem itens, não bloqueia)
-  if(!itAb.length || itAb.every(it=>idsAb.has(String(it.id)))) _liberarAbertura();
-  else _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
+  const faltamAb=itAb.filter(it=>!idsAb.has(String(it.id).trim()));
+  if(!faltamAb.length) _liberarAbertura();
+  else {
+    // servidor diz que falta, mas este celular salvou: não manda refazer, só registra para conferirmos
+    if(typeof logProva==='function') logProva(okAbLocal?'CHECKLIST_STATUS_DIVERGE':'CHECKLIST_STATUS_INCOMPLETO','abertura: servidor tem '+idsAb.size+' de '+itAb.length+'; faltam '+faltamAb.length+' ('+faltamAb.slice(0,5).map(it=>it.id).join(',')+')');
+    _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
+  }
   // fechamento completo = todos os itens de fechamento conferidos hoje (loja sem itens de fechamento não trava o envio)
   if(itFe && (!itFe.length || itFe.every(it=>idsFe.has(String(it.id))))) chkFechamentoFeito = true;
   renderEtapasChecklist({nokAb:r&&r.abertura?r.abertura.nok:0});
@@ -2378,7 +2420,17 @@ function chkResponder(id, status){
   renderItensChecklist();
 }
 
+// 04/11/2026: um salvamento por vez. Antes, enquanto o GPS era conferido o botão continuava ativo e cada toque
+// gravava o checklist de novo (até 50 vezes no mesmo minuto), enchendo a planilha.
+let _chkSalvando=false;
 async function salvarChecklist(){
+  if(_chkSalvando) return;
+  _chkSalvando=true;
+  const b0=document.getElementById('chkSalvarBtn'); if(b0) b0.disabled=true;
+  let salvou=false;
+  try{ salvou=(await _salvarChecklist())===true; } finally { _chkSalvando=false; if(salvou){ const b1=document.getElementById('chkSalvarBtn'); if(b1) b1.disabled=true; } else atualizarBotaoSalvarChk(); }
+}
+async function _salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
   if(msg){ msg.textContent='📍 Conferindo se você está na loja...'; msg.style.color='#888'; }
@@ -2426,6 +2478,9 @@ async function salvarChecklist(){
   try{ localStorage.removeItem(chkChaveRasc()); }catch(e){}
   msg.textContent='✓ Checklist salvo com sucesso!'; msg.style.color='#2ecc71';
   if(typeof logProva==='function') logProva('CHECKLIST_SALVO', turno);
+  // 04/11/2026: lembra no celular que o checklist do turno foi salvo hoje (se a conferência no servidor falhar
+  // depois — internet ruim, servidor lento — o gerente não precisa refazer o checklist inteiro)
+  try{ localStorage.setItem(chaveHoje('chk_ok_'+turno), String(Date.now())); }catch(e){}
   if(turno==='abertura') _liberarAbertura();
   else chkFechamentoFeito=true;
   renderEtapasChecklist();
@@ -2435,6 +2490,7 @@ async function salvarChecklist(){
     setTimeout(()=>chkMostrarAviso(r.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 CHECKLIST FORA DO HORÁRIO', chkTextoAtraso(r.atraso.n, r.atraso.hora, true, r.atraso.bloqueiaEm, 'checklist de abertura'), 'Entendi', null), 1600);
   }
   setTimeout(()=>{ fecharChecklistForm(); carregarStatusChecklist(); carregarChkAbertos(); if(turno==='abertura'){ const c=document.getElementById('cardStartDina'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); } },1500);
+  return true;
 }
 
 window.addEventListener('load',()=>{
@@ -3205,15 +3261,10 @@ async function registrar(){
       return;
     }
     logProva('SUCESSO','payload '+_tamKB+'KB');
-    localStorage.removeItem(chaveHoje('startdina_foto'));
-    localStorage.removeItem(chaveHoje('startdina_hora'));
-    localStorage.removeItem(chaveHoje('startdina_pauta'));
-    localStorage.removeItem(chaveHoje('startdina_salvo'));
-    localStorage.removeItem(chaveHoje('tempo'));
-    localStorage.removeItem(chaveHoje('falta'));
-    localStorage.removeItem(chaveHoje('motoboys_qtd'));
-    localStorage.removeItem(chaveHoje('motoboys_salvo'));
-    localStorage.removeItem(chaveHoje('fech_rasc'));
+    // 04/11/2026: NÃO apaga mais o que foi preenchido. Se o gerente enviar antes e precisar corrigir/completar
+    // depois (placar parcial), tudo continua na tela (Start Dina, motoboys, tempos, números) e o novo envio
+    // substitui o anterior no servidor (1 linha por dia). As chaves são do dia e somem sozinhas no dia seguinte.
+    fechGuardar();
     try{ const h=new Date(); localStorage.setItem(chaveHoje('enviado_em'),String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0')); }catch(e){}
     showMsg('savedMsg');
 
@@ -3222,7 +3273,7 @@ async function registrar(){
 
     // Depois tenta buscar dias sem meta do servidor
     verificarCumprimento();
-    limpar();
+    { const sv=document.getElementById('savedMsg'); if(sv) sv.innerHTML='✅ Placar enviado às '+(localStorage.getItem(chaveHoje('enviado_em'))||'')+'. Os dados continuam na tela: se precisar corrigir ou completar, altere e envie de novo (substitui o anterior).'; setTimeout(()=>{ if(sv) sv.style.display='block'; },3100); }
   }catch(e){
     logProva('ERRO_CONEXAO',((e&&e.message)||String(e)).slice(0,150));
     const errEl=document.getElementById('errorMsg');
