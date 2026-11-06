@@ -475,6 +475,7 @@
     <div class="card card-full" id="cardTempo" style="display:none">
       <div class="card-label">🕐 Tempo de Entrega</div>
       <div class="card-meta" id="tempoRegistroInfo">3 registros por noite — sempre disponível</div>
+      <div style="margin-top:6px;font-size:0.78rem;font-weight:700;color:var(--danger)">⚠️ Se os tempos não forem registrados dentro dos horários, o placar corre o risco de ser BLOQUEADO. É obrigação do gerente da unidade ou do assistente.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px" id="tempoRegistros"></div>
       <!-- inputs file sempre fora de qualquer div que some -->
       <input type="file" id="cameraTempoAppInput" accept="image/*" capture="environment" style="display:none" onchange="processarFotoTempoApp(this)">
@@ -1064,7 +1065,7 @@ function renderTempoRegistros(){
   const nomes=['1º registro','2º registro','3º registro'];
   container.innerHTML=[0,1,2].map(i=>{
     const r=tempoRegDe(i);
-    if(!r) return tempoJanelaPassou(i)?`<div style="background:rgba(255,68,68,0.1);border:1px solid var(--danger);border-radius:6px;padding:8px 12px;font-size:0.78rem;color:var(--danger)">❌ ${nomes[i]} NÃO feito no horário (${JANELAS_TEMPO[i].label})</div>`:'';
+    if(!r) return tempoJanelaPassou(i)?`<div style="background:rgba(255,68,68,0.1);border:1px solid var(--danger);border-radius:6px;padding:8px 12px;font-size:0.78rem;color:var(--danger)">❌ ${nomes[i]} NÃO feito no horário (${JANELAS_TEMPO[i].label}) — o placar corre o risco de ser bloqueado</div>`:'';
     const metaT=METAS_TEMPO[i]||30;
     const okApp=r.app<=metaT||r.app===0;
     const okIf=r.ifood<=metaT||r.ifood===0;
@@ -2653,7 +2654,7 @@ function salvarStartDinaAgora(){
 function salvarMotoboys(){
   if(motoTravado()){alert('🔒 Depois das 20h a quantidade de motoboys fica travada.');motoAplicarTrava();return;}
   if(!filled('motoboys')){alert('Informe a quantidade de motoboys.');return;}
-  if(temLoja(unidadeAtual) && !((parseInt(document.getElementById('motoboys').value)||0)>=1)){alert('👥 Informe quantos motoboys estão trabalhando (1 ou mais).\n\nSe hoje não tem motoboy, avise o GDI: sem motoboy os tempos de entrega não podem ser registrados e o placar do dia é cancelado.');return;}
+  if(temLoja(unidadeAtual) && !((parseInt(document.getElementById('motoboys').value)||0)>=1)){alert('👥 Informe quantos motoboys estão trabalhando (1 ou mais).\n\nSe hoje não tem motoboy, avise o GDI: sem motoboy os tempos de entrega não podem ser registrados e o placar corre o risco de ser bloqueado.');return;}
   if(!fotoMotoBase64){alert('📋 Fotografe a lista de motoboys antes de salvar!');return;}
   motoboySalvo=true;
   localStorage.setItem(chaveHoje('motoboys_qtd'), document.getElementById('motoboys').value);
