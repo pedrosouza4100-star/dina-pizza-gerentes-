@@ -21,10 +21,21 @@
     document.body.appendChild(aviso);
   }
   var nova=null;
+  // 06/11/2026: a página aberta precisa ser da versão atual. Antes, um placar antigo guardado no celular (aba restaurada,
+  // cache do navegador) lia a versão nova na 1ª conferência, achava que já estava atualizado e nunca recarregava
+  // (Colombo, 05/11). Agora a página só vale se foi aberta com ?v=<versão atual> no endereço; senão recarrega na hora
+  // com esse endereço novo, que o navegador nunca guardou (então vem a página nova do servidor).
+  function versaoDaPagina(){ try{ return new URL(location.href).searchParams.get('v'); }catch(e){ return null; } }
+  function garantirAtual(v){
+    if(versaoDaPagina()===v) return false;
+    try{ var k='dina_vurl_'+location.pathname+'_'+v, n=Number(sessionStorage.getItem(k)||0); if(n>=2) return false; sessionStorage.setItem(k,String(n+1)); }catch(e){}
+    var u=new URL(location.href); u.searchParams.set('v',v); location.replace(u.toString());
+    return true;
+  }
   function checar(){
     buscar().then(function(v){
       if(!v) return;
-      if(base===null){ base=v; return; }
+      if(base===null){ base=v; garantirAtual(v); return; }
       if(v===base) return;
       nova=v;
       if(document.visibilityState==='hidden'){ recarregar(v); return; }   // fora da tela: atualiza sem atrapalhar

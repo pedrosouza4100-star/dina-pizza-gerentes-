@@ -32,7 +32,7 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 6. Mexa só nos arquivos do assunto pedido. Antes de enviar, faça `git fetch` e confira o que outras conversas mudaram (`git log HEAD..origin/main`).
 7. Ao mudar um `.js` ou `.css` compartilhado, aumente o `?v=` nas páginas que o usam (o GitHub Pages guarda cache).
 8. **A cada publicação, troque o valor de `versao.json`** (ex.: `2026-10-25-1`). O `atualizador.js` (incluído no fim das páginas) percebe a mudança,
-   avisa o gerente e recarrega o placar/escala sozinho (na hora se o app estiver em segundo plano; senão em 1 min sem digitação, ou no máximo 15 min).
+   avisa o gerente e recarrega o placar/escala sozinho (na hora se o app estiver em segundo plano; senão em 1 min sem digitação, ou no máximo 15 min). Desde 06/11/2026 (`atualizador.js?v=2`) a página também só vale se foi aberta com `?v=<versão atual>` no endereço: aberta sem isso (link, tela inicial, aba restaurada, cache do navegador) recarrega na hora com o endereço novo (`garantirAtual`, no máximo 2 vezes por página e versão na sessão). Isso fecha o buraco da Colombo (05/11): página antiga guardada no celular lia a versão nova na 1ª conferência e se achava atualizada.
 9. **A cada entrega de código do Apps Script, troque `versao-servidor.json`** para o mesmo valor de `VERSAO_SERVIDOR` do Codigo.gs.
    O Admin (faixa "🛡️ Proteção do sistema" no Hoje na rede) e o robô de cobrança comparam os dois e avisam se o código publicado for outro,
    se faltar parte do código ou se o backup semanal parar.
