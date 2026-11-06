@@ -128,6 +128,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
         </div>
       </div>
     </div>
+    <div class="aviso" id="grupoAviso" hidden style="text-align:left"></div>
 
     <span class="rotulo">Horário</span>
     <div class="chips" id="horarios"><span class="vazio">Escolha a unidade e a data.</span></div>
@@ -152,6 +153,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
       <select id="anivMes" aria-label="Mês do aniversário"><option value="">Mês</option></select>
     </div>
     </div>
+    <label for="bolo">Vai trazer bolo?</label>
+    <select id="bolo"><option value="">Escolha</option><option value="NAO">Não</option><option value="SIM">Sim, vou levar bolo</option></select>
+    <div class="aviso" id="boloAviso" hidden style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>
     <label for="ocasiao">Qual é a ocasião?</label>
     <select id="ocasiao"><option value="">Escolha</option><option>Aniversário</option><option>Confraternização</option><option>Jantar a dois</option><option>Família</option><option>Negócios</option><option>Outro</option></select>
     <label class="aceite"><input type="checkbox" id="aceite">
@@ -216,7 +220,7 @@ async function apiPost(body){
 const Demo=(()=>{
   const H=['18:30','19:00','19:30','20:00','20:30','21:00'];
   const lojas=[
-    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:4,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,sinal_dias:[6],sinal_datas:['12/06'],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
+    {id:'sitio',nome:'Sítio Cercado',whatsapp:'5541999999999',texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',saloes:[{nome:'Salão com Espaço Kids',lugares:140},{nome:'Salão Entrada da Loja',lugares:50},{nome:'Salão Música ao Vivo',lugares:100}],horarios:H,dias_fechados:[],min_pessoas:4,max_pessoas:150,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:10,sinal_dias:[6],sinal_datas:['12/06'],tolerancia_min:15,endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado'},
     {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:4,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:10},
     {id:'agua-verde',nome:'Água Verde',whatsapp:'5541977777777',saloes:[{nome:'Salão Principal',lugares:50}],horarios:H,dias_fechados:[],min_pessoas:4,max_pessoas:30,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:0}];
   const w=v=>new Promise(r=>setTimeout(()=>r(v),300));
@@ -233,7 +237,7 @@ const Demo=(()=>{
     post(b){
       const l=lojas.find(x=>x.id===b.loja_id);
       if(b.action==='clienteConfirmar'||b.action==='clienteCancelar'){demoRes.status=b.action==='clienteConfirmar'?'confirmado':'cancelado';return w(demoRes)}
-      return w({texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
+      return w({aguarda_loja:b.pessoas>40,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
         sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor*b.pessoas,por_pessoa:l.sinal_valor,pessoas:b.pessoas,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
     }
   };
@@ -274,7 +278,7 @@ function trocarLoja(){
     $('exclusivo').hidden=!estado.loja.texto_reserva;$('exclusivo').textContent='🍕 '+(estado.loja.texto_reserva||'');
     if(pessoas()<estado.loja.min_pessoas)$('pessoas').value=estado.loja.min_pessoas;
   }
-  atualizarSinal();carregarHorarios();
+  atualizarSinal();avisoGrupo();carregarHorarios();
 }
 
 let pedido=0;
@@ -379,7 +383,7 @@ async function enviar(){
   if(!estado.salao)return erro('Escolha o salão.');
   const corpo={action:'criarReserva',loja_id:l.id,data:$('data').value,hora:estado.hora,salao:estado.salao,pessoas:pessoas(),
     nome:$('nome').value.trim(),telefone:$('tel').value,aniversario:$('anivDia').value+'/'+$('anivMes').value,
-    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value};
+    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value,bolo:$('bolo').value};
   Object.assign(corpo,ORIGEM);
   if(corpo.telefone.replace(/\D/g,'').length<10)return erro('Informe o WhatsApp com DDD.');
   const conhecido=estado.cliente&&estado.cliente.tel===corpo.telefone.replace(/\D/g,'')?estado.cliente:null;
@@ -388,6 +392,7 @@ async function enviar(){
   if(conhecido&&$('blocoAniv').hidden)corpo.aniversario='';
   else if(!$('anivDia').value||!$('anivMes').value)return erro('Informe o dia e o mês do seu aniversário.');
   if(!corpo.ocasiao)return erro('Conte pra gente qual é a ocasião da visita. 😊');
+  if(!corpo.bolo)return erro('Conte pra gente se você vai trazer bolo. 🎂');
   if(corpo.pessoas<(l.min_pessoas||1))return erro(`As reservas são a partir de ${l.min_pessoas} pessoas. Para grupos menores é só chegar, sem reserva. 😉`);
   const b=$('enviar');b.disabled=true;b.textContent='Enviando…';
   try{mostrarSucesso(await apiPost(corpo))}
@@ -435,11 +440,12 @@ function mostrarSucesso(res){
     </div>
     ${res.texto_reserva?`<div class="exclusivo">🍕 ${esc(res.texto_reserva)}</div>`:''}
     ${s?blocoPix(s,res.loja,r):''}
-    <div class="confirmar" id="boxConfirmar">
+    ${res.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>⏳ Aguardando a unidade</h3><p>Sua reserva para <b>${r.pessoas} pessoas</b> foi recebida, mas <b>ainda não está confirmada</b>. Grupos grandes precisam de um preparo especial: a unidade vai falar com você pelo WhatsApp para confirmar.</p></div>`:`<div class="confirmar" id="boxConfirmar">
       <h3>Falta só confirmar</h3>
       <p>Toque no botão para confirmar a sua reserva.</p>
       <button class="btn verde" type="button" id="btConfirmarAgora">✅ Confirmar minha reserva</button>
-    </div>
+    </div>`}
+    ${r.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
     <div class="aviso" style="text-align:left">${res.lembrete_whats?`📲 No dia da reserva, entre 9h e 14h, você recebe uma mensagem no WhatsApp para confirmar a sua presença.<br><br>`:''}🙏 <b>Se acontecer algum imprevisto</b>, pedimos que cancele a reserva para liberar a mesa: <a href="${location.pathname}?r=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}" style="color:var(--yellow)">ver ou cancelar minha reserva</a>${res.loja.whatsapp?` ou <a href="https://wa.me/${res.loja.whatsapp}" target="_blank" rel="noopener" style="color:var(--yellow)">fale com a unidade</a>`:''}. Guarde este link.</div>
     ${l.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${l.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
@@ -447,7 +453,7 @@ function mostrarSucesso(res){
     ${res.loja.whatsapp?`<p class="duvida">Dúvidas? <a href="https://wa.me/${res.loja.whatsapp}" target="_blank" rel="noopener">Fale com a unidade</a></p>`:''}`;
   $('formCard').hidden=true;$('okCard').hidden=false;window.scrollTo({top:0,behavior:'smooth'});
   ligarCopiar(s);
-  $('btConfirmarAgora').onclick=async()=>{
+  if($('btConfirmarAgora'))$('btConfirmarAgora').onclick=async()=>{
     const b=$('btConfirmarAgora');b.disabled=true;b.textContent='Confirmando…';
     try{await apiPost({action:'clienteConfirmar',id:r.id,t:r.token});
       $('boxConfirmar').classList.add('ok');$('boxConfirmar').innerHTML='<h3>✅ Reserva confirmada!</h3><p>Te esperamos na Dina Pizza '+esc(res.loja.nome)+' 🍕</p>';}
@@ -495,7 +501,9 @@ function desenharMinhaReserva(v){
     </div>
     ${L.texto_reserva?`<div class="exclusivo">🍕 ${esc(L.texto_reserva)}</div>`:''}
     ${ativa&&v.taxa&&!v.taxa.pago?blocoPix(v.taxa,L,v):''}
-    ${ativa&&st!=='confirmado'?`<button class="btn verde" type="button" id="btConf">✅ Confirmar presença</button>`:''}
+    ${ativa&&st!=='confirmado'&&v.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>⏳ Aguardando a unidade</h3><p>Grupos grandes são confirmados pela própria unidade. Ela vai falar com você pelo WhatsApp.</p></div>`:''}
+    ${ativa&&st!=='confirmado'&&!v.aguarda_loja?`<button class="btn verde" type="button" id="btConf">✅ Confirmar presença</button>`:''}
+    ${ativa&&v.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
     ${ativa&&st==='confirmado'?`<div class="confirmar ok"><h3>Te esperamos! 🍕</h3><p>Sua presença está confirmada${L.tolerancia_min?'. Tolerância de '+L.tolerancia_min+' minutos após o horário':''}.</p></div>`:''}
     ${ativa?`<button class="btn claro" type="button" id="btCanc">Não vou poder ir — cancelar</button>`:''}
     ${!ativa?`<a class="btn" href="${location.pathname}?loja=${encodeURIComponent(L.id)}">Fazer nova reserva</a>`:''}
@@ -513,11 +521,13 @@ async function decidir(acao,b,txt){
 /* ======== EVENTOS ======== */
 $('loja').onchange=trocarLoja;
 $('data').onchange=()=>{atualizarSinal();carregarHorarios()};
-$('pessoas').oninput=()=>{atualizarSinal();if(estado.disp)desenharHorarios()};
+$('pessoas').oninput=()=>{atualizarSinal();avisoGrupo();if(estado.disp)desenharHorarios()};
 $('menos').onclick=()=>{$('pessoas').value=Math.max(1,pessoas()-1);$('pessoas').oninput()};
 $('mais').onclick=()=>{$('pessoas').value=pessoas()+1;$('pessoas').oninput()};
 $('horarios').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.hora=c.dataset.h;document.querySelectorAll('#horarios .chip').forEach(x=>x.classList.toggle('on',x===c));desenharSaloes()};
 $('saloes').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.salao=c.dataset.s;document.querySelectorAll('#saloes .chip').forEach(x=>x.classList.toggle('on',x===c))};
+$('bolo').onchange=()=>{$('boloAviso').hidden=$('bolo').value!=='SIM'};
+function avisoGrupo(){const l=estado.loja,a=$('grupoAviso');if(!a)return;const gg=(l&&l.grupo_grande_acima)||40,p=+$('pessoas').value||0;a.hidden=!(l&&p>gg);if(!a.hidden)a.innerHTML=`👥 Para grupos com mais de ${gg} pessoas, a reserva <b>só fica confirmada depois que a unidade falar com você</b> pelo WhatsApp. Grupos grandes precisam de um preparo especial, por isso confirmamos pessoalmente.`}
 $('tel').oninput=e=>{e.target.value=mascaraTel(e.target.value);buscarCliente()};
 $('jaCliente').onclick=e=>{if(e.target.closest('[data-naosou]')){estado.cliente=null;mostrarCliente()}};
 $('enviar').onclick=enviar;
