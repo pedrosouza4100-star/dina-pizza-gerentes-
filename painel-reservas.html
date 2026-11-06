@@ -49,12 +49,15 @@ header .esp{flex:1}
 .menu{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
 .menu button{border:0;background:none;padding:6px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:700}
 .menu button.on{background:var(--yellow);color:#2b1a12}
+.abas div{max-width:100%;overflow-x:auto;scrollbar-width:none}.abas div::-webkit-scrollbar{display:none}.abas button{white-space:nowrap;flex:0 0 auto}
+.menu{overflow-x:auto;scrollbar-width:none}.menu::-webkit-scrollbar{display:none}.menu button{white-space:nowrap}
+@media (max-width:1440px){header{flex-wrap:wrap}.menu{order:5;width:100%}}
 .wrap{max-width:1280px;margin:0 auto;padding:16px}
 
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .kpi .r{color:var(--muted);font-size:12px}.kpi .v{font-size:26px;font-weight:800;margin-top:2px}
-.abas{display:flex;justify-content:center;margin:16px 0 12px}
+.abas{display:flex;margin:16px 0 12px}.abas>div{margin:0 auto}
 .abas div{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .abas button{border:0;background:none;padding:8px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600}
 .abas button.on{background:var(--panel2);color:#fff;box-shadow:inset 0 -2px 0 var(--orange)}
@@ -303,6 +306,8 @@ header .esp{flex:1}
       <button data-aba="todas" class="on">Todas as reservas</button>
       <button data-aba="dia">☀ No dia de hoje</button>
       <button data-aba="noite">☾ Na noite de hoje</button>
+      <button data-aba="amanha">📅 Amanhã</button>
+      <button data-aba="semana">🗓️ Próximos 7 dias</button>
     </div></div>
     <div class="filtros">
       <div class="grp" id="grpLoja"><label>Unidade</label><select class="campo" id="fLoja"></select></div>
@@ -791,7 +796,9 @@ function trocarTela(t){
 async function carregar(silencioso){
   try{
     let de=$('fDe').value,ate=$('fAte').value;
-    if(filtro.aba!=='todas')de=ate=hojeISO();
+    if(filtro.aba==='dia'||filtro.aba==='noite')de=ate=hojeISO();
+    else if(filtro.aba==='amanha')de=ate=somaDias(hojeISO(),1);
+    else if(filtro.aba==='semana'){de=hojeISO();ate=somaDias(hojeISO(),6)}
     const d=await api('listarReservas',{de,ate,filtro_loja:$('fLoja').value});
     reservas=d.reservas;desenhar();
   }catch(e){if(!silencioso)toast(e.message,true);if(/senha/i.test(e.message))sair()}
