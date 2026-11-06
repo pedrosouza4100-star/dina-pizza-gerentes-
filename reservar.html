@@ -160,11 +160,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
       <select id="anivMes" aria-label="Mês do aniversário"><option value="">Mês</option></select>
     </div>
     </div>
-    <label for="bolo">Vai trazer bolo?</label>
-    <select id="bolo"><option value="">Escolha</option><option value="NAO">Não</option><option value="SIM">Sim, vou levar bolo</option></select>
-    <div class="aviso" id="boloAviso" hidden style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>
     <label for="ocasiao">Qual é a ocasião?</label>
     <select id="ocasiao"><option value="">Escolha</option><option>Aniversário</option><option>Confraternização</option><option>Jantar a dois</option><option>Família</option><option>Negócios</option><option>Outro</option></select>
+    <div id="blocoBolo" hidden>
+    <label for="bolo">🎂 Vai trazer bolo?</label>
+    <select id="bolo"><option value="">Escolha</option><option value="NAO">Não</option><option value="SIM">Sim, vou levar bolo</option></select>
+    <div class="aviso" id="boloAviso" hidden style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>
+    </div>
     <label class="aceite"><input type="checkbox" id="aceite">
       <span>Quero receber pelo WhatsApp mensagens e presentes da Dina Pizza no meu aniversário e promoções. Posso cancelar quando quiser.</span></label>
     <label for="obs">Observações (opcional)</label>
@@ -246,8 +248,8 @@ const Demo=(()=>{
       const l=lojas.find(x=>x.id===b.loja_id);
       if(b.action==='clienteAlterar'){Object.assign(demoRes,{data:b.data,hora:b.hora,salao:b.salao,adultos:b.adultos,criancas_6_10:b.criancas_6_10,criancas_0_5:b.criancas_0_5,pessoas:b.adultos+b.criancas_6_10+b.criancas_0_5,alterada:true,status:demoRes.status==='confirmado'&&b.data!==demoRes.data?'notificado':demoRes.status});return w(Object.assign({},demoRes))}
       if(b.action==='clienteConfirmar'||b.action==='clienteCancelar'){demoRes.status=b.action==='clienteConfirmar'?'confirmado':'cancelado';return w(demoRes)}
-      return w({aguarda_loja:b.pessoas>40,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
-        sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor*b.pessoas,por_pessoa:l.sinal_valor,pessoas:b.pessoas,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
+      return w({regras:{alterar_ate_horas:5,cancelar_ate_horas:24},aguarda_loja:b.pessoas>40,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
+        sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor*(b.adultos+b.criancas_6_10),por_pessoa:l.sinal_valor,pessoas:b.adultos+b.criancas_6_10,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
     }
   };
 })();
@@ -353,8 +355,9 @@ const NOMES_DIA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta
 function atualizarSinal(){
   const l=estado.loja,p=pessoas(),a=$('avisoSinal');
   if(!l||!(l.sinal_valor>0)||!$('data').value){a.hidden=true;return}
+  const qp=lerPessoas('q'),pg=Math.max(1,qp.adultos+qp.criancas_6_10),gratis=qp.criancas_0_5;
   const iso=$('data').value,dia=new Date(iso+'T12:00:00').getDay(),dm=iso.slice(8,10)+'/'+iso.slice(5,7);
-  const fim=` pedimos uma <b>pré-reserva de ${brl(l.sinal_valor)} por pessoa</b>${p>0?` (${brl(l.sinal_valor*p)} para ${p} ${p>1?'pessoas':'pessoa'})`:''} via PIX, que é <b>descontada da conta de quem fez a reserva</b>. Os dados do PIX aparecem no final. 😉`;
+  const fim=` pedimos uma <b>pré-reserva de ${brl(l.sinal_valor)} por pessoa</b> (${brl(l.sinal_valor*pg)} para ${pg} ${pg>1?'pessoas':'pessoa'}${gratis?`; criança${gratis>1?'s':''} de 0 a 5 anos não paga${gratis>1?'m':''}`:''}) via PIX, que é <b>descontada da conta de quem fez a reserva</b>. A reserva é confirmada assim que a unidade receber o comprovante. Os dados do PIX aparecem no final. 😉`;
   let txt='';
   if((l.sinal_datas||[]).includes(dm))txt=`💛 <b>${dm}</b> é uma data especial e a casa fica cheia! Para guardar a sua mesa,`+fim;
   else if((l.sinal_dias||[]).includes(dia))txt=`💛 <b>${NOMES_DIA[dia].charAt(0).toUpperCase()+NOMES_DIA[dia].slice(1)}</b> é o nosso dia mais disputado! Para guardar a sua mesa,`+fim;
@@ -404,7 +407,8 @@ async function enviar(){
   if(corpo.adultos<1)return erro('Informe pelo menos 1 adulto.');
   if(corpo.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(corpo.email))return erro('Confira o e-mail (ou deixe em branco, ele é opcional).');
   if(!corpo.ocasiao)return erro('Conte pra gente qual é a ocasião da visita. 😊');
-  if(!corpo.bolo)return erro('Conte pra gente se você vai trazer bolo. 🎂');
+  if(corpo.ocasiao!=='Aniversário')corpo.bolo='';
+  else if(!corpo.bolo)return erro('Conte pra gente se você vai trazer bolo. 🎂');
   if(corpo.pessoas<(l.min_pessoas||1))return erro(`As reservas são a partir de ${l.min_pessoas} pessoas. Para grupos menores é só chegar, sem reserva. 😉`);
   const b=$('enviar');b.disabled=true;b.textContent='Enviando…';
   try{mostrarSucesso(await apiPost(corpo))}
@@ -452,13 +456,14 @@ function mostrarSucesso(res){
     </div>
     ${res.texto_reserva?`<div class="exclusivo">🍕 ${esc(res.texto_reserva)}</div>`:''}
     ${s?blocoPix(s,res.loja,r):''}
-    ${res.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>⏳ Aguardando a unidade</h3><p>Sua reserva para <b>${r.pessoas} pessoas</b> foi recebida, mas <b>ainda não está confirmada</b>. Grupos grandes precisam de um preparo especial: a unidade vai falar com você pelo WhatsApp para confirmar.</p></div>`:`<div class="confirmar" id="boxConfirmar">
+    ${s&&!s.pago&&!res.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>💛 Falta só o PIX</h3><p>Sua reserva fica <b>confirmada assim que a unidade receber o comprovante</b> da pré-reserva. Faça o PIX acima e toque em <b>Enviar comprovante no WhatsApp</b>.</p></div>`:''}
+    ${s&&!s.pago&&!res.aguarda_loja?'':res.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>⏳ Aguardando a unidade</h3><p>Sua reserva para <b>${r.pessoas} pessoas</b> foi recebida, mas <b>ainda não está confirmada</b>. Grupos grandes precisam de um preparo especial: a unidade vai falar com você pelo WhatsApp para confirmar.</p></div>`:`<div class="confirmar" id="boxConfirmar">
       <h3>Falta só confirmar</h3>
       <p>Toque no botão para confirmar a sua reserva.</p>
       <button class="btn verde" type="button" id="btConfirmarAgora">✅ Confirmar minha reserva</button>
     </div>`}
     ${r.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
-    <div class="aviso" style="text-align:left">${res.lembrete_whats?`📲 No dia da reserva, entre 9h e 14h, você recebe uma mensagem no WhatsApp para confirmar a sua presença.<br><br>`:''}🙏 <b>Se acontecer algum imprevisto</b>, pedimos que cancele a reserva para liberar a mesa: <a href="${location.pathname}?r=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}" style="color:var(--yellow)">ver ou cancelar minha reserva</a>${res.loja.whatsapp?` ou <a href="https://wa.me/${res.loja.whatsapp}" target="_blank" rel="noopener" style="color:var(--yellow)">fale com a unidade</a>`:''}. Guarde este link.</div>
+    <div class="aviso" style="text-align:left">🔖 <b>Guarde o código da sua reserva: <span style="color:var(--yellow);font-size:17px">${esc(r.id)}</span></b><br>Com ele e o seu WhatsApp você vê, altera ou cancela a reserva em <b>“Já reservou?”</b>, no topo da página de reservas, ou direto por <a href="${location.pathname}?r=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}" style="color:var(--yellow)">este link</a>.<br><br>${regrasTexto(res.regras)}${res.lembrete_whats?`<br><br>📲 No dia da reserva, entre 9h e 14h, você recebe uma mensagem no WhatsApp para confirmar a sua presença.`:''}</div>
     ${l.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${l.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
     <button class="btn claro" type="button" onclick="location.href=location.pathname+(estado.loja?'?loja='+estado.loja.id:'')">Fazer outra reserva</button>
@@ -514,13 +519,16 @@ function desenharMinhaReserva(v){
     ${L.texto_reserva?`<div class="exclusivo">🍕 ${esc(L.texto_reserva)}</div>`:''}
     ${ativa&&v.taxa&&!v.taxa.pago?blocoPix(v.taxa,L,v):''}
     ${ativa&&st!=='confirmado'&&v.aguarda_loja?`<div class="confirmar" style="border-color:var(--yellow)"><h3>⏳ Aguardando a unidade</h3><p>Grupos grandes são confirmados pela própria unidade. Ela vai falar com você pelo WhatsApp.</p></div>`:''}
-    ${ativa&&st!=='confirmado'&&!v.aguarda_loja?`<button class="btn verde" type="button" id="btConf">✅ Confirmar presença</button>`:''}
+    ${ativa&&st!=='confirmado'&&!v.aguarda_loja&&v.aguarda_pix?`<div class="confirmar" style="border-color:var(--yellow)"><h3>💛 Aguardando o comprovante do PIX</h3><p>Sua reserva é confirmada pela unidade assim que ela receber o comprovante da pré-reserva pelo WhatsApp.</p></div>`:''}
+    ${ativa&&st!=='confirmado'&&!v.aguarda_loja&&!v.aguarda_pix?`<button class="btn verde" type="button" id="btConf">✅ Confirmar presença</button>`:''}
     ${ativa&&v.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
     ${ativa&&st==='confirmado'?`<div class="confirmar ok"><h3>Te esperamos! 🍕</h3><p>Sua presença está confirmada${L.tolerancia_min?'. Tolerância de '+L.tolerancia_min+' minutos após o horário':''}.</p></div>`:''}
     ${v.alterada?`<div class="confirmar ok"><h3>✏️ Reserva alterada!</h3><p>${st==='confirmado'?'Está tudo certo.':'Confirme a presença no botão abaixo.'}</p></div>`:''}
     ${ativa&&v.pode_alterar?`<button class="btn claro" type="button" id="btAlt">✏️ Alterar data, horário ou pessoas</button>`:''}
-    ${ativa&&!v.pode_alterar?`<p class="duvida">Faltando menos de ${v.alterar_ate_horas||2} h, para alterar fale com a unidade.</p>`:''}
-    ${ativa?`<button class="btn claro" type="button" id="btCanc">Não vou poder ir — cancelar</button>`:''}
+    ${ativa&&!v.pode_alterar?`<p class="duvida">Faltando menos de ${horasTxt(v.alterar_ate_horas||5)}, para alterar fale com a unidade.</p>`:''}
+    ${ativa&&v.pode_cancelar!==false?`<button class="btn claro" type="button" id="btCanc">Não vou poder ir — cancelar</button>`:''}
+    ${ativa&&v.pode_cancelar===false?`<p class="duvida">Faltando menos de ${horasTxt(v.cancelar_ate_horas||24)}, o cancelamento é feito pela unidade.${L.whatsapp?` <a href="https://wa.me/${L.whatsapp}?text=${encodeURIComponent('Olá! Não vou conseguir ir na reserva '+v.id+' ('+brData(v.data)+' às '+v.hora+').')}" target="_blank" rel="noopener">Avisar a unidade</a>`:''}</p>`:''}
+    ${ativa?`<div class="aviso" style="text-align:left;font-size:13px">${regrasTexto({alterar_ate_horas:v.alterar_ate_horas,cancelar_ate_horas:v.cancelar_ate_horas})}</div>`:''}
     ${!ativa?`<a class="btn" href="${location.pathname}?loja=${encodeURIComponent(L.id)}">Fazer nova reserva</a>`:''}
     ${L.whatsapp?`<p class="duvida">Precisa mudar data ou horário? <a href="https://wa.me/${L.whatsapp}" target="_blank" rel="noopener">Fale com a unidade</a></p>`:''}`;
   if(v.taxa)ligarCopiar(v.taxa);
@@ -543,6 +551,7 @@ $('lnkJaRes').onclick=abrirJaReservei;
 $('horarios').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.hora=c.dataset.h;document.querySelectorAll('#horarios .chip').forEach(x=>x.classList.toggle('on',x===c));desenharSaloes()};
 $('saloes').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.salao=c.dataset.s;document.querySelectorAll('#saloes .chip').forEach(x=>x.classList.toggle('on',x===c))};
 $('bolo').onchange=()=>{$('boloAviso').hidden=$('bolo').value!=='SIM'};
+$('ocasiao').onchange=()=>{const an=$('ocasiao').value==='Aniversário';$('blocoBolo').hidden=!an;if(!an){$('bolo').value='';$('boloAviso').hidden=true}};
 function avisoGrupo(){const l=estado.loja,a=$('grupoAviso');if(!a)return;const gg=(l&&l.grupo_grande_acima)||40,p=+$('pessoas').value||0;a.hidden=!(l&&p>gg);if(!a.hidden)a.innerHTML=`👥 Para grupos com mais de ${gg} pessoas, a reserva <b>só fica confirmada depois que a unidade falar com você</b> pelo WhatsApp. Grupos grandes precisam de um preparo especial, por isso confirmamos pessoalmente.`}
 $('tel').oninput=e=>{e.target.value=mascaraTel(e.target.value);buscarCliente()};
 $('jaCliente').onclick=e=>{if(e.target.closest('[data-naosou]')){estado.cliente=null;mostrarCliente()}};
@@ -638,6 +647,13 @@ function abrirAlterar(v){
     catch(e){b.disabled=false;b.textContent='Salvar alterações';$('altErro').textContent=e.message}
   };
   carregar();window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ======== REGRAS DE ALTERAÇÃO E CANCELAMENTO (aparecem para o cliente) ======== */
+function horasTxt(h){h=+h;return h===24?'1 dia':h%24===0?(h/24)+' dias':h+' h'}
+function regrasTexto(g){
+  g=g||{};const a=g.alterar_ate_horas==null?5:g.alterar_ate_horas,c=g.cancelar_ate_horas==null?24:g.cancelar_ate_horas;
+  return `✏️ <b>Alterar</b> data, horário ou número de pessoas: até <b>${horasTxt(a)} antes</b>, se houver lugar.<br>✕ <b>Cancelar</b>: até <b>${horasTxt(c)} antes</b> do horário da reserva. Depois disso, fale com a unidade.`;
 }
 </script>
 </body>

@@ -831,6 +831,7 @@ function seloExtra(r){
   if(r.atualizado_por==='cliente'&&r.status==='confirmado')t.push('<span class="sx conf">✔ confirmou pelo link</span>');
   if(r.atualizado_por==='cliente'&&r.status==='cancelado')t.push('<span class="sx falta">✕ cancelou pelo link</span>');
   if(r.presente_aniversario)t.push('<span class="sx gift2">🎁 presente de aniversário válido</span>');
+  if(r.taxa_motivo&&!(Number(r.valor_pago||0)>0)&&['pendente','notificado'].includes(r.status))t.push(`<span class="sx" style="background:#3b2a0c;color:#ffd166">⏳ aguardando comprovante do PIX: ao receber, lance o valor pago (confirma sozinha)</span>`);
   if(r.taxa_motivo)t.push(`<span class="sx taxa">💛 pré-reserva ${r.taxa_motivo==='dia'?'(dia disputado)':r.taxa_motivo==='data'?'(data especial)':r.taxa_motivo==='grupo'?'(grupo)':'(faltas)'}${Number(r.valor_pago||0)>0?' ✓ paga':''}</span>`);
   if(r.aguarda_loja==='SIM'&&['pendente','notificado'].includes(r.status))t.push(`<span class="sx" style="background:#3b2a0c;color:#ffd166">⚠️ Grupo grande: ligue e marque Confirmado</span>`);
   if(r.ocasiao)t.push(`<span class="sx" style="background:#2a2238;color:#d7c4ff">🎉 ${esc(r.ocasiao)}</span>`);
@@ -941,7 +942,8 @@ function msgConfirmacao(r){
       :motivoTaxa==='data'?`💛 Dia ${dm} é uma data especial e a casa fica cheia! Para guardar a sua mesa,`
       :motivoTaxa==='grupo'?`💛 Para guardar as mesas do seu grupo,`
       :`💛 Para garantir a sua mesa,`;
-    linhas.push(`${abre} pedimos uma pré-reserva de ${brl(l.sinal_valor)} por pessoa (${brl(l.sinal_valor*(+r.pessoas||1))} para ${r.pessoas} ${+r.pessoas>1?'pessoas':'pessoa'}), que é descontada da conta de quem fez a reserva.${l.pix_chave?` PIX: ${l.pix_chave}${l.pix_nome?' ('+l.pix_nome+')':''}.`:''} É só enviar o comprovante por aqui 😉`,'');
+    const pg=(r.adultos===''||r.adultos==null)?(+r.pessoas||1):Math.max(1,(+r.adultos||0)+(+r.criancas_6_10||0));
+    linhas.push(`${abre} pedimos uma pré-reserva de ${brl(l.sinal_valor)} por pessoa (${brl(l.sinal_valor*pg)} para ${pg} ${pg>1?'pessoas':'pessoa'}${+r.criancas_0_5?'; crianças de 0 a 5 anos não pagam':''}), que é descontada da conta de quem fez a reserva. A reserva fica confirmada quando recebermos o comprovante.${l.pix_chave?` PIX: ${l.pix_chave}${l.pix_nome?' ('+l.pix_nome+')':''}.`:''} É só enviar o comprovante por aqui 😉`,'');
   }else if(taxa&&pago){
     linhas.push(`✅ Pré-reserva recebida. Sua mesa está garantida!`,'');
   }
