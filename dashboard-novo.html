@@ -15,7 +15,7 @@
   [data-theme="light"]{--amar:#D9A400}
   body{background:var(--bg);color:var(--text);font-family:'Inter',Arial,sans-serif;min-height:100vh}
   a{color:inherit}
-  .wrap{max-width:1320px;margin:0 auto;padding:18px 20px 48px;display:flex;flex-direction:column;gap:16px}
+  .wrap{width:100%;margin:0 auto;padding:18px 28px 48px;display:flex;flex-direction:column;gap:16px}
   .num,.tit{font-family:'Space Grotesk',Inter,sans-serif}
   .topo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding:4px 0}
   .topo .logo-dina{width:58px}
@@ -64,8 +64,8 @@
   .graf .meta{position:absolute;left:0;right:0;border-top:2px dashed var(--amar)}
   .eixo{display:flex;gap:4px;font-size:.62rem;color:var(--muted);margin-top:4px}
   .eixo span{flex:1;text-align:center}
-  .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px;max-width:560px}
-  .cal div{aspect-ratio:1.4;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700}
+  .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
+  .cal div{height:46px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700}
   .mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
   .mini div{background:var(--inner);border-radius:14px;padding:11px 12px}
   .mini small{display:block;font-size:.72rem;color:var(--muted)}
@@ -233,7 +233,7 @@ function telaLoja(u){
   // disciplina dia a dia
   const nD=(D.disciplina||{}).nDias||D.diasNoMesAtual, s=d.dias||'', mesN=Number(D.mes), anoN=Number(D.anoNum);
   const cor={v:'var(--green)',a:'var(--amar)',r:'var(--red)'}, dica={v:'Tudo no horário',a:'Algo atrasado ou faltando',r:'Placar não enviado',h:'Hoje (em andamento)',f:'Ainda não chegou'};
-  const pri=new Date(anoN,mesN,1).getDay(); let cal=SEM.map(x=>'<div style="aspect-ratio:auto;font-size:.68rem;color:var(--muted);font-weight:700">'+x+'</div>').join('');
+  const pri=new Date(anoN,mesN,1).getDay(); let cal=SEM.map(x=>'<div style="height:auto;font-size:.68rem;color:var(--muted);font-weight:700">'+x+'</div>').join('');
   for(let i=0;i<pri;i++) cal+='<div></div>';
   for(let i=0;i<nD;i++){ const c=s[i]||'f'; cal+='<div title="'+(i+1)+': '+dica[c]+'" style="'+(cor[c]?'background:'+cor[c]+';color:var(--d-on-cor)':'border:1px dashed var(--line);color:var(--muted)')+(c==='h'?';border:2px solid var(--gold)':'')+'">'+(i+1)+'</div>'; }
   h+='<div class="duas"><div class="principal card"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="tit" style="font-size:1.15rem;font-weight:700">Disciplina do mês, dia a dia</span><span class="sub" style="font-size:.76rem">Cada quadrado é um dia</span></div><div class="cal">'+cal+'</div>'
