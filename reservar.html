@@ -439,6 +439,7 @@ function blocoFidelidade(f){
 
 function mostrarSucesso(res){
   const r=res.reserva,s=res.sinal,l=estado.loja||{};
+  estado.regras=res.regras||estado.regras;
   medirReserva(r,res.loja.nome);
   minhaReserva={id:r.id,t:r.token};
   $('okCard').innerHTML=`
@@ -464,7 +465,7 @@ function mostrarSucesso(res){
     </div>`}
     ${r.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
     <div class="aviso" style="text-align:left">🔖 <b>Guarde o código da sua reserva: <span style="color:var(--yellow);font-size:17px">${esc(r.id)}</span></b><br>Com ele e o seu WhatsApp você vê, altera ou cancela a reserva em <b>“Já reservou?”</b>, no topo da página de reservas, ou direto por <a href="${location.pathname}?r=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}" style="color:var(--yellow)">este link</a>.<br><br>${regrasTexto(res.regras)}${res.lembrete_whats?`<br><br>📲 No dia da reserva, entre 9h e 14h, você recebe uma mensagem no WhatsApp para confirmar a sua presença.`:''}</div>
-    ${l.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${l.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.</div>`:''}
+    ${l.tolerancia_min?`<div class="aviso" style="text-align:left">⏳ Tolerância de <b>${l.tolerancia_min} minutos</b>: após o horário, a reserva poderá ser cancelada.${s&&!s.pago?' '+politicaPix(true):''}</div>`:''}
     ${blocoFidelidade(res.fidelidade)}
     <button class="btn claro" type="button" onclick="location.href=location.pathname+(estado.loja?'?loja='+estado.loja.id:'')">Fazer outra reserva</button>
     ${res.loja.whatsapp?`<p class="duvida">Dúvidas? <a href="https://wa.me/${res.loja.whatsapp}" target="_blank" rel="noopener">Fale com a unidade</a></p>`:''}`;
@@ -484,6 +485,7 @@ function blocoPix(s,loja,r){
   const msg=`Olá! Segue o comprovante da pré-reserva da reserva ${r.id} (${brData(r.data)} às ${r.hora}, ${r.pessoas} pessoas).`;
   return `<div class="pix"><h3>💛 Para guardar a sua mesa</h3>
     <div>${s.motivo==='dia'?'Este é o nosso dia mais disputado. ':s.motivo==='data'?'Esta é uma data especial e a casa fica cheia. ':''}Faça a pré-reserva de <b>${brl(s.valor)}</b>${s.por_pessoa?` (${brl(s.por_pessoa)} por pessoa)`:''} por PIX para <b>${esc(s.pix_nome||'')}</b>. O valor é <b>descontado da conta de quem fez a reserva</b>.</div>
+    <div style="margin-top:10px;font-size:13px;color:var(--muted)">${politicaPix()}</div>
     <div class="chave"><input readonly value="${esc(s.pix_chave||'')}" id="chavePix"><button type="button" id="copiar">Copiar</button></div>
     ${loja&&loja.whatsapp?`<a class="btn zap" style="margin-top:12px" href="https://wa.me/${loja.whatsapp}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Enviar comprovante no WhatsApp</a>`:''}</div>`;
 }
@@ -672,6 +674,13 @@ function jaTemReserva(corpo,msg){
         :`Não conseguimos enviar agora. Use o <b>código da reserva</b> em “Alterar a minha reserva”${estado.loja&&estado.loja.whatsapp?` ou <a href="https://wa.me/${estado.loja.whatsapp}" target="_blank" rel="noopener" style="color:var(--yellow)">fale com a unidade</a>`:''}.`}
     catch(x){b.disabled=false;$('dupMsg').textContent=x.message}
   };
+}
+
+/* ======== PRÉ-RESERVA: POLÍTICA DE DEVOLUÇÃO ======== */
+function politicaPix(curto){
+  const h=horasTxt((estado.regras&&estado.regras.cancelar_ate_horas)||24);
+  return curto?`<b>Com pré-reserva paga:</b> não devolvemos o valor em caso de atraso além da tolerância ou de não comparecimento. Para ter a devolução, avise o cancelamento com pelo menos <b>${h} de antecedência</b>.`
+    :`⚠️ <b>Devolução:</b> o valor só é devolvido se o cancelamento for avisado com pelo menos <b>${h} de antecedência</b>. Atraso além da tolerância ou não comparecimento: o valor não é devolvido.`;
 }
 </script>
 </body>

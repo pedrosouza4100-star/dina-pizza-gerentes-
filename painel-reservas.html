@@ -936,6 +936,7 @@ function msgConfirmacao(r){
   if(l.endereco)linhas.push(`📍 Endereço: ${l.endereco}`);
   linhas.push('');
   if(l.tolerancia_min)linhas.push(`⏳ Tolerância de ${l.tolerancia_min} minutos: após o horário, sua reserva poderá ser cancelada.`,'');
+  if(taxa)linhas.push('⚠️ Sobre a pré-reserva: o valor só é devolvido se o cancelamento for avisado com pelo menos 24 horas de antecedência. Em caso de atraso além da tolerância ou de não comparecimento, o valor não é devolvido.','');
   if(r.bolo==='SIM')linhas.push('🎂 Sobre o bolo: quando chegar, é só entregar para a nossa atendente na recepção. Ele fica guardado em ambiente refrigerado até a hora do parabéns.','');
   if(taxa&&!pago){
     const abre=motivoTaxa==='dia'?`💛 ${dias[dia].charAt(0).toUpperCase()+dias[dia].slice(1)} é o nosso dia mais disputado! Para guardar a sua mesa,`
