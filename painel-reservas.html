@@ -834,6 +834,9 @@ function seloExtra(r){
   if(r.taxa_motivo)t.push(`<span class="sx taxa">💛 pré-reserva ${r.taxa_motivo==='dia'?'(dia disputado)':r.taxa_motivo==='data'?'(data especial)':r.taxa_motivo==='grupo'?'(grupo)':'(faltas)'}${Number(r.valor_pago||0)>0?' ✓ paga':''}</span>`);
   if(r.aguarda_loja==='SIM'&&['pendente','notificado'].includes(r.status))t.push(`<span class="sx" style="background:#3b2a0c;color:#ffd166">⚠️ Grupo grande: ligue e marque Confirmado</span>`);
   if(r.ocasiao)t.push(`<span class="sx" style="background:#2a2238;color:#d7c4ff">🎉 ${esc(r.ocasiao)}</span>`);
+  if((+r.criancas_6_10||0)+(+r.criancas_0_5||0)>0)t.push(`<span class="sx" style="background:#14283a;color:#9fd2ff">👨‍👩‍👧 ${r.adultos} adulto${+r.adultos===1?'':'s'}${+r.criancas_6_10?' · '+r.criancas_6_10+' de 6 a 10':''}${+r.criancas_0_5?' · '+r.criancas_0_5+' de 0 a 5':''}</span>`);
+  if(r.alterado_em)t.push(`<span class="sx" style="background:#2b2b12;color:#f2e58a">✏️ alterada pelo cliente ${esc(String(r.alterado_em).slice(8,10)+'/'+String(r.alterado_em).slice(5,7)+' '+String(r.alterado_em).slice(11,16))}</span>`);
+  if(r.email)t.push(`<span class="sx" style="background:#1f2a22;color:#b6e3c3">✉️ ${esc(r.email)}</span>`);
   if(r.bolo==='SIM')t.push(`<span class="sx" style="background:#3a1f2a;color:#ffb3c8">🎂 Traz bolo (guardar refrigerado)</span>`);
   if(r.faltas>0)t.push(`<span class="sx falta" title="Não compareceu em reservas dos últimos 12 meses">⚠ ${r.faltas} falta${r.faltas>1?'s':''}</span>`);
   return t.length?`<div class="sxs">${t.join('')}</div>`:'';

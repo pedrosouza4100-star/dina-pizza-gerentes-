@@ -40,6 +40,16 @@ textarea{min-height:70px;resize:vertical}
 .contador button:active{background:#38383e}
 .contador input{border:0;text-align:center;font-weight:700;border-radius:0;padding:0;height:46px;background:transparent}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.gpBox{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:4px 12px}
+.gp{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.gp:last-of-type{border-bottom:0}
+.gp>div:first-child{text-align:left}.gp b{display:block;font-size:15px}.gp small{color:var(--muted);font-size:12px}
+.gp .contador{width:150px;flex:0 0 auto}.gp .contador button{width:44px;height:42px}.gp .contador input{height:42px}
+.gpTotal{display:flex;justify-content:space-between;padding:10px 0 8px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.gpTotal b{color:var(--ink)}
+.opc{font-weight:500;color:var(--muted);font-size:12px}
+.jaRes{display:block;text-align:center;margin:-4px 0 10px;font-size:14px;color:var(--muted)}
+.jaRes a{color:var(--yellow);font-weight:700;cursor:pointer}
 .chip{border:1px solid var(--line);background:var(--panel2);border-radius:14px;padding:9px 14px;font:600 15px Inter;cursor:pointer;color:var(--ink);text-align:left}
 .chip:hover:not(:disabled){border-color:#4a4a52}
 .chip small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
@@ -56,6 +66,7 @@ textarea{min-height:70px;resize:vertical}
 .aviso{background:#2e2a12;border:1px solid #4d4518;border-radius:12px;padding:12px 14px;font-size:14px;color:#f3e7a6;margin-top:14px}
 .aviso b{color:var(--yellow)}
 .erro{background:#3a1c1c;border:1px solid #5a2320;color:#ffb3ad;border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;display:none}
+.erroV:not(:empty){display:block}
 .aceite{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14px;color:var(--ink);cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
 .aceite input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--red)}
 .btn{display:block;width:100%;border:0;border-radius:14px;padding:16px;font:800 19px 'Baloo 2',sans-serif;cursor:pointer;margin-top:20px;background:var(--red);color:#fff;text-align:center;text-decoration:none;box-shadow:0 6px 0 var(--red-d)}
@@ -112,22 +123,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
 
 <main>
   <section class="card" id="formCard">
+    <span class="jaRes">Já reservou? <a id="lnkJaRes">Ver, alterar ou cancelar a minha reserva</a></span>
     <div class="passo"><b>1</b> Onde e quando</div>
     <label for="loja">Unidade</label>
     <select id="loja"><option value="">Carregando unidades…</option></select>
     <div class="exclusivo" id="exclusivo" hidden></div>
 
-    <div class="linha">
-      <div><label for="data">Data</label><input type="date" id="data"></div>
-      <div>
-        <span class="rotulo">Pessoas</span>
-        <div class="contador">
-          <button type="button" id="menos" aria-label="Menos">−</button>
-          <input type="number" id="pessoas" value="2" min="1" inputmode="numeric" aria-label="Pessoas">
-          <button type="button" id="mais" aria-label="Mais">+</button>
-        </div>
-      </div>
-    </div>
+    <label for="data">Data</label><input type="date" id="data">
+    <span class="rotulo">Quantas pessoas?</span>
+    <div id="qPessoas"></div>
+    <input type="hidden" id="pessoas" value="2">
     <div class="aviso" id="grupoAviso" hidden style="text-align:left"></div>
 
     <span class="rotulo">Horário</span>
@@ -142,6 +147,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
     <label for="tel">WhatsApp com DDD</label>
     <input id="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="(41) 99999-9999">
     <div class="aviso" id="jaCliente" hidden></div>
+    <label for="email">E-mail <span class="opc">(opcional)</span></label>
+    <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="voce@exemplo.com">
     <div id="blocoNome">
     <label for="nome">Nome completo</label>
     <input id="nome" autocomplete="name" placeholder="Como devemos chamar você">
@@ -224,11 +231,12 @@ const Demo=(()=>{
     {id:'colombo',nome:'Colombo',whatsapp:'5541988888888',saloes:[{nome:'Salão Principal',lugares:40},{nome:'Salão Superior',lugares:110}],horarios:H,dias_fechados:[1],min_pessoas:4,max_pessoas:40,dias_maximo:60,sinal_a_partir_de:15,sinal_valor:10},
     {id:'agua-verde',nome:'Água Verde',whatsapp:'5541977777777',saloes:[{nome:'Salão Principal',lugares:50}],horarios:H,dias_fechados:[],min_pessoas:4,max_pessoas:30,dias_maximo:60,sinal_a_partir_de:0,sinal_valor:0}];
   const w=v=>new Promise(r=>setTimeout(()=>r(v),300));
-  const demoRes={id:'DEMO42',nome:'Maria',data:new Date(Date.now()+3*864e5).toISOString().slice(0,10),hora:'19:30',pessoas:4,salao:'Salão com Espaço Kids',status:'notificado',passou:false,loja:{id:'sitio',nome:'Sítio Cercado',endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado',whatsapp:'5541999999999',tolerancia_min:15,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.'},taxa:null};
+  const demoRes={id:'DEMO42',nome:'Maria',data:new Date(Date.now()+3*864e5).toISOString().slice(0,10),hora:'19:30',pessoas:4,salao:'Salão com Espaço Kids',status:'notificado',passou:false,pode_alterar:true,alterar_ate_horas:2,adultos:3,criancas_6_10:1,criancas_0_5:0,loja:{id:'sitio',nome:'Sítio Cercado',endereco:'R. Izaac Ferreira da Cruz, 3700 - Sítio Cercado',whatsapp:'5541999999999',tolerancia_min:15,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.'},taxa:null};
   return{
     get(p){
       if(p.action==='lojas')return w(lojas);
       if(p.action==='reserva')return w(demoRes);
+      if(p.action==='minhaReserva')return String(p.codigo).toUpperCase()==='DEMO42'?w({id:'DEMO42',t:'DEMO'}):Promise.reject(new Error('Não encontramos uma reserva com esse código e esse WhatsApp.'));
       if(p.action==='cliente')return w(String(p.tel).replace(/\D/g,'').endsWith('99998888')?{encontrado:true,primeiro_nome:'Maria',tem_aniversario:true,fidelidade:{meta:5,pontos:3,faltam:2,cortesias:0,visitas:3}}:{encontrado:false});
       const l=lojas.find(x=>x.id===p.loja);
       if(l.dias_fechados.includes(new Date(p.data+'T12:00').getDay()))return w({fechado:true,horarios:[]});
@@ -236,6 +244,7 @@ const Demo=(()=>{
     },
     post(b){
       const l=lojas.find(x=>x.id===b.loja_id);
+      if(b.action==='clienteAlterar'){Object.assign(demoRes,{data:b.data,hora:b.hora,salao:b.salao,adultos:b.adultos,criancas_6_10:b.criancas_6_10,criancas_0_5:b.criancas_0_5,pessoas:b.adultos+b.criancas_6_10+b.criancas_0_5,alterada:true,status:demoRes.status==='confirmado'&&b.data!==demoRes.data?'notificado':demoRes.status});return w(Object.assign({},demoRes))}
       if(b.action==='clienteConfirmar'||b.action==='clienteCancelar'){demoRes.status=b.action==='clienteConfirmar'?'confirmado':'cancelado';return w(demoRes)}
       return w({aguarda_loja:b.pessoas>40,texto_reserva:'As reservas são exclusivas para o Buffet de Pizzas e Acompanhamentos da Dina Pizza.',reserva:Object.assign({id:Math.random().toString(36).slice(2,8).toUpperCase(),token:'DEMO',status:'pendente'},b),loja:{nome:l.nome,whatsapp:l.whatsapp},
         sinal:l.sinal_valor&&((l.sinal_a_partir_de>0&&b.pessoas>=l.sinal_a_partir_de)||(l.sinal_dias||[]).includes(new Date(b.data+'T12:00').getDay()))?{motivo:'dia',valor:l.sinal_valor*b.pessoas,por_pessoa:l.sinal_valor,pessoas:b.pessoas,pix_chave:'00.000.000/0001-00',pix_nome:'Dina Pizza Gastronomia'}:null,fidelidade:{meta:5,pontos:1,faltam:4,cortesias:0,visitas:1}});
@@ -276,7 +285,7 @@ function trocarLoja(){
   if(estado.loja){
     $('data').max=somaDias(hojeISO(),estado.loja.dias_maximo);
     $('exclusivo').hidden=!estado.loja.texto_reserva;$('exclusivo').textContent='🍕 '+(estado.loja.texto_reserva||'');
-    if(pessoas()<estado.loja.min_pessoas)$('pessoas').value=estado.loja.min_pessoas;
+    if(pessoas()<estado.loja.min_pessoas){const q=lerPessoas('q');$('qAdu').value=Math.max(1,estado.loja.min_pessoas-q.criancas_6_10-q.criancas_0_5);somarPessoas('q')}
   }
   atualizarSinal();avisoGrupo();carregarHorarios();
 }
@@ -383,7 +392,8 @@ async function enviar(){
   if(!estado.salao)return erro('Escolha o salão.');
   const corpo={action:'criarReserva',loja_id:l.id,data:$('data').value,hora:estado.hora,salao:estado.salao,pessoas:pessoas(),
     nome:$('nome').value.trim(),telefone:$('tel').value,aniversario:$('anivDia').value+'/'+$('anivMes').value,
-    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value,bolo:$('bolo').value};
+    aceita_mensagens:$('aceite').checked,observacoes:$('obs').value.trim(),ocasiao:$('ocasiao').value,bolo:$('bolo').value,email:$('email').value.trim()};
+  {const q=lerPessoas('q');corpo.adultos=q.adultos;corpo.criancas_6_10=q.criancas_6_10;corpo.criancas_0_5=q.criancas_0_5}
   Object.assign(corpo,ORIGEM);
   if(corpo.telefone.replace(/\D/g,'').length<10)return erro('Informe o WhatsApp com DDD.');
   const conhecido=estado.cliente&&estado.cliente.tel===corpo.telefone.replace(/\D/g,'')?estado.cliente:null;
@@ -391,6 +401,8 @@ async function enviar(){
   if(corpo.nome.length<3&&!conhecido)return erro('Informe seu nome completo.');
   if(conhecido&&$('blocoAniv').hidden)corpo.aniversario='';
   else if(!$('anivDia').value||!$('anivMes').value)return erro('Informe o dia e o mês do seu aniversário.');
+  if(corpo.adultos<1)return erro('Informe pelo menos 1 adulto.');
+  if(corpo.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(corpo.email))return erro('Confira o e-mail (ou deixe em branco, ele é opcional).');
   if(!corpo.ocasiao)return erro('Conte pra gente qual é a ocasião da visita. 😊');
   if(!corpo.bolo)return erro('Conte pra gente se você vai trazer bolo. 🎂');
   if(corpo.pessoas<(l.min_pessoas||1))return erro(`As reservas são a partir de ${l.min_pessoas} pessoas. Para grupos menores é só chegar, sem reserva. 😉`);
@@ -433,7 +445,7 @@ function mostrarSucesso(res){
     <div class="resumo">
       <div><span>Unidade</span><b>${esc(res.loja.nome)}</b></div>
       <div><span>Data</span><b>${brData(r.data)} às ${esc(r.hora)}</b></div>
-      <div><span>Pessoas</span><b>${r.pessoas}</b></div>
+      <div><span>Pessoas</span><b>${r.pessoas}${detalhePessoas(r)}</b></div>
       <div><span>Salão</span><b>${esc(r.salao)}</b></div>
       ${l.endereco?`<div><span>Endereço</span><b>${esc(l.endereco)}</b></div>`:''}
       <div><span>Nome</span><b>${esc(r.nome)}</b></div>
@@ -495,7 +507,7 @@ function desenharMinhaReserva(v){
     <div class="resumo">
       <div><span>Unidade</span><b>${esc(L.nome)}</b></div>
       <div><span>Data</span><b>${brData(v.data)} às ${esc(v.hora)}</b></div>
-      <div><span>Pessoas</span><b>${v.pessoas}</b></div>
+      <div><span>Pessoas</span><b>${v.pessoas}${detalhePessoas(v)}</b></div>
       ${v.salao?`<div><span>Salão</span><b>${esc(v.salao)}</b></div>`:''}
       ${L.endereco?`<div><span>Endereço</span><b>${esc(L.endereco)}</b></div>`:''}
     </div>
@@ -505,11 +517,15 @@ function desenharMinhaReserva(v){
     ${ativa&&st!=='confirmado'&&!v.aguarda_loja?`<button class="btn verde" type="button" id="btConf">✅ Confirmar presença</button>`:''}
     ${ativa&&v.bolo==='SIM'?`<div class="aviso" style="text-align:left">🎂 <b>Perfeito!</b> Quando chegar, é só entregar o bolo para a nossa atendente na recepção: ele fica guardado em ambiente refrigerado até a hora do parabéns.</div>`:''}
     ${ativa&&st==='confirmado'?`<div class="confirmar ok"><h3>Te esperamos! 🍕</h3><p>Sua presença está confirmada${L.tolerancia_min?'. Tolerância de '+L.tolerancia_min+' minutos após o horário':''}.</p></div>`:''}
+    ${v.alterada?`<div class="confirmar ok"><h3>✏️ Reserva alterada!</h3><p>${st==='confirmado'?'Está tudo certo.':'Confirme a presença no botão abaixo.'}</p></div>`:''}
+    ${ativa&&v.pode_alterar?`<button class="btn claro" type="button" id="btAlt">✏️ Alterar data, horário ou pessoas</button>`:''}
+    ${ativa&&!v.pode_alterar?`<p class="duvida">Faltando menos de ${v.alterar_ate_horas||2} h, para alterar fale com a unidade.</p>`:''}
     ${ativa?`<button class="btn claro" type="button" id="btCanc">Não vou poder ir — cancelar</button>`:''}
     ${!ativa?`<a class="btn" href="${location.pathname}?loja=${encodeURIComponent(L.id)}">Fazer nova reserva</a>`:''}
     ${L.whatsapp?`<p class="duvida">Precisa mudar data ou horário? <a href="https://wa.me/${L.whatsapp}" target="_blank" rel="noopener">Fale com a unidade</a></p>`:''}`;
   if(v.taxa)ligarCopiar(v.taxa);
   const c=$('btConf');if(c)c.onclick=()=>decidir('clienteConfirmar',c,'Confirmando…');
+  const al=$('btAlt');if(al)al.onclick=()=>abrirAlterar(v);
   const x=$('btCanc');if(x)x.onclick=()=>{let ok=true;try{ok=window.confirm('Cancelar a sua reserva? A mesa fica livre para outra pessoa.')}catch(e){}if(ok)decidir('clienteCancelar',x,'Cancelando…')};
 }
 async function decidir(acao,b,txt){
@@ -522,8 +538,8 @@ async function decidir(acao,b,txt){
 $('loja').onchange=trocarLoja;
 $('data').onchange=()=>{atualizarSinal();carregarHorarios()};
 $('pessoas').oninput=()=>{atualizarSinal();avisoGrupo();if(estado.disp)desenharHorarios()};
-$('menos').onclick=()=>{$('pessoas').value=Math.max(1,pessoas()-1);$('pessoas').oninput()};
-$('mais').onclick=()=>{$('pessoas').value=pessoas()+1;$('pessoas').oninput()};
+$('qPessoas').innerHTML=blocoPessoas('q',2,0,0);ligarPessoas('q',()=>{$('pessoas').value=lerPessoas('q').total;$('pessoas').oninput()});
+$('lnkJaRes').onclick=abrirJaReservei;
 $('horarios').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.hora=c.dataset.h;document.querySelectorAll('#horarios .chip').forEach(x=>x.classList.toggle('on',x===c));desenharSaloes()};
 $('saloes').onclick=e=>{const c=e.target.closest('.chip');if(!c||c.disabled)return;estado.salao=c.dataset.s;document.querySelectorAll('#saloes .chip').forEach(x=>x.classList.toggle('on',x===c))};
 $('bolo').onchange=()=>{$('boloAviso').hidden=$('bolo').value!=='SIM'};
@@ -532,6 +548,97 @@ $('tel').oninput=e=>{e.target.value=mascaraTel(e.target.value);buscarCliente()};
 $('jaCliente').onclick=e=>{if(e.target.closest('[data-naosou]')){estado.cliente=null;mostrarCliente()}};
 $('enviar').onclick=enviar;
 iniciar();
+
+/* ======== PESSOAS POR IDADE ======== */
+function blocoPessoas(px,a,b,c){
+  const linha=(k,tit,sub,v,min)=>`<div class="gp"><div><b>${tit}</b><small>${sub}</small></div><div class="contador">
+    <button type="button" data-px="${px}" data-k="${k}" data-d="-1" aria-label="Menos">−</button>
+    <input type="number" id="${px}${k}" value="${v}" min="${min}" inputmode="numeric" aria-label="${tit}">
+    <button type="button" data-px="${px}" data-k="${k}" data-d="1" aria-label="Mais">+</button></div></div>`;
+  return `<div class="gpBox" id="${px}Box">${linha('Adu','Adultos','11 anos ou mais',a,1)}${linha('C610','Crianças de 6 a 10 anos','',b||0,0)}${linha('C05','Crianças de 0 a 5 anos','',c||0,0)}
+    <div class="gpTotal"><span>Total</span><span><b id="${px}Total">${(+a||0)+(+b||0)+(+c||0)}</b> pessoas</span></div></div>`;
+}
+function lerPessoas(px){const n=k=>Math.max(0,parseInt(($(px+k)||{}).value,10)||0);const a=n('Adu'),b=n('C610'),c=n('C05');return{adultos:a,criancas_6_10:b,criancas_0_5:c,total:a+b+c}}
+function somarPessoas(px){const q=lerPessoas(px);$(px+'Total').textContent=q.total;const cb=(window._pm||{})[px];if(cb)cb(q)}
+function ligarPessoas(px,cb){
+  (window._pm=window._pm||{})[px]=cb;const box=$(px+'Box');
+  box.onclick=e=>{const b=e.target.closest('button[data-k]');if(!b)return;const inp=$(px+b.dataset.k);inp.value=Math.max(+inp.min||0,(parseInt(inp.value,10)||0)+(+b.dataset.d));somarPessoas(px)};
+  box.oninput=e=>{if(e.target.tagName==='INPUT')somarPessoas(px)};
+}
+function detalhePessoas(r){
+  const b=+r.criancas_6_10||0,c=+r.criancas_0_5||0;if(r.adultos==null||r.adultos===''||(!b&&!c))return'';
+  return `<small style="display:block;font-weight:500;color:var(--muted)">${r.adultos} adulto${+r.adultos===1?'':'s'}${b?' · '+b+' de 6 a 10':''}${c?' · '+c+' de 0 a 5':''}</small>`;
+}
+
+/* ======== JÁ RESERVEI: código + WhatsApp → link da reserva ======== */
+function abrirJaReservei(){
+  $('formCard').hidden=true;$('okCard').hidden=false;
+  $('okCard').innerHTML=`<h2>Minha reserva</h2><p style="color:var(--muted);margin:4px 0 0">Digite o código da reserva (está na tela de reserva feita e na mensagem do WhatsApp) e o WhatsApp usado na reserva.</p>
+    <label for="jrCod">Código da reserva</label><input id="jrCod" autocomplete="off" placeholder="Ex.: K7M2Q9" style="text-transform:uppercase">
+    <label for="jrTel">WhatsApp com DDD</label><input id="jrTel" type="tel" inputmode="tel" placeholder="(41) 99999-9999">
+    <div class="erro erroV" id="jrErro"></div>
+    <button class="btn" type="button" id="jrIr">Abrir minha reserva</button>
+    <button class="btn claro" type="button" id="jrVoltar">Voltar</button>`;
+  $('jrTel').oninput=e=>{e.target.value=mascaraTel(e.target.value)};
+  $('jrVoltar').onclick=()=>{$('okCard').hidden=true;$('formCard').hidden=false};
+  $('jrIr').onclick=async()=>{
+    const b=$('jrIr');b.disabled=true;$('jrErro').textContent='';
+    try{const r=await apiGet({action:'minhaReserva',codigo:$('jrCod').value.trim(),tel:$('jrTel').value});location.href=location.pathname+'?r='+encodeURIComponent(r.id)+'&t='+encodeURIComponent(r.t)}
+    catch(e){b.disabled=false;$('jrErro').textContent=e.message}
+  };
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ======== ALTERAR A RESERVA (pelo link) ======== */
+function abrirAlterar(v){
+  const L=v.loja,alt={disp:null,hora:v.hora,salao:v.salao};
+  const ad=v.adultos==null?v.pessoas:v.adultos;
+  $('okCard').innerHTML=`<h2>✏️ Alterar reserva</h2><p style="color:var(--muted);margin:4px 0 0">Código <b style="color:var(--yellow)">${esc(v.id)}</b> · ${esc(L.nome)}</p>
+    <label for="altData">Data</label><input type="date" id="altData" value="${esc(v.data)}" min="${hojeISO()}">
+    <span class="rotulo">Quantas pessoas?</span>${blocoPessoas('alt',ad,v.criancas_6_10,v.criancas_0_5)}
+    <span class="rotulo">Horário</span><div class="chips" id="altHoras"><span class="vazio">Carregando…</span></div>
+    <span class="rotulo">Salão</span><div class="chips" id="altSaloes"></div>
+    <div class="erro erroV" id="altErro"></div>
+    <button class="btn verde" type="button" id="altSalvar">Salvar alterações</button>
+    <button class="btn claro" type="button" id="altVoltar">Voltar sem alterar</button>`;
+  const total=()=>lerPessoas('alt').total;
+  function horas(){
+    const d=alt.disp,box=$('altHoras');
+    if(!d||d.fechado){alt.hora='';box.innerHTML='<span class="vazio">A unidade não recebe reservas nesse dia.</span>';saloes();return}
+    const p=total(),ant=alt.hora;alt.hora='';
+    box.innerHTML=d.horarios.map(h=>{const cabe=!h.encerrado&&Math.max(0,...Object.values(h.vagas))>=p;const on=cabe&&h.hora===ant;if(on)alt.hora=h.hora;
+      return `<button type="button" class="chip${on?' on':''}" data-h="${esc(h.hora)}" ${cabe?'':'disabled'}>${esc(h.hora)}<small>${h.encerrado?'encerrado':cabe?'disponível':'esgotado p/ '+p}</small></button>`}).join('');
+    saloes();
+  }
+  function saloes(){
+    const d=alt.disp,box=$('altSaloes'),slot=d&&!d.fechado&&d.horarios.find(h=>h.hora===alt.hora),p=total();
+    if(!slot){alt.salao='';box.innerHTML='<span class="vazio">Escolha o horário.</span>';return}
+    const ant=alt.salao;alt.salao='';
+    box.innerHTML=Object.keys(slot.vagas).map(n=>{const vg=slot.vagas[n],cabe=vg>=p,on=cabe&&n===ant;if(on)alt.salao=n;
+      return `<button type="button" class="chip salao${on?' on':''}" data-s="${esc(n)}" ${cabe?'':'disabled'}>${esc(n)}<small>${cabe?(vg<=15?'🔥 últimos lugares':'disponível'):'sem lugar p/ '+p}</small></button>`}).join('');
+    if(!alt.salao){const ok=[...box.querySelectorAll('button:not([disabled])')];if(ok.length===1){ok[0].classList.add('on');alt.salao=ok[0].dataset.s}}
+  }
+  async function carregar(){
+    $('altHoras').innerHTML='<span class="vazio">Carregando…</span>';
+    try{alt.disp=await apiGet({action:'disponibilidade',loja:L.id,data:$('altData').value,r:minhaReserva.id,t:minhaReserva.t})}catch(e){alt.disp=null;$('altErro').textContent=e.message}
+    horas();
+  }
+  $('altHoras').onclick=e=>{const b=e.target.closest('button[data-h]');if(!b||b.disabled)return;alt.hora=b.dataset.h;horas()};
+  $('altSaloes').onclick=e=>{const b=e.target.closest('button[data-s]');if(!b||b.disabled)return;alt.salao=b.dataset.s;saloes()};
+  $('altData').onchange=carregar;
+  ligarPessoas('alt',()=>horas());
+  $('altVoltar').onclick=()=>desenharMinhaReserva(v);
+  $('altSalvar').onclick=async()=>{
+    const q=lerPessoas('alt');$('altErro').textContent='';
+    if(q.adultos<1)return $('altErro').textContent='Informe pelo menos 1 adulto.';
+    if(!alt.hora)return $('altErro').textContent='Escolha o horário.';
+    if(!alt.salao)return $('altErro').textContent='Escolha o salão.';
+    const b=$('altSalvar');b.disabled=true;b.textContent='Salvando…';
+    try{desenharMinhaReserva(await apiPost(Object.assign({action:'clienteAlterar',id:minhaReserva.id,t:minhaReserva.t,data:$('altData').value,hora:alt.hora,salao:alt.salao},q)));window.scrollTo({top:0,behavior:'smooth'})}
+    catch(e){b.disabled=false;b.textContent='Salvar alterações';$('altErro').textContent=e.message}
+  };
+  carregar();window.scrollTo({top:0,behavior:'smooth'});
+}
 </script>
 </body>
 </html>
