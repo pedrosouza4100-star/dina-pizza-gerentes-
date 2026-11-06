@@ -1,0 +1,45 @@
+/* Visual "futurista" do Sistema Dina Pizza — peças comuns a todas as telas.
+   Cores em variáveis: escuro é o padrão; [data-theme="light"] é o claro (botão sol/lua, dina-tema.js). */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root{
+  --d-bg:#07090E; --d-surface:#0E121A; --d-card:#121722; --d-card-2:#171D2A; --d-line:#242B38;
+  --d-text:#F2F4F8; --d-muted:#A3ACBB;
+  --d-red:#D93025; --d-red-hover:#B3261E; --d-red-vivo:#FF4D3D; --d-red-soft:rgba(255,77,61,0.12);
+  --d-gold:#FFD000; --d-green:#3DDC97; --d-yellow:#FFD000; --d-danger:#FF5A4E;
+  --d-glow:0 0 26px rgba(255,77,61,0.38);
+  --d-halo:radial-gradient(circle, rgba(255,200,0,0.38) 0%, rgba(255,77,61,0.22) 42%, rgba(255,77,61,0) 70%);
+  --d-logo-sombra:drop-shadow(0 6px 16px rgba(0,0,0,0.55));
+  --d-aneis:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' fill='none' stroke-width='1.5'%3E%3Ccircle cx='180' cy='180' r='80' stroke='rgba(255,208,0,0.22)'/%3E%3Ccircle cx='180' cy='180' r='118' stroke='rgba(255,77,61,0.16)'/%3E%3Ccircle cx='180' cy='180' r='158' stroke='rgba(255,77,61,0.08)'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --d-bg:#F3F5F9; --d-surface:#FFFFFF; --d-card:#FFFFFF; --d-card-2:#F6F8FB; --d-line:#E1E5EC;
+  --d-text:#0E1220; --d-muted:#566072;
+  --d-red:#D92D20; --d-red-hover:#B42318; --d-red-vivo:#D92D20; --d-red-soft:#FDEEEC;
+  --d-gold:#8A6700; --d-green:#0B7A53; --d-yellow:#8A6700; --d-danger:#C62828;
+  --d-glow:0 6px 18px rgba(217,45,32,0.25);
+  --d-halo:radial-gradient(circle, rgba(255,208,0,0.30) 0%, rgba(255,120,60,0.12) 45%, rgba(255,120,60,0) 70%);
+  --d-logo-sombra:drop-shadow(0 6px 12px rgba(150,60,0,0.22));
+  --d-aneis:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' fill='none' stroke-width='1.5'%3E%3Ccircle cx='180' cy='180' r='80' stroke='rgba(230,160,0,0.30)'/%3E%3Ccircle cx='180' cy='180' r='118' stroke='rgba(217,45,32,0.16)'/%3E%3Ccircle cx='180' cy='180' r='158' stroke='rgba(217,45,32,0.08)'/%3E%3C/svg%3E");
+  color-scheme:light;
+}
+
+/* Logomarca com a luz por trás (fica "dentro" do desenho, não colada) */
+.logo-dina{position:relative;display:inline-block;flex:none;line-height:0}
+.logo-dina::before{content:"";position:absolute;inset:-22%;border-radius:50%;background:var(--d-halo);pointer-events:none}
+.logo-dina img{position:relative;display:block;width:100%;height:auto;filter:var(--d-logo-sombra)}
+
+/* Círculos finos que saem da logomarca (repetem os círculos do logo) */
+.dina-aneis{position:relative;overflow:hidden;isolation:isolate}
+.dina-aneis::before{content:"";position:absolute;z-index:-1;width:360px;height:360px;left:-120px;top:-140px;background:var(--d-aneis) no-repeat;pointer-events:none}
+
+/* Botão sol/lua */
+.tema-btn{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid var(--d-line);background:var(--d-card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:border-color .2s,transform .1s}
+.tema-btn:hover{border-color:var(--d-gold)}
+.tema-btn:active{transform:scale(.94)}
+.tema-btn svg{width:18px;height:18px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tema-btn .sol{stroke:var(--d-gold)}
+.tema-btn .lua{stroke:var(--d-text);display:none}
+[data-theme="light"] .tema-btn .sol{display:none}
+[data-theme="light"] .tema-btn .lua{display:block}
