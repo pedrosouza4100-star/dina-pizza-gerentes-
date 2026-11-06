@@ -53,7 +53,8 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 
 ## Visual novo (aprovado pelo Robson em 06/11/2026)
 
-Visual "futurista" (quadro https://claude.ai/artifact/Xy9maWdHq1P9JLDkz39nmS, proposta A), aplicado tela por tela: **Admin ✔ (06/11)** → agenda, regional, nutricionista → placar por último (4h05).
+Visual "futurista" (quadro https://claude.ai/artifact/Xy9maWdHq1P9JLDkz39nmS, proposta A), aplicado tela por tela: **Admin ✔, agenda ✔, regional ✔, nutricionista ✔ e senha da gestão (`gestao-guard.js?v=4`, logo + tema) ✔ em 06/11** → placar por último (4h05, com mensagem ao grupo). Depois: escala, painel de escalas, dashboards, call center.
+- Cores fixas antigas trocadas por variáveis: `--d-text2` (texto claro secundário), `--d-on-cor` (texto em cima de botão verde/cinza), `--d-t-err/ok/info` (texto dos avisos), `--d-blue`. O `gestao-guard.js` tem as cores próprias (claro/escuro) porque abre também em páginas sem `dina-tema.css`.
 - Cada tela nova carrega no `<head>`: `<meta name="theme-color" content="#07090E">`, `dina-tema.css?v=N` e `dina-tema.js?v=N` (antes do resto, para não piscar).
 - Cores: variáveis `--d-*` do `dina-tema.css` (escuro é o padrão; claro em `[data-theme="light"]`). As variáveis antigas da página (`--red`, `--card`, `--border`…) passam a apontar para elas; nada de cor fixa que só funciona no escuro.
 - Botão sol/lua: `<button class="tema-btn" onclick="temaAlternar()">` com os 2 SVG (`.sol`, `.lua`); a escolha fica no aparelho (`localStorage dina_tema`).
