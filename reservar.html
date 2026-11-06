@@ -412,7 +412,7 @@ async function enviar(){
   if(corpo.pessoas<(l.min_pessoas||1))return erro(`As reservas são a partir de ${l.min_pessoas} pessoas. Para grupos menores é só chegar, sem reserva. 😉`);
   const b=$('enviar');b.disabled=true;b.textContent='Enviando…';
   try{mostrarSucesso(await apiPost(corpo))}
-  catch(e){erro(e.message);carregarHorarios()}
+  catch(e){if(/já tem uma reserva|Já existe uma reserva/i.test(e.message))return jaTemReserva(corpo,e.message);erro(e.message);carregarHorarios()}
   finally{b.disabled=false;b.textContent='Solicitar reserva'}
 }
 
@@ -654,6 +654,24 @@ function horasTxt(h){h=+h;return h===24?'1 dia':h%24===0?(h/24)+' dias':h+' h'}
 function regrasTexto(g){
   g=g||{};const a=g.alterar_ate_horas==null?5:g.alterar_ate_horas,c=g.cancelar_ate_horas==null?24:g.cancelar_ate_horas;
   return `✏️ <b>Alterar</b> data, horário ou número de pessoas: até <b>${horasTxt(a)} antes</b>, se houver lugar.<br>✕ <b>Cancelar</b>: até <b>${horasTxt(c)} antes</b> do horário da reserva. Depois disso, fale com a unidade.`;
+}
+
+/* ======== JÁ TEM RESERVA NESSE DIA: oferece alterar a que existe ======== */
+function jaTemReserva(corpo,msg){
+  const e=$('erro');e.style.display='block';
+  e.innerHTML=`<b>${esc(msg)}</b>
+    <button class="btn" type="button" id="dupAlterar" style="margin-top:12px">✏️ Alterar a minha reserva</button>
+    <button class="btn claro" type="button" id="dupLink" style="margin-top:8px">📲 Receber o link no meu WhatsApp</button>
+    <div id="dupMsg" style="margin-top:8px;font-size:13px"></div>`;
+  e.scrollIntoView({behavior:'smooth',block:'center'});
+  $('dupAlterar').onclick=()=>{abrirJaReservei();$('jrTel').value=mascaraTel(corpo.telefone)};
+  $('dupLink').onclick=async()=>{
+    const b=$('dupLink');b.disabled=true;$('dupMsg').textContent='Enviando…';
+    try{const r=await apiPost({action:'enviarLinkReserva',loja_id:corpo.loja_id,data:corpo.data,telefone:corpo.telefone});
+      $('dupMsg').innerHTML=r.enviado?'✅ Pronto! Enviamos o link da sua reserva para o seu WhatsApp. Abra a mensagem e toque em <b>Alterar</b>.'
+        :`Não conseguimos enviar agora. Use o <b>código da reserva</b> em “Alterar a minha reserva”${estado.loja&&estado.loja.whatsapp?` ou <a href="https://wa.me/${estado.loja.whatsapp}" target="_blank" rel="noopener" style="color:var(--yellow)">fale com a unidade</a>`:''}.`}
+    catch(x){b.disabled=false;$('dupMsg').textContent=x.message}
+  };
 }
 </script>
 </body>
