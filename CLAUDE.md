@@ -51,6 +51,15 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
 
 11. **Nome do cargo:** o gerente regional (Marco) é chamado de **GDI** em todas as telas e mensagens (pedido do Robson em 02/11/2026). Os nomes técnicos (`regional.html`, `/regional`, `regPend*`, `__regional__`) continuam iguais.
 
+## Visual novo (aprovado pelo Robson em 06/11/2026)
+
+Visual "futurista" (quadro https://claude.ai/artifact/Xy9maWdHq1P9JLDkz39nmS, proposta A), aplicado tela por tela: **Admin ✔ (06/11)** → agenda, regional, nutricionista → placar por último (4h05).
+- Cada tela nova carrega no `<head>`: `<meta name="theme-color" content="#07090E">`, `dina-tema.css?v=N` e `dina-tema.js?v=N` (antes do resto, para não piscar).
+- Cores: variáveis `--d-*` do `dina-tema.css` (escuro é o padrão; claro em `[data-theme="light"]`). As variáveis antigas da página (`--red`, `--card`, `--border`…) passam a apontar para elas; nada de cor fixa que só funciona no escuro.
+- Botão sol/lua: `<button class="tema-btn" onclick="temaAlternar()">` com os 2 SVG (`.sol`, `.lua`); a escolha fica no aparelho (`localStorage dina_tema`).
+- Logomarca: `<span class="logo-dina"><img src="logo-emblema.png"></span>` (luz por trás) dentro de um bloco `.dina-aneis` (círculos finos). Não use mais a logo em base64.
+- Só aparência: não mude id, onclick, nomes de função nem os z-index das telas de bloqueio. Teste antes x depois no simulador.
+
 ## Mapa das telas
 
 | Arquivo | O que é | Ações no Apps Script |
