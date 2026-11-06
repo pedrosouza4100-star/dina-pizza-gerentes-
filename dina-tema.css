@@ -8,6 +8,8 @@
   --d-red:#D93025; --d-red-hover:#B3261E; --d-red-vivo:#FF4D3D; --d-red-soft:rgba(255,77,61,0.12);
   --d-gold:#FFD000; --d-green:#3DDC97; --d-yellow:#FFD000; --d-danger:#FF5A4E;
   --d-glow:0 0 26px rgba(255,77,61,0.38);
+  --d-text2:#DADFE6; --d-on-cor:#0A0A0A; --d-blue:#4FA3FF;
+  --d-t-err:#FFB3B3; --d-t-ok:#BFF3D3; --d-t-info:#FFE9A8;
   --d-halo:radial-gradient(circle, rgba(255,200,0,0.38) 0%, rgba(255,77,61,0.22) 42%, rgba(255,77,61,0) 70%);
   --d-logo-sombra:drop-shadow(0 6px 16px rgba(0,0,0,0.55));
   --d-aneis:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' fill='none' stroke-width='1.5'%3E%3Ccircle cx='180' cy='180' r='80' stroke='rgba(255,208,0,0.22)'/%3E%3Ccircle cx='180' cy='180' r='118' stroke='rgba(255,77,61,0.16)'/%3E%3Ccircle cx='180' cy='180' r='158' stroke='rgba(255,77,61,0.08)'/%3E%3C/svg%3E");
@@ -19,6 +21,8 @@
   --d-red:#D92D20; --d-red-hover:#B42318; --d-red-vivo:#D92D20; --d-red-soft:#FDEEEC;
   --d-gold:#8A6700; --d-green:#0B7A53; --d-yellow:#8A6700; --d-danger:#C62828;
   --d-glow:0 6px 18px rgba(217,45,32,0.25);
+  --d-text2:#2B3240; --d-on-cor:#FFFFFF; --d-blue:#1F64C8;
+  --d-t-err:#9F1F17; --d-t-ok:#0B5E40; --d-t-info:#6B5000;
   --d-halo:radial-gradient(circle, rgba(255,208,0,0.30) 0%, rgba(255,120,60,0.12) 45%, rgba(255,120,60,0) 70%);
   --d-logo-sombra:drop-shadow(0 6px 12px rgba(150,60,0,0.22));
   --d-aneis:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' fill='none' stroke-width='1.5'%3E%3Ccircle cx='180' cy='180' r='80' stroke='rgba(230,160,0,0.30)'/%3E%3Ccircle cx='180' cy='180' r='118' stroke='rgba(217,45,32,0.16)'/%3E%3Ccircle cx='180' cy='180' r='158' stroke='rgba(217,45,32,0.08)'/%3E%3C/svg%3E");
@@ -43,3 +47,12 @@
 .tema-btn .lua{stroke:var(--d-text);display:none}
 [data-theme="light"] .tema-btn .sol{display:none}
 [data-theme="light"] .tema-btn .lua{display:block}
+
+/* Cabeçalho com a logomarca (telas de celular) */
+.hdr-marca{display:flex;align-items:center;gap:12px;min-width:0}
+.hdr-marca .logo-dina{width:44px}
+.hdr-tit{display:flex;flex-direction:column;gap:1px;line-height:1.15;min-width:0}
+.hdr-tit b{font-family:'Space Grotesk',Inter,sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:-0.01em;color:var(--d-text)}
+.hdr-tit small{font-size:0.72rem;color:var(--d-muted)}
+.hdr-dir{display:flex;align-items:center;gap:10px;flex:none}
+.login-logo{width:110px;margin:4px auto 2px}
