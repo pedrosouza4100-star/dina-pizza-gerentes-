@@ -621,7 +621,7 @@
           <button class="action-btn btn-nova" onclick="alpSalvar()">Salvar acesso</button></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
           <b style="font-size:0.85rem">Testar:</b>
-          <select class="cont-in" id="alpModulo"><option value="vendas">Vendas</option><option value="financeiro-movimentacao">Financeiro — movimentação</option><option value="financeiro-agenda">Financeiro — agenda</option><option value="nota-fiscal-saida">Notas de saída</option><option value="nota-fiscal-entrada">Notas de entrada</option><option value="inventario">Inventário</option></select>
+          <select class="cont-in" id="alpModulo"><option value="__resumo">Resumo do dia por loja</option><option value="vendas">Vendas (estrutura)</option><option value="financeiro-movimentacao">Financeiro — movimentação</option><option value="financeiro-agenda">Financeiro — agenda</option><option value="nota-fiscal-saida">Notas de saída</option><option value="nota-fiscal-entrada">Notas de entrada</option><option value="inventario">Inventário</option></select>
           <input class="cont-in" id="alpDia" type="date">
           <button class="action-btn btn-nova" id="alpBtnTestar" onclick="alpTestar()">🔌 Testar Alpha</button>
           <button class="action-btn btn-nova" id="alpBtnCopiar" style="display:none" onclick="alpCopiar()">📋 Copiar resultado</button></div>
@@ -1149,11 +1149,11 @@
     const bt=document.getElementById('alpBtnTestar'), pre=document.getElementById('alpRes');
     bt.disabled=true; bt.textContent='Testando...'; pre.style.display='block'; pre.textContent='Falando com o Alpha...';
     try{
-      const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'alphaTestar',modulo:document.getElementById('alpModulo').value,dia:document.getElementById('alpDia').value})});
+      const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(document.getElementById('alpModulo').value==='__resumo'?{action:'alphaResumo',dia:document.getElementById('alpDia').value}:{action:'alphaTestar',modulo:document.getElementById('alpModulo').value,dia:document.getElementById('alpDia').value})});
       const t=await r.text(); let j=null; try{ j=JSON.parse(t); }catch(e){}
       pre.textContent=j?JSON.stringify(j,null,1):t.slice(0,2000);
       document.getElementById('alpBtnCopiar').style.display='';
-      if(j&&j.ok) showToast('Alpha respondeu: '+((j.empresas||[]).length)+' empresas'+(j.quantidade!=null?' · '+j.quantidade+' registros no dia':'')+'.','ok');
+      if(j&&j.ok) showToast(j.doDia!=null?('Alpha: '+j.doDia+' vendas no dia em '+Object.keys(j.empresas||{}).length+' empresas.'):('Alpha respondeu: '+((j.empresas||[]).length)+' empresas.'),'ok');
       else showToast((j&&j.erro)||'Falha no teste','warn');
     }catch(e){ pre.textContent='⚠ '+e.message; }
     bt.disabled=false; bt.textContent='🔌 Testar Alpha';
