@@ -196,6 +196,10 @@
   .camera-btn,.falta-btn,.turno-btn,.chk-turno-btn{border-radius:12px}
   .chk-status-header,.chk-modal-header{background:linear-gradient(135deg,#B3261E,#D93025)}
   @media(max-width:360px){#dateDisplay{display:none}}
+  .falta-ir{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:600 0.86rem Inter,Arial,sans-serif;text-align:left;cursor:pointer}
+  .falta-ir span{color:var(--gold);font-size:1.1rem}
+  @keyframes faltaPisca{0%,100%{box-shadow:0 0 0 0 rgba(255,208,0,0)}25%,75%{box-shadow:0 0 0 4px rgba(255,208,0,0.85)}50%{box-shadow:0 0 0 2px rgba(255,208,0,0.4)}}
+  .falta-pisca{animation:faltaPisca 1.2s ease 2;border-radius:16px}
 </style>
 </head>
 <body>
@@ -3003,8 +3007,9 @@ function verificarBotaoRegistrar(){
     btn.onclick=null;
     if(lista){
       lista.style.display='block';
-      lista.innerHTML='<strong style="color:var(--danger)">⚠️ Ainda falta preencher:</strong><br>'
-        + faltando.map(f=>`• ${f}`).join('<br>');
+      // 07/11/2026: cada item leva até o lugar dele no placar (o gerente não achava a Equipe do dia)
+      lista.innerHTML='<strong style="color:var(--danger)">⚠️ Ainda falta preencher</strong> <span style="font-size:0.78rem;color:var(--muted)">(toque no item para ir até ele)</span><br>'
+        + faltando.map(f=>`<button type="button" class="falta-ir" onclick="irParaFalta(this.dataset.f)" data-f="${f.replace(/"/g,'&quot;')}">• ${f} <span aria-hidden="true">›</span></button>`).join('');
     }
   } else {
     btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
@@ -3012,6 +3017,18 @@ function verificarBotaoRegistrar(){
     btn.onclick=registrar;
     if(lista) lista.style.display='none';
   }
+}
+
+// leva até o card do item que falta e faz ele piscar
+function irParaFalta(txt){
+  const mapa=[['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
+  const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
+  const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
+  window.scrollTo({top:Math.max(0,el.getBoundingClientRect().top+window.scrollY-topo),behavior:'smooth'});
+  el.classList.remove('falta-pisca'); void el.offsetWidth; el.classList.add('falta-pisca');
+  setTimeout(()=>el.classList.remove('falta-pisca'),2600);
+  const campo=el.querySelector('input:not([type=hidden]):not([disabled]),textarea'); if(campo&&!campo.value) setTimeout(()=>{ try{ campo.focus({preventScroll:true}); }catch(e){} },650);
 }
 
 function confirmarEnvioComAviso(pendencias){
