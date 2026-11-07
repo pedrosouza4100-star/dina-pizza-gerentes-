@@ -52,6 +52,29 @@ header .esp{flex:1}
 .abas div{max-width:100%;overflow-x:auto;scrollbar-width:none}.abas div::-webkit-scrollbar{display:none}.abas button{white-space:nowrap;flex:0 0 auto}
 .menu{overflow-x:auto;scrollbar-width:none}.menu::-webkit-scrollbar{display:none}.menu button{white-space:nowrap}
 @media (max-width:1440px){header{flex-wrap:wrap}.menu{order:5;width:100%}}
+/* Computador: menu na lateral esquerda (no celular continua no topo) */
+@media (min-width:1000px){
+  #telaPainel{padding-left:236px}
+  #telaPainel>header{position:fixed;left:0;top:0;bottom:0;width:236px;box-sizing:border-box;flex-direction:column;flex-wrap:nowrap;align-items:stretch;
+    gap:8px;padding:18px 14px;border-bottom:0;border-top:0;border-right:1px solid var(--line);border-left:3px solid var(--red);overflow-y:auto;z-index:6}
+  #telaPainel>header img{width:64px;height:64px;align-self:center}
+  #telaPainel>header>div:nth-of-type(1){text-align:center;margin-bottom:6px}
+  #telaPainel>header .titulo{font-size:16px}
+  #telaPainel>header .sub{display:block}
+  #telaPainel>header .esp{display:none}
+  #btNova{order:1;width:100%}
+  #telaPainel>header .menu{order:2;flex-direction:column;width:100%;background:none;border:0;padding:4px 0;gap:2px;overflow:visible}
+  #telaPainel>header .menu button{text-align:left;padding:10px 12px;font-size:14px;border-radius:10px}
+  #telaPainel>header .menu button:not(.on):hover{background:var(--panel);color:var(--ink)}
+  .menu button[data-tela]::before{display:inline-block;width:24px}
+  .menu button[data-tela="reservas"]::before{content:"📅"}.menu button[data-tela="fila"]::before{content:"⏳"}
+  .menu button[data-tela="envios"]::before{content:"📲"}.menu button[data-tela="avaliacoes"]::before{content:"⭐"}
+  .menu button[data-tela="desempenho"]::before{content:"📊"}.menu button[data-tela="fidelidade"]::before{content:"🍕"}
+  .menu button[data-tela="clientes"]::before{content:"👥"}.menu button[data-tela="lojas"]::before{content:"🏪"}
+  #selWhats{order:3;width:100%!important;margin-top:auto}
+  #btAtualizar{order:4;width:100%}#btAtualizar::after{content:" Atualizar"}
+  #btSair{order:5;width:100%}
+}
 .wrap{max-width:1280px;margin:0 auto;padding:16px}
 
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
