@@ -93,6 +93,7 @@
 <div id="telaSelecao">
   <div id="eqAlertaBox" style="display:none;margin-bottom:16px"></div>
   <div id="excBox" style="display:none;margin-bottom:16px"></div>
+  <div id="plcBox" style="display:none;margin-bottom:16px"></div>
   <div id="corrBox" style="display:none;margin-bottom:16px"></div>
   <div class="card">
     <div class="sel-label">Selecione a unidade</div>
@@ -308,6 +309,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   recursos();
   carregarCorrecoes();
   carregarExcecoes(); setInterval(carregarExcecoes, 60000);
+  carregarCancelados(); setInterval(carregarCancelados, 60000);
   carregarAlertasEquipe(); setInterval(carregarAlertasEquipe, 60000);
 });
 
@@ -401,6 +403,50 @@ async function decidirExc(id, decisao, horas){
     let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
     if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
     await carregarExcecoes();
+  }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
+}
+
+// ── Placares cancelados (tempo de entrega não feito no horário): o gerente pede para reabrir com o motivo (06/11/2026) ──
+let PLCS=[];
+const PLC_ALVO=new URLSearchParams(location.search).get('cancelado')||'';
+async function carregarCancelados(){
+  try{
+    if(!(await recursos()).includes('placarCancel')) return;
+    for(let i=0;i<120 && (document.getElementById('gGuard')||document.getElementById('gGuardCss')); i++) await new Promise(r=>setTimeout(r,500));
+    const r=await jsonp({action:'excPlcAguardando',chave:chaveGestao()},20000);
+    if(!r||!r.ok) return;
+    PLCS=r.itens||[];
+  }catch(e){ return; }
+  const box=document.getElementById('plcBox');
+  const pend=PLCS.filter(x=>x.situacao==='pendente'), feitas=PLCS.filter(x=>x.situacao!=='pendente');
+  if(!pend.length&&!feitas.length&&!PLC_ALVO){ box.style.display='none'; return; }
+  box.innerHTML='<div class="card" style="border-color:'+(pend.length?'var(--danger)':'var(--border)')+'"><div class="sel-label">🚫 Placares cancelados — pedidos para reabrir'+(pend.length?' ('+pend.length+')':'')+'</div>'+
+    (pend.length?'<div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px">A loja não registrou um tempo de entrega no horário e o placar de hoje foi cancelado. Autorizado, o gerente termina e envia; não autorizado, o placar de hoje fica cancelado.</div>':'<div style="font-size:0.85rem;color:var(--muted)">Nenhum pedido esperando resposta.</div>')+
+    pend.map(x=>`<div class="corr${x.id===PLC_ALVO?' alvo':''}" id="plc_${x.id}">
+      <div style="font-weight:700">${esc(x.unidade)} <span style="font-weight:400;color:var(--muted);font-size:0.8rem">· ${x.papel==='assistente'?'assistente':'gerente'} · pediu às ${esc(x.pedidoEm)} · tempo ${esc(String(x.perdidos).split(',').join('º, '))}º não feito</span></div>
+      <div class="pend-detail" style="margin-top:6px;color:#ddd"><strong>Motivo:</strong> ${esc(x.motivo)}</div>
+      <div class="acoes" style="margin-top:8px"><button style="background:var(--green);color:#0A0A0A" onclick="decidirPlc('${x.id}','aprovar')">✅ Autorizar</button><button style="background:var(--danger);color:#fff" onclick="abrirRecusa('plc${x.id}')">❌ Não autorizar</button></div>
+      <div id="recusa_plc${x.id}" style="display:none;margin-top:10px"><textarea id="motivo_plc${x.id}" placeholder="Por que não? (o gerente vê isso no placar)"></textarea><button class="btn" style="margin-top:8px" onclick="decidirPlc('${x.id}','recusar')">Não autorizar</button></div>
+      <div id="plcMsg_${x.id}" style="font-size:0.8rem;margin-top:6px;color:var(--danger)"></div>
+    </div>`).join('')+
+    (feitas.length?'<div style="font-size:0.75rem;color:var(--muted);margin-top:12px;text-transform:uppercase;font-weight:700">Decididos hoje</div>'+feitas.map(x=>`<div style="font-size:0.8rem;color:#ccc;margin-top:6px">${x.situacao==='aprovado'?'✅':'❌'} ${esc(x.unidade)} · ${esc(x.motivo).slice(0,60)} · ${esc(x.situacao)} (${esc(x.por)})</div>`).join(''):'')+
+    '</div>';
+  box.style.display='block';
+  if(PLC_ALVO){ const a=document.getElementById('plc_'+PLC_ALVO); if(a) setTimeout(()=>a.scrollIntoView({behavior:'smooth',block:'center'}),300); }
+}
+async function decidirPlc(id, decisao){
+  const m=document.getElementById('plcMsg_'+id); m.textContent='';
+  const nome=(document.getElementById('nomeRegional').value||'').trim();
+  if(!nome){ m.textContent='Digite seu nome no campo "Seu nome (GDI)" abaixo antes de responder.'; return; }
+  const motivo=decisao==='recusar'?(document.getElementById('motivo_plc'+id).value||'').trim():'';
+  if(decisao==='recusar'&&motivo.length<5){ m.textContent='Escreva por que não autorizou.'; return; }
+  try{ localStorage.setItem('dina_regional_nome',nome); }catch(e){}
+  m.style.color='var(--muted)'; m.textContent='Salvando...';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'excPlcDecidir',id,decisao,motivo,quem:nome,chave:chaveGestao()})});
+    let r=null; try{ r=JSON.parse(await resp.text()); }catch(e){}
+    if(!(r&&r.ok)) throw new Error((r&&r.erro)||'sem resposta do servidor');
+    await carregarCancelados();
   }catch(e){ m.style.color='var(--danger)'; m.textContent='Não salvou: '+e.message; }
 }
 
@@ -646,6 +692,6 @@ async function enviarChecklist(){
   }
 }
 </script>
-<script src="atualizador.js"></script>
+<script src="atualizador.js?v=2"></script>
 </body>
 </html>

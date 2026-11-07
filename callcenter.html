@@ -211,7 +211,7 @@ function renderLojaEntrega(d){
     </div>
     <div class="indicador">
       <div class="ind-label">👥 Motoboys em Serviço</div>
-      <div class="moto-valor" style="color:${motoOk?'var(--green)':'var(--danger)'}">${moto} <span style="font-size:1rem">motoboys</span></div>
+      <div class="moto-valor" style="color:${motoOk?'var(--green)':'var(--danger)'}">${d.motoboysInformado===false?'<span style="font-size:1rem;color:var(--muted)">⏳ não informado</span>':moto+' <span style="font-size:1rem">motoboys</span>'}</div>
       ${metaMoto>0?`<div class="moto-meta">Meta: ${metaMoto} motoboys</div>`:''}
     </div>
     <div class="indicador">
@@ -255,6 +255,6 @@ function tickCountdown(){
 carregarDados();
 setInterval(tickCountdown, 1000);
 </script>
-<script src="atualizador.js"></script>
+<script src="atualizador.js?v=2"></script>
 </body>
 </html>
