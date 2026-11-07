@@ -3167,13 +3167,20 @@ async function selfieEnvio(){
 // ── Equipe do dia (02/11/2026): quadro ideal da loja (Admin) x quem está trabalhando hoje, por setor ──
 let EQ=null, eqSalvo=false, EQ_SNAP=null; // EQ_SNAP: o que já está salvo (07/11/2026: botão vira "✓ Equipe salva" até mudar algum número)
 const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['falta','Faltou'],['vaga','Vaga aberta']];
+// 07/11/2026: se a busca da equipe falhar (servidor lento no começo da noite), tenta de novo a cada 1 min
+// e antes de enviar — antes o card sumia e a equipe deixava de ser obrigatória (Isaac Manhã e Araucária, 06/11)
+let EQ_OK=false, _eqRetry=null;
+function eqTentarDeNovo(){ clearTimeout(_eqRetry); _eqRetry=setTimeout(()=>{ if(!EQ_OK && unidadeAtual) eqCarregar(); },60000); }
 async function eqCarregar(){
-  EQ=null; eqSalvo=false; EQ_SNAP=null;
+  EQ=null; eqSalvo=false; EQ_SNAP=null; EQ_OK=false;
   const card=document.getElementById('cardEquipe'); if(!card||!unidadeAtual) return;
   try{
-    if(!(await chkRecursos()).includes('equipeDia')) return;
+    const rc=await chkRecursos();
+    if(_chkRecursos===null){ eqTentarDeNovo(); verificarBotaoRegistrar(); return; } // servidor não respondeu: tenta de novo
+    if(!rc.includes('equipeDia')){ EQ_OK=true; return; }
     const r=await chkJsonp({action:'equipeDia',unidade:unidadeAtual},12000);
-    if(!r||!r.ok) return;
+    if(!r||!r.ok){ eqTentarDeNovo(); verificarBotaoRegistrar(); return; }
+    EQ_OK=true; clearTimeout(_eqRetry);
     EQ=r; eqSalvo=!!r.feito||!r.setores.length;
     if(!r.setores.length && !r.feriadoAmanha && !r.feriadoHoje){ card.style.display='none'; verificarBotaoRegistrar(); return; }
     card.style.display='flex'; eqRender();
@@ -3185,7 +3192,7 @@ async function eqCarregar(){
       if(!visto) setTimeout(()=>chkMostrarAviso('🎉 AMANHÃ É FERIADO',
         'Amanhã, <b>'+escR(r.feriadoAmanha.data)+'</b>, é feriado: <b>'+escR(r.feriadoAmanha.nome)+'</b>.<br><br>Nós trabalhamos em <b>todos os feriados</b> e o movimento costuma ser maior. Confira a escala e <b>reforce a sua equipe</b> para amanhã não ter problema.','Entendi',null),2500);
     }
-  }catch(e){}
+  }catch(e){ if(!EQ_OK) eqTentarDeNovo(); }
   verificarBotaoRegistrar();
 }
 function eqRender(){
@@ -3294,8 +3301,24 @@ async function eqSalvarEquipe(){
   if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1500);
 }
 
+let _eqFalhasEnvio=0;
 async function registrar(){
   if(!(await conferirLocal(true))) return;
+  // equipe do dia ainda não carregou: busca agora; se houver equipe para informar, pede antes de enviar (07/11/2026)
+  if(!EQ_OK && !MODO_TESTE){
+    await eqCarregar();
+    if(EQ && EQ.setores && EQ.setores.length && !eqSalvo){
+      verificarBotaoRegistrar();
+      alert('👥 Falta informar a EQUIPE DO DIA antes de enviar o placar.\n\nO placar vai levar você até ela.');
+      if(typeof irParaFalta==='function') irParaFalta('Equipe do dia');
+      return;
+    }
+    if(!EQ_OK){
+      _eqFalhasEnvio++;
+      logProva('EQUIPE_NAO_CARREGOU','tentativa '+_eqFalhasEnvio);
+      if(_eqFalhasEnvio<3){ alert('⏳ Não consegui conferir a equipe do dia com o servidor (internet ou servidor lento).\n\nEspere alguns segundos e toque em Registrar Placar de novo.'); return; }
+    }
+  }
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
   if(!chkFechamentoFeito){
     alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nEle fica logo acima do botão de enviar: "🌙 Checklist de Fechamento da Unidade".');
