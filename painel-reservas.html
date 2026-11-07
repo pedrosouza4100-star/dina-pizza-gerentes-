@@ -74,7 +74,21 @@ header .esp{flex:1}
   #selWhats{order:3;width:100%!important;margin-top:auto}
   #btAtualizar{order:4;width:100%}#btAtualizar::after{content:" Atualizar"}
   #btSair{order:5;width:100%}
+  .vista{order:6;display:flex;gap:6px}.vista .btn{flex:1;padding:8px 6px;font-size:12px}
+  body.tela-toda .wrap{max-width:none}
+  body.menu-curto #telaPainel{padding-left:76px}
+  body.menu-curto #telaPainel>header{width:76px;padding:14px 8px}
+  body.menu-curto #telaPainel>header img{width:44px;height:44px}
+  body.menu-curto #telaPainel>header>div:nth-of-type(1),body.menu-curto #selWhats,body.menu-curto #btLargura{display:none}
+  body.menu-curto #telaPainel>header .menu button{font-size:0;padding:10px 0;text-align:center}
+  body.menu-curto .menu button[data-tela]::before{font-size:18px;width:auto}
+  body.menu-curto #btNova{font-size:0;padding:10px 0}body.menu-curto #btNova::before{content:'+';font-size:20px}
+  body.menu-curto #btAtualizar::after{content:''}
+  body.menu-curto #btSair{font-size:0}body.menu-curto #btSair::before{content:'⏻';font-size:16px}
+  body.menu-curto #selWhats{margin-top:0}body.menu-curto #btAtualizar{margin-top:auto}
+  body.menu-curto .vista{flex-direction:column}
 }
+@media (max-width:999px){.vista{display:none}}
 .wrap{max-width:1280px;margin:0 auto;padding:16px}
 
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -313,6 +327,7 @@ header .esp{flex:1}
     <div class="menu" id="menu"><button data-tela="reservas" class="on">Reservas</button><button data-tela="fila">Fila</button><button data-tela="envios">Envios</button><button data-tela="avaliacoes">Avaliações</button><button data-tela="desempenho">Desempenho</button><button data-tela="fidelidade">Fidelidade</button><button data-tela="clientes">Clientes</button><button data-tela="lojas" id="mnLojas">Lojas</button></div>
     <select class="campo selWhats" id="selWhats" title="Onde abrir o WhatsApp neste aparelho" style="width:auto;padding:8px 10px;font-size:13px"><option value="app">📱 Abrir no app do WhatsApp</option><option value="web">💻 WhatsApp Web (mesma aba)</option></select>
     <button class="btn" id="btAtualizar" title="Atualizar">↻</button>
+    <div class="vista" id="vista"><button type="button" class="btn" id="btLargura" title="Usar a largura toda da tela">⤢ Tela toda</button><button type="button" class="btn" id="btRecolher" title="Recolher o menu lateral">«</button></div>
     <button class="btn prim" id="btNova">+ Nova reserva</button>
     <button class="btn" id="btSair">Sair</button>
   </header>
@@ -1504,6 +1519,20 @@ $('fdLista').onclick=e=>{
     :`Olá, ${nome}! 💛 Você faz parte da Fidelidade Dina Pizza e já tem *${c.pontos} visita${c.pontos===1?'':'s'}* com reserva. Faltam só *${c.faltam}* para o seu *buffet por nossa conta*! 🍕 Reserve a próxima: ${link}`;
   abrirWhats(c.telefone,msg);
 };
+
+/* ======== JEITO DE VER O PAINEL (fica guardado neste computador) ======== */
+function vistaAplicar(){
+  let v={};try{v=JSON.parse(localStorage.getItem('res_vista')||'{}')}catch(e){}
+  document.body.classList.toggle('tela-toda',!!v.toda);document.body.classList.toggle('menu-curto',!!v.curto);
+  $('btLargura').textContent=v.toda?'↔ Largura padrão':'⤢ Tela toda';$('btLargura').title=v.toda?'Voltar à largura padrão':'Usar a largura toda da tela';
+  $('btRecolher').textContent=v.curto?'»':'«';$('btRecolher').title=v.curto?'Mostrar o menu com os nomes':'Recolher o menu lateral';
+  vistaAtual=v;
+}
+let vistaAtual={};
+function vistaTrocar(k){vistaAtual[k]=!vistaAtual[k];try{localStorage.setItem('res_vista',JSON.stringify(vistaAtual))}catch(e){}vistaAplicar()}
+$('btLargura').onclick=()=>vistaTrocar('toda');$('btRecolher').onclick=()=>vistaTrocar('curto');
+document.querySelectorAll('#menu button').forEach(b=>{if(!b.title)b.title=b.textContent.trim()});
+vistaAplicar();
 </script>
 </body>
 </html>
