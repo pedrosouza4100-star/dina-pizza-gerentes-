@@ -3148,10 +3148,10 @@ async function selfieEnvio(){
 }
 
 // ── Equipe do dia (02/11/2026): quadro ideal da loja (Admin) x quem está trabalhando hoje, por setor ──
-let EQ=null, eqSalvo=false;
+let EQ=null, eqSalvo=false, EQ_SNAP=null; // EQ_SNAP: o que já está salvo (07/11/2026: botão vira "✓ Equipe salva" até mudar algum número)
 const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['falta','Faltou'],['vaga','Vaga aberta']];
 async function eqCarregar(){
-  EQ=null; eqSalvo=false;
+  EQ=null; eqSalvo=false; EQ_SNAP=null;
   const card=document.getElementById('cardEquipe'); if(!card||!unidadeAtual) return;
   try{
     if(!(await chkRecursos()).includes('equipeDia')) return;
@@ -3160,6 +3160,7 @@ async function eqCarregar(){
     EQ=r; eqSalvo=!!r.feito||!r.setores.length;
     if(!r.setores.length && !r.feriadoAmanha && !r.feriadoHoje){ card.style.display='none'; verificarBotaoRegistrar(); return; }
     card.style.display='flex'; eqRender();
+    if(r.feito){ const jaSalvo=eqAtualizar(); EQ_SNAP=jaSalvo?JSON.stringify(jaSalvo):null; eqAtualizar(); }
     if(r.feriadoHoje && !r.feriadoConf && (await chkRecursos()).includes('feriadoConf')) setTimeout(()=>ferAbrir(r.feriadoHoje),1800);
     if(r.feriadoAmanha){
       const k=(MODO_TESTE?'dinateste_':'')+'eq_feriado_'+unidadeAtual+'_'+r.feriadoAmanha.data;
@@ -3245,7 +3246,8 @@ function eqAtualizar(){
     } else if(box){ box.style.display='none'; EQ_MOT.forEach(([k])=>item[k]=0); }
     out.push(item);
   });
-  const b=document.getElementById('eqSalvarBtn'); if(b) b.disabled=!tudo;
+  const b=document.getElementById('eqSalvarBtn');
+  if(b){ const igual=tudo && EQ_SNAP!==null && JSON.stringify(out)===EQ_SNAP; b.disabled=!tudo||igual; b.textContent=igual?'✓ Equipe salva — mude um número para corrigir':'💾 Salvar equipe do dia'; b.style.opacity=igual?'0.8':''; }
   return tudo?out:null;
 }
 async function eqSalvarEquipe(){
@@ -3263,7 +3265,7 @@ async function eqSalvarEquipe(){
   try{ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'equipeSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',setores:lista})}); r=JSON.parse(await resp.text()); }catch(e){ r=null; }
   b.disabled=false;
   if(!(r&&r.ok)){ msg.innerHTML='<span style="color:#ff6b6b">Não salvou ('+escR((r&&r.erro)||'sem conexão')+'). Tente de novo.</span>'; return; }
-  eqSalvo=true;
+  eqSalvo=true; EQ_SNAP=JSON.stringify(lista); eqAtualizar();
   if(r.alerta && r.alerta.situacao==='aberto'){
     msg.innerHTML='<div style="background:#3a0000;border:1px solid #ff4444;border-radius:8px;padding:10px;color:#ffb3b3;font-weight:700">🚨 Equipe abaixo do mínimo hoje ('+r.alerta.presentes+' de '+r.alerta.ideal+', '+r.alerta.pct+'%'+(r.alerta.zeradas.length?' — sem '+escR(r.alerta.zeradas.join(', ').toLowerCase()):'')+'). O GDI foi avisado agora para ajudar a resolver.</div>';
     document.getElementById('eqTag').textContent='✓ Salvo'; if(typeof logProva==='function') logProva('EQUIPE_ALERTA', r.alerta.pct+'%'); verificarBotaoRegistrar(); if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1500); return;
