@@ -200,6 +200,18 @@
   .falta-ir span{color:var(--gold);font-size:1.1rem}
   @keyframes faltaPisca{0%,100%{box-shadow:0 0 0 0 rgba(255,208,0,0)}25%,75%{box-shadow:0 0 0 4px rgba(255,208,0,0.85)}50%{box-shadow:0 0 0 2px rgba(255,208,0,0.4)}}
   .falta-pisca{animation:faltaPisca 1.2s ease 2;border-radius:16px}
+/* Faturamento, buffets e fichas buscados no Alpha (07/11/2026) */
+.alp-box{margin-top:10px}
+.alp-btn{width:100%;padding:12px;border-radius:10px;border:1px solid var(--d-blue,#3aa0ff);background:rgba(58,160,255,.14);color:var(--text);font-weight:800;font-size:.95rem;cursor:pointer}
+.alp-btn:disabled{opacity:.6}
+.alp-info{font-size:.82rem;line-height:1.5;margin-top:8px}
+.alp-tab{width:100%;border-collapse:collapse;margin:6px 0}
+.alp-tab td{padding:3px 2px;border-bottom:1px solid var(--border)}
+.alp-tab td:last-child{text-align:right;font-weight:700;white-space:nowrap}
+.alp-tab tr.alp-liq td{font-size:.95rem;color:var(--d-t-ok,#7CFFB2);border-bottom:none}
+.alp-erro{color:var(--d-t-err,#ffb4b4)}
+.alp-mao{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:.78rem;padding:4px 0;cursor:pointer}
+input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
 </style>
 </head>
 <body>
@@ -559,6 +571,10 @@
         <div class="card-meta" id="metaFatDisplay"></div>
         <div class="card-meta muted" id="periodoDisplay"></div>
         <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
+        <div id="alpBox" class="alp-box" style="display:none">
+          <button type="button" class="alp-btn" id="alpBtn" onclick="alpBuscar()">🔌 Buscar no Alpha</button>
+          <div id="alpInfo" class="alp-info"></div>
+        </div>
         <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
         <span class="tag" id="fatTag"></span>
         <div class="meta-mes" id="mm_fat"></div>
@@ -1539,6 +1555,7 @@ function iniciarApp(u){
   carregarPendenciasChecklist();
   REG_PEND=[]; REG_PEND_FOTO={}; carregarRegPend();
   eqCarregar();
+  alpPreparar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -2939,6 +2956,7 @@ function faturamentoForaDaFaixa(){
 }
 
 function validarFaturamento(){
+  if(window._alpOk){ document.getElementById('fatAlerta').style.display='none'; return; } // valor veio do Alpha: não pede para refazer a soma
   const fat = valFat();
   const meta = metaFat(unidadeAtual);
   const alerta = document.getElementById('fatAlerta');
@@ -3169,6 +3187,52 @@ let EQ=null, eqSalvo=false, EQ_SNAP=null; // EQ_SNAP: o que já está salvo (07/
 const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['falta','Faltou'],['vaga','Vaga aberta']];
 // 07/11/2026: se a busca da equipe falhar (servidor lento no começo da noite), tenta de novo a cada 1 min
 // e antes de enviar — antes o card sumia e a equipe deixava de ser obrigatória (Isaac Manhã e Araucária, 06/11)
+// ── Faturamento, buffets e fichas vindos do Alpha (07/11/2026) ──
+// Botão "Buscar no Alpha" no card do faturamento (só se o servidor tiver o recurso alphaPlacar): preenche o líquido,
+// os buffets e as fichas da noite e trava os campos; "digitar à mão" destrava (fica registrado na linha do tempo).
+let ALP=null;
+async function alpPreparar(){
+  const b=document.getElementById('alpBox'); ALP=null; alpDestravar(true); if(!b) return;
+  b.style.display='none'; document.getElementById('alpInfo').innerHTML=''; document.getElementById('alpBtn').textContent='🔌 Buscar no Alpha';
+  try{ const rc=await chkRecursos(); if(rc.includes('alphaPlacar')) b.style.display='block'; }catch(e){}
+}
+function alpChave(){
+  if(MODO_TESTE){ try{ return sessionStorage.getItem('dina_teste_admin')||''; }catch(e){ return ''; } }
+  try{ return localStorage.getItem('dina_senha_'+unidadeAtual)||''; }catch(e){ return ''; }
+}
+function alpMoeda(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+async function alpBuscar(){
+  const bt=document.getElementById('alpBtn'), info=document.getElementById('alpInfo');
+  bt.disabled=true; bt.textContent='Buscando no Alpha...';
+  let r=null; try{ r=await chkJsonp({action:'alphaPlacar',unidade:unidadeAtual,chave:alpChave()},45000); }catch(e){}
+  bt.disabled=false; bt.textContent='🔄 Buscar de novo no Alpha';
+  if(!r||!r.ok){ info.innerHTML='<div class="alp-erro">⚠️ '+escR((r&&r.erro)||'O Alpha não respondeu agora.')+' Tente de novo em instantes ou digite os valores.</div>'; logProva('ALPHA_FALHOU',(r&&r.erro)||'sem resposta'); return; }
+  if(r.semVendas){ info.innerHTML='<div class="alp-erro">Ainda não há vendas desta noite no Alpha.</div>'; return; }
+  ALP=r; window._alpOk=true; const L=r.loja;
+  const fat=document.getElementById('fat');
+  fat.value=Number(L.liquido||0).toFixed(2).replace('.',','); formatarMoedaInput(fat); fat.readOnly=true; fat.classList.add('alp-travado');
+  const cf=document.getElementById('cardFichas'), cb=document.getElementById('cardBuffets');
+  if(cf&&cf.style.display!=='none'){ const e=document.getElementById('fichas'); e.value=L.fichas||0; e.readOnly=true; e.classList.add('alp-travado'); }
+  if(cb&&cb.style.display!=='none'){ const e=document.getElementById('buffets'); e.value=L.buffets||0; e.readOnly=true; e.classList.add('alp-travado'); }
+  let h='<table class="alp-tab">'+
+    '<tr><td>Faturamento bruto</td><td>'+alpMoeda(L.bruto)+'</td></tr>'+
+    '<tr><td>(−) Descontos</td><td>'+alpMoeda(L.descontos)+'</td></tr>'+
+    '<tr><td>(−) Cortesias</td><td>'+alpMoeda(L.cortesias)+'</td></tr>'+
+    (L.taxaEntrega?'<tr><td>(+) Taxa de entrega</td><td>'+alpMoeda(L.taxaEntrega)+'</td></tr>':'')+
+    '<tr class="alp-liq"><td>= Faturamento líquido</td><td>'+alpMoeda(L.liquido)+'</td></tr></table>';
+  if(cb&&cb.style.display!=='none') h+='<div>🍽️ Buffets: <b>'+(L.buffets||0)+'</b> ('+(L.buffetInteiro||0)+' inteiros + '+(L.buffetMeia||0)+' meias)</div>';
+  if(cf&&cf.style.display!=='none') h+='<div>🕹️ Fichas: <b>'+(L.fichas||0)+'</b> ('+(L.fichasCombo||0)+' combos + '+(L.fichasAvulsa||0)+' avulsas)</div>';
+  h+='<div style="color:var(--muted);margin-top:4px">Números do Alpha às '+escR(r.hora)+' ('+(L.vendas||0)+' vendas até agora). Antes de enviar, toque em <b>Buscar de novo</b> para pegar as últimas vendas.</div>'+
+    '<button type="button" class="alp-mao" onclick="alpDestravar(false)">O valor está errado? Digitar à mão</button>';
+  info.innerHTML=h;
+  validarFaturamento(); verificarBotaoRegistrar(); try{ fechGuardar(); }catch(e){}
+  logProva('ALPHA_PREENCHIDO','líquido '+L.liquido+' · buffets '+L.buffets+' · fichas '+L.fichas+' · '+r.hora);
+}
+function alpDestravar(silencioso){
+  window._alpOk=false; ['fat','fichas','buffets'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.readOnly=false; e.classList.remove('alp-travado'); } });
+  if(!silencioso){ ALP=null; logProva('ALPHA_DIGITAR_A_MAO','gerente destravou os valores do Alpha');
+    document.getElementById('alpInfo').innerHTML='<div class="alp-erro">Campos liberados para digitar. O sistema compara depois com o Alpha.</div>'; }
+}
 let EQ_OK=false, _eqRetry=null;
 function eqTentarDeNovo(){ clearTimeout(_eqRetry); _eqRetry=setTimeout(()=>{ if(!EQ_OK && unidadeAtual) eqCarregar(); },60000); }
 async function eqCarregar(){
