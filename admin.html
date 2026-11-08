@@ -611,7 +611,7 @@
       </div>
       <div id="alpSecao" style="display:none">
         <div class="section-title">🔌 Sistema Alpha — integração (teste)</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Liga o placar ao sistema Alpha para buscar as vendas sozinho. Os dados de acesso ficam guardados só no servidor (nunca aparecem de novo aqui). Por enquanto é só o teste: ele mostra as empresas liberadas e como vêm as vendas de um dia, para montarmos a leitura.</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Liga o placar ao sistema Alpha para buscar as vendas sozinho. Os dados de acesso ficam guardados só no servidor (nunca aparecem de novo aqui). "Importar o dia" grava os números de cada loja e compara com o que o gerente lançou no placar. Todo dia às 4h30 isso é feito sozinho (depois de ligado).</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <span id="alpSt" style="font-size:0.8rem"></span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -621,10 +621,11 @@
           <button class="action-btn btn-nova" onclick="alpSalvar()">Salvar acesso</button></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
           <b style="font-size:0.85rem">Testar:</b>
-          <select class="cont-in" id="alpModulo"><option value="__resumo">Resumo do dia por loja</option><option value="vendas">Vendas (estrutura)</option><option value="financeiro-movimentacao">Financeiro — movimentação</option><option value="financeiro-agenda">Financeiro — agenda</option><option value="nota-fiscal-saida">Notas de saída</option><option value="nota-fiscal-entrada">Notas de entrada</option><option value="inventario">Inventário</option></select>
+          <select class="cont-in" id="alpModulo"><option value="__importar">Importar o dia (Alpha × placar)</option><option value="__resumo">Resumo do dia por loja</option><option value="vendas">Vendas (estrutura)</option><option value="financeiro-movimentacao">Financeiro — movimentação</option><option value="financeiro-agenda">Financeiro — agenda</option><option value="nota-fiscal-saida">Notas de saída</option><option value="nota-fiscal-entrada">Notas de entrada</option><option value="inventario">Inventário</option></select>
           <input class="cont-in" id="alpDia" type="date">
           <button class="action-btn btn-nova" id="alpBtnTestar" onclick="alpTestar()">🔌 Testar Alpha</button>
           <button class="action-btn btn-nova" id="alpBtnCopiar" style="display:none" onclick="alpCopiar()">📋 Copiar resultado</button></div>
+        <div id="alpTabela" class="table-wrap" style="display:none;margin-bottom:10px"></div>
         <pre id="alpRes" style="display:none;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:0.72rem;background:var(--surface,#111);border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
       </div>
       <div>
@@ -1136,7 +1137,7 @@
     sec.style.display='block';
     const d=document.getElementById('alpDia'); if(!d.value){ const o=new Date(Date.now()-86400000); d.value=o.getFullYear()+'-'+String(o.getMonth()+1).padStart(2,'0')+'-'+String(o.getDate()).padStart(2,'0'); }
     document.getElementById('alpSt').innerHTML=(r.temGrupo&&r.temIdent&&r.temToken)
-      ? '<span class="badge ok">✓ acesso cadastrado</span> identificador <b>'+escH(r.ident)+'</b> · token terminando em <b>'+escH(r.tokenFim)+'</b>'
+      ? '<span class="badge ok">✓ acesso cadastrado</span> identificador <b>'+escH(r.ident)+'</b> · token terminando em <b>'+escH(r.tokenFim)+'</b>'+(r.agendado?' · importação automática '+escH(r.agendado):' · <span style="color:var(--yellow)">importação automática ainda não ligada</span>')+(r.ultimaImportacao?' · última: dia '+escH(r.ultimaImportacao.dia)+' ('+escH(r.ultimaImportacao.quando)+')':'')
       : '<span class="badge sem">acesso não cadastrado</span>';
   }
   async function alpSalvar(){
@@ -1149,14 +1150,27 @@
     const bt=document.getElementById('alpBtnTestar'), pre=document.getElementById('alpRes');
     bt.disabled=true; bt.textContent='Testando...'; pre.style.display='block'; pre.textContent='Falando com o Alpha...';
     try{
-      const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(document.getElementById('alpModulo').value==='__resumo'?{action:'alphaResumo',dia:document.getElementById('alpDia').value}:{action:'alphaTestar',modulo:document.getElementById('alpModulo').value,dia:document.getElementById('alpDia').value})});
+      const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(document.getElementById('alpModulo').value==='__importar'?{action:'alphaImportar',dia:document.getElementById('alpDia').value}:document.getElementById('alpModulo').value==='__resumo'?{action:'alphaResumo',dia:document.getElementById('alpDia').value}:{action:'alphaTestar',modulo:document.getElementById('alpModulo').value,dia:document.getElementById('alpDia').value})});
       const t=await r.text(); let j=null; try{ j=JSON.parse(t); }catch(e){}
       pre.textContent=j?JSON.stringify(j,null,1):t.slice(0,2000);
+      alpTabela(j&&j.ok&&j.lojas?j:null);
       document.getElementById('alpBtnCopiar').style.display='';
       if(j&&j.ok) showToast(j.doDia!=null?('Alpha: '+j.doDia+' vendas no dia em '+Object.keys(j.empresas||{}).length+' empresas.'):('Alpha respondeu: '+((j.empresas||[]).length)+' empresas.'),'ok');
       else showToast((j&&j.erro)||'Falha no teste','warn');
     }catch(e){ pre.textContent='⚠ '+e.message; }
     bt.disabled=false; bt.textContent='🔌 Testar Alpha';
+  }
+  function alpTabela(j){
+    const box=document.getElementById('alpTabela'); if(!j){ box.style.display='none'; box.innerHTML=''; return; }
+    const brl=v=>v==null||v===''?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const num=v=>v==null||v===''?'—':String(Math.round(Number(v)*10)/10).replace('.',',');
+    const ordem=['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
+    const dif=(a,p)=>{ if(p==null||p===''||a==null) return ''; const d=Number(p)-Number(a); if(Math.abs(d)<1) return ' <span class="badge ok">=</span>'; return ' <span style="color:'+(Math.abs(d)>Math.max(50,Number(a)*0.02)?'var(--danger)':'var(--yellow)')+';font-size:0.72rem">('+(d>0?'+':'')+Math.round(d).toLocaleString('pt-BR')+')</span>'; };
+    box.innerHTML='<table><thead><tr><th>Loja</th><th>Líquido Alpha</th><th>Placar</th><th>Bruto</th><th>Descontos</th><th>Cortesias</th><th>Buffets A / P</th><th>Fichas A / P</th><th>Caipiras</th><th>Coquetéis</th><th>Chope (L)</th><th>Sucos nat.</th><th>À la carte</th></tr></thead><tbody>'+
+      ordem.map(u=>{ const a=j.lojas[u], p=(j.placar||{})[u]; if(!a&&!p) return '';
+        const A=a||{};
+        return '<tr><td style="font-weight:600;white-space:nowrap">'+escH(u)+'</td><td style="white-space:nowrap">'+brl(A.liquido)+'</td><td style="white-space:nowrap">'+(p?brl(p.faturamento)+dif(A.liquido,p.faturamento):'<span style="color:var(--muted)">não enviou</span>')+'</td><td style="white-space:nowrap">'+brl(A.bruto)+'</td><td style="white-space:nowrap">'+brl(A.descontos)+'</td><td style="white-space:nowrap">'+brl(A.cortesias)+'</td><td>'+num(A.buffets)+' / '+(p?num(p.buffets):'—')+'</td><td>'+num(A.fichas)+' / '+(p?num(p.fichas):'—')+'</td><td>'+num(A.caipiras)+'</td><td>'+num(A.coqueteis)+'</td><td>'+num(A.chopeLitros)+'</td><td>'+num(A.sucosNaturais)+'</td><td style="white-space:nowrap">'+brl(A.aLaCarte)+'</td></tr>'; }).join('')+'</tbody></table><div style="font-size:0.72rem;color:var(--muted);margin-top:4px">A = Alpha · P = placar do gerente. Líquido = bruto − descontos − cortesias + taxa de entrega.</div>';
+    box.style.display='block';
   }
   function alpCopiar(){
     const t=document.getElementById('alpRes').textContent;
