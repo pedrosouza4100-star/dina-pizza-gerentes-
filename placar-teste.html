@@ -1983,6 +1983,16 @@ function conferirLocal(agora, envio){
         if(!r2||!r2.ok||r2.dentro){ document.getElementById('geoOverlay').style.display='none'; return true; }
         if(p2.acc>GEO_PRECISAO_MAX){ logProva('GPS_IMPRECISO','2ª leitura fora '+(r2.distancia||'?')+' m com precisão '+Math.round(p2.acc)+' m: não travou'); return true; }
         r=r2;
+      } else if(!travada){ // salvando (checklist, equipe, envio) — 08/11/2026: confirma com mais 2 leituras novas antes de travar (Campo Largo travou no salvar do checklist dentro da loja)
+        logProva('GPS_FORA_AO_SALVAR',(r.distancia||'?')+' m, precisão '+Math.round(pos.acc)+' m: conferindo de novo');
+        window._geoSuspeito=true; // enquanto confere, nada é gravado
+        for(let k=0;k<2;k++){
+          await new Promise(res=>setTimeout(res,6000));
+          const p3=await geoLer(true); if(p3.erro) continue;
+          let r3=null; try{ r3=await geoPerguntar(p3); }catch(e){ return true; }
+          if(!r3||!r3.ok||r3.dentro){ logProva('GPS_CONFIRMOU_DENTRO',(k+2)+'ª leitura dentro da loja'); document.getElementById('geoOverlay').style.display='none'; return true; }
+          r=r3;
+        }
       }
       mostrarGeo('fora', r); return false;
     } finally {
@@ -2613,7 +2623,7 @@ async function salvarChecklist(){
 async function _salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
-  if(msg){ msg.textContent='📍 Conferindo se você está na loja...'; msg.style.color='#888'; }
+  if(msg){ msg.textContent='📍 Conferindo se você está na loja... (pode levar até 20 segundos)'; msg.style.color='#888'; }
   if(!(await conferirLocal(true,true))){ // a tela 📍 aparece por cima do checklist (as respostas continuam guardadas)
     if(msg){ msg.textContent='📍 Não salvou: o placar não confirmou que você está dentro da loja. Veja a tela da localização.'; msg.style.color='#ff4444'; }
     if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', chkTurnoAtual+': fora da loja (GPS)');
