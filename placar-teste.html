@@ -3481,12 +3481,26 @@ function eqAtualizar(){
     out.push(item);
   });
   const b=document.getElementById('eqSalvarBtn');
-  if(b){ const igual=tudo && EQ_SNAP!==null && JSON.stringify(out)===EQ_SNAP; b.disabled=!tudo||igual; b.textContent=igual?'✓ Equipe salva — mude um número para corrigir':'💾 Salvar equipe do dia'; b.style.opacity=igual?'0.8':''; }
+  if(b){ const igual=tudo && EQ_SNAP!==null && JSON.stringify(out)===EQ_SNAP; b.disabled=igual; /* 08/11/2026: com algo faltando o botão fica ativo e, ao tocar, leva até a função incompleta */ b.textContent=igual?'✓ Equipe salva — mude um número para corrigir':'💾 Salvar equipe do dia'; b.style.opacity=igual?'0.8':''; }
   return tudo?out:null;
 }
 async function eqSalvarEquipe(){
   const lista=eqAtualizar(), msg=document.getElementById('eqMsg'), b=document.getElementById('eqSalvarBtn');
-  if(!lista){ msg.innerHTML='<span style="color:#ff6b6b">Preencha todos os setores e explique quem está faltando.</span>'; return; }
+  if(!lista){
+    // leva até a 1ª função incompleta: sem "trabalhando hoje" ou com quem falta sem motivo
+    let alvo=null, campo=null, txt='';
+    for(const st of (EQ&&EQ.setores)||[]){
+      const pres=eqNum('eq_'+st.setor+'_pres');
+      if(pres===null){ alvo=st; campo='eq_'+st.setor+'_pres'; txt='Informe quantas pessoas estão trabalhando hoje em <b>'+escR(st.nome)+'</b>.'; break; }
+      const falta=st.ideal-pres, soma=EQ_MOT.reduce((a,[k])=>a+(eqNum('eq_'+st.setor+'_'+k)||0),0);
+      if(falta>0 && soma!==falta){ alvo=st; campo='eq_'+st.setor+'_folga'; txt='Em <b>'+escR(st.nome)+'</b> faltam '+falta+' pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').'; break; }
+    }
+    msg.innerHTML='<span style="color:#ff6b6b">⬆️ Ainda não dá para salvar. '+(txt||'Preencha todas as funções e explique quem está faltando.')+'</span>';
+    const el=alvo&&document.querySelector('.eq-setor[data-s="'+alvo.setor+'"]');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.remove('falta-pisca'); void el.offsetWidth; el.classList.add('falta-pisca'); setTimeout(()=>el.classList.remove('falta-pisca'),2600); const c=document.getElementById(campo); if(c) setTimeout(()=>{ try{c.focus({preventScroll:true});}catch(e){} },600); }
+    if(typeof logProva==='function') logProva('EQUIPE_INCOMPLETA', alvo?alvo.setor:'');
+    return;
+  }
   if(!(await conferirLocal(true,true))){ msg.innerHTML='<span style="color:#ff6b6b">📍 Não salvou: o placar não confirmou que você está dentro da loja.</span>'; return; }
   // confere com a escala da semana (03/11/2026): informou mais gente trabalhando do que a escala tem para hoje → confirma
   if(EQ && EQ.escala && EQ.escala.completa){
