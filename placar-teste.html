@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
 <meta name="robots" content="noindex,nofollow">
-<!-- CÓPIA DE TESTE do placar do pacote 08/11 (branch pacote-0811). Só para o Robson testar no celular com a senha do Admin (modo teste). Apagar depois que o placar novo entrar no ar em 09/11 4h05. -->
+<!-- CÓPIA DE TESTE do placar do pacote 08/11 (branch pacote-0811). Apagar depois que o placar novo entrar no ar em 09/11 4h05. -->
 <script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -2681,7 +2681,7 @@ window.addEventListener('load',()=>{
   // voltando da escala em modo teste: continua no modo teste (nesta aba)
   let tLoja=null, tHash=null; try{ tLoja=sessionStorage.getItem('dina_teste_loja'); tHash=sessionStorage.getItem('dina_teste_admin'); }catch(e){}
   if(tLoja&&tHash){ carregarMetas(); ehSenhaAdmin(tHash).then(ok=>{ if(ok) entrarTeste(tLoja); else { try{sessionStorage.removeItem('dina_teste_loja');}catch(e){} mostrar('telaEscolha'); } }); return; }
-  const u=null; /* placar-teste: nunca entra sozinho na loja salva no celular — sempre pede loja + senha */
+  const u=null; /* placar-teste: sempre pede loja + senha */
   if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
   // Carrega metas sem bloquear
@@ -3304,7 +3304,7 @@ async function alpcConferir(){
   const D=r.detalhe||{};
   let h='<table class="alpc-tab"><tr><th>Item</th><th>Você informou</th><th>Alpha</th><th>Diferença</th></tr>'+linhas+'</table>';
   h+='<div class="muted" style="font-size:.76rem">Faturamento no Alpha: bruto '+alpcFmt('faturamento',D.bruto)+' − descontos '+alpcFmt('faturamento',D.descontos)+' − cortesias '+alpcFmt('faturamento',D.cortesias)+(D.taxaEntrega?' + taxa de entrega '+alpcFmt('faturamento',D.taxaEntrega):'')+' = <b>'+alpcFmt('faturamento',D.liquido)+'</b> · conferido às '+escR(r.hora)+'</div>';
-  if((r.alertas||[]).length) h='<div class="alpc-alerta">🔴 Os números não batem. Você precisa organizar os seus lançamentos: o que você informou tem que bater com o que está no sistema.</div>'+h;
+  if((r.alertas||[]).length) h='<div class="alpc-alerta">🔴 Os números não batem. Você precisa organizar os seus lançamentos: o que você informou tem que bater com o que está no sistema.<br><br>⚠️ <b>Por enquanto o placar não é bloqueado</b>, mas <b>nas próximas semanas o placar será BLOQUEADO</b> sempre que o seu lançamento não bater com o lançamento do sistema. Corrija a forma de lançar a partir de hoje.</div>'+h;
   else h='<div class="alpc-ok">✅ Números conferidos: o que você informou bate com o sistema.</div>'+h;
   h+='<div class="muted" style="font-size:.76rem;margin-top:4px">Os campos passaram para os valores do Alpha, que são os que vão no placar. Se vender mais antes de fechar, toque em <b>Conferir de novo</b>.</div>';
   res.innerHTML=h;
