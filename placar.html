@@ -3280,6 +3280,7 @@ function alpcCampos(){ // o que entra na conferência nesta loja
   const c=[['faturamento','fat','Faturamento líquido',true]];
   if(temFliperBuffet(unidadeAtual)){ c.push(['buffets','buffets','Buffets']); c.push(['fichas','fichas','Fichas']); }
   ALPC_BEB.forEach(b=>c.push(b));
+  c.push(['vendasCanceladas','vendasCanceladas','Vendas canceladas no caixa']); // 08/11/2026: cancelamentos também conferidos com o Alpha
   return c;
 }
 function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar(); }
@@ -3312,17 +3313,18 @@ async function alpcConferir(){
     bt.disabled=false; verificarBotaoRegistrar(); return;
   }
   ALPC={informado:inf, alpha:r.alpha, diferencas:r.diferencas, alertas:r.alertas||[], hora:r.hora, detalhe:r.detalhe};
-  const linhas=alpcCampos().map(([k,,nome])=>{ const ruim=(r.alertas||[]).includes(k); return '<tr class="'+(ruim?'ruim':'')+'"><td>'+nome+'</td><td>'+alpcFmt(k,inf[k])+'</td><td>'+alpcFmt(k,r.alpha[k])+'</td><td>'+alpcDif(k,r.diferencas[k])+'</td></tr>'; }).join('');
+  const linhas=alpcCampos().filter(([k])=>r.alpha[k]!==undefined).map(([k,,nome])=>{ const ruim=(r.alertas||[]).includes(k); return '<tr class="'+(ruim?'ruim':'')+'"><td>'+nome+'</td><td>'+alpcFmt(k,inf[k])+'</td><td>'+alpcFmt(k,r.alpha[k])+'</td><td>'+alpcDif(k,r.diferencas[k])+'</td></tr>'; }).join('');
   const D=r.detalhe||{};
   let h='<table class="alpc-tab"><tr><th>Item</th><th>Você informou</th><th>Alpha</th><th>Diferença</th></tr>'+linhas+'</table>';
-  h+='<div class="muted" style="font-size:.76rem">Faturamento no Alpha: bruto '+alpcFmt('faturamento',D.bruto)+' − descontos '+alpcFmt('faturamento',D.descontos)+' − cortesias '+alpcFmt('faturamento',D.cortesias)+(D.taxaEntrega?' + taxa de entrega '+alpcFmt('faturamento',D.taxaEntrega):'')+' = <b>'+alpcFmt('faturamento',D.liquido)+'</b> · conferido às '+escR(r.hora)+'</div>';
+  h+='<div class="muted" style="font-size:.76rem">Faturamento no Alpha: bruto '+alpcFmt('faturamento',D.bruto)+' − descontos '+alpcFmt('faturamento',D.descontos)+' − cortesias '+alpcFmt('faturamento',D.cortesias)+(D.taxaEntrega?' + taxa de entrega '+alpcFmt('faturamento',D.taxaEntrega):'')+' = <b>'+alpcFmt('faturamento',D.liquido)+'</b>'+(D.canceladas?' · '+D.canceladas+' venda(s) cancelada(s) no Alpha, '+alpcFmt('faturamento',D.valorCancelado):'')+' · conferido às '+escR(r.hora)+'</div>';
   if((r.alertas||[]).length) h='<div class="alpc-alerta">🔴 Os números não batem. Você precisa organizar os seus lançamentos: o que você informou tem que bater com o que está no sistema.<br><br>⚠️ <b>Por enquanto o placar não é bloqueado</b>, mas <b>nas próximas semanas o placar será BLOQUEADO</b> sempre que o seu lançamento não bater com o lançamento do sistema. Corrija a forma de lançar a partir de hoje.</div>'+h;
   else h='<div class="alpc-ok">✅ Números conferidos: o que você informou bate com o sistema.</div>'+h;
   h+='<div class="muted" style="font-size:.76rem;margin-top:4px">Os campos passaram para os valores do Alpha, que são os que vão no placar. Se vender mais antes de fechar, toque em <b>Conferir de novo</b>.</div>';
   res.innerHTML=h;
   // os campos passam a ter o valor do Alpha e ficam travados
   const fat=document.getElementById('fat'); fat.value=Number(r.alpha.faturamento||0).toFixed(2).replace('.',','); formatarMoedaInput(fat);
-  alpcCampos().forEach(([k,id])=>{ const e=document.getElementById(id); if(!e) return; if(k!=='faturamento') e.value=Number(r.alpha[k]||0); e.readOnly=true; e.classList.add('alp-travado'); });
+  alpcCampos().forEach(([k,id])=>{ const e=document.getElementById(id); if(!e||r.alpha[k]===undefined) return; if(k!=='faturamento') e.value=Number(r.alpha[k]||0); e.readOnly=true; e.classList.add('alp-travado'); });
+  try{ onVendasCanceladasInput(); }catch(e){} // se o Alpha tem cancelamento, pede o motivo
   window._alpOk=true; validarFaturamento();
   bt.disabled=false; try{ fechGuardar(); }catch(e){}
   verificarBotaoRegistrar();
