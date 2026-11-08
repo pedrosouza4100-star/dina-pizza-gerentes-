@@ -179,23 +179,33 @@ let VAGAS=null;
 function renderVagas(){
   if(!VAGAS) return '';
   const ab=VAGAS.filter(v=>v.situacao==='aberta'), fe=VAGAS.filter(v=>v.situacao!=='aberta').slice(0,5);
-  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">O gerente informa no placar quando a equipe está incompleta. Prazo: 10 dias úteis. Se não for conseguir, avise aqui: o Robson e o GDI recebem na hora.</div>';
+  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">O gerente informa no placar quando a equipe está incompleta. A vaga é sempre aberta como <b>auxiliar</b> (nunca a categoria principal). Prazo: 10 dias úteis. Se não for conseguir, peça mais prazo aqui dizendo o motivo: a Rosi e o GDI recebem.</div>';
   if(!ab.length) h+='<div class="muted">Nenhuma vaga aberta. 👏</div>';
   ab.forEach(v=>{
     const cor=v.atrasada?'var(--danger)':v.uteisRestantes<=3?'#FFD000':'var(--green)';
     h+=`<div style="border:1px solid var(--border);border-left:4px solid ${cor};border-radius:8px;padding:10px;margin-top:8px">
-      <b>${esc(v.unidade)} — ${esc(v.setorNome)}: ${v.qtd} vaga(s)</b><br>
+      <b>${esc(v.unidade)} — ${esc(v.cargo||v.setorNome)}: ${v.qtd} vaga(s)</b>${v.cargo&&v.cargo!==v.setorNome?' <span class="muted" style="font-size:0.78rem">(falta de '+esc(v.setorNome)+')</span>':''}<br>
       <span class="muted" style="font-size:0.82rem">Aberta ${esc(v.abertaEm)} · ${v.atrasada?'<b style="color:var(--danger)">PRAZO VENCIDO em '+esc(v.prazo.slice(0,5))+'</b>':'prazo '+esc(v.prazo.slice(0,5))+' (faltam '+v.uteisRestantes+' dia(s) útil(eis))'}</span>
-      ${v.naoConsigo?'<div style="font-size:0.82rem;color:var(--d-t-err);margin-top:4px">Você avisou que não vai conseguir: '+esc(v.naoConsigo)+'</div>':''}
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn verde" style="flex:1;min-width:130px" onclick="vagaAcao('${v.id}','preenchida')">✓ Vaga preenchida</button>${v.naoConsigo?'':`<button class="btn" style="flex:1;min-width:130px;background:var(--d-line)" onclick="vagaNaoConsigo('${v.id}')">Não vou conseguir no prazo</button>`}</div></div>`;
+      ${(v.prorrogacoes||[]).length?'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px">Prazo prorrogado '+v.prorrogacoes.length+'x (original '+esc(String(v.prazoOriginal||'').slice(0,5))+'). Último motivo: '+esc(v.prorrogacoes[v.prorrogacoes.length-1].motivo)+'</div>':(v.naoConsigo?'<div style="font-size:0.82rem;color:var(--d-t-err);margin-top:4px">Você avisou: '+esc(v.naoConsigo)+'</div>':'')}
+      ${v.atrasada?'<div style="font-size:0.82rem;color:var(--d-t-err);font-weight:700;margin-top:4px">🚨 Prazo vencido: peça mais prazo dizendo por que ainda não completou.</div>':''}
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn verde" style="flex:1;min-width:130px" onclick="vagaAcao('${v.id}','preenchida')">✓ Vaga preenchida</button><button class="btn" style="flex:1;min-width:130px;background:var(--d-line)" onclick="vagaPrazoAbrir('${v.id}')">⏳ Pedir mais prazo</button></div>
+      <div id="vprz_${v.id}" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:8px"><div class="muted" style="font-size:0.8rem">Por que ainda não completou esta vaga? (vai para a Rosi e para o GDI)</div><textarea id="vprzm_${v.id}" rows="2" style="width:100%;margin-top:4px"></textarea><div class="muted" style="font-size:0.8rem;margin-top:6px">Nova data (no máximo 10 dias úteis a partir de hoje)</div><input type="date" id="vprzd_${v.id}" style="margin-top:4px"><button class="btn verde" style="margin-top:8px;width:100%" onclick="vagaPrazoEnviar('${v.id}')">Enviar pedido de mais prazo</button></div></div>`;
   });
-  if(fe.length) h+='<div class="muted" style="font-size:0.78rem;margin-top:10px">Fechadas nos últimos 7 dias: '+fe.map(v=>esc(v.unidade)+' '+esc(v.setorNome)+' ('+(v.situacao==='preenchida'?'preenchida':'cancelada')+')').join(' · ')+'</div>';
+  if(fe.length) h+='<div class="muted" style="font-size:0.78rem;margin-top:10px">Fechadas nos últimos 7 dias: '+fe.map(v=>esc(v.unidade)+' '+esc(v.cargo||v.setorNome)+' ('+(v.situacao==='preenchida'?'preenchida':'cancelada')+')').join(' · ')+'</div>';
   return h+'</div>';
 }
 async function vagaAcao(id,acao,motivo){
   if(acao==='preenchida'&&!confirm('Confirmar que a vaga foi preenchida (a pessoa já começou)?')) return;
   if(TESTE){ toast('Modo teste: as vagas são reais, nada foi alterado.'); return; }
   try{ await post({action:'equipeVagaAcao',chave:H,id,acao,motivo:motivo||''}); toast(acao==='preenchida'?'Vaga preenchida. Obrigado!':'Aviso enviado ao Robson e ao regional.'); await carregar(); }catch(e){ toast(e.message); }
+}
+function vagaPrazoAbrir(id){ const e=document.getElementById('vprz_'+id); if(e) e.style.display=e.style.display==='none'?'block':'none'; }
+async function vagaPrazoEnviar(id){
+  const m=(document.getElementById('vprzm_'+id).value||'').trim(), d=document.getElementById('vprzd_'+id).value;
+  if(m.length<10){ toast('Explique o motivo com pelo menos 10 letras.'); return; }
+  if(!d){ toast('Escolha a nova data.'); return; }
+  if(TESTE){ toast('Modo teste: as vagas são reais, nada foi alterado.'); return; }
+  try{ const r=await post({action:'equipeVagaAcao',chave:H,id,acao:'prorrogar',motivo:m,novoPrazo:d}); toast('Pedido enviado: novo prazo '+(r.prazo||'').slice(0,5)+'. A Rosi e o GDI vão receber.'); await carregar(); }catch(e){ toast(e.message); }
 }
 function vagaNaoConsigo(id){
   const m=prompt('Por que não vai conseguir preencher no prazo? (o Robson e o GDI recebem esta mensagem)');
