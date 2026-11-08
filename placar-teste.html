@@ -2681,7 +2681,7 @@ window.addEventListener('load',()=>{
   // voltando da escala em modo teste: continua no modo teste (nesta aba)
   let tLoja=null, tHash=null; try{ tLoja=sessionStorage.getItem('dina_teste_loja'); tHash=sessionStorage.getItem('dina_teste_admin'); }catch(e){}
   if(tLoja&&tHash){ carregarMetas(); ehSenhaAdmin(tHash).then(ok=>{ if(ok) entrarTeste(tLoja); else { try{sessionStorage.removeItem('dina_teste_loja');}catch(e){} mostrar('telaEscolha'); } }); return; }
-  const u=localStorage.getItem('dina_unidade_logada');
+  const u=null; /* placar-teste: nunca entra sozinho na loja salva no celular — sempre pede loja + senha */
   if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
   // Carrega metas sem bloquear
