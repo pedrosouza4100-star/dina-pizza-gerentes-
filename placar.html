@@ -3194,7 +3194,8 @@ let ALP=null;
 async function alpPreparar(){
   const b=document.getElementById('alpBox'); ALP=null; alpDestravar(true); if(!b) return;
   b.style.display='none'; document.getElementById('alpInfo').innerHTML=''; document.getElementById('alpBtn').textContent='🔌 Buscar no Alpha';
-  try{ const rc=await chkRecursos(); if(rc.includes('alphaPlacar')) b.style.display='block'; }catch(e){}
+  // desligado na publicação de 08/11 (Robson 07/11 22h15): o gerente preenche primeiro e depois confere com o Alpha (fluxo novo, recurso alphaConferir)
+  try{ const rc=await chkRecursos(); if(rc.includes('alphaConferir')) b.style.display='block'; }catch(e){}
 }
 function alpChave(){
   if(MODO_TESTE){ try{ return sessionStorage.getItem('dina_teste_admin')||''; }catch(e){ return ''; } }
