@@ -1926,6 +1926,10 @@ function mostrarGeo(tipo, r){
     t.textContent='VOCÊ ESTÁ FORA DA LOJA';
     excMostrarNaTela();
     x.innerHTML='O placar de <b>'+unidadeAtual+'</b> só pode ser preenchido <b>dentro da unidade</b>.<br><br>Você está a <b>'+km+'</b> da loja.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”. Esta tentativa fica registrada para o administrador.</span>';
+    // 08/11/2026: celular com localização APROXIMADA (precisão de quilômetros, ex.: Fazenda ±2000 m) — explica como ligar a localização precisa
+    if((r.precisao||0)>GEO_PRECISAO_MAX) x.innerHTML+='<div style="margin-top:12px;background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:10px;font-size:13px;color:#ffe9a8;text-align:left">⚠️ <b>Seu celular está mandando a localização APROXIMADA</b> (erro de '+(r.precisao>=1000?(r.precisao/1000).toFixed(1).replace('.',',')+' km':r.precisao+' m')+'). Por isso o placar acha que você está longe.<br><br>'+(/iPhone|iPad|iPod/.test(navigator.userAgent)
+      ?'<b>No iPhone:</b> Ajustes › Privacidade e Segurança › Serviços de Localização › <b>Safari (Sites)</b> › ligue <b>Localização Exata</b>.'
+      :'<b>No Android:</b> 1) Toque no cadeado ao lado do endereço do site › <b>Permissões</b> › <b>Local</b> › marque <b>Precisa</b>. 2) Se não aparecer: Configurações do celular › <b>Apps</b> › <b>Chrome</b> › <b>Permissões</b> › <b>Local</b> › ligue <b>Usar local exato</b>. 3) Deixe a localização do celular ligada com o <b>Wi-Fi</b> ligado.')+'<br>Depois toque em “Conferir de novo”.</div>';
   } else if(tipo==='negado'){
     document.getElementById('excBox').style.display='none';
     t.textContent='PERMITA A LOCALIZAÇÃO';
