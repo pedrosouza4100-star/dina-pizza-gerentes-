@@ -3292,9 +3292,19 @@ function alpcCampos(){ // o que entra na conferência nesta loja
   return c;
 }
 function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar(); }
+function alpcObrigatorios(){
+  const l=[['fat','faturamento'],['google','Google'],['ifood','iFood'],['chamados','chamados'],['cancel','cancelamentos']];
+  if(temFliperBuffet(unidadeAtual)) l.push(['fichas','fichas de fliperama'],['buffets','buffets vendidos']);
+  l.push(['bebCaipiras','caipiras'],['bebCoqueteis','coquetéis'],['bebChopes','chopes'],['bebSucos','sucos naturais']);
+  if(temLoja(unidadeAtual)) l.push(['pedidosIfood','pedidos não confirmados do iFood']);
+  l.push(['vendasCanceladas','vendas canceladas no caixa']);
+  return l;
+}
 function alpcEstado(){
   const bt=document.getElementById('alpcBtn'); if(!bt||!ALPC_ATIVO) return;
-  const falta=alpcCampos().filter(([,id])=>{ const e=document.getElementById(id); return !e||String(e.value).trim()===''; });
+  // 09/11/2026 (Robson): só libera depois de TODOS os números do fechamento preenchidos com o que o gerente tem da loja
+  const falta=alpcObrigatorios().filter(([id])=>!filled(id)).map(([id,nome])=>[null,id,nome]);
+  if(temLoja(unidadeAtual)&&filled('pedidosIfood')){ const piv=ival('pedidosIfood'); if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) falta.push([null,'pedidosIfoodDetalhe','número dos pedidos não confirmados']); }
   bt.disabled=!!ALPC || falta.length>0;
   const aj=document.getElementById('alpcAjuda');
   if(aj && !ALPC) aj.textContent=falta.length?('Antes de conferir, preencha: '+falta.map(f=>f[2]).join(', ')+'.'):'Tudo preenchido. Toque em conferir: o placar compara o que você informou com o que está no sistema.';
