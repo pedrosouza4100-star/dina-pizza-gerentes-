@@ -200,6 +200,16 @@
   .falta-ir span{color:var(--gold);font-size:1.1rem}
   @keyframes faltaPisca{0%,100%{box-shadow:0 0 0 0 rgba(255,208,0,0)}25%,75%{box-shadow:0 0 0 4px rgba(255,208,0,0.85)}50%{box-shadow:0 0 0 2px rgba(255,208,0,0.4)}}
   .falta-pisca{animation:faltaPisca 1.2s ease 2;border-radius:16px}
+/* Bebidas e Conferir com o Alpha (08/11/2026) */
+.beb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.beb-grid label{font-size:.78rem;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:4px}
+.alpc-tab{width:100%;border-collapse:collapse;margin:8px 0;font-size:.82rem}
+.alpc-tab th{font-size:.68rem;text-transform:uppercase;color:var(--muted);text-align:right;padding:3px 2px;font-weight:700}
+.alpc-tab th:first-child,.alpc-tab td:first-child{text-align:left}
+.alpc-tab td{padding:4px 2px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.alpc-tab tr.ruim td{color:var(--d-t-err,#ffb4b4);font-weight:800}
+.alpc-alerta{background:rgba(255,68,68,.14);border:1px solid var(--danger);color:var(--d-t-err,#ffb4b4);border-radius:10px;padding:10px 12px;font-weight:800;line-height:1.4;margin:8px 0}
+.alpc-ok{background:rgba(46,204,113,.12);border:1px solid rgba(46,204,113,.4);color:var(--d-t-ok,#7CFFB2);border-radius:10px;padding:10px 12px;font-weight:800;margin:8px 0}
 /* Faturamento, buffets e fichas buscados no Alpha (07/11/2026) */
 .alp-box{margin-top:10px}
 .alp-btn{width:100%;padding:12px;border-radius:10px;border:1px solid var(--d-blue,#3aa0ff);background:rgba(58,160,255,.14);color:var(--text);font-weight:800;font-size:.95rem;cursor:pointer}
@@ -627,6 +637,24 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_buffets"></div>
       </div>
+      <!-- Bebidas vendidas (08/11/2026; só com o recurso alphaConferir) -->
+      <div class="card card-full" id="cardBebidas" style="display:none">
+        <div class="card-label">🍹 Bebidas vendidas</div>
+        <div class="atencao-campo">⚠️ Quantidades da noite inteira. Chopes: some canecas e torres (cada um conta 1). Sucos naturais: copos e jarras, vitaminas incluídas.</div>
+        <div class="beb-grid">
+          <label>Caipiras<div class="input-wrap"><input class="val" id="bebCaipiras" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+          <label>Coquetéis<div class="input-wrap"><input class="val" id="bebCoqueteis" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+          <label>Chopes<div class="input-wrap"><input class="val" id="bebChopes" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+          <label>Sucos naturais<div class="input-wrap"><input class="val" id="bebSucos" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+        </div>
+      </div>
+      <!-- Conferir com o Alpha (08/11/2026): o gerente preenche primeiro e depois confere -->
+      <div class="card card-full" id="cardAlpha" style="display:none">
+        <div class="card-label">🔌 Conferir com o Alpha</div>
+        <div class="card-meta muted" id="alpcAjuda">Preencha o faturamento, os buffets, as fichas e as bebidas. Depois toque em conferir: o placar compara o que você informou com o que está no sistema.</div>
+        <button type="button" class="alp-btn" id="alpcBtn" onclick="alpcConferir()" disabled>🔌 Conferir com o Alpha</button>
+        <div id="alpcRes" class="alp-info"></div>
+      </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
         <div class="card-label">💳 Vendas Canceladas no Caixa</div>
@@ -698,7 +726,7 @@ const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirD
   const fetchOrig=window.fetch.bind(window);
   window.fetch=function(url,opt){
     if(MODO_TESTE && opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
-      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
+      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
       return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify({ok:true,status:'ok',teste:true}),{status:200,headers:{'Content-Type':'application/json'}})),500));
     }
     return fetchOrig(url,opt);
@@ -804,6 +832,14 @@ const JANELAS_TEMPO=[
   {inicio:'20:00', fim:'21:00', label:'20h às 21h', hora:'20h30'},
   {inicio:'21:30', fim:'22:30', label:'21h30 às 22h30', hora:'22h'},
 ];
+// 08/11/2026: os horários vêm do servidor (o Robson muda no Admin); a lista acima vale só se o servidor não mandar
+function tmpJanelasAplicar(l){
+  try{
+    if(!Array.isArray(l)||l.length!==3||!l.every(j=>/^\d\d:\d\d$/.test(j.inicio)&&/^\d\d:\d\d$/.test(j.fim))) return;
+    JANELAS_TEMPO.splice(0,3,...l.map((j,i)=>({inicio:j.inicio, fim:j.fim, label:j.label||(j.inicio+' às '+j.fim), hora:j.hora||JANELAS_TEMPO[i].hora})));
+    if(typeof renderTempoRegistros==='function') renderTempoRegistros();
+  }catch(e){}
+}
 const MOTO_TRAVA_MIN=20*60; // motoboys: pode incluir/corrigir até as 20h
 function minAgoraTurno(){ const a=new Date(); const m=a.getHours()*60+a.getMinutes(); return a.getHours()<4?m+1440:m; } // madrugada conta como depois da meia-noite do turno
 function janelaMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -1292,6 +1328,7 @@ function salvarFalta(d){
   avaliar();
   // Envia em tempo real para o Call Center
   enviarTempoReal('falta', {status:d.status, descricao:d.descricao||''});
+  setTimeout(()=>fltMostrar(d),1200);
 }
 
 function mostrarFaltaRegistrada(d){
@@ -1556,6 +1593,7 @@ function iniciarApp(u){
   REG_PEND=[]; REG_PEND_FOTO={}; carregarRegPend();
   eqCarregar();
   alpPreparar();
+  alpcPreparar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -1574,7 +1612,7 @@ function iniciarApp(u){
 // ── Números do fechamento guardados no celular enquanto o gerente digita: se a página recarregar
 //    (celular fechou a aba em segundo plano, atualização do sistema, internet caiu), nada se perde.
 //    Apaga depois que o placar é enviado com sucesso. ──
-const FECH_CAMPOS=['fat','google','ifood','cancel','chamados','fichas','buffets','vendasCanceladas','vendasCanceladasMotivo','pedidosIfood','pedidosIfoodDetalhe','obs'];
+const FECH_CAMPOS=['fat','google','ifood','cancel','chamados','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos','vendasCanceladas','vendasCanceladasMotivo','pedidosIfood','pedidosIfoodDetalhe','obs'];
 function fechGuardar(){
   if(!unidadeAtual) return;
   const v={}; let algum=false;
@@ -1894,6 +1932,10 @@ function mostrarGeo(tipo, r){
     t.textContent='VOCÊ ESTÁ FORA DA LOJA';
     excMostrarNaTela();
     x.innerHTML='O placar de <b>'+unidadeAtual+'</b> só pode ser preenchido <b>dentro da unidade</b>.<br><br>Você está a <b>'+km+'</b> da loja.<br><span style="font-size:12px;color:#999">Se você está na loja, vá para perto da porta ou de uma janela e toque em “Conferir de novo”. Esta tentativa fica registrada para o administrador.</span>';
+    // 08/11/2026: celular com localização APROXIMADA (precisão de quilômetros, ex.: Fazenda ±2000 m) — explica como ligar a localização precisa
+    if((r.precisao||0)>GEO_PRECISAO_MAX) x.innerHTML+='<div style="margin-top:12px;background:#2a1a00;border:1px solid #FFD000;border-radius:8px;padding:10px;font-size:13px;color:#ffe9a8;text-align:left">⚠️ <b>Seu celular está mandando a localização APROXIMADA</b> (erro de '+(r.precisao>=1000?(r.precisao/1000).toFixed(1).replace('.',',')+' km':r.precisao+' m')+'). Por isso o placar acha que você está longe.<br><br>'+(/iPhone|iPad|iPod/.test(navigator.userAgent)
+      ?'<b>No iPhone:</b> Ajustes › Privacidade e Segurança › Serviços de Localização › <b>Safari (Sites)</b> › ligue <b>Localização Exata</b>.'
+      :'<b>No Android:</b> 1) Toque no cadeado ao lado do endereço do site › <b>Permissões</b> › <b>Local</b> › marque <b>Precisa</b>. 2) Se não aparecer: Configurações do celular › <b>Apps</b> › <b>Chrome</b> › <b>Permissões</b> › <b>Local</b> › ligue <b>Usar local exato</b>. 3) Deixe a localização do celular ligada com o <b>Wi-Fi</b> ligado.')+'<br>Depois toque em “Conferir de novo”.</div>';
   } else if(tipo==='negado'){
     document.getElementById('excBox').style.display='none';
     t.textContent='PERMITA A LOCALIZAÇÃO';
@@ -1951,6 +1993,16 @@ function conferirLocal(agora, envio){
         if(!r2||!r2.ok||r2.dentro){ document.getElementById('geoOverlay').style.display='none'; return true; }
         if(p2.acc>GEO_PRECISAO_MAX){ logProva('GPS_IMPRECISO','2ª leitura fora '+(r2.distancia||'?')+' m com precisão '+Math.round(p2.acc)+' m: não travou'); return true; }
         r=r2;
+      } else if(!travada){ // salvando (checklist, equipe, envio) — 08/11/2026: confirma com mais 2 leituras novas antes de travar (Campo Largo travou no salvar do checklist dentro da loja)
+        logProva('GPS_FORA_AO_SALVAR',(r.distancia||'?')+' m, precisão '+Math.round(pos.acc)+' m: conferindo de novo');
+        window._geoSuspeito=true; // enquanto confere, nada é gravado
+        for(let k=0;k<2;k++){
+          await new Promise(res=>setTimeout(res,6000));
+          const p3=await geoLer(true); if(p3.erro) continue;
+          let r3=null; try{ r3=await geoPerguntar(p3); }catch(e){ return true; }
+          if(!r3||!r3.ok||r3.dentro){ logProva('GPS_CONFIRMOU_DENTRO',(k+2)+'ª leitura dentro da loja'); document.getElementById('geoOverlay').style.display='none'; return true; }
+          r=r3;
+        }
       }
       mostrarGeo('fora', r); return false;
     } finally {
@@ -2105,7 +2157,7 @@ function chkJsonp(params, ms){
 let _chkV2=null, _chkRecursos=null;
 async function chkRecursos(){
   if(_chkRecursos!==null) return _chkRecursos;
-  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; }
+  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; tmpJanelasAplicar(r&&r.tempoJanelas); }
   catch(e){ return []; } // não guarda: tenta de novo depois
   return _chkRecursos;
 }
@@ -2581,7 +2633,7 @@ async function salvarChecklist(){
 async function _salvarChecklist(){
   const btn = document.getElementById('chkSalvarBtn');
   const msg = document.getElementById('chkModalMsg');
-  if(msg){ msg.textContent='📍 Conferindo se você está na loja...'; msg.style.color='#888'; }
+  if(msg){ msg.textContent='📍 Conferindo se você está na loja... (pode levar até 20 segundos)'; msg.style.color='#888'; }
   if(!(await conferirLocal(true,true))){ // a tela 📍 aparece por cima do checklist (as respostas continuam guardadas)
     if(msg){ msg.textContent='📍 Não salvou: o placar não confirmou que você está dentro da loja. Veja a tela da localização.'; msg.style.color='#ff4444'; }
     if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', chkTurnoAtual+': fora da loja (GPS)');
@@ -3003,6 +3055,7 @@ function validarFaturamento(){
 
 window._tsInicioPlacar=Date.now();
 function verificarBotaoRegistrar(){
+  try{ alpcEstado(); }catch(e){}
   const btn=document.getElementById('saveBtn');
   const lista=document.getElementById('pendenciasList');
   if(!btn||!unidadeAtual) return;
@@ -3017,6 +3070,7 @@ function verificarBotaoRegistrar(){
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
+  if(ALPC_ATIVO){ if(['bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].some(id=>!filled(id))) faltando.push('🍹 Bebidas vendidas'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
@@ -3066,7 +3120,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3214,6 +3268,92 @@ let EQ=null, eqSalvo=false, EQ_SNAP=null; // EQ_SNAP: o que já está salvo (07/
 const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['falta','Faltou'],['vaga','Vaga aberta']];
 // 07/11/2026: se a busca da equipe falhar (servidor lento no começo da noite), tenta de novo a cada 1 min
 // e antes de enviar — antes o card sumia e a equipe deixava de ser obrigatória (Isaac Manhã e Araucária, 06/11)
+// ── Conferir com o Alpha (08/11/2026; pedido do Robson): o gerente preenche primeiro e depois confere ──
+// Só com o recurso alphaConferir. Compara informado × Alpha, mostra a diferença, passa os campos para o valor do Alpha
+// e trava; diferença acima do limite = mensagem vermelha. Obrigatório para enviar; Alpha fora do ar = envia com o informado (LOG ALPHA_FORA).
+let ALPC_ATIVO=false, ALPC=null;
+const ALPC_BEB=[['caipiras','bebCaipiras','Caipiras'],['coqueteis','bebCoqueteis','Coquetéis'],['chopes','bebChopes','Chopes'],['sucos','bebSucos','Sucos naturais']];
+async function alpcPreparar(){
+  ALPC_ATIVO=false; ALPC=null; window._alpOk=false;
+  ['cardBebidas','cardAlpha'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  ['fat','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.readOnly=false; e.classList.remove('alp-travado'); } });
+  const r=document.getElementById('alpcRes'); if(r) r.innerHTML='';
+  try{ const rc=await chkRecursos(); if(!rc.includes('alphaConferir')) return; }catch(e){ return; }
+  ALPC_ATIVO=true;
+  document.getElementById('cardBebidas').style.display='block';
+  document.getElementById('cardAlpha').style.display='block';
+  verificarBotaoRegistrar();
+}
+function alpcCampos(){ // o que entra na conferência nesta loja
+  const c=[['faturamento','fat','Faturamento líquido',true]];
+  if(temFliperBuffet(unidadeAtual)){ c.push(['buffets','buffets','Buffets']); c.push(['fichas','fichas','Fichas']); }
+  ALPC_BEB.forEach(b=>c.push(b));
+  c.push(['vendasCanceladas','vendasCanceladas','Vendas canceladas no caixa']); // 08/11/2026: cancelamentos também conferidos com o Alpha
+  return c;
+}
+function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar(); }
+function alpcEstado(){
+  const bt=document.getElementById('alpcBtn'); if(!bt||!ALPC_ATIVO) return;
+  const falta=alpcCampos().filter(([,id])=>{ const e=document.getElementById(id); return !e||String(e.value).trim()===''; });
+  bt.disabled=!!ALPC || falta.length>0;
+  const aj=document.getElementById('alpcAjuda');
+  if(aj && !ALPC) aj.textContent=falta.length?('Antes de conferir, preencha: '+falta.map(f=>f[2]).join(', ')+'.'):'Tudo preenchido. Toque em conferir: o placar compara o que você informou com o que está no sistema.';
+  if(ALPC && ALPC.fora) bt.disabled=false;
+}
+function alpcNum(id){ const e=document.getElementById(id); if(!e) return null; if(id==='fat') return valFat(); const v=String(e.value).trim(); return v===''?null:Number(v); }
+function alpcFmt(k,v){ if(v===null||v===undefined||v==='') return '—'; return k==='faturamento'?'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):String(Math.round(Number(v)*10)/10).replace('.',','); }
+function alpcDif(k,v){ if(v===null||v===undefined) return '—'; if(Math.abs(v)<0.005) return '0'; const s=v>0?'+':'−'; return s+(k==='faturamento'?'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):String(Math.abs(Math.round(v*10)/10)).replace('.',',')); }
+async function alpcConferir(){
+  const bt=document.getElementById('alpcBtn'), res=document.getElementById('alpcRes');
+  const inf=(ALPC&&ALPC.informado)||{}; if(!ALPC) alpcCampos().forEach(([k,id])=>{ inf[k]=alpcNum(id); });
+  bt.disabled=true; bt.textContent='Conferindo com o Alpha...';
+  let r=null;
+  try{
+    const chave=MODO_TESTE?(sessionStorage.getItem('dina_teste_admin')||''):(localStorage.getItem('dina_senha_'+unidadeAtual)||'');
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'alphaConferir',unidade:unidadeAtual,chave:chave,informado:inf})});
+    r=await resp.json();
+  }catch(e){ r=null; }
+  bt.textContent='🔄 Conferir de novo';
+  if(!r||!r.ok){
+    const msg=(r&&r.erro)||'O Alpha não respondeu agora.';
+    res.innerHTML='<div class="alpc-alerta">⚠️ '+escR(msg)+'</div><div class="muted" style="font-size:.78rem">Tente de novo em instantes. Se o sistema continuar fora, você pode enviar o placar com os números que informou (fica registrado).</div>';
+    if(r&&r.alphaFora||!r){ ALPC={fora:true,informado:inf,erro:msg}; logProva('ALPHA_FORA',msg); }
+    bt.disabled=false; verificarBotaoRegistrar(); return;
+  }
+  ALPC={informado:inf, alpha:r.alpha, diferencas:r.diferencas, alertas:r.alertas||[], hora:r.hora, detalhe:r.detalhe};
+  const linhas=alpcCampos().filter(([k])=>r.alpha[k]!==undefined).map(([k,,nome])=>{ const ruim=(r.alertas||[]).includes(k); return '<tr class="'+(ruim?'ruim':'')+'"><td>'+nome+'</td><td>'+alpcFmt(k,inf[k])+'</td><td>'+alpcFmt(k,r.alpha[k])+'</td><td>'+alpcDif(k,r.diferencas[k])+'</td></tr>'; }).join('');
+  const D=r.detalhe||{};
+  let h='<table class="alpc-tab"><tr><th>Item</th><th>Você informou</th><th>Alpha</th><th>Diferença</th></tr>'+linhas+'</table>';
+  h+='<div class="muted" style="font-size:.76rem">Faturamento no Alpha: bruto '+alpcFmt('faturamento',D.bruto)+' − descontos '+alpcFmt('faturamento',D.descontos)+' − cortesias '+alpcFmt('faturamento',D.cortesias)+(D.taxaEntrega?' + taxa de entrega '+alpcFmt('faturamento',D.taxaEntrega):'')+' = <b>'+alpcFmt('faturamento',D.liquido)+'</b>'+(D.canceladas?' · '+D.canceladas+' venda(s) cancelada(s) no Alpha, '+alpcFmt('faturamento',D.valorCancelado):'')+' · conferido às '+escR(r.hora)+'</div>';
+  if((r.alertas||[]).length) h='<div class="alpc-alerta">🔴 Os números não batem. Você precisa organizar os seus lançamentos: o que você informou tem que bater com o que está no sistema.<br><br>⚠️ <b>Por enquanto o placar não é bloqueado</b>, mas <b>nas próximas semanas o placar será BLOQUEADO</b> sempre que o seu lançamento não bater com o lançamento do sistema. Corrija a forma de lançar a partir de hoje.</div>'+h;
+  else h='<div class="alpc-ok">✅ Números conferidos: o que você informou bate com o sistema.</div>'+h;
+  h+='<div class="muted" style="font-size:.76rem;margin-top:4px">Os campos passaram para os valores do Alpha, que são os que vão no placar. Se vender mais antes de fechar, toque em <b>Conferir de novo</b>.</div>';
+  res.innerHTML=h;
+  // os campos passam a ter o valor do Alpha e ficam travados
+  const fat=document.getElementById('fat'); fat.value=Number(r.alpha.faturamento||0).toFixed(2).replace('.',','); formatarMoedaInput(fat);
+  alpcCampos().forEach(([k,id])=>{ const e=document.getElementById(id); if(!e||r.alpha[k]===undefined) return; if(k!=='faturamento') e.value=Number(r.alpha[k]||0); e.readOnly=true; e.classList.add('alp-travado'); });
+  try{ onVendasCanceladasInput(); }catch(e){} // se o Alpha tem cancelamento, pede o motivo
+  window._alpOk=true; validarFaturamento();
+  bt.disabled=false; try{ fechGuardar(); }catch(e){}
+  verificarBotaoRegistrar();
+  logProva((r.alertas||[]).length?'ALPHA_DIVERGE':'ALPHA_CONFERIDO',(r.alertas||[]).join(',')+' · '+JSON.stringify(r.diferencas).slice(0,200));
+}
+
+// ── Falta de produto: cobrar quando repete e elogiar os dias sem falta (08/11/2026) ──
+async function fltMostrar(d){
+  try{ const rc=await chkRecursos(); if(!rc.includes('faltaAnalise')) return; }catch(e){ return; }
+  let r=null; try{ r=await chkJsonp({action:'fltAnalise',unidade:unidadeAtual,status:d.status,descricao:d.descricao||''},15000); }catch(e){ return; }
+  if(!r||!r.ok) return;
+  if(r.status==='sim' && (r.repetidos||[]).length){
+    const pior=r.repetidos.slice().sort((a,b)=>b.dias-a.dias)[0];
+    const itens=r.repetidos.length===1?'<b>'+escR(pior.item)+'</b>':r.repetidos.map(x=>'<b>'+escR(x.item)+'</b> ('+x.dias+'º dia seguido)').join(', ');
+    chkMostrarAviso('⚠️ FALTA REPETIDA','Atenção: já é o <b>'+pior.dias+'º dia seguido</b> faltando '+itens+'.<br><br>Sua lista de pedidos está correta? Onde está o problema? Já informou o seu superior?'+(pior.dias>=3?'<br><br><b>O GDI e o responsável por compras (CD) foram avisados.</b>':''),'Entendi',null);
+    logProva('FALTA_REPETIDA',r.repetidos.map(x=>x.item+' '+x.dias+'d').join(', '));
+  } else if(r.status==='nao' && r.parabens){
+    chkMostrarAviso('🏆 PARABÉNS!','Hoje é o <b>'+r.diasSemFalta+'º dia seguido sem falta de produto</b>. Sua gestão está excelente!','Obrigado',null);
+  }
+}
+
 // ── Faturamento, buffets e fichas vindos do Alpha (07/11/2026) ──
 // Botão "Buscar no Alpha" no card do faturamento (só se o servidor tiver o recurso alphaPlacar): preenche o líquido,
 // os buffets e as fichas da noite e trava os campos; "digitar à mão" destrava (fica registrado na linha do tempo).
@@ -3222,7 +3362,7 @@ async function alpPreparar(){
   const b=document.getElementById('alpBox'); ALP=null; alpDestravar(true); if(!b) return;
   b.style.display='none'; document.getElementById('alpInfo').innerHTML=''; document.getElementById('alpBtn').textContent='🔌 Buscar no Alpha';
   // desligado na publicação de 08/11 (Robson 07/11 22h15): o gerente preenche primeiro e depois confere com o Alpha (fluxo novo, recurso alphaConferir)
-  try{ const rc=await chkRecursos(); if(rc.includes('alphaConferir')) b.style.display='block'; }catch(e){}
+  try{ const rc=await chkRecursos(); if(rc.includes('alphaBuscarDireto')) b.style.display='block'; /* fluxo antigo desligado: agora é Conferir com o Alpha (cardAlpha) */ }catch(e){}
 }
 function alpChave(){
   if(MODO_TESTE){ try{ return sessionStorage.getItem('dina_teste_admin')||''; }catch(e){ return ''; } }
@@ -3305,7 +3445,7 @@ function eqRender(){
       '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar()"></label>').join('')+'</div>'+
       '<input id="eq_'+s.setor+'_obs" placeholder="Observação (opcional)" value="'+escR(g.obs||'')+'" style="margin-top:8px;width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px;font-size:0.85rem"></div></div>';
   }).join('');
-  document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
+  document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
   eqAtualizar();
 }
@@ -3363,12 +3503,26 @@ function eqAtualizar(){
     out.push(item);
   });
   const b=document.getElementById('eqSalvarBtn');
-  if(b){ const igual=tudo && EQ_SNAP!==null && JSON.stringify(out)===EQ_SNAP; b.disabled=!tudo||igual; b.textContent=igual?'✓ Equipe salva — mude um número para corrigir':'💾 Salvar equipe do dia'; b.style.opacity=igual?'0.8':''; }
+  if(b){ const igual=tudo && EQ_SNAP!==null && JSON.stringify(out)===EQ_SNAP; b.disabled=igual; /* 08/11/2026: com algo faltando o botão fica ativo e, ao tocar, leva até a função incompleta */ b.textContent=igual?'✓ Equipe salva — mude um número para corrigir':'💾 Salvar equipe do dia'; b.style.opacity=igual?'0.8':''; }
   return tudo?out:null;
 }
 async function eqSalvarEquipe(){
   const lista=eqAtualizar(), msg=document.getElementById('eqMsg'), b=document.getElementById('eqSalvarBtn');
-  if(!lista){ msg.innerHTML='<span style="color:#ff6b6b">Preencha todos os setores e explique quem está faltando.</span>'; return; }
+  if(!lista){
+    // leva até a 1ª função incompleta: sem "trabalhando hoje" ou com quem falta sem motivo
+    let alvo=null, campo=null, txt='';
+    for(const st of (EQ&&EQ.setores)||[]){
+      const pres=eqNum('eq_'+st.setor+'_pres');
+      if(pres===null){ alvo=st; campo='eq_'+st.setor+'_pres'; txt='Informe quantas pessoas estão trabalhando hoje em <b>'+escR(st.nome)+'</b>.'; break; }
+      const falta=st.ideal-pres, soma=EQ_MOT.reduce((a,[k])=>a+(eqNum('eq_'+st.setor+'_'+k)||0),0);
+      if(falta>0 && soma!==falta){ alvo=st; campo='eq_'+st.setor+'_folga'; txt='Em <b>'+escR(st.nome)+'</b> faltam '+falta+' pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').'; break; }
+    }
+    msg.innerHTML='<span style="color:#ff6b6b">⬆️ Ainda não dá para salvar. '+(txt||'Preencha todas as funções e explique quem está faltando.')+'</span>';
+    const el=alvo&&document.querySelector('.eq-setor[data-s="'+alvo.setor+'"]');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.remove('falta-pisca'); void el.offsetWidth; el.classList.add('falta-pisca'); setTimeout(()=>el.classList.remove('falta-pisca'),2600); const c=document.getElementById(campo); if(c) setTimeout(()=>{ try{c.focus({preventScroll:true});}catch(e){} },600); }
+    if(typeof logProva==='function') logProva('EQUIPE_INCOMPLETA', alvo?alvo.setor:'');
+    return;
+  }
   if(!(await conferirLocal(true,true))){ msg.innerHTML='<span style="color:#ff6b6b">📍 Não salvou: o placar não confirmou que você está dentro da loja.</span>'; return; }
   // confere com a escala da semana (03/11/2026): informou mais gente trabalhando do que a escala tem para hoje → confirma
   if(EQ && EQ.escala && EQ.escala.completa){
