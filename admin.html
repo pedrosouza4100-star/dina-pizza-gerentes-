@@ -638,6 +638,22 @@
         <div id="alpTabela" class="table-wrap" style="display:none;margin-bottom:10px"></div>
         <pre id="alpRes" style="display:none;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:0.72rem;background:var(--surface,#111);border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
       </div>
+      <div id="estSecao" style="display:none">
+        <div class="section-title">📦 Controle de estoque — piloto (Isaac)</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.6">Lance aqui a <b>contagem</b> (o que tem de verdade agora) e cada <b>entrada</b> de mercadoria (nota). O sistema desconta as vendas do Alpha feitas depois de cada lançamento e mostra quanto <b>deveria ter</b>. Na contagem seguinte aparece a diferença: diferença sempre parecida = ficha técnica; diferença de repente = desvio. Contra filé = 160 g por prato (já com a perda); chope = perda de 3%.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+          <label style="font-size:0.75rem;color:var(--muted)">Produto<br><select class="modal-input" id="estProd" style="min-width:150px"></select></label>
+          <label style="font-size:0.75rem;color:var(--muted)">Tipo<br><select class="modal-input" id="estTipo"><option value="contagem">Contagem (tem agora)</option><option value="entrada">Entrada (chegou / nota)</option></select></label>
+          <label style="font-size:0.75rem;color:var(--muted)">Quantidade<br><input class="modal-input" id="estQtd" inputmode="decimal" placeholder="kg ou litros" style="max-width:120px"></label>
+          <label style="font-size:0.75rem;color:var(--muted)">Quando (vazio = agora)<br><input class="modal-input" id="estQuando" type="datetime-local" style="max-width:200px"></label>
+          <label style="font-size:0.75rem;color:var(--muted);flex:1;min-width:160px">Observação<br><input class="modal-input" id="estObs" placeholder="ex.: nota 1234, 2 barris de 50 L"></label>
+          <button class="action-btn btn-nova" onclick="estLancar()">💾 Lançar</button>
+          <button class="action-btn btn-nova" onclick="estCarregar(true)">🔄 Atualizar</button>
+        </div>
+        <div id="estInfo" style="font-size:0.78rem;margin-bottom:8px"></div>
+        <div id="estCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px"></div>
+        <details><summary style="cursor:pointer;font-size:0.8rem;color:var(--muted)">Últimos lançamentos</summary><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Quando</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Esperado</th><th>Diferença</th><th>Obs</th><th></th></tr></thead><tbody id="estLanc"></tbody></table></div></details>
+      </div>
       <div>
         <div class="section-title">📱 Celulares autorizados</div>
         <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Cada senha (gerente e assistente) só funciona em um celular aprovado aqui. Pedidos novos aparecem também em “Hoje na rede”. Remover um celular faz ele parar de abrir o placar na hora.</div>
@@ -1079,7 +1095,7 @@
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r;
     }
     catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; at.innerHTML=''; return; }
-    gglCarregar(); alpCarregar();
+    gglCarregar(); alpCarregar(); estCarregar();
     gt.innerHTML=LOJAS_HOJE.lojas.map((l,i)=>{ const g=l.geo;
       const coord=g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}`:'';
       return `<tr data-u="${escH(l.unidade)}"><td style="font-weight:600;white-space:nowrap">${escH(l.unidade)}</td>
@@ -1138,6 +1154,46 @@
     try{ await admPost({action:'dupRemover',unidade:u,linha,ms}); showToast('Linha repetida apagada.','ok'); registrarLog('Linha repetida do placar apagada: '+u,'ok'); }
     catch(e){ showToast('Não apagou: '+e.message,'warn'); }
     dupCarregar();
+  }
+  // ── Controle de estoque — piloto (09/11/2026) ──
+  async function estCarregar(forcar){
+    const sec=document.getElementById('estSecao'), info=document.getElementById('estInfo');
+    if(forcar) info.textContent='Calculando com as vendas do Alpha…';
+    let r; try{ r=await admJsonp({action:'estqRelatorio'}); }catch(e){ if(forcar) info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(e.message)+'</span>'; return; }
+    if(!r||r.ok!==true){ if(r&&/não reconhecida|Unknown/i.test(r.erro||'')) sec.style.display='none'; else if(r&&r.erro){ sec.style.display='block'; info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(r.erro)+'</span>'; } return; }
+    sec.style.display='block';
+    const sel=document.getElementById('estProd'); if(!sel.options.length) sel.innerHTML=r.produtos.map(p=>'<option value="'+p.id+'">'+escH(p.nome)+' ('+p.unid+')</option>').join('');
+    const f=(v,u)=>v===null||v===undefined?'—':String(Math.round(v*100)/100).replace('.',',')+(u?' '+u:'');
+    document.getElementById('estCards').innerHTML=r.itens.map(i=>{
+      if(i.semContagem) return '<div class="card" style="padding:12px;border:1px dashed var(--border);border-radius:10px"><b>'+escH(i.nome)+'</b><div style="font-size:0.8rem;color:var(--muted);margin-top:6px">Ainda sem contagem inicial. Lance uma <b>contagem</b> para começar.</div></div>';
+      const cor=i.alerta==='zerado'?'var(--danger)':i.alerta==='acabando'?'var(--yellow)':'var(--green)';
+      const ult=i.historico.length?i.historico[i.historico.length-1]:null;
+      return '<div style="padding:12px;border:1px solid var(--border);border-left:4px solid '+cor+';border-radius:10px;background:var(--card)">'
+        +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+escH(i.nome)+'</b><span style="font-size:0.75rem;color:var(--muted)">'+escH(i.estoque)+'</span></div>'
+        +'<div style="font-size:1.6rem;font-weight:800;color:'+cor+';margin:6px 0 2px">'+f(i.saldo,i.unid)+'</div>'
+        +'<div style="font-size:0.78rem;color:var(--muted)">deveria ter agora'+(i.produto==='contrafile'?' ≈ <b>'+i.saldoItens+' pratos</b>':'')+(i.alerta==='zerado'?' — <b style="color:var(--danger)">pelo sistema já acabou</b>':i.alerta==='acabando'?' — <b style="color:var(--yellow)">acabando</b>':'')+'</div>'
+        +'<div style="font-size:0.78rem;margin-top:8px;line-height:1.6">Contagem: <b>'+f(i.base.qtd,i.unid)+'</b> em '+escH(i.base.quando)+'<br>Entradas depois: <b>'+f(i.totalEntradas,i.unid)+'</b><br>Vendido no Alpha: <b>'+f(i.vendidos,'')+' '+escH(i.itens)+'</b> = '+f(i.consumo,i.unid)+(i.perda?' (com '+Math.round(i.perda*100)+'% de perda)':'')
+        +'<br>Média por dia: <b>'+(i.mediaDia===null?'— (precisa de 1 dia completo)':f(i.mediaDia,'')+' '+escH(i.itens))+'</b>'+(i.diasRestantes!==null?' · dá para ~<b>'+f(i.diasRestantes,'')+' dia(s)</b>':'')
+        +(ult?'<br>Última contagem: contou <b>'+f(ult.contado,i.unid)+'</b>, esperado '+f(ult.esperado,i.unid)+' → <b style="color:'+(Math.abs(ult.diferenca)<0.01?'var(--green)':ult.diferenca<0?'var(--danger)':'var(--yellow)')+'">'+(ult.diferenca>0?'+':'')+f(ult.diferenca,i.unid)+'</b>':'')
+        +(i.erro?'<br><span style="color:var(--danger)">⚠ Alpha: '+escH(i.erro)+'</span>':'')+'</div>'
+        +(i.nomesAlpha.length?'<div style="font-size:0.7rem;color:var(--muted);margin-top:6px">Itens do Alpha contados: '+escH(i.nomesAlpha.join(', '))+'</div>':'')+'</div>';
+    }).join('');
+    document.getElementById('estLanc').innerHTML=r.lancamentos.length?r.lancamentos.map(m=>'<tr><td>'+escH(m.quando)+'</td><td>'+escH(m.produto)+'</td><td>'+escH(m.tipo)+'</td><td>'+f(m.qtd,'')+'</td><td>'+f(m.esperado,'')+'</td><td>'+(m.diferenca===null?'—':(m.diferenca>0?'+':'')+f(m.diferenca,''))+'</td><td>'+escH(m.obs)+'</td><td><button class="action-btn" style="padding:2px 8px" onclick="estExcluir(\''+m.id+'\')">🗑</button></td></tr>').join(''):'<tr><td colspan="8" style="color:var(--muted)">Nenhum lançamento ainda.</td></tr>';
+    info.innerHTML='<span style="color:var(--muted)">Atualizado às '+escH(r.hora)+'</span>';
+  }
+  async function estLancar(){
+    const info=document.getElementById('estInfo'), q=document.getElementById('estQtd').value.trim();
+    if(!q){ info.innerHTML='<span style="color:var(--danger)">Informe a quantidade.</span>'; return; }
+    const o={action:'estqLancar',senhaAdmin:ADM.hash||'',estoque:'Isaac',produto:document.getElementById('estProd').value,tipo:document.getElementById('estTipo').value,qtd:q,obs:document.getElementById('estObs').value.trim(),quando:document.getElementById('estQuando').value||''};
+    info.textContent='Lançando…';
+    try{ const r=await admPost(o);
+      ['estQtd','estObs','estQuando'].forEach(id=>document.getElementById(id).value=''); registrarLog('Estoque: '+o.tipo+' de '+o.qtd+' ('+o.produto+')','ok'); await estCarregar();
+      info.innerHTML='<span style="color:var(--green)">✓ Lançado ('+escH(r.quando)+')'+(r.diferenca!==null&&r.diferenca!==undefined?' — esperado '+String(r.esperado).replace('.',',')+', diferença <b>'+(r.diferenca>0?'+':'')+String(r.diferenca).replace('.',',')+'</b>':'')+'</span>';
+    }catch(e){ info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(e.message)+'</span>'; }
+  }
+  async function estExcluir(id){
+    if(!confirm('Apagar este lançamento?')) return;
+    try{ await admPost({action:'estqExcluir',senhaAdmin:ADM.hash||'',id}); estCarregar(true); }catch(e){ showToast(e.message,'erro'); }
   }
   // ── Sistema Alpha (integração: acesso e teste) ──
   async function alpCarregar(){
