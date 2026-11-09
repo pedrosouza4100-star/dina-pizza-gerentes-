@@ -525,7 +525,7 @@
         <textarea class="modal-input" id="msgAviso" rows="4" oninput="previaMsg()"></textarea>
         <div class="modal-label" style="margin-top:14px">2ª cobrança — no horário de atraso (padrão 19h), se continuar sem iniciar</div>
         <textarea class="modal-input" id="msgAtraso" rows="4" oninput="previaMsg()"></textarea>
-        <div class="modal-label" style="margin-top:14px">⏱️ Tempos de entrega — 5 min antes de fechar cada horário (19h55, 21h25 e 22h55), se aquele tempo não foi registrado (só lojas com entrega). Use também <b>{n}</b> (1º, 2º ou 3º tempo) e <b>{janela}</b> (ex.: 18h às 20h)</div>
+        <div class="modal-label" style="margin-top:14px">⏱️ Tempos de entrega — 5 min antes de fechar cada horário (ver ⏱️ Horários dos tempos de entrega, abaixo), se aquele tempo não foi registrado (só lojas com entrega). Use também <b>{n}</b> (1º, 2º ou 3º tempo) e <b>{janela}</b> (ex.: 18h às 20h)</div>
         <textarea class="modal-input" id="msgTempo" rows="4" oninput="previaMsg()"></textarea>
         <div class="modal-label" style="margin-top:14px">Como o gerente vai receber (exemplo)</div>
         <div id="msgPrevia" style="background:#0b2e1e;border:1px solid #1f5c3f;border-radius:10px;padding:12px 14px;font-size:0.85rem;line-height:1.5;white-space:pre-wrap;color:#e8ffe8"></div>
@@ -534,6 +534,16 @@
           <button class="save-metas-btn outline" onclick="padraoMensagens()">Voltar ao texto padrão</button>
         </div>
         <div id="msgInfo" style="font-size:0.75rem;color:var(--muted);margin-top:8px"></div>
+      </div>
+      <div style="margin-top:26px">
+        <div class="section-title">⏱️ Horários dos tempos de entrega</div>
+        <div style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin:8px 0 12px">O gerente só consegue registrar cada tempo dentro do horário abaixo (o servidor também confere). O robô avisa 5 min antes de fechar e o call center usa os mesmos horários. Vale na hora para todas as lojas com entrega.</div>
+        <div class="table-wrap"><table class="cont-tab"><thead><tr><th>Tempo</th><th>Combinado</th><th>Abre</th><th>Fecha</th></tr></thead><tbody id="tjBody"><tr><td colspan="4" style="color:var(--muted)">Carregando…</td></tr></tbody></table></div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="save-metas-btn" onclick="salvarTempoJanelas()">Salvar horários</button>
+          <button class="save-metas-btn outline" onclick="salvarTempoJanelas('padrao')">Voltar ao padrão (19h, 20h30, 22h — último até 23h)</button>
+        </div>
+        <div id="tjInfo" style="font-size:0.75rem;color:var(--muted);margin-top:8px"></div>
       </div>
     </div>
 
@@ -1315,12 +1325,29 @@
     const m=ULTIMO_HOJE.mensagens;
     if(m){ MSG_PADRAO=m.padrao; document.getElementById('msgAviso').value=m.aviso; document.getElementById('msgAtraso').value=m.atraso; document.getElementById('msgTempo').value=m.tempo||(m.padrao&&m.padrao.tempo)||''; document.getElementById('msgTempo').disabled=!m.tempo; document.getElementById('msgInfo').textContent=m.personalizada?'Usando as suas mensagens.':'Usando o texto padrão.'; }
     else document.getElementById('msgInfo').innerHTML='<span style="color:var(--yellow)">⚠ Falta colar no Apps Script o código novo para salvar as mensagens aqui.</span>';
+    document.getElementById('tjBody').innerHTML=linhasTempoJanelas(ULTIMO_HOJE.tempoJanelas&&ULTIMO_HOJE.tempoJanelas[0]&&('hora' in ULTIMO_HOJE.tempoJanelas[0])?ULTIMO_HOJE.tempoJanelas:null);
     previaMsg();
   }
   function montarMsg(t){
     const l=ULTIMO_HOJE&&ULTIMO_HOJE.lojas.find(x=>(x.contato||{}).gerente)||{unidade:'Uberaba',contato:{gerente:'Neusa'}};
     const nome=String((l.contato||{}).gerente||'Gerente').trim().split(/\s+/)[0];
     return String(t||'').replace(/\{gerente\}/g,nome).replace(/\{loja\}/g,l.unidade).replace(/\{hora\}/g,'17:30').replace(/\{n\}/g,'1').replace(/\{janela\}/g,'18h às 20h');
+  }
+  function linhasTempoJanelas(l){
+    if(!Array.isArray(l)||l.length!==3) return '<tr><td colspan="4" style="color:var(--yellow)">⚠ Falta colar no Apps Script o código novo (2026-11-08-c) para mudar os horários aqui.</td></tr>';
+    return l.map((j,i)=>'<tr><td><b>'+(i+1)+'º</b></td><td><input class="modal-input" style="max-width:90px" id="tjHora'+i+'" value="'+escH(j.hora||'')+'" placeholder="19h"></td><td><input class="modal-input" type="time" style="max-width:120px" id="tjIni'+i+'" value="'+escH(j.inicio)+'"></td><td><input class="modal-input" type="time" style="max-width:120px" id="tjFim'+i+'" value="'+escH(j.fim)+'"></td></tr>').join('');
+  }
+  async function salvarTempoJanelas(padrao){
+    const info=document.getElementById('tjInfo');
+    const janelas=padrao?'padrao':[0,1,2].map(i=>({hora:document.getElementById('tjHora'+i).value.trim(),inicio:document.getElementById('tjIni'+i).value,fim:document.getElementById('tjFim'+i).value}));
+    info.textContent='Salvando…';
+    try{
+      const r=await admPost({action:'authTempoJanelasSalvar',janelas});
+      if(!r||!r.ok) throw new Error((r&&r.erro)||'Não salvou');
+      document.getElementById('tjBody').innerHTML=linhasTempoJanelas(r.janelas);
+      info.innerHTML='<span style="color:var(--green)">✓ Salvo: '+r.janelas.map(j=>j.n+'º '+escH(j.label)).join(' · ')+'. Os placares abertos pegam o novo horário na próxima vez que abrirem.</span>';
+      showToast('Horários dos tempos salvos','ok');
+    }catch(e){ info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(e.message)+'</span>'; }
   }
   function previaMsg(){ const t=document.getElementById('msgTempo').value; document.getElementById('msgPrevia').textContent='1ª: '+montarMsg(document.getElementById('msgAviso').value)+'\n\n2ª: '+montarMsg(document.getElementById('msgAtraso').value)+(t?'\n\n⏱️ Tempo: '+montarMsg(t):''); }
   function padraoMensagens(){ if(!MSG_PADRAO) return; document.getElementById('msgAviso').value=MSG_PADRAO.aviso; document.getElementById('msgAtraso').value=MSG_PADRAO.atraso; if(MSG_PADRAO.tempo) document.getElementById('msgTempo').value=MSG_PADRAO.tempo; previaMsg(); showToast('Texto padrão colocado. Toque em Salvar mensagens para valer.','ok'); }

@@ -834,6 +834,14 @@ const JANELAS_TEMPO=[
   {inicio:'20:00', fim:'21:00', label:'20h às 21h', hora:'20h30'},
   {inicio:'21:30', fim:'22:30', label:'21h30 às 22h30', hora:'22h'},
 ];
+// 08/11/2026: os horários vêm do servidor (o Robson muda no Admin); a lista acima vale só se o servidor não mandar
+function tmpJanelasAplicar(l){
+  try{
+    if(!Array.isArray(l)||l.length!==3||!l.every(j=>/^\d\d:\d\d$/.test(j.inicio)&&/^\d\d:\d\d$/.test(j.fim))) return;
+    JANELAS_TEMPO.splice(0,3,...l.map((j,i)=>({inicio:j.inicio, fim:j.fim, label:j.label||(j.inicio+' às '+j.fim), hora:j.hora||JANELAS_TEMPO[i].hora})));
+    if(typeof renderTempoRegistros==='function') renderTempoRegistros();
+  }catch(e){}
+}
 const MOTO_TRAVA_MIN=20*60; // motoboys: pode incluir/corrigir até as 20h
 function minAgoraTurno(){ const a=new Date(); const m=a.getHours()*60+a.getMinutes(); return a.getHours()<4?m+1440:m; } // madrugada conta como depois da meia-noite do turno
 function janelaMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -2151,7 +2159,7 @@ function chkJsonp(params, ms){
 let _chkV2=null, _chkRecursos=null;
 async function chkRecursos(){
   if(_chkRecursos!==null) return _chkRecursos;
-  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; }
+  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; tmpJanelasAplicar(r&&r.tempoJanelas); }
   catch(e){ return []; } // não guarda: tenta de novo depois
   return _chkRecursos;
 }
