@@ -61,6 +61,8 @@ Visual "futurista" (quadro https://claude.ai/artifact/Xy9maWdHq1P9JLDkz39nmS, pr
 - Logomarca: `<span class="logo-dina"><img src="logo-emblema.png"></span>` (luz por trás) dentro de um bloco `.dina-aneis` (círculos finos). Não use mais a logo em base64.
 - Só aparência: não mude id, onclick, nomes de função nem os z-index das telas de bloqueio. Teste antes x depois no simulador.
 
+**Página de teste do placar:** `placar-teste.html` (gerentes.dinapizza.com.br/placar-teste.html) é uma cópia do `placar.html` para o Robson testar no celular com a senha do Admin (modo teste); diferenças: `<meta name="robots" noindex>` e `const u=null` no início (nunca entra sozinho na loja salva). **A cada publicação do placar, gere esta cópia de novo a partir do placar.html** (pedido do Robson em 09/11/2026). Durante um pacote em preparo, ela pode trazer o placar novo antes de ele ir ao ar.
+
 ## Mapa das telas
 
 | Arquivo | O que é | Ações no Apps Script |
