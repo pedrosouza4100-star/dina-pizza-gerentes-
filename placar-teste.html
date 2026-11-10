@@ -613,6 +613,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <!-- Faturamento -->
       <div class="card card-full" id="cardFat">
         <div class="card-label">Faturamento do Dia</div>
+        <div class="atencao-campo">⚠️ Informe o <b>faturamento LÍQUIDO do Alpha</b> (já tirados os descontos e as cortesias). É esse número que o placar confere com o sistema.</div>
         <div class="card-meta" id="metaFatDisplay"></div>
         <div class="card-meta muted" id="periodoDisplay"></div>
         <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
@@ -660,14 +661,14 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <!-- Fichas de fliperama e buffets (quantidade) — não aparecem no Capão Raso e na Expressa -->
       <div class="card card-full" id="cardFichas" style="display:none">
         <div class="card-label">🕹️ Fichas de Fliperama Vendidas</div>
-        <div class="atencao-campo">⚠️ <b>Combo conta 1</b> (não 3). <b>Avulsa conta 1.</b><br>Ex.: 10 combos + 10 avulsas = <b>20</b></div>
+        <div class="atencao-campo">⚠️ <b>Combo conta 1</b> (não 3). <b>Avulsa conta 1.</b><br>Ex.: 10 combos + 10 avulsas = <b>20</b><br><b>Sinuca e outras fichas NÃO entram.</b></div>
         <div class="card-meta" id="metaFichasDisplay"></div>
         <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_fichas"></div>
       </div>
       <div class="card card-full" id="cardBuffets" style="display:none">
         <div class="card-label">🍽️ Buffets Vendidos</div>
-        <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b></div>
+        <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b> Buffet por quilo: <b>cada prato pesado na balança conta 1.</b></div>
         <div class="card-meta" id="metaBuffetsDisplay"></div>
         <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_buffets"></div>
