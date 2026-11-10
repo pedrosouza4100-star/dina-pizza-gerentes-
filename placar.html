@@ -215,6 +215,20 @@
 .alp-btn{width:100%;padding:12px;border-radius:10px;border:1px solid var(--d-blue,#3aa0ff);background:rgba(58,160,255,.14);color:var(--text);font-weight:800;font-size:.95rem;cursor:pointer}
 .alp-btn:disabled{opacity:.6}
 .alp-info{font-size:.82rem;line-height:1.5;margin-top:8px}
+/* Lista de compras de hortifrúti (10/11/2026) */
+.hf-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:10px 0}
+.hf-it{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;font-size:.9rem;cursor:pointer;user-select:none}
+.hf-it input{width:20px;height:20px;accent-color:var(--d-green,#22c55e)}
+.hf-it.on{border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.12);font-weight:700}
+.hf-nada{display:flex;align-items:center;gap:8px;padding:10px;border:1px dashed var(--border);border-radius:10px;font-size:.9rem;margin-bottom:8px;cursor:pointer}
+.hf-nada input{width:20px;height:20px}
+.hf-txt{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;font-size:.9rem;margin-bottom:8px;font-family:inherit}
+.hf-aviso{background:rgba(255,208,0,.12);border:1px solid #FFD000;border-radius:10px;padding:10px;font-size:.84rem;line-height:1.5;margin:8px 0;color:var(--text)}
+.hf-forn{font-size:.84rem;line-height:1.55;border-top:1px solid var(--border);margin-top:12px;padding-top:10px}
+.hf-frow{border:1px solid var(--border);border-radius:10px;padding:8px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hf-frow b{grid-column:1/-1;font-size:.8rem}
+.hf-frow input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px;font-size:.88rem;font-family:inherit;min-width:0}
+.hf-mg{width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:700;cursor:pointer}
 .alp-tab{width:100%;border-collapse:collapse;margin:6px 0}
 .alp-tab td{padding:3px 2px;border-bottom:1px solid var(--border)}
 .alp-tab td:last-child{text-align:right;font-weight:700;white-space:nowrap}
@@ -351,6 +365,25 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     <div id="chkBloqStatus" style="font-size:13px;color:#FFD000;margin-top:14px;max-width:330px;line-height:1.5"></div>
   </div>
   <!-- Câmera do checklist: foto só na hora, sem acesso à galeria -->
+  <div id="hfOverlay" style="display:none;position:fixed;inset:0;background:var(--bg,#07090E);z-index:695;overflow:auto;padding:20px 16px">
+    <div style="max-width:520px;margin:0 auto">
+      <div style="font-size:2.4rem;text-align:center">🥬🔒</div>
+      <h2 style="text-align:center;color:var(--danger);margin:6px 0 10px">Cadastre seus fornecedores de hortifrúti</h2>
+      <div style="font-size:.92rem;line-height:1.6;margin-bottom:10px">O prazo terminou: o placar fica <b>bloqueado</b> até você cadastrar <b>3 fornecedores</b> (varejão ou mercado pequeno do bairro, com o nome do gerente de lá). Supermercado grande não vale.</div>
+      <div id="hfOverlayForm"></div>
+    </div>
+  </div>
+  <div id="hforaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1100;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:90vh;overflow:auto">
+      <div style="font-weight:800;font-size:1.05rem;margin-bottom:6px">🛒 Comprei em mercado grande</div>
+      <div style="font-size:.84rem;line-height:1.5;color:var(--muted);margin-bottom:10px">Compra fora dos seus fornecedores precisa da <b>foto do cupom fiscal</b> e do <b>motivo</b>. Vai para o Sidinei e para o Robson autorizar.</div>
+      <textarea class="hf-txt" id="hforaMotivo" rows="3" placeholder="Por que comprou no mercado grande? (mínimo 10 letras)"></textarea>
+      <input class="hf-txt" id="hforaValor" inputmode="decimal" placeholder="Valor do cupom (R$) — opcional">
+      <button type="button" class="hf-mg" id="hforaFotoBtn" onclick="hforaFoto()">📷 Tirar foto do cupom</button>
+      <div id="hforaMsg" class="alp-info"></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="hf-mg" style="margin:0" onclick="hforaFechar()">Cancelar</button><button type="button" class="alp-btn" id="hforaEnviar" onclick="hforaEnviar()">Enviar</button></div>
+    </div>
+  </div>
   <div id="chkCamModal" style="display:none;position:fixed;inset:0;background:#000;z-index:1200;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;">
     <video id="chkCamVideo" autoplay playsinline muted style="width:100%;max-width:520px;max-height:70vh;border-radius:10px;background:#111;object-fit:cover"></video>
     <div id="chkCamMsg" style="color:#ddd;font-size:14px;text-align:center;max-width:340px;line-height:1.5"></div>
@@ -654,6 +687,19 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div class="card-meta muted" id="alpcAjuda">Preencha o faturamento, os buffets, as fichas e as bebidas. Depois toque em conferir: o placar compara o que você informou com o que está no sistema.</div>
         <button type="button" class="alp-btn" id="alpcBtn" onclick="alpcConferir()" disabled>🔌 Conferir com o Alpha</button>
         <div id="alpcRes" class="alp-info"></div>
+      </div>
+      <!-- Lista de compras de hortifrúti (10/11/2026): obrigatória antes de enviar; menos Expressa, Capão Raso e Isaac Manhã -->
+      <div class="card card-full" id="cardHF" style="display:none">
+        <div class="card-label">🥬 Lista de compras — hortifrúti</div>
+        <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
+        <div id="hfAvisoForn"></div>
+        <div class="hf-grid" id="hfItens"></div>
+        <label class="hf-nada" id="hfNadaLbl"><input type="checkbox" id="hfNada" onchange="hfNadaMudou()"> ✅ Conferi o estoque, não falta nada</label>
+        <input class="hf-txt" id="hfOutros" maxlength="200" placeholder="Outros (ex.: alho, limão) — opcional" oninput="hfMudou()">
+        <button type="button" class="alp-btn" id="hfBtn" onclick="hfSalvar()">💾 Salvar lista de compras</button>
+        <div id="hfMsg" class="alp-info"></div>
+        <div class="hf-forn" id="hfFornBox" style="display:none"></div>
+        <button type="button" class="hf-mg" id="hforaBtn" onclick="hforaAbrir()">🛒 Comprei em mercado grande</button>
       </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
@@ -1594,6 +1640,7 @@ function iniciarApp(u){
   eqCarregar();
   alpPreparar();
   alpcPreparar();
+  hfPreparar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -3071,6 +3118,7 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(['bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].some(id=>!filled(id))) faltando.push('🍹 Bebidas vendidas'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
+  if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
@@ -3120,7 +3168,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3273,6 +3321,101 @@ const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['f
 // e trava; diferença acima do limite = mensagem vermelha. Obrigatório para enviar; Alpha fora do ar = envia com o informado (LOG ALPHA_FORA).
 let ALPC_ATIVO=false, ALPC=null;
 const ALPC_BEB=[['caipiras','bebCaipiras','Caipiras'],['coqueteis','bebCoqueteis','Coquetéis'],['chopes','bebChopes','Chopes'],['sucos','bebSucos','Sucos naturais']];
+// ── Lista de compras de hortifrúti (10/11/2026) ──
+let HF_ATIVO=false, HF=null, HF_SALVO=false, HFORA_FOTO=null;
+async function hfPreparar(){
+  HF_ATIVO=false; HF=null; HF_SALVO=false;
+  const c=document.getElementById('cardHF'); if(c) c.style.display='none';
+  document.getElementById('hfOverlay').style.display='none';
+  try{ const rc=await chkRecursos(); if(!rc.includes('hortifruti')) return; }catch(e){ return; }
+  let r; try{ r=await chkJsonp({action:'hfEstado',unidade:unidadeAtual,marcar:MODO_TESTE?0:1},15000); }catch(e){ return; }
+  if(!r||!r.ok||!r.participa) return;
+  HF=r; HF_ATIVO=true; HF_SALVO=!!r.listaHoje;
+  c.style.display='block';
+  document.getElementById('hforaBtn').style.display=r.precisaFornec===false?'none':'block';
+  if(r.precisaFornec===false) document.getElementById('hfAjuda').innerHTML='Confira o estoque e marque <b>o que precisa comprar</b>. A lista vai para o <b>Sidinei às 9h</b>, que compra para a loja.';
+  const sel=(r.listaHoje&&r.listaHoje.itens)||[];
+  document.getElementById('hfItens').innerHTML=r.itens.map((it,i)=>'<label class="hf-it'+(sel.includes(it)?' on':'')+'"><input type="checkbox" data-hf="'+escR(it)+'"'+(sel.includes(it)?' checked':'')+' onchange="hfMudou(this)"> '+escR(it)+'</label>').join('');
+  document.getElementById('hfNada').checked=!!(r.listaHoje&&r.listaHoje.nadaFalta);
+  document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
+  document.getElementById('hfMsg').innerHTML=r.listaHoje?'<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva às '+escR(r.listaHoje.hora)+'. Mudou algo? Marque e salve de novo.</span>':'';
+  hfRenderForn();
+  verificarBotaoRegistrar();
+}
+function hfMarcados(){ return [...document.querySelectorAll('#hfItens input[data-hf]')].filter(e=>e.checked).map(e=>e.dataset.hf); }
+function hfMudou(el){
+  if(el&&el.parentElement) el.parentElement.classList.toggle('on',el.checked);
+  if(hfMarcados().length||document.getElementById('hfOutros').value.trim()) document.getElementById('hfNada').checked=false;
+  HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
+}
+function hfNadaMudou(){
+  if(document.getElementById('hfNada').checked){ document.querySelectorAll('#hfItens input[data-hf]').forEach(e=>{ e.checked=false; e.parentElement.classList.remove('on'); }); document.getElementById('hfOutros').value=''; }
+  HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
+}
+async function hfSalvar(){
+  const itens=hfMarcados(), nada=document.getElementById('hfNada').checked, outros=document.getElementById('hfOutros').value.trim(), msg=document.getElementById('hfMsg'), bt=document.getElementById('hfBtn');
+  if(!nada&&!itens.length&&!outros){ msg.innerHTML='<span style="color:var(--danger)">Marque o que precisa comprar ou "Conferi o estoque, não falta nada".</span>'; return; }
+  if(HF&&HF.bloqueado){ document.getElementById('hfOverlay').style.display='block'; return; }
+  if(geoForaAgora&&geoForaAgora()){ msg.innerHTML='<span style="color:var(--danger)">📍 Confirme que está na loja para salvar.</span>'; return; }
+  bt.disabled=true; msg.textContent='Salvando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfSalvarLista',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens,nadaFalta:nada,outros})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; if(r&&r.bloqueado){ HF.bloqueado=true; hfRenderForn(); } return; }
+    HF_SALVO=true; msg.innerHTML='<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva'+(r.hora?' às '+escR(r.hora):'')+'. '+(HF.precisaFornec===false?'Vai para o Sidinei amanhã às 9h.':'Chega no seu WhatsApp amanhã às 15h.')+'</span>';
+    logProva('HF_LISTA_SALVA',nada?'nada falta':itens.join(', ')+(outros?' + '+outros:''));
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+  finally{ bt.disabled=false; verificarBotaoRegistrar(); }
+}
+function hfFormHtml(pref){
+  const l=(HF&&HF.fornecedores)||[];
+  return [0,1,2].map(i=>{ const f=l[i]||{}; return '<div class="hf-frow"><b>Fornecedor '+(i+1)+'</b><input id="'+pref+'n'+i+'" placeholder="Varejão / mercado" value="'+escR(f.nome||'')+'"><input id="'+pref+'c'+i+'" placeholder="Nome do gerente de lá" value="'+escR(f.contato||'')+'"><input id="'+pref+'w'+i+'" inputmode="tel" placeholder="WhatsApp com DDD" value="'+escR(f.whats||'')+'"><input id="'+pref+'b'+i+'" placeholder="Bairro" value="'+escR(f.bairro||'')+'"></div>'; }).join('')
+    +'<button type="button" class="alp-btn" onclick="hfFornSalvar(\''+pref+'\')">💾 Salvar fornecedores</button><div id="'+pref+'msg" class="alp-info"></div>';
+}
+function hfRenderForn(){
+  const box=document.getElementById('hfFornBox'), av=document.getElementById('hfAvisoForn');
+  av.innerHTML=''; box.style.display='none';
+  if(!HF||!HF.precisaFornec){ document.getElementById('hfOverlay').style.display='none'; return; }
+  const l=HF.fornecedores||[];
+  if(HF.faltam>0&&!HF.bloqueado) av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b> (varejão ou mercado pequeno do bairro, com o nome do gerente de lá). Faltam <b>'+HF.faltam+'</b>.'+(HF.bloqueiaEm?' A partir de <b>'+escR(HF.bloqueiaEm)+'</b>, sem os 3 cadastrados, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.':'')+'</div>';
+  box.style.display='block';
+  box.innerHTML='<div style="font-weight:700;margin-bottom:4px">🏪 Seus fornecedores de hortifrúti</div>'+(l.length?l.map((f,i)=>'<div>'+(i+1)+') <b>'+escR(f.nome)+'</b> — '+escR(f.contato)+(f.bairro?' · '+escR(f.bairro):'')+'</div>').join(''):'<div class="muted">Nenhum cadastrado ainda.</div>')
+    +'<details'+(HF.faltam>0?' open':'')+' style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted)">'+(HF.faltam>0?'Cadastrar':'Trocar um fornecedor')+'</summary>'+hfFormHtml('hff')+'</details>';
+  const ov=document.getElementById('hfOverlay');
+  if(HF.bloqueado){ document.getElementById('hfOverlayForm').innerHTML=hfFormHtml('hfo'); ov.style.display='block'; } else ov.style.display='none';
+}
+async function hfFornSalvar(pref){
+  const msg=document.getElementById(pref+'msg');
+  const fornecedores=[0,1,2].map(i=>({nome:document.getElementById(pref+'n'+i).value.trim(),contato:document.getElementById(pref+'c'+i).value.trim(),whats:document.getElementById(pref+'w'+i).value.trim(),bairro:document.getElementById(pref+'b'+i).value.trim()})).filter(f=>f.nome);
+  if(!fornecedores.length){ msg.innerHTML='<span style="color:var(--danger)">Preencha pelo menos 1 fornecedor.</span>'; return; }
+  if(HF.bloqueado&&fornecedores.length<3){ msg.innerHTML='<span style="color:var(--danger)">Para liberar o placar são 3 fornecedores.</span>'; return; }
+  msg.textContent='Salvando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfFornecSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',fornecedores})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    if(r.teste){ HF.fornecedores=fornecedores; HF.faltam=Math.max(0,3-fornecedores.length); HF.bloqueado=false; }
+    else Object.assign(HF,{fornecedores:r.fornecedores,faltam:r.faltam,bloqueado:r.bloqueado,bloqueiaEm:r.bloqueiaEm});
+    logProva('HF_FORNECEDORES',fornecedores.map(f=>f.nome).join(' / '));
+    hfRenderForn(); if(typeof showToast==='function') showToast('Fornecedores salvos');
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+function hforaAbrir(){ HFORA_FOTO=null; document.getElementById('hforaMotivo').value=''; document.getElementById('hforaValor').value=''; document.getElementById('hforaMsg').innerHTML=''; document.getElementById('hforaFotoBtn').textContent='📷 Tirar foto do cupom'; document.getElementById('hforaModal').style.display='flex'; }
+function hforaFechar(){ document.getElementById('hforaModal').style.display='none'; }
+function hforaFoto(){ chkAbrirCamera('hfora', f=>{ HFORA_FOTO=f; document.getElementById('hforaFotoBtn').textContent='✓ Foto do cupom tirada — tirar outra'; }, {msg:'🧾 Fotografe o <b>cupom fiscal</b> inteiro (loja, itens e valor).'}); }
+async function hforaEnviar(){
+  const motivo=document.getElementById('hforaMotivo').value.trim(), msg=document.getElementById('hforaMsg'), bt=document.getElementById('hforaEnviar');
+  if(motivo.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o motivo (mínimo 10 letras).</span>'; return; }
+  if(!HFORA_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto do cupom fiscal.</span>'; return; }
+  bt.disabled=true; msg.textContent='Enviando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfForaPedir',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo,valor:document.getElementById('hforaValor').value.trim(),foto:HFORA_FOTO})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não enviou')+'</span>'; return; }
+    logProva('HF_MERCADO_GRANDE',motivo); hforaFechar(); alert('✅ Enviado ao Sidinei e ao Robson. A resposta chega no seu WhatsApp.');
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+  finally{ bt.disabled=false; }
+}
 async function alpcPreparar(){
   ALPC_ATIVO=false; ALPC=null; window._alpOk=false;
   ['cardBebidas','cardAlpha'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
