@@ -673,12 +673,17 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <!-- Bebidas vendidas (08/11/2026; só com o recurso alphaConferir) -->
       <div class="card card-full" id="cardBebidas" style="display:none">
         <div class="card-label">🍹 Bebidas vendidas</div>
-        <div class="atencao-campo">⚠️ Quantidades do seu turno inteiro (o que saiu no sistema). Não vendeu? Coloque 0. Chopes: some canecas e torres (cada um conta 1). Sucos naturais: copos e jarras, vitaminas incluídas.</div>
-        <div class="beb-grid">
+        <div class="atencao-campo" id="bebAviso">⚠️ Quantidades do seu turno inteiro (o que saiu no sistema). Não vendeu? Coloque 0. Chopes: some canecas e torres (cada um conta 1). Sucos naturais: copos e jarras, vitaminas incluídas.</div>
+        <div class="beb-grid" id="bebGridSalao">
           <label>Caipiras<div class="input-wrap"><input class="val" id="bebCaipiras" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
           <label>Coquetéis<div class="input-wrap"><input class="val" id="bebCoqueteis" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
           <label>Chopes<div class="input-wrap"><input class="val" id="bebChopes" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
           <label>Sucos naturais<div class="input-wrap"><input class="val" id="bebSucos" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+        </div>
+        <div class="beb-grid" id="bebGridBalcao" style="display:none">
+          <label>Sobremesas<div class="input-wrap"><input class="val" id="bebSobremesas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+          <label>Refrigerantes 2 L<div class="input-wrap"><input class="val" id="bebRefri2l" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
+          <label>Sucos no balcão<div class="input-wrap"><input class="val" id="bebSucosBalcao" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
         </div>
       </div>
       <!-- Conferir com o Alpha (08/11/2026): o gerente preenche primeiro e depois confere -->
@@ -1660,7 +1665,7 @@ function iniciarApp(u){
 // ── Números do fechamento guardados no celular enquanto o gerente digita: se a página recarregar
 //    (celular fechou a aba em segundo plano, atualização do sistema, internet caiu), nada se perde.
 //    Apaga depois que o placar é enviado com sucesso. ──
-const FECH_CAMPOS=['fat','google','ifood','cancel','chamados','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos','vendasCanceladas','vendasCanceladasMotivo','pedidosIfood','pedidosIfoodDetalhe','obs'];
+const FECH_CAMPOS=['fat','google','ifood','cancel','chamados','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos','bebSobremesas','bebRefri2l','bebSucosBalcao','vendasCanceladas','vendasCanceladasMotivo','pedidosIfood','pedidosIfoodDetalhe','obs'];
 function fechGuardar(){
   if(!unidadeAtual) return;
   const v={}; let algum=false;
@@ -3118,7 +3123,7 @@ function verificarBotaoRegistrar(){
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
-  if(ALPC_ATIVO){ if(['bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].some(id=>!filled(id))) faltando.push('🍹 Bebidas vendidas'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
+  if(ALPC_ATIVO){ if(bebLista().map(b=>b[1]).some(id=>!filled(id))) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
   if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
@@ -3171,7 +3176,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3324,6 +3329,10 @@ const EQ_MOT=[['folga','Folga'],['ferias','Férias'],['atestado','Atestado'],['f
 // e trava; diferença acima do limite = mensagem vermelha. Obrigatório para enviar; Alpha fora do ar = envia com o informado (LOG ALPHA_FORA).
 let ALPC_ATIVO=false, ALPC=null;
 const ALPC_BEB=[['caipiras','bebCaipiras','Caipiras'],['coqueteis','bebCoqueteis','Coquetéis'],['chopes','bebChopes','Chopes'],['sucos','bebSucos','Sucos naturais']];
+// 10/11/2026 (Robson): Capão Raso e Expressa não vendem esses; no lugar, sobremesas, refrigerantes 2 L e sucos no balcão.
+// A conferência com o Alpha só mostra esses 3 quando o servidor devolver os valores (mapeamento dos itens a confirmar).
+const ALPC_BEB_BALCAO=[['sobremesas','bebSobremesas','Sobremesas'],['refri2l','bebRefri2l','Refrigerantes 2 L'],['sucosBalcao','bebSucosBalcao','Sucos no balcão']];
+function bebLista(){ return temFliperBuffet(unidadeAtual)?ALPC_BEB:ALPC_BEB_BALCAO; }
 // ── Lista de compras de hortifrúti (10/11/2026) ──
 let HF_ATIVO=false, HF=null, HF_SALVO=false, HFORA_FOTO=null;
 async function hfPreparar(){
@@ -3472,18 +3481,22 @@ async function hforaEnviar(){
 async function alpcPreparar(){
   ALPC_ATIVO=false; ALPC=null; window._alpOk=false;
   ['cardBebidas','cardAlpha'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
-  ['fat','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.readOnly=false; e.classList.remove('alp-travado'); } });
+  ['fat','fichas','buffets','bebCaipiras','bebCoqueteis','bebChopes','bebSucos','bebSobremesas','bebRefri2l','bebSucosBalcao'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.readOnly=false; e.classList.remove('alp-travado'); } });
   const r=document.getElementById('alpcRes'); if(r) r.innerHTML='';
   try{ const rc=await chkRecursos(); if(!rc.includes('alphaConferir')) return; }catch(e){ return; }
   ALPC_ATIVO=true;
   document.getElementById('cardBebidas').style.display='block';
+  { const bal=!temFliperBuffet(unidadeAtual);
+    document.getElementById('bebGridSalao').style.display=bal?'none':'grid'; document.getElementById('bebGridBalcao').style.display=bal?'grid':'none';
+    document.querySelector('#cardBebidas .card-label').textContent=bal?'🍰 Sobremesas e bebidas do balcão':'🍹 Bebidas vendidas';
+    document.getElementById('bebAviso').textContent=bal?'⚠️ Quantidades do dia inteiro (o que saiu no sistema). Não vendeu? Coloque 0. Refrigerantes: só as garrafas de 2 litros. Sucos: os vendidos no balcão.':'⚠️ Quantidades do seu turno inteiro (o que saiu no sistema). Não vendeu? Coloque 0. Chopes: some canecas e torres (cada um conta 1). Sucos naturais: copos e jarras, vitaminas incluídas.'; }
   document.getElementById('cardAlpha').style.display='block';
   verificarBotaoRegistrar();
 }
 function alpcCampos(){ // o que entra na conferência nesta loja
   const c=[['faturamento','fat','Faturamento líquido',true]];
   if(temFliperBuffet(unidadeAtual)){ c.push(['buffets','buffets','Buffets']); c.push(['fichas','fichas','Fichas']); }
-  ALPC_BEB.forEach(b=>c.push(b));
+  bebLista().forEach(b=>c.push(b));
   c.push(['vendasCanceladas','vendasCanceladas','Vendas canceladas no caixa']); // 08/11/2026: cancelamentos também conferidos com o Alpha
   return c;
 }
@@ -3491,7 +3504,7 @@ function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar();
 function alpcObrigatorios(){
   const l=[['fat','faturamento'],['google','Google'],['ifood','iFood'],['chamados','chamados'],['cancel','cancelamentos']];
   if(temFliperBuffet(unidadeAtual)) l.push(['fichas','fichas de fliperama'],['buffets','buffets vendidos']);
-  l.push(['bebCaipiras','caipiras'],['bebCoqueteis','coquetéis'],['bebChopes','chopes'],['bebSucos','sucos naturais']);
+  bebLista().forEach(b=>l.push([b[1],b[2].toLowerCase()]));
   if(temLoja(unidadeAtual)) l.push(['pedidosIfood','pedidos não confirmados do iFood']);
   l.push(['vendasCanceladas','vendas canceladas no caixa']);
   return l;
