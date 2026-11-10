@@ -369,7 +369,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     <div style="max-width:520px;margin:0 auto">
       <div style="font-size:2.4rem;text-align:center">🥬🔒</div>
       <h2 style="text-align:center;color:var(--danger);margin:6px 0 10px">Cadastre seus fornecedores de hortifrúti</h2>
-      <div style="font-size:.92rem;line-height:1.6;margin-bottom:10px">O prazo terminou: o placar fica <b>bloqueado</b> até você cadastrar <b>3 fornecedores</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Supermercado grande não vale.</div>
+      <div style="font-size:.92rem;line-height:1.6;margin-bottom:10px">O prazo que você assumiu terminou: o placar fica <b>bloqueado</b> até você cadastrar <b>3 fornecedores</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Supermercado grande não vale.</div>
       <div id="hfOverlayForm"></div>
     </div>
   </div>
@@ -3119,6 +3119,7 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(['bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].some(id=>!filled(id))) faltando.push('🍹 Bebidas vendidas'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
+  if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
   if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
@@ -3170,7 +3171,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3379,12 +3380,32 @@ function hfRenderForn(){
   av.innerHTML=''; box.style.display='none';
   if(!HF||!HF.precisaFornec){ document.getElementById('hfOverlay').style.display='none'; return; }
   const l=HF.fornecedores||[];
-  if(HF.faltam>0&&!HF.bloqueado) av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Faltam <b>'+HF.faltam+'</b>.'+(HF.bloqueiaEm?' A partir de <b>'+escR(HF.bloqueiaEm)+'</b>, sem os 3 cadastrados, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.':'')+'</div>';
+  if(HF.faltam>0&&!HF.bloqueado){
+    if(HF.precisaPrazo){
+      const op=[]; for(let d=1;d<=(HF.prazoMax||7);d++) op.push('<option value="'+d+'">'+d+' dia'+(d>1?'s':'')+'</option>');
+      av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Faltam <b>'+HF.faltam+'</b>.<br><br>Em <b>quantos dias</b> você consegue cadastrar os 3? Você assume essa data: se não cumprir, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.'
+        +'<div style="display:flex;gap:8px;margin-top:8px"><select class="hf-txt" id="hfPrazoDias" style="margin:0;flex:1"><option value="">Escolha…</option>'+op.join('')+'</select><button type="button" class="alp-btn" style="flex:1" onclick="hfPrazoAssumir()">Assumir prazo</button></div><div id="hfPrazoMsg" class="alp-info"></div></div>';
+    } else av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b>. Faltam <b>'+HF.faltam+'</b>. Você assumiu cadastrar até <b>'+escR(HF.prazoAte)+'</b>'+(HF.diasRestantes!==null?' ('+(HF.diasRestantes===0?'é hoje':'faltam '+HF.diasRestantes+' dia'+(HF.diasRestantes>1?'s':''))+')':'')+'. Depois disso, sem os 3, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.</div>';
+  }
   box.style.display='block';
   box.innerHTML='<div style="font-weight:700;margin-bottom:4px">🏪 Seus fornecedores de hortifrúti</div>'+(l.length?l.map((f,i)=>'<div>'+(i+1)+') <b>'+escR(f.nome)+'</b>'+(f.telefone?' · '+escR(f.telefone):'')+' — responsável: '+escR(f.contato)+(f.bairro?' · '+escR(f.bairro):'')+'</div>').join(''):'<div class="muted">Nenhum cadastrado ainda.</div>')
     +'<details'+(HF.faltam>0?' open':'')+' style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted)">'+(HF.faltam>0?'Cadastrar':'Trocar um fornecedor')+'</summary>'+hfFormHtml('hff')+'</details>';
   const ov=document.getElementById('hfOverlay');
   if(HF.bloqueado){ document.getElementById('hfOverlayForm').innerHTML=hfFormHtml('hfo'); ov.style.display='block'; } else ov.style.display='none';
+}
+async function hfPrazoAssumir(){
+  const d=document.getElementById('hfPrazoDias').value, msg=document.getElementById('hfPrazoMsg');
+  if(!d){ msg.innerHTML='<span style="color:var(--danger)">Escolha em quantos dias.</span>'; return; }
+  if(!confirm('Você assume cadastrar os 3 fornecedores em '+d+' dia(s)? Se não cumprir, o placar será BLOQUEADO.')) return;
+  msg.textContent='Salvando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfPrazo',unidade:unidadeAtual,dias:d,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    if(r.teste){ const t=new Date(); t.setDate(t.getDate()+Number(d)); Object.assign(HF,{precisaPrazo:false,prazoAte:t.toLocaleDateString('pt-BR'),diasRestantes:Number(d)}); }
+    else Object.assign(HF,{precisaPrazo:r.precisaPrazo,prazoAte:r.prazoAte,diasRestantes:r.diasRestantes,bloqueiaEm:r.bloqueiaEm});
+    logProva('HF_PRAZO',d+' dia(s)'); hfRenderForn(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
 }
 async function hfFornSalvar(pref){
   const msg=document.getElementById(pref+'msg');
@@ -3396,8 +3417,8 @@ async function hfFornSalvar(pref){
     const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfFornecSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',fornecedores})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
-    if(r.teste){ HF.fornecedores=fornecedores; HF.faltam=Math.max(0,3-fornecedores.length); HF.bloqueado=false; }
-    else Object.assign(HF,{fornecedores:r.fornecedores,faltam:r.faltam,bloqueado:r.bloqueado,bloqueiaEm:r.bloqueiaEm});
+    if(r.teste){ HF.fornecedores=fornecedores; HF.faltam=Math.max(0,3-fornecedores.length); HF.bloqueado=false; if(!HF.faltam) HF.precisaPrazo=false; }
+    else Object.assign(HF,{fornecedores:r.fornecedores,faltam:r.faltam,bloqueado:r.bloqueado,bloqueiaEm:r.bloqueiaEm,precisaPrazo:r.precisaPrazo,prazoAte:r.prazoAte,diasRestantes:r.diasRestantes});
     logProva('HF_FORNECEDORES',fornecedores.map(f=>f.nome).join(' / '));
     hfRenderForn(); if(typeof showToast==='function') showToast('Fornecedores salvos');
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
