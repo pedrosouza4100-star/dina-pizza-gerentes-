@@ -268,6 +268,7 @@
         <div id="arqBox" style="display:none;font-size:0.84rem;margin:-4px 0 14px;padding:12px 14px;border:1px solid var(--border);border-radius:10px"></div>
         <div class="hoje-resumo" id="hojeResumo"></div>
         <div class="cob-box" id="cobBox"><div class="cob-head"><b>📲 Cobrança do placar</b><small>Carregando...</small></div></div>
+        <div id="hfAdminBox" style="display:none;margin-bottom:14px"></div>
         <div class="hoje-grid" id="hojeLojas"><div style="color:var(--muted);font-size:0.85rem">Carregando...</div></div>
         <div style="margin-top:14px"><button class="save-metas-btn outline btnAtualizarHoje" onclick="atualizarAgora(this)">↻ Atualizar agora</button></div>
         <div class="section-title" style="margin-top:24px">🔎 Linha do tempo da loja</div>
@@ -814,6 +815,7 @@
     clearTimeout(hojeTimer); hojeTimer=setTimeout(()=>{ if(document.getElementById('tab-hoje').classList.contains('active')) carregarHoje(); },120000);
   }
   function renderHoje(r){
+    try{ hfAdminRender(r.hf); }catch(e){}
     const brl=v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR');
     let nPlacar=0,nAb=0,nFe=0,nEsc=0,nDesb=0,nSemSenha=0;
     const cards=r.lojas.map(l=>{
@@ -1154,6 +1156,27 @@
     try{ await admPost({action:'dupRemover',unidade:u,linha,ms}); showToast('Linha repetida apagada.','ok'); registrarLog('Linha repetida do placar apagada: '+u,'ok'); }
     catch(e){ showToast('Não apagou: '+e.message,'warn'); }
     dupCarregar();
+  }
+  // ── Hortifrúti: compras em mercado grande (Robson aprova) e listas de ontem (10/11/2026) ──
+  function hfAdminRender(hf){
+    const box=document.getElementById('hfAdminBox'); if(!box) return;
+    if(!hf){ box.style.display='none'; return; }
+    const pend=(hf.fora||[]).filter(x=>x.situacao==='pendente'), dec=(hf.fora||[]).filter(x=>x.situacao!=='pendente');
+    const alvo=(new URLSearchParams(location.search)).get('hfFora');
+    let h='<div class="section-title">🥬 Hortifrúti</div>';
+    if(pend.length) h+='<div style="font-weight:700;margin:6px 0">🛒 Compras em mercado grande para autorizar</div>'+pend.map(x=>'<div id="hfp_'+x.id+'" style="border:1px solid '+(alvo===x.id?'var(--gold)':'var(--yellow)')+';border-radius:10px;padding:10px;margin-bottom:8px;font-size:0.85rem;line-height:1.5"><b>'+escH(x.unidade)+'</b> · '+escH(x.quando)+(x.valor?' · R$ '+String(x.valor).replace('.',','):'')+'<br>Motivo: '+escH(x.motivo)+(/^https/.test(x.foto)?'<br><a href="'+escH(x.foto)+'" target="_blank" style="color:var(--gold)">🧾 ver cupom</a>':'')
+      +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="modal-input" id="hfpm_'+x.id+'" placeholder="Observação (opcional)" style="flex:1;min-width:140px"><button class="action-btn btn-nova" onclick="hfDecidir(\''+x.id+'\',\'aprovar\')">✅ Autorizar</button><button class="action-btn" style="background:var(--danger);color:#fff" onclick="hfDecidir(\''+x.id+'\',\'recusar\')">❌ Não autorizar</button></div></div>').join('');
+    if(dec.length) h+='<div style="font-size:0.78rem;color:var(--muted);margin:4px 0">Decididas: '+dec.map(x=>escH(x.unidade)+' '+(x.situacao==='aprovada'?'✅':'❌')).join(' · ')+'</div>';
+    const ls=hf.listas||[], feitas=ls.filter(l=>l.feita), nao=ls.filter(l=>!l.feita);
+    h+='<details style="margin-top:6px"><summary style="cursor:pointer;font-size:0.82rem;color:var(--muted)">Listas de compras do fechamento de ontem ('+feitas.length+' de '+ls.length+' lojas'+(nao.length?' · faltou: '+nao.map(l=>escH(l.unidade)).join(', '):'')+')</summary><div style="font-size:0.82rem;line-height:1.6;margin-top:6px">'
+      +feitas.map(l=>'<div><b>'+escH(l.unidade)+'</b>: '+(l.nadaFalta?'não falta nada':escH(l.itens.concat(l.outros?[l.outros]:[]).join(', ')))+'</div>').join('')+'</div></details>';
+    if((hf.lembretes||[]).length) h+='<div style="font-size:0.8rem;color:var(--yellow);margin-top:4px">Sem os 3 fornecedores: '+hf.lembretes.map(l=>escH(l.unidade)+' (faltam '+l.faltam+(l.bloqueado?', BLOQUEADO':l.bloqueiaEm?', bloqueia '+escH(l.bloqueiaEm):'')+')').join(' · ')+'</div>';
+    box.innerHTML=h; box.style.display='block';
+    if(alvo){ const e=document.getElementById('hfp_'+alvo); if(e) e.scrollIntoView({block:'center'}); }
+  }
+  async function hfDecidir(id,decisao){
+    try{ await admPost({action:'hfForaDecidir',senhaAdmin:ADM.hash||'',id,decisao,motivo:(document.getElementById('hfpm_'+id)||{}).value||'',quem:'Robson'}); showToast(decisao==='aprovar'?'Compra autorizada':'Compra não autorizada','ok'); registrarLog('Hortifrúti: compra em mercado grande '+(decisao==='aprovar'?'autorizada':'não autorizada'),'ok'); carregarHoje(); }
+    catch(e){ showToast(e.message,'erro'); }
   }
   // ── Controle de estoque — piloto (09/11/2026) ──
   async function estCarregar(forcar){
