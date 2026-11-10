@@ -371,7 +371,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     <div style="max-width:520px;margin:0 auto">
       <div style="font-size:2.4rem;text-align:center">🥬🔒</div>
       <h2 style="text-align:center;color:var(--danger);margin:6px 0 10px">Cadastre seus fornecedores de hortifrúti</h2>
-      <div style="font-size:.92rem;line-height:1.6;margin-bottom:10px">O prazo terminou: o placar fica <b>bloqueado</b> até você cadastrar <b>3 fornecedores</b> (varejão ou mercado pequeno do bairro, com o nome do gerente de lá). Supermercado grande não vale.</div>
+      <div style="font-size:.92rem;line-height:1.6;margin-bottom:10px">O prazo terminou: o placar fica <b>bloqueado</b> até você cadastrar <b>3 fornecedores</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Supermercado grande não vale.</div>
       <div id="hfOverlayForm"></div>
     </div>
   </div>
@@ -694,6 +694,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="card card-full" id="cardHF" style="display:none">
         <div class="card-label">🥬 Lista de compras — hortifrúti</div>
         <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
+        <div id="hfCompraBox" style="display:none"></div>
         <div id="hfAvisoForn"></div>
         <div class="hf-grid" id="hfItens"></div>
         <label class="hf-nada" id="hfNadaLbl"><input type="checkbox" id="hfNada" onchange="hfNadaMudou()"> ✅ Conferi o estoque, não falta nada</label>
@@ -3120,6 +3121,7 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(['bebCaipiras','bebCoqueteis','bebChopes','bebSucos'].some(id=>!filled(id))) faltando.push('🍹 Bebidas vendidas'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
+  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
@@ -3170,7 +3172,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3341,7 +3343,7 @@ async function hfPreparar(){
   document.getElementById('hfNada').checked=!!(r.listaHoje&&r.listaHoje.nadaFalta);
   document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
   document.getElementById('hfMsg').innerHTML=r.listaHoje?'<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva às '+escR(r.listaHoje.hora)+'. Mudou algo? Marque e salve de novo.</span>':'';
-  hfRenderForn();
+  hfRenderForn(); hfRenderCompra();
   verificarBotaoRegistrar();
 }
 function hfMarcados(){ return [...document.querySelectorAll('#hfItens input[data-hf]')].filter(e=>e.checked).map(e=>e.dataset.hf); }
@@ -3371,7 +3373,7 @@ async function hfSalvar(){
 }
 function hfFormHtml(pref){
   const l=(HF&&HF.fornecedores)||[];
-  return [0,1,2].map(i=>{ const f=l[i]||{}; return '<div class="hf-frow"><b>Fornecedor '+(i+1)+'</b><input id="'+pref+'n'+i+'" placeholder="Varejão / mercado" value="'+escR(f.nome||'')+'"><input id="'+pref+'c'+i+'" placeholder="Nome do gerente de lá" value="'+escR(f.contato||'')+'"><input id="'+pref+'w'+i+'" inputmode="tel" placeholder="WhatsApp com DDD" value="'+escR(f.whats||'')+'"><input id="'+pref+'b'+i+'" placeholder="Bairro" value="'+escR(f.bairro||'')+'"></div>'; }).join('')
+  return [0,1,2].map(i=>{ const f=l[i]||{}; return '<div class="hf-frow"><b>Fornecedor '+(i+1)+'</b><input id="'+pref+'n'+i+'" placeholder="Nome do estabelecimento" value="'+escR(f.nome||'')+'"><input id="'+pref+'t'+i+'" inputmode="tel" placeholder="Telefone do estabelecimento" value="'+escR(f.telefone||'')+'"><input id="'+pref+'c'+i+'" placeholder="Nome do responsável" value="'+escR(f.contato||'')+'"><input id="'+pref+'w'+i+'" inputmode="tel" placeholder="Celular do responsável" value="'+escR(f.whats||'')+'"><input id="'+pref+'b'+i+'" placeholder="Bairro (opcional)" style="grid-column:1/-1" value="'+escR(f.bairro||'')+'"></div>'; }).join('')
     +'<button type="button" class="alp-btn" onclick="hfFornSalvar(\''+pref+'\')">💾 Salvar fornecedores</button><div id="'+pref+'msg" class="alp-info"></div>';
 }
 function hfRenderForn(){
@@ -3379,16 +3381,16 @@ function hfRenderForn(){
   av.innerHTML=''; box.style.display='none';
   if(!HF||!HF.precisaFornec){ document.getElementById('hfOverlay').style.display='none'; return; }
   const l=HF.fornecedores||[];
-  if(HF.faltam>0&&!HF.bloqueado) av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b> (varejão ou mercado pequeno do bairro, com o nome do gerente de lá). Faltam <b>'+HF.faltam+'</b>.'+(HF.bloqueiaEm?' A partir de <b>'+escR(HF.bloqueiaEm)+'</b>, sem os 3 cadastrados, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.':'')+'</div>';
+  if(HF.faltam>0&&!HF.bloqueado) av.innerHTML='<div class="hf-aviso">📌 <b>Cadastre seus 3 fornecedores de hortifrúti</b> (varejão ou mercado pequeno do bairro: nome, telefone e o responsável de lá). Faltam <b>'+HF.faltam+'</b>.'+(HF.bloqueiaEm?' A partir de <b>'+escR(HF.bloqueiaEm)+'</b>, sem os 3 cadastrados, o placar será <b style="color:var(--danger)">BLOQUEADO</b>.':'')+'</div>';
   box.style.display='block';
-  box.innerHTML='<div style="font-weight:700;margin-bottom:4px">🏪 Seus fornecedores de hortifrúti</div>'+(l.length?l.map((f,i)=>'<div>'+(i+1)+') <b>'+escR(f.nome)+'</b> — '+escR(f.contato)+(f.bairro?' · '+escR(f.bairro):'')+'</div>').join(''):'<div class="muted">Nenhum cadastrado ainda.</div>')
+  box.innerHTML='<div style="font-weight:700;margin-bottom:4px">🏪 Seus fornecedores de hortifrúti</div>'+(l.length?l.map((f,i)=>'<div>'+(i+1)+') <b>'+escR(f.nome)+'</b>'+(f.telefone?' · '+escR(f.telefone):'')+' — responsável: '+escR(f.contato)+(f.bairro?' · '+escR(f.bairro):'')+'</div>').join(''):'<div class="muted">Nenhum cadastrado ainda.</div>')
     +'<details'+(HF.faltam>0?' open':'')+' style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted)">'+(HF.faltam>0?'Cadastrar':'Trocar um fornecedor')+'</summary>'+hfFormHtml('hff')+'</details>';
   const ov=document.getElementById('hfOverlay');
   if(HF.bloqueado){ document.getElementById('hfOverlayForm').innerHTML=hfFormHtml('hfo'); ov.style.display='block'; } else ov.style.display='none';
 }
 async function hfFornSalvar(pref){
   const msg=document.getElementById(pref+'msg');
-  const fornecedores=[0,1,2].map(i=>({nome:document.getElementById(pref+'n'+i).value.trim(),contato:document.getElementById(pref+'c'+i).value.trim(),whats:document.getElementById(pref+'w'+i).value.trim(),bairro:document.getElementById(pref+'b'+i).value.trim()})).filter(f=>f.nome);
+  const fornecedores=[0,1,2].map(i=>({nome:document.getElementById(pref+'n'+i).value.trim(),telefone:document.getElementById(pref+'t'+i).value.trim(),contato:document.getElementById(pref+'c'+i).value.trim(),whats:document.getElementById(pref+'w'+i).value.trim(),bairro:document.getElementById(pref+'b'+i).value.trim()})).filter(f=>f.nome);
   if(!fornecedores.length){ msg.innerHTML='<span style="color:var(--danger)">Preencha pelo menos 1 fornecedor.</span>'; return; }
   if(HF.bloqueado&&fornecedores.length<3){ msg.innerHTML='<span style="color:var(--danger)">Para liberar o placar são 3 fornecedores.</span>'; return; }
   msg.textContent='Salvando…';
@@ -3400,6 +3402,36 @@ async function hfFornSalvar(pref){
     else Object.assign(HF,{fornecedores:r.fornecedores,faltam:r.faltam,bloqueado:r.bloqueado,bloqueiaEm:r.bloqueiaEm});
     logProva('HF_FORNECEDORES',fornecedores.map(f=>f.nome).join(' / '));
     hfRenderForn(); if(typeof showToast==='function') showToast('Fornecedores salvos');
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+let HFC_FOTO=null;
+function hfRenderCompra(){
+  const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
+  if(!c){ box.style.display='none'; return; }
+  box.style.display='block';
+  if(c.feita){ box.innerHTML='<div class="hf-aviso" style="border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.1)">✓ Compra de hoje registrada às '+escR(c.hora)+' e enviada ao Sidinei. <a href="#" onclick="HF.compra.feita=false;hfRenderCompra();verificarBotaoRegistrar();return false" style="color:var(--gold)">corrigir</a></div>'; return; }
+  const forn=(HF.fornecedores||[]).map(f=>f.nome);
+  box.innerHTML='<div style="font-weight:800;margin:6px 0 4px">🧾 Compra de hoje (lista de '+escR(c.diaLista)+')</div><div class="muted" style="font-size:.82rem;margin-bottom:6px">Marque o que você <b>comprou</b>, diga onde e tire a <b>foto da compra</b> (mercadoria e cupom). Vai direto para o Sidinei.</div>'
+    +'<div class="hf-grid">'+c.itens.map(it=>'<label class="hf-it"><input type="checkbox" data-hfc="'+escR(it)+'" onchange="this.parentElement.classList.toggle(\'on\',this.checked)"> '+escR(it)+'</label>').join('')+'</div>'
+    +'<select class="hf-txt" id="hfcOnde"><option value="">Onde comprou?</option>'+forn.map(n=>'<option>'+escR(n)+'</option>').join('')+'<option>Outro varejão / mercado pequeno</option><option>Mercado grande (avisei pelo botão)</option></select>'
+    +'<input class="hf-txt" id="hfcObs" maxlength="200" placeholder="Observação (obrigatória se não comprou algo)">'
+    +'<button type="button" class="hf-mg" id="hfcFotoBtn" onclick="hfcFoto()">📷 Tirar foto da compra</button>'
+    +'<button type="button" class="alp-btn" style="margin-top:8px" onclick="hfcSalvar()">💾 Salvar compra e enviar ao Sidinei</button><div id="hfcMsg" class="alp-info"></div>'
+    +'<div style="border-top:1px solid var(--border);margin:12px 0 4px"></div><div style="font-weight:800;margin:6px 0 2px">📝 Lista para amanhã</div>';
+}
+function hfcFoto(){ chkAbrirCamera('hfcompra', f=>{ HFC_FOTO=f; document.getElementById('hfcFotoBtn').textContent='✓ Foto tirada — tirar outra'; }, {msg:'🧾 Fotografe a <b>compra feita</b> (as mercadorias e o cupom).'}); }
+async function hfcSalvar(){
+  const comprados=[...document.querySelectorAll('#hfCompraBox input[data-hfc]')].filter(e=>e.checked).map(e=>e.dataset.hfc), onde=document.getElementById('hfcOnde').value, obs=document.getElementById('hfcObs').value.trim(), msg=document.getElementById('hfcMsg');
+  if(comprados.length&&!onde){ msg.innerHTML='<span style="color:var(--danger)">Informe onde comprou.</span>'; return; }
+  if(comprados.length&&!HFC_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da compra.</span>'; return; }
+  if(comprados.length<HF.compra.itens.length&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">Não comprou tudo? Explique na observação (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
+    hfRenderCompra(); verificarBotaoRegistrar();
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
 }
 function hforaAbrir(){ HFORA_FOTO=null; document.getElementById('hforaMotivo').value=''; document.getElementById('hforaValor').value=''; document.getElementById('hforaMsg').innerHTML=''; document.getElementById('hforaFotoBtn').textContent='📷 Tirar foto do cupom'; document.getElementById('hforaModal').style.display='flex'; }
