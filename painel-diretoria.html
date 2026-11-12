@@ -220,7 +220,43 @@ function listaAlertas(l){ const cores={alto:'var(--red)',medio:'var(--gold)',bai
 function alertas(){ const ordem={alto:0,medio:1,bom:2,baixo:3}; const l=D.alertas.filter(a=>LOJA==='__rede__'||a.loja===LOJA).sort((a,b)=>ordem[a.nivel]-ordem[b.nivel]);
   return '<div class="card"><span class="rot">Alertas e sugestões automáticas</span><p class="sub" style="margin-top:6px">🔴 meta em risco · 🟡 atenção (descontos, canal em queda, iFood alto) · 🟢 candidata à premiação · 🔵 produtos parados</p>'+listaAlertas(l)+'</div>'
     +'<div class="card breve"><span class="rot">Sugestões de mercado do mês</span><p class="sub" style="margin-top:6px">Texto com análise do mercado e das grandes redes, atualizado todo mês. Em preparo.</p></div>'; }
-function financeiro(){ return '<div class="card breve"><span class="rot">Fase 2</span><div class="frase">💰 Contas a pagar e a receber, agenda financeira e limite de compra do dia</div><p class="sub">Entra depois dos testes do Alpha (financeiro-agenda, financeiro-movimentacao e nota-fiscal-entrada). Limite de compra = caixa − contas do dia − contas da semana, dentro do CMV de 38%.</p></div>'; }
+function hojeCal(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date()); }
+function financeiro(){
+  const F=D.fin; if(!F) return '<div class="card breve"><span class="rot">Financeiro</span><div class="frase">💰 Ainda sem dados do financeiro</div><p class="sub">'+esc(D.finErro||'O financeiro é importado do Alpha de hora em hora, das 8h às 20h. Clique em "Atualizar agora" ou espere a próxima hora.')+'</p></div>';
+  const k=LOJA==='__rede__'?null:(/^Isaac/.test(LOJA)?'Isaac':LOJA), X=k?F.lojas[k]:F.rede;
+  if(!X) return '<div class="card">Sem contas no Alpha para '+esc(LOJA)+'.</div>';
+  const nome=k?(k==='Isaac'?'Isaac (Manhã + Noite, mesma empresa no Alpha)':k):'a rede', c=X.cmv;
+  const bk=(o,b)=>o[b]||[0,0];
+  let h='';
+  if(c) h+='<div class="card"><span class="rot">Limite de compra — '+esc(nome)+'</span><div class="frase" style="color:'+(c.limiteDia>0?'var(--green)':'var(--red)')+'">Pode comprar hoje até '+R(c.limiteDia)+'</div>'
+    +'<div class="sub">No mês ainda cabem '+R(c.limiteMes)+' em compras para ficar dentro do CMV de '+P(F.cmvMeta*100)+' ('+P(F.cmvMeta*100)+' de '+R(c.projecao)+' previstos − '+R(c.compras)+' já comprados). Dividido pelos '+c.diasRestantes+' dias que faltam e limitado pelo caixa previsto da semana ('+R(c.fluxo7)+' = a receber + vendas previstas − a pagar e vencidas, 7 dias).</div>'
+    +'<div style="margin-top:12px"><div class="barra"><span style="width:'+Math.min(c.pct/(F.cmvMeta*100)*100,100)+'%;background:'+(c.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'"></span></div></div><div class="sub" style="margin-top:6px">CMV do mês até agora: <b style="color:'+(c.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'">'+P(c.pct)+'</b> ('+R(c.compras)+' em compras ÷ '+R(c.faturamento)+' vendidos). Compras: '+esc(F.origemCompras)+'.</div></div>';
+  h+='<div class="grid">'
+    +kpi('A pagar vencidas',R(bk(X.aPagar,'vencidas')[1]),N(bk(X.aPagar,'vencidas')[0])+' contas em aberto',bk(X.aPagar,'vencidas')[1]?'<b class="vermelho">pagar ou dar baixa no Alpha</b>':'')
+    +kpi('A pagar hoje',R(bk(X.aPagar,'hoje')[1]),N(bk(X.aPagar,'hoje')[0])+' contas')
+    +kpi('A pagar em 7 dias',R(bk(X.aPagar,'d7')[1]),'30 dias: '+R(bk(X.aPagar,'d7')[1]+bk(X.aPagar,'d30')[1]+bk(X.aPagar,'hoje')[1]))
+    +kpi('A receber em 7 dias',R(bk(X.aReceber,'hoje')[1]+bk(X.aReceber,'d7')[1]),'cartões, iFood e vales · 30 dias: '+R(bk(X.aReceber,'hoje')[1]+bk(X.aReceber,'d7')[1]+bk(X.aReceber,'d30')[1]))
+    +kpi('Pagas hoje',R(X.pagas.hoje[1]),N(X.pagas.hoje[0])+' baixas hoje · no mês '+R(X.pagas.mes[1]))
+    +'</div>';
+  const fx=X.fluxo, mx=Math.max(1,...fx.map(f=>Math.max(f[1],f[2])));
+  h+='<div class="card"><span class="rot">Próximos 14 dias — a receber × a pagar (em aberto no Alpha)</span><div class="graf">'
+    +fx.map(f=>'<div class="par" title="'+f[0].split('-').reverse().join('/')+': receber '+R(f[1])+', pagar '+R(f[2])+'"><div style="height:'+(f[1]/mx*100)+'%;background:var(--green)"></div><div style="height:'+(f[2]/mx*100)+'%;background:var(--red)"></div></div>').join('')
+    +'</div><div class="eixo">'+fx.map(f=>'<span>'+f[0].slice(8)+'</span>').join('')+'</div><div class="leg"><span><i style="background:var(--green)"></i>a receber</span><span><i style="background:var(--red)"></i>a pagar</span></div></div>';
+  h+='<div class="duas"><div class="card"><span class="rot">Contas a pagar — vencidas e próximas</span><div class="tab"><table><tr><th>Vence</th>'+(k?'':'<th>Empresa</th>')+'<th>Descrição</th><th class="n">Valor</th></tr>'
+    +(X.proximas.length?X.proximas.map(p=>'<tr><td style="white-space:nowrap;'+(p.v<hojeCal()?'color:var(--red);font-weight:700':'')+'">'+p.v.split('-').reverse().slice(0,2).join('/')+'</td>'+(k?'':'<td>'+esc(p.k)+'</td>')+'<td>'+esc(p.d||p.p)+'<br><span class="sub">'+esc(p.p)+'</span></td><td class="n">'+R(p.val)+'</td></tr>').join(''):'<tr><td colspan="4" class="sub">Nenhuma conta em aberto nos próximos 30 dias. 👏</td></tr>')
+    +'</table></div><p class="sub" style="margin-top:8px">Conta paga e baixada no Alpha sai desta lista na próxima atualização.</p></div>';
+  h+='<div class="card"><span class="rot">Despesas por plano de contas — '+nomeMes(D.mes)+' × '+nomeMes(D.mesAnterior)+' (pelo vencimento)</span><div class="tab"><table><tr><th>Plano</th><th class="n">Este mês</th><th class="n">Mês ant.</th></tr>'
+    +X.planos.map(p=>'<tr><td>'+esc(p.p)+'</td><td class="n">'+R(p.v)+'</td><td class="n">'+R(p.v0)+'</td></tr>').join('')+'</table></div></div></div>';
+  if(!k){
+    const ls=Object.keys(F.lojas);
+    h+='<div class="card"><span class="rot">Por empresa</span><div class="tab"><table><tr><th>Empresa</th><th class="n">Vencidas</th><th class="n">A pagar 7 dias</th><th class="n">A receber 7 dias</th><th class="n">CMV</th><th class="n">Pode comprar hoje</th></tr>'
+      +ls.map(n=>{ const L=F.lojas[n]; return '<tr><td>'+esc(n==='Central'?'Central (compras da rede)':n)+'</td><td class="n" style="'+(L.aPagar.vencidas[1]?'color:var(--red);font-weight:700':'')+'">'+R(L.aPagar.vencidas[1])+'</td><td class="n">'+R(L.aPagar.hoje[1]+L.aPagar.d7[1])+'</td><td class="n">'+R(L.aReceber.hoje[1]+L.aReceber.d7[1])+'</td><td class="n">'+(L.cmv?'<b style="color:'+(L.cmv.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'">'+P(L.cmv.pct)+'</b>':'—')+'</td><td class="n">'+(L.cmv?R(L.cmv.limiteDia):'—')+'</td></tr>'; }).join('')+'</table></div></div>';
+    const S=F.socios;
+    h+='<div class="card"><span class="rot">Sócios e patrimônio (fora do resultado das lojas)</span><div class="sub" style="margin-top:6px">Retiradas, consórcios, IPTU e terrenos. A pagar em 30 dias: <b>'+R(S.aPagar.hoje[1]+S.aPagar.d7[1]+S.aPagar.d30[1])+'</b>'+(S.aPagar.vencidas[1]?' · vencidas <b class="vermelho">'+R(S.aPagar.vencidas[1])+'</b>':'')+' · pagos no mês '+R(S.pagas.mes[1])+'</div><div class="tab"><table><tr><th>Vence</th><th>Descrição</th><th class="n">Valor</th></tr>'
+      +(S.proximas.length?S.proximas.slice(0,10).map(p=>'<tr><td>'+p.v.split('-').reverse().slice(0,2).join('/')+'</td><td>'+esc(p.d||p.p)+'<br><span class="sub">'+esc(p.p)+'</span></td><td class="n">'+R(p.val)+'</td></tr>').join(''):'<tr><td colspan="3" class="sub">Nada em aberto.</td></tr>')+'</table></div></div>';
+  }
+  return h+'<p class="sub">Financeiro atualizado em '+esc(F.atualizadoEm)+' (de hora em hora, 8h–20h). Contas da agenda do Alpha; R S de Pontes fica fora.</p>';
+}
 function clientes(){ return '<div class="card breve"><span class="rot">Fase 3</span><div class="frase">👥 Melhores clientes, inativos há 90 dias, aniversários e fidelidade</div><p class="sub">Só números neste painel. Os dados dos clientes ficam numa planilha privada, e o robô da campanha usa um chip próprio.</p></div>'; }
 
 const espera=setInterval(()=>{ if(!document.getElementById('gGuard') && !document.getElementById('gGuardCss') && chave()){ clearInterval(espera); carregar(); } },300);
