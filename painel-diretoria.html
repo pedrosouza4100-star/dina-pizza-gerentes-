@@ -148,11 +148,22 @@ function geral(){
     +kpi('Até ontem × mês anterior',R(comp.liq),'mesmos dias de '+nomeMes(D.mesAnterior)+': '+R(X.ant.liq)+' '+varia(comp.liq,X.ant.liq))
     +kpi('× mesmo período do ano passado',X.aa?R(X.aa.liq):'—',X.aa?varia(comp.liq,X.aa.liq):'ainda sem histórico do ano passado')
     +kpi('Descontos + cortesias',P(X.mes.descPct),'do faturamento bruto do mês',X.mes.descPct>D.regras.limDesc*100?'<b class="vermelho">acima do limite de '+P(D.regras.limDesc*100)+'</b>':'')
-    +'</div>';
+    +'</div>'+extrasCards(X);
   if(LOJA==='__rede__') return h+'<div class="card"><span class="rot">Lojas — projeção × meta (toque numa loja para ver o detalhe)</span><div class="tab">'+tabelaLojas()+'</div></div>'
     +'<div class="card"><span class="rot">Canais no mês</span>'+canais(X.mes.can,X.mes.liq)+'</div>';
   return h+'<div class="duas"><div class="card"><span class="rot">Canais no mês</span>'+canais(X.mes.can,X.mes.liq)+'</div>'
     +'<div class="card"><span class="rot">Alertas da loja</span>'+listaAlertas(D.alertas.filter(a=>a.loja===LOJA))+'</div></div>';
+}
+// Buffets e fichas / chopes e coquetéis (mesma contagem do "Conferir com o Alpha"); só aparece onde a loja vende
+function extrasCards(X){
+  const m=X.mes.x, c=(X.mes.comp||{}).x||{}, a=X.ant.x||{}; if(!m) return '';
+  const q=v=>Math.round(Number(v)||0).toLocaleString('pt-BR'), l=v=>(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR');
+  const st=(val,rot,k,f)=>'<div style="flex:1;min-width:120px"><div class="num" style="font-size:1.6rem;font-weight:700;line-height:1.1">'+val+'</div><div class="sub">'+rot+'</div><div style="font-size:.8rem;margin-top:3px">'+varia((c[k]||0)+(f?(c[f]||0):0),(a[k]||0)+(f?(a[f]||0):0))+'</div></div>';
+  const card=(t,itens)=>'<div class="card"><span class="rot">'+t+'</span><div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px">'+itens+'</div><p class="sub" style="margin-top:10px;font-size:.74rem">Variação: até ontem × mesmos dias do mês anterior. Mesma contagem do "Conferir com o Alpha".</p></div>';
+  let h='';
+  if((m.buf||0)+(m.fic||0)>0) h+=card('🍽️ Buffets e 🕹️ fichas no mês',st(q(m.buf),'buffets','buf')+st(q(m.fic),'fichas de fliperama','fic'));
+  if((m.chL||0)+(m.coq||0)+(m.cai||0)>0) h+=card('🍺 Chopes e 🍹 coquetéis no mês',st(l(m.chL)+' L','de chope','chL')+st(q(m.chI),'chopes (itens)','chI')+st(q((m.coq||0)+(m.cai||0)),'coquetéis + caipiras','coq','cai'));
+  return h?'<div class="duas">'+h+'</div>':'';
 }
 function kpi(t,v,s,extra){ return '<div class="card kpi"><span class="rot">'+t+'</span><b>'+v+'</b><span class="sub">'+(s||'')+'</span>'+(extra||'')+'</div>'; }
 function canais(can,tot){ const ks=Object.keys(CANAIS).filter(k=>can&&can[k]); if(!ks.length) return '<p class="sub" style="margin-top:8px">Sem vendas.</p>';
