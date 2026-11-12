@@ -104,7 +104,7 @@ function desenhar(){
   if(!j.meta) h+='<div class="card"><span class="rot">Meta de '+nomeMes(j.mes)+'</span><div class="frase">A meta do mês ainda não foi aprovada pela diretoria.</div><p class="sub">Enquanto isso, acompanhe as vendas e os produtos abaixo.</p></div>';
   // HOJE
   const pH=j.dia.meta?j.dia.liq/j.dia.meta*100:0;
-  h+='<div class="card"><span class="rot">Hoje até agora</span><div class="big" style="color:'+(j.dia.meta?cor(pH):'inherit')+'">'+R(j.dia.liq)+'</div>'
+  h+='<div class="card"><span class="rot">Hoje até agora</span><div class="big" style="color:'+(j.dia.meta&&j.dia.liq>0?cor(pH):'inherit')+'">'+R(j.dia.liq)+'</div>'
     +'<div class="sub">'+j.dia.v+' pedidos'+(j.dia.meta?' · meta do dia '+R(j.dia.meta)+' · <b>'+P(pH)+'</b>':'')+'</div>'+(j.dia.meta?'<div class="barra"><span style="width:'+Math.min(pH,100)+'%;background:'+cor(pH)+'"></span></div>':'')+'</div>';
   // ONTEM + MÊS
   if(j.meta){
