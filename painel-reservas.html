@@ -296,6 +296,9 @@ header .esp{flex:1}
   .menu{order:5;width:100%}.menu button{flex:1}
   .g3{grid-template-columns:1fr 1fr}
 }
+.lgLembrar[hidden],.lgFixa[hidden]{display:none!important}
+.lgLembrar{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:14px;color:var(--muted);cursor:pointer}.lgLembrar input{width:18px;height:18px;accent-color:var(--yellow)}
+.lgFixa{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px;text-align:left}.lgFixa span{font-size:12px;color:var(--muted)}.lgFixa b{font-size:17px}.lgFixa a{font-size:13px;color:var(--yellow);cursor:pointer;margin-top:4px}
 </style>
 </head>
 <body>
@@ -308,10 +311,14 @@ header .esp{flex:1}
     <h1>Reservas</h1>
     <p>Painel das unidades</p>
     <div>
+      <div id="lgLojaFixa" class="lgFixa" hidden></div>
+      <div id="lgLojaGrp">
       <label for="lgLoja">Unidade</label>
       <select class="campo" id="lgLoja"><option>Carregando…</option></select>
+      </div>
       <label for="lgSenha">Senha</label>
       <input class="campo" id="lgSenha" type="password" autocomplete="current-password">
+      <label class="lgLembrar" id="lgLembrarGrp"><input type="checkbox" id="lgLembrar"> Lembrar neste computador</label>
       <button class="btn prim full" id="btEntrar">Entrar</button>
       <div class="msgErro" id="lgErro"></div>
     </div>
@@ -790,17 +797,31 @@ async function iniciar(){
     $('lgLoja').innerHTML=lojas.map(l=>`<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join('')+'<option value="ADMIN">Administrador (todas as lojas)</option>';
     const ult=store.get('res_loja');if(ult)$('lgLoja').value=ult;
   }catch(e){$('lgErro').textContent=e.message;$('lgLoja').innerHTML='<option value="ADMIN">Administrador (todas as lojas)</option>'}
-  const salvo=store.get('res_sessao');
-  if(salvo){try{const s=JSON.parse(salvo);await entrar(s.loja_login,s.senha,true)}catch(e){store.del('res_sessao')}}
+  lgAdminCheck();lojaDoLink();
+  const salvo=store.get('res_sessao')||lembrado.get();
+  if(salvo){try{const s=JSON.parse(salvo);await entrar(s.loja_login,s.senha,true)}catch(e){store.del('res_sessao');lembrado.del()}}
 }
 async function entrar(loja,senha,silencioso){
   $('lgErro').textContent='';sessao={loja_login:loja,senha};
   try{
     const d=await api('login');Object.assign(sessao,{papel:d.papel,lojas:d.lojas});
-    store.set('res_sessao',JSON.stringify({loja_login:loja,senha}));store.set('res_loja',loja);abrirPainel();
+    store.set('res_sessao',JSON.stringify({loja_login:loja,senha}));store.set('res_loja',loja);
+    if(!silencioso){if($('lgLembrar').checked&&loja!=='ADMIN')lembrado.set(JSON.stringify({loja_login:loja,senha}));else lembrado.del()}
+    abrirPainel();
   }catch(e){sessao=null;if(!silencioso)$('lgErro').textContent=e.message;throw e}
 }
-function sair(){store.del('res_sessao');sessao=null;location.reload()}
+function sair(){store.del('res_sessao');lembrado.del();sessao=null;location.reload()}
+/* Lembrar neste computador: só para gerente/assistente (nunca a senha do Administrador). Fica no aparelho até clicar em Sair. */
+const lembrado={get(){try{return localStorage.getItem('res_lembrar')}catch(e){return null}},set(v){try{localStorage.setItem('res_lembrar',v)}catch(e){}},del(){try{localStorage.removeItem('res_lembrar')}catch(e){}}};
+/* Link do painel de cada loja: painel-reservas.html?loja=<id> já abre com a loja escolhida. */
+function lojaDoLink(){
+  const id=new URLSearchParams(location.search).get('loja');const op=id&&[...$('lgLoja').options].find(o=>o.value===id&&id!=='ADMIN');
+  if(!op)return;$('lgLoja').value=id;$('lgLojaGrp').hidden=true;
+  $('lgLojaFixa').hidden=false;$('lgLojaFixa').innerHTML=`<span>Unidade</span><b>${esc(op.textContent)}</b><a id="lgOutra">Entrar em outra unidade</a>`;
+  $('lgOutra').onclick=()=>{$('lgLojaGrp').hidden=false;$('lgLojaFixa').hidden=true;lgAdminCheck()};
+  $('lgLembrar').checked=true;
+}
+function lgAdminCheck(){const adm=$('lgLoja').value==='ADMIN';$('lgLembrarGrp').hidden=adm;if(adm)$('lgLembrar').checked=false}
 
 /* ======== PAINEL ======== */
 let timer=null;
@@ -1356,6 +1377,7 @@ async function copiar(txt){try{await navigator.clipboard.writeText(txt);toast('L
 
 /* ======== EVENTOS ======== */
 $('btEntrar').onclick=()=>entrar($('lgLoja').value,$('lgSenha').value).catch(()=>{});
+$('lgLoja').addEventListener('change',lgAdminCheck);
 $('lgSenha').onkeydown=e=>{if(e.key==='Enter')$('btEntrar').click()};
 $('btSair').onclick=sair;
 $('selWhats').value=modoWhats();
