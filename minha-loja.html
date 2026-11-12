@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Minha loja — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root,[data-theme="light"]{--bg:var(--d-bg);--card:var(--d-card);--inner:var(--d-card-2);--line:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--red:var(--d-red-vivo);--green:var(--d-green);--gold:var(--d-gold);--track:rgba(127,127,127,0.18)}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',Arial,sans-serif;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:14px 14px 48px;display:flex;flex-direction:column;gap:14px}
+  .topo{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .topo .logo-dina{width:48px}
+  .topo h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:1.25rem}
+  .topo small{display:block;font-size:.76rem;color:var(--muted);margin-top:2px}
+  .marca{display:flex;align-items:center;gap:10px}
+  select,.btn{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font:600 .9rem Inter,Arial,sans-serif;padding:0 12px}
+  .btn{cursor:pointer}.btn.prim{background:var(--d-red);border-color:var(--d-red);color:#fff}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .rot{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .big{font-family:'Space Grotesk',Inter,sans-serif;font-size:2rem;font-weight:700;line-height:1.1;margin:6px 0 4px}
+  .frase{font-family:'Space Grotesk',Inter,sans-serif;font-size:1.15rem;font-weight:700;line-height:1.3;margin:6px 0}
+  .sub{font-size:.86rem;color:var(--muted);line-height:1.45}
+  .barra{position:relative;height:10px;border-radius:99px;background:var(--track);margin-top:10px}
+  .barra>span{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+  .duas{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .verde{color:var(--green)}.vermelho{color:var(--red)}.amarelo{color:var(--gold)}
+  .linha{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem}
+  .linha:first-of-type{border-top:0}
+  .linha b{font-variant-numeric:tabular-nums}
+  .eu{background:var(--d-red-soft);border-radius:10px;padding:9px 10px;margin:0 -10px;font-weight:700}
+  .pos{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--inner);font-size:.78rem;font-weight:700;margin-right:8px}
+  #conteudo{display:flex;flex-direction:column;gap:14px}
+  #msg{padding:50px 16px;text-align:center;color:var(--muted)}
+  input{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--inner);color:var(--text);padding:0 12px;font-size:1rem;margin:10px 0}
+  @media(max-width:420px){.duas{grid-template-columns:1fr}.big{font-size:1.75rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo dina-aneis">
+    <div class="marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza Gastronomia" width="48" height="47"></span>
+      <div><h1 id="titulo">Minha loja</h1><small id="sub">Carregando…</small></div></div>
+    <button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Mudar entre tema escuro e claro"><svg class="sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+  </div>
+  <div id="gdiBar" style="display:none;gap:8px" class="card"><span class="rot">Visão do GDI</span><select id="lojaSel" style="width:100%;margin-top:8px" onchange="LOJA=this.value;carregar()"></select></div>
+  <div id="conteudo"><div id="msg">⏳ Carregando…</div></div>
+</div>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const qs=new URLSearchParams(location.search);
+const ler=k=>{ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+const UG=ler('dina_unidade_logada'), HG=UG?ler('dina_senha_'+UG):'', PAPEL=UG?ler('dina_papel_'+UG):'';
+let CHAVE=ler('dina_gestao_hash'), MODO=(qs.get('gdi')==='1'||!HG)&&CHAVE?'gdi':(HG?'gerente':''), LOJA=MODO==='gerente'?UG:(qs.get('loja')||''), D=null;
+const R=x=>'R$ '+Math.round(Number(x)||0).toLocaleString('pt-BR');
+const P=x=>(Number(x)||0).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const nomeMes=m=>MESES[Number(m.slice(5,7))-1];
+const CANAIS={salao:'Salão',deliveryProprio:'Delivery próprio',ifood:'iFood',balcao:'Balcão/retirada'};
+const cor=p=>p>=100?'var(--green)':p>=95?'var(--gold)':'var(--red)';
+const seta=(a,b)=>{ if(!b) return '<span class="sub">—</span>'; const v=(a-b)/b*100; return '<b class="'+(v>=0?'verde':'vermelho')+'">'+(v>=0?'▲ ':'▼ ')+P(Math.abs(v))+'</b>'; };
+function jsonp(params){ return new Promise((ok,falha)=>{ const cb='ml'+Date.now()+Math.floor(Math.random()*1e4), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); falha(new Error('O servidor demorou para responder.')); },60000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); ok(j); };
+  s.onerror=()=>{ clearTimeout(t); delete window[cb]; falha(new Error('Sem conexão com o servidor.')); };
+  s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&callback='+cb; document.head.appendChild(s); }); }
+const tela=h=>{ document.getElementById('conteudo').innerHTML=h; };
+
+function pedirSenha(msg){
+  tela('<div class="card"><span class="rot">Entrar</span><p class="sub" style="margin-top:6px">'+esc(msg||'O gerente abre esta tela pelo botão do placar. GDI e gestão: digite a sua senha.')+'</p>'
+    +'<input id="senha" type="password" placeholder="Senha do GDI ou da gestão" autocomplete="current-password"><button class="btn prim" style="width:100%" onclick="entrarGdi()">Entrar</button></div>');
+  document.getElementById('sub').textContent='';
+}
+async function entrarGdi(){ const s=document.getElementById('senha').value.trim(); if(!s) return; CHAVE=hash(s); MODO='gdi'; LOJA=''; await carregar(true); }
+
+async function carregar(primeiro){
+  if(!MODO){ pedirSenha(); return; }
+  if(MODO==='gerente'&&PAPEL==='assistente'){ tela('<div class="card"><div class="frase">Esta tela é só do gerente da loja.</div></div>'); document.getElementById('sub').textContent=UG; return; }
+  tela('<div id="msg">⏳ Carregando…</div>');
+  try{
+    const p={action:'pnlLoja',unidade:LOJA}; if(MODO==='gdi') p.chave=CHAVE; else p.hash=HG;
+    const j=await jsonp(p);
+    if(!j.ok){ if(j.semAcesso&&MODO==='gdi'){ CHAVE=''; pedirSenha('Senha inválida. Tente de novo.'); } else tela('<div class="card"><div class="frase">'+esc(j.erro||'Não foi possível carregar.')+'</div></div>'); return; }
+    if(MODO==='gdi'){ try{ localStorage.setItem('dina_gestao_hash',CHAVE); }catch(e){}
+      const sel=document.getElementById('lojaSel'); document.getElementById('gdiBar').style.display='block';
+      sel.innerHTML='<option value="">Escolha a loja…</option>'+j.lojas.map(u=>'<option'+(u===LOJA?' selected':'')+'>'+esc(u)+'</option>').join('');
+      if(!LOJA){ tela('<div class="card"><div class="frase">Escolha a loja acima.</div></div>'); document.getElementById('sub').textContent='Atualizado em '+j.atualizadoEm; return; } }
+    D=j; desenhar();
+  }catch(e){ tela('<div class="card"><div class="frase">'+esc(e.message)+'</div><button class="btn" style="margin-top:10px" onclick="carregar()">Tentar de novo</button></div>'); }
+}
+
+function desenhar(){
+  const j=D, M=j.mesLoja; document.getElementById('titulo').textContent=j.loja;
+  document.getElementById('sub').textContent='Atualizado em '+j.atualizadoEm+' · de hora em hora';
+  if(j.semDados){ tela('<div class="card"><div class="frase">Ainda sem vendas do Alpha para esta loja.</div></div>'); return; }
+  let h='';
+  if(!j.meta) h+='<div class="card"><span class="rot">Meta de '+nomeMes(j.mes)+'</span><div class="frase">A meta do mês ainda não foi aprovada pela diretoria.</div><p class="sub">Enquanto isso, acompanhe as vendas e os produtos abaixo.</p></div>';
+  // HOJE
+  const pH=j.dia.meta?j.dia.liq/j.dia.meta*100:0;
+  h+='<div class="card"><span class="rot">Hoje até agora</span><div class="big" style="color:'+(j.dia.meta?cor(pH):'inherit')+'">'+R(j.dia.liq)+'</div>'
+    +'<div class="sub">'+j.dia.v+' pedidos'+(j.dia.meta?' · meta do dia '+R(j.dia.meta)+' · <b>'+P(pH)+'</b>':'')+'</div>'+(j.dia.meta?'<div class="barra"><span style="width:'+Math.min(pH,100)+'%;background:'+cor(pH)+'"></span></div>':'')+'</div>';
+  // ONTEM + MÊS
+  if(j.meta){
+    const o=j.ontem, pO=o&&o.meta?o.liq/o.meta*100:0, bateu=pO>=100;
+    const pM=M.projecao/j.meta.meta*100, falta=Math.max(0,j.meta.meta-M.liq), faltaD=Math.max(0,j.meta.desafio-M.liq);
+    h+='<div class="duas">'
+      +(o&&o.meta?'<div class="card"><span class="rot">Ontem</span><div class="frase '+(bateu?'verde':'vermelho')+'">'+(bateu?'✅ Bateu a meta':'❌ Não bateu')+'</div><div class="sub">'+R(o.liq)+' de '+R(o.meta)+' · <b>'+P(pO)+'</b> ('+(bateu?'+':'−')+R(Math.abs(o.liq-o.meta))+')</div></div>':'<div class="card"><span class="rot">Ontem</span><div class="sub" style="margin-top:6px">Sem meta para ontem.</div></div>')
+      +'<div class="card"><span class="rot">'+nomeMes(j.mes)+'</span><div class="frase" style="color:'+cor(pM)+'">No ritmo: '+P(pM)+' da meta</div><div class="sub">Vendido '+R(M.liq)+' de '+R(j.meta.meta)+'. Faltam '+R(falta)+'.</div><div class="barra"><span style="width:'+Math.min(M.liq/j.meta.meta*100,100)+'%;background:'+cor(pM)+'"></span></div></div>'
+      +'</div>';
+    h+='<div class="card"><span class="rot">Para bater a meta</span><div class="frase">Precisa vender '+R(M.precisaPorDia)+' por dia</div><div class="sub">nos '+M.diasRestantes+' dias que faltam (contando hoje).</div>'
+      +'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><span class="rot">🏆 Desafio da premiação (+'+P(j.desafioPct*100)+')</span><div class="frase">'+(faltaD>0?'Faltam '+R(faltaD)+' — '+R(faltaD/Math.max(1,M.diasRestantes))+' por dia':'🎉 Desafio batido!')+'</div><div class="sub">Desafio: '+R(j.meta.desafio)+'</div></div></div>';
+  }
+  // RANKING
+  if(j.ranking&&j.ranking.length){
+    const eu=j.ranking.find(x=>x.loja===j.loja);
+    h+='<div class="card"><span class="rot">Ranking das lojas — ritmo da meta</span>'+(eu?'<div class="frase">Você está em '+eu.pos+'º de '+j.ranking.length+'</div>':'')
+      +j.ranking.map(x=>'<div class="linha'+(x.loja===j.loja?' eu':'')+'"><span><span class="pos">'+x.pos+'º</span>'+esc(x.loja)+'</span><b style="color:'+cor(x.pct)+'">'+P(x.pct)+'</b></div>').join('')
+      +'<p class="sub" style="margin-top:8px">% = quanto cada loja deve fechar do mês em relação à própria meta, no ritmo atual.</p></div>';
+  }
+  // TICKET E PEDIDOS
+  const C=M.comp||{};
+  h+='<div class="duas"><div class="card"><span class="rot">Ticket médio</span><div class="big">'+R(M.ticket)+'</div><div class="sub">até ontem '+R(C.ticket)+' × '+R(j.ant.ticket)+' no mês anterior '+seta(C.ticket,j.ant.ticket)+'</div></div>'
+    +'<div class="card"><span class="rot">Pedidos no mês</span><div class="big">'+(M.v||0).toLocaleString('pt-BR')+'</div><div class="sub">até ontem '+(C.v||0)+' × '+(j.ant.v||0)+' no mês anterior '+seta(C.v,j.ant.v)+'</div></div></div>';
+  // CANAIS
+  h+='<div class="card"><span class="rot">Canais — até ontem × mesmos dias do mês anterior</span>'
+    +Object.keys(CANAIS).map(k=>{ const a=C.can&&C.can[k]?C.can[k][1]:0, b=j.ant.can&&j.ant.can[k]?j.ant.can[k][1]:0; return (a||b)?'<div class="linha"><span>'+CANAIS[k]+'</span><span><b>'+R(a)+'</b> '+seta(a,b)+'</span></div>':''; }).join('')+'</div>';
+  // PRODUTOS
+  h+='<div class="duas"><div class="card"><span class="rot">🏆 Mais vendidos (30 dias)</span>'+(j.produtos.mais.length?j.produtos.mais.map((p,i)=>'<div class="linha"><span>'+(i+1)+'. '+esc(p.n)+'</span><b>'+Math.round(p.q)+'</b></div>').join(''):'<p class="sub">Sem dados.</p>')+'</div>'
+    +'<div class="card"><span class="rot">⛔ Parados (30 dias sem venda)</span>'+(j.produtos.parados.length?j.produtos.parados.map(p=>'<div class="linha"><span>'+esc(p.n)+'</span></div>').join(''):'<p class="sub" style="margin-top:6px">Nenhum. 👏</p>')+'</div></div>';
+  // DESCONTOS
+  h+='<div class="card"><span class="rot">Descontos e cortesias no mês</span><div class="frase">'+R((M.des||0)+(M.cor||0))+' · '+P(M.descPct)+' do bruto</div><div class="sub">Descontos '+R(M.des)+' · cortesias '+R(M.cor)+'</div></div>';
+  tela(h);
+}
+carregar();
+setInterval(()=>{ if(document.visibilityState==='visible'&&D) carregar(); },15*60000);
+</script>
+</body>
+</html>
