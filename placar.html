@@ -3456,7 +3456,7 @@ async function hfcSalvar(){
   if(comprados.length<HF.compra.itens.length&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">Não comprou tudo? Explique na observação (mínimo 10 letras).</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO})});
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
     HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
@@ -3472,7 +3472,7 @@ async function hforaEnviar(){
   if(!HFORA_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto do cupom fiscal.</span>'; return; }
   bt.disabled=true; msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfForaPedir',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo,valor:document.getElementById('hforaValor').value.trim(),foto:HFORA_FOTO})});
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfForaPedir',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo,valor:document.getElementById('hforaValor').value.trim(),foto:HFORA_FOTO?{base64:HFORA_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não enviou')+'</span>'; return; }
     logProva('HF_MERCADO_GRANDE',motivo); hforaFechar(); alert('✅ Enviado ao Sidinei e ao Robson. A resposta chega no seu WhatsApp.');
