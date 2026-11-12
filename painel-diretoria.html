@@ -128,7 +128,7 @@ async function atualizarAgora(){ const b=document.getElementById('btnAtualizar')
 function montarLojas(){ const s=document.getElementById('loja'); const lojas=Object.keys(D.lojas);
   s.innerHTML='<option value="__rede__">Rede inteira</option>'+lojas.map(u=>'<option'+(u===LOJA?' selected':'')+'>'+esc(u)+'</option>').join('');
   if(LOJA!=='__rede__'&&!D.lojas[LOJA]) LOJA='__rede__'; s.value=LOJA;
-  const h=D.historicoAte&&D.historicoAte!=='completo'?' · histórico do Alpha entrando (até '+D.historicoAte.split('-').reverse().join('/')+')':'';
+  const br=d=>d.split('-').reverse().join('/'), h=D.historicoFalta?' · histórico do Alpha entrando (falta de '+br(D.historicoFalta[0])+' a '+br(D.historicoFalta[1])+')':(D.historicoAte&&D.historicoAte!=='completo'?' · histórico do Alpha entrando':'');
   document.getElementById('subtitulo').textContent='Atualizado em '+D.atualizadoEm+' · dia de operação '+D.hoje.split('-').reverse().join('/')+h; }
 function aba(a){ ABA=a; document.querySelectorAll('[data-aba]').forEach(b=>b.classList.toggle('on',b.dataset.aba===a)); desenhar(); }
 function atual(){ return LOJA==='__rede__'?D.rede:D.lojas[LOJA]; }
