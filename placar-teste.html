@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
-<meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
 <!-- PÁGINA DE TESTE DO PLACAR (para o Robson testar no celular com a senha do Admin = modo teste). É uma CÓPIA do placar.html: a cada publicação do placar, atualize esta cópia também (mesmas 2 mudanças: esta meta e o "const u=null"). -->
+<script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Placar Diário — Dina Pizza</title>
 <meta name="theme-color" content="#07090E">
@@ -1509,6 +1509,10 @@ async function verificarSessaoServidor(u){
     const r=await authPost({action:'authVerificar',unidade:u,hash:localStorage.getItem('dina_senha_'+u)||'',aparelho:aparelhoId(),info:aparelhoInfo()});
     if(r.situacao==='ok') aplicarAparelho(r.aparelho);
     if(r.situacao==='ok'&&r.papel&&localStorage.getItem('dina_papel_'+u)!==r.papel){ localStorage.setItem('dina_papel_'+u,r.papel); mlMostrar(u); const b=document.getElementById('unitBadge'); if(b) b.textContent=u+(r.papel==='assistente'?' · Assistente':''); }
+    if(r.situacao==='pausada'){ // gerente/assistente pausado pelo Admin (servidor 2026-11-13-b): volta para a tela de senha com o aviso
+      logProva('ACESSO_PAUSADO',(r.pausa&&r.pausa.ate)||''); sair(); pausaAvisar(r);
+      return;
+    }
     if(r.situacao==='diferente'||r.situacao==='resetada'){
       localStorage.removeItem('dina_senha_'+u);
       sair();
@@ -1518,6 +1522,16 @@ async function verificarSessaoServidor(u){
     }
   }catch(e){}
 }
+function pausaAvisar(r){
+  const m=(r&&r.pausa&&r.pausa.mensagem)||'Acesso pausado. Fale com o GDI.';
+  const el=document.getElementById('authAviso'); if(el) el.innerHTML='<div style="background:#2a1a00;border:1px solid #FFD000;border-radius:10px;padding:12px;color:#ffe9a8;font-weight:700">⏸️ '+m.replace(/</g,'&lt;')+'</div>';
+}
+// volta para o placar (outro app, tela apagada): confere a senha de novo no máximo a cada 5 min, para a pausa valer sem fechar a página
+let _sessaoUltima=Date.now();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'||!unidadeAtual||MODO_TESTE||Date.now()-_sessaoUltima<300000) return;
+  _sessaoUltima=Date.now(); verificarSessaoServidor(unidadeAtual);
+});
 function entrarComo(u){
   localStorage.setItem('dina_unidade_logada',u);
   localStorage.setItem('dina_ultima_loja',u);
@@ -1545,6 +1559,7 @@ async function entrar(){
         err.textContent='Esta loja ainda não tem senha. Peça a senha ao administrador.'; return;
       }
       if(r.situacao==='resetada'){ err.textContent='A senha desta loja foi trocada. Peça a senha nova ao administrador.'; return; }
+      if(r.situacao==='pausada'){ err.textContent='⏸️ '+((r.pausa&&r.pausa.mensagem)||'Acesso pausado. Fale com o GDI.'); return; }
       err.textContent='Senha incorreta para '+u+'.'; return;
     }catch(e){ err.textContent=''; /* sem servidor: segue como antes */ }
   }
