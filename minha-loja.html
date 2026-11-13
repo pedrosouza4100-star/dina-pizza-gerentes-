@@ -131,6 +131,17 @@ function desenhar(){
   // CANAIS
   h+='<div class="card"><span class="rot">Canais — até ontem × mesmos dias do mês anterior</span>'
     +Object.keys(CANAIS).map(k=>{ const a=C.can&&C.can[k]?C.can[k][1]:0, b=j.ant.can&&j.ant.can[k]?j.ant.can[k][1]:0; return (a||b)?'<div class="linha"><span>'+CANAIS[k]+'</span><span><b>'+R(a)+'</b> '+seta(a,b)+'</span></div>':''; }).join('')+'</div>';
+  // QUANTIDADES (buffets e fichas com a meta do placar; o resto só quantidade e comparação)
+  if(j.qtd&&j.qtd.length){
+    const fq=(v,un)=>(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR')+(un==='L'?' L':'');
+    h+='<div class="card"><span class="rot">🍽️ Quantidades</span>'+j.qtd.map(q=>{
+      const pD=q.metaDia?q.hoje/q.metaDia*100:0, pR=q.metaAteOntem?q.comp/q.metaAteOntem*100:0;
+      return '<div style="padding:10px 0;border-top:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(q.nome)+'</b>'+seta(q.comp,q.ant)+'</div>'
+        +'<div class="sub" style="margin-top:4px">Hoje <b style="color:'+(q.metaDia&&q.hoje>0?cor(pD):'var(--text)')+'">'+fq(q.hoje,q.un)+'</b>'+(q.metaDia?' / meta '+fq(q.metaDia,q.un):'')
+        +' · Ontem <b>'+fq(q.ontem,q.un)+'</b>'+(q.metaOntem?' / '+fq(q.metaOntem,q.un):'')
+        +' · No mês <b>'+fq(q.mes,q.un)+'</b>'+(q.metaMes?' / '+fq(q.metaMes,q.un)+' (<b style="color:'+cor(pR)+'">'+P(pR)+'</b> do ritmo)':'')+'</div></div>'; }).join('')
+      +'<p class="sub" style="margin-top:6px;font-size:.76rem">Seta = até ontem × mesmos dias do mês anterior. Meta só para buffets e fichas (a mesma do placar).</p></div>';
+  }
   // PRODUTOS
   h+='<div class="duas"><div class="card"><span class="rot">🏆 Mais vendidos (30 dias)</span>'+(j.produtos.mais.length?j.produtos.mais.map((p,i)=>'<div class="linha"><span>'+(i+1)+'. '+esc(p.n)+'</span><b>'+Math.round(p.q)+'</b></div>').join(''):'<p class="sub">Sem dados.</p>')+'</div>'
     +'<div class="card"><span class="rot">⛔ Parados (30 dias sem venda)</span>'+(j.produtos.parados.length?j.produtos.parados.map(p=>'<div class="linha"><span>'+esc(p.n)+'</span></div>').join(''):'<p class="sub" style="margin-top:6px">Nenhum. 👏</p>')+'</div></div>';
