@@ -752,6 +752,18 @@
   <table class="cont-tab"><thead><tr><th>Loja</th><th>Gerente</th><th>WhatsApp</th><th>Cobrar a partir</th><th>Atrasado após</th></tr></thead><tbody id="contBody"></tbody></table>
   <div class="modal-btns" style="margin-top:12px"><button class="modal-btn cancel" onclick="fecharModal('modalContatos')">Cancelar</button><button class="modal-btn confirm" onclick="salvarContatos()">Salvar</button></div></div>
 </div>
+<div class="modal-bg" id="modalPausa" style="display:none">
+  <div class="modal" style="max-width:460px;width:94%">
+  <h3 id="pzTitulo" style="margin-bottom:6px">⏸️ Pausar</h3>
+  <p id="pzQuem" style="font-size:0.8rem;color:var(--muted);margin-bottom:12px"></p>
+  <label style="font-size:0.8rem;font-weight:700">Até quando (último dia da pausa)</label>
+  <input class="modal-input" type="date" id="pzAte" style="margin:4px 0 10px">
+  <label style="font-size:0.8rem;font-weight:700">Motivo</label>
+  <select class="modal-input" id="pzMotivo" style="margin:4px 0 10px"><option value="férias">Férias</option><option value="afastamento">Afastamento</option><option value="atestado">Atestado</option><option value="outro">Outro</option></select>
+  <input class="modal-input" id="pzObs" maxlength="120" placeholder="Observação (obrigatória em Outro)" style="margin-bottom:6px">
+  <div id="pzErro" style="color:var(--danger);font-size:0.8rem;min-height:1.1em"></div>
+  <div class="modal-btns" style="margin-top:10px"><button class="modal-btn cancel" onclick="fecharModal('modalPausa')">Cancelar</button><button class="modal-btn confirm" onclick="pausaSalvar()">⏸️ Pausar</button></div></div>
+</div>
 <div class="modal-bg" id="modalLista" style="display:none">
   <div class="modal" style="width:480px"><h2>Senhas novas das lojas</h2>
   <p>Anote ou copie agora: por segurança, as senhas não aparecem de novo. Mande para cada gerente só a senha da loja dele.</p>
@@ -1389,8 +1401,59 @@
       (H.supRh?[['__sup_rh__','🧑‍💼 Responsável pelo RH','recebe tudo da RH: agenda enviada, check-in/saída, visitas não feitas e vagas',H.supRh],['__sup_qualidade__','🧪 Responsável pela qualidade e compras (CD)','recebe tudo da nutricionista (agenda, check-in/saída, notas das visitas e correções) e os avisos de falta de produto repetida',H.supQualidade]].map(([k,n,d,c])=>{ c=c||{}; return `<tr data-u="${k}" style="background:rgba(155,89,182,0.10)"><td style="white-space:nowrap"><b>${n}</b><br><small style="color:var(--muted)">${d}</small></td><td><input class="cg" value="${escH(c.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = vai para você<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`; }).join(''):'')+
       [['__agenda_rh__','👩‍💼 Gestora de RH',H.agendaRh],['__agenda_nutri__','🥗 Nutricionista',H.agendaNutri]].map(([k,n,c])=>{ c=c||{}; return `<tr data-u="${k}" style="background:rgba(255,215,0,0.06)"><td style="white-space:nowrap"><b>${n}</b><br><small style="color:var(--muted)">recebe a cobrança e o lembrete da agenda de visitas</small></td><td><input class="cg" value="${escH(c.nome||'')}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats||'')}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">—<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`; }).join('')+ULTIMO_HOJE.lojas.map((l,i)=>{ const c=l.contato||{}, F=H.folgas&&H.folgas.lojas?H.folgas.lojas[l.unidade]:null;
       const esc=F?(F.situacao==='sem escala'?'<span style="color:var(--muted)">sem escala desta semana</span>':F.situacao==='gerente não achado na escala'?'<span style="color:var(--yellow)">nome não achado na escala</span>':'escala: '+escH(F.achado)+' · hoje <b style="color:'+(F.folga?'var(--yellow)':'var(--green)')+'">'+escH(F.situacao)+'</b>'):'';
-      const ass=F?`<tr data-u="${escH(l.unidade)}#assistente" style="background:var(--bg)"><td style="white-space:nowrap;padding-left:18px">↳ Assistente<br><small style="color:var(--muted)">recebe as mensagens na folga do gerente</small></td><td><input class="cg" value="${escH((F.assistente||{}).nome)}" placeholder="Nome do assistente"></td><td><input class="cw" inputmode="tel" value="${escH((F.assistente||{}).whats)}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = na folga do gerente ninguém recebe<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`:'';
-      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}${esc?'<br><small style="font-size:0.7rem">'+esc+'</small>':''}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`+ass; }).join('');
+      const ass=F?`<tr data-u="${escH(l.unidade)}#assistente" style="background:var(--bg)"><td style="white-space:nowrap;padding-left:18px">↳ Assistente<br><small style="color:var(--muted)">recebe as mensagens na folga do gerente</small>${pausaCelula(H,l.unidade,'assistente')}</td><td><input class="cg" value="${escH((F.assistente||{}).nome)}" placeholder="Nome do assistente"></td><td><input class="cw" inputmode="tel" value="${escH((F.assistente||{}).whats)}" placeholder="41999998888"></td><td colspan="2" style="color:var(--muted);font-size:0.75rem">vazio = na folga do gerente ninguém recebe<input class="ch" type="hidden" value="17:30"><input class="cl" type="hidden" value="19:00"></td></tr>`:'';
+      return `<tr data-u="${escH(l.unidade)}"><td style="white-space:nowrap">${escH(l.unidade)}${esc?'<br><small style="font-size:0.7rem">'+esc+'</small>':''}${pausaCelula(H,l.unidade,'gerente')}</td><td><input class="cg" value="${escH(c.gerente)}" placeholder="Nome"></td><td><input class="cw" inputmode="tel" value="${escH(c.whats)}" placeholder="41999998888"></td><td><input class="ch" type="time" value="${escH(c.hora||'17:30')}"></td><td><input class="cl" type="time" value="${escH(c.limite||'19:00')}"></td></tr>`+ass; }).join('');
+  }
+  // ── ⏸️ Pausar gerente ou assistente (servidor 2026-11-13-b): a senha não abre o placar e o robô manda as mensagens dele
+  //    para o assistente (ou o gerente); sem esse contato, ou ele também pausado, vão para o GDI ──
+  function pausaDaLista(H,u,papel){ return (H&&Array.isArray(H.pausas)?H.pausas:[]).find(p=>p.unidade===u&&p.papel===papel)||null; }
+  function pausaCelula(H,u,papel){
+    if(!H||!Array.isArray(H.pausas)) return '';
+    return `<div class="pz-cel" data-u="${escH(u)}" data-p="${papel}" style="margin-top:4px">${pausaBotaoHtml(pausaDaLista(H,u,papel),u,papel)}</div>`;
+  }
+  function pausaBotaoHtml(pz,u,papel){
+    const ua=escH(u).replace(/'/g,"\\'");
+    if(!pz) return `<button type="button" class="save-metas-btn outline" style="padding:3px 9px;font-size:0.72rem" onclick="pausaAbrir('${ua}','${papel}')">⏸️ Pausar</button>`;
+    return `<span style="color:var(--yellow);font-size:0.74rem;font-weight:700">⏸️ Pausado até ${escH(pz.ateTxt)}</span> <small style="color:var(--muted)">(${escH(pz.motivo)}${pz.obs?': '+escH(pz.obs):''})</small> <button type="button" class="save-metas-btn" style="padding:3px 9px;font-size:0.72rem" onclick="pausaRetomar('${ua}','${papel}')">▶️ Retomar</button>`;
+  }
+  function pausaHojeIso(){ const d=new Date(Date.now()-4*3600000); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+  let PZ_ALVO=null;
+  function pausaAbrir(u,papel){
+    PZ_ALVO={u,papel};
+    const lj=(ULTIMO_HOJE&&ULTIMO_HOJE.lojas||[]).find(x=>x.unidade===u)||{}, F=ULTIMO_HOJE&&ULTIMO_HOJE.folgas&&ULTIMO_HOJE.folgas.lojas?ULTIMO_HOJE.folgas.lojas[u]:null;
+    const nome=papel==='gerente'?((lj.contato||{}).gerente||'o gerente'):(((F||{}).assistente||{}).nome||'o assistente');
+    const temOutro=papel==='gerente'?!!((F||{}).assistente||{}).whats:!!(lj.contato||{}).whats;
+    document.getElementById('pzTitulo').textContent='⏸️ Pausar '+(papel==='gerente'?'gerente':'assistente')+' — '+u;
+    document.getElementById('pzQuem').innerHTML='<b>'+escH(nome)+'</b> fica sem acesso ao placar até a data abaixo (a senha dele não abre; aparece "Acesso pausado até dd/mm. Fale com o GDI.").<br>As mensagens do robô que iriam para ele vão para <b>'+(temOutro?(papel==='gerente'?'o assistente':'o gerente'):'o GDI')+'</b>'+(temOutro?' (se ele também estiver pausado, para o GDI)':' (não há '+(papel==='gerente'?'assistente':'gerente')+' com WhatsApp cadastrado)')+'. A pausa acaba sozinha no dia seguinte à data final.';
+    const di=document.getElementById('pzAte'); di.min=pausaHojeIso(); di.value='';
+    document.getElementById('pzMotivo').value='férias'; document.getElementById('pzObs').value=''; document.getElementById('pzErro').textContent='';
+    document.getElementById('modalPausa').style.display='flex';
+  }
+  function pausaAtualizarTela(pausas){
+    if(ULTIMO_HOJE) ULTIMO_HOJE.pausas=pausas||[];
+    document.querySelectorAll('.pz-cel').forEach(el=>{ el.innerHTML=pausaBotaoHtml(pausaDaLista(ULTIMO_HOJE,el.dataset.u,el.dataset.p),el.dataset.u,el.dataset.p); });
+  }
+  async function pausaSalvar(){
+    const ate=document.getElementById('pzAte').value, motivo=document.getElementById('pzMotivo').value, obs=document.getElementById('pzObs').value.trim(), er=document.getElementById('pzErro');
+    if(!PZ_ALVO) return;
+    if(!ate){ er.textContent='Escolha até quando fica pausado.'; return; }
+    if(ate<pausaHojeIso()){ er.textContent='A data final precisa ser hoje ou depois.'; return; }
+    if(motivo==='outro'&&obs.length<3){ er.textContent='Escreva o motivo.'; return; }
+    er.textContent='Salvando…';
+    try{
+      const r=await admPost({action:'authPausaSalvar',unidade:PZ_ALVO.u,papel:PZ_ALVO.papel,ate,motivo,obs,quem:'Admin'});
+      if(!r||!r.ok) throw new Error((r&&r.erro)||'Não salvou');
+      fecharModal('modalPausa'); pausaAtualizarTela(r.pausas);
+      showToast(PZ_ALVO.u+' ('+PZ_ALVO.papel+') pausado até '+r.pausa.ateTxt,'ok'); registrarLog('Pausa: '+PZ_ALVO.u+' ('+PZ_ALVO.papel+') até '+r.pausa.ateTxt+' — '+motivo,'warn');
+    }catch(e){ er.textContent='⚠ '+e.message+(/reconhecida/.test(e.message)?' — cole o código novo (2026-11-13-b) no Apps Script.':''); }
+  }
+  async function pausaRetomar(u,papel){
+    if(!confirm('Retomar '+(papel==='gerente'?'o gerente':'o assistente')+' de '+u+' agora? A senha volta a abrir o placar e as mensagens voltam para ele.')) return;
+    try{
+      const r=await admPost({action:'authPausaSalvar',unidade:u,papel,ate:''});
+      if(!r||!r.ok) throw new Error((r&&r.erro)||'Não salvou');
+      pausaAtualizarTela(r.pausas); showToast(u+' ('+papel+') retomado','ok'); registrarLog('Pausa encerrada: '+u+' ('+papel+')','ok');
+    }catch(e){ showToast('Não retomou: '+e.message,'warn'); }
   }
   // ── Aba Gerentes e mensagens ──
   let MSG_PADRAO=null;
