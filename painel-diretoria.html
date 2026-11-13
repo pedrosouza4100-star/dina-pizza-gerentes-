@@ -154,16 +154,19 @@ function geral(){
   return h+'<div class="duas"><div class="card"><span class="rot">Canais no mês</span>'+canais(X.mes.can,X.mes.liq)+'</div>'
     +'<div class="card"><span class="rot">Alertas da loja</span>'+listaAlertas(D.alertas.filter(a=>a.loja===LOJA))+'</div></div>';
 }
-// Buffets e fichas / chopes e coquetéis (mesma contagem do "Conferir com o Alpha"); só aparece onde a loja vende
+// Quantidades do dia e do mês com metas (buffets, fichas = meta do placar; chope, coquetéis = mês anterior +3%)
 function extrasCards(X){
-  const m=X.mes.x, c=(X.mes.comp||{}).x||{}, a=X.ant.x||{}; if(!m) return '';
-  const q=v=>Math.round(Number(v)||0).toLocaleString('pt-BR'), l=v=>(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR');
-  const st=(val,rot,k,f)=>'<div style="flex:1;min-width:120px"><div class="num" style="font-size:1.6rem;font-weight:700;line-height:1.1">'+val+'</div><div class="sub">'+rot+'</div><div style="font-size:.8rem;margin-top:3px">'+varia((c[k]||0)+(f?(c[f]||0):0),(a[k]||0)+(f?(a[f]||0):0))+'</div></div>';
-  const card=(t,itens)=>'<div class="card"><span class="rot">'+t+'</span><div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px">'+itens+'</div><p class="sub" style="margin-top:10px;font-size:.74rem">Variação: até ontem × mesmos dias do mês anterior. Mesma contagem do "Conferir com o Alpha".</p></div>';
-  let h='';
-  if((m.buf||0)+(m.fic||0)>0) h+=card('🍽️ Buffets e 🕹️ fichas no mês',st(q(m.buf),'buffets','buf')+st(q(m.fic),'fichas de fliperama','fic'));
-  if((m.chL||0)+(m.coq||0)+(m.cai||0)>0) h+=card('🍺 Chopes e 🍹 coquetéis no mês',st(l(m.chL)+' L','de chope','chL')+st(q(m.chI),'chopes (itens)','chI')+st(q((m.coq||0)+(m.cai||0)),'coquetéis + caipiras','coq','cai'));
-  return h?'<div class="duas">'+h+'</div>':'';
+  const Q=X.qtd||[]; if(!Q.length) return '';
+  const f=(v,un)=>(un==='L'?(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR')+' L':Math.round(Number(v)||0).toLocaleString('pt-BR'));
+  const pc=(v,m)=>m?'<b style="color:'+cor(v/m*100)+'">'+P(v/m*100)+'</b>':'<span class="sub">sem meta</span>';
+  const cel=(v,m,un)=>'<td class="n"><b>'+f(v,un)+'</b>'+(m?'<span class="sub"> / '+f(m,un)+'</span><br>'+pc(v,m):'<br><span class="sub">sem meta</span>')+'</td>';
+  return '<div class="card"><span class="rot">🍽️ Buffets · 🕹️ fichas · 🍺 chope · 🍹 coquetéis — quantidades e metas</span><div class="tab"><table><tr><th>Item</th><th class="n">Hoje</th><th class="n">Ontem</th><th class="n">No mês</th><th class="n">Ritmo do mês</th><th class="n">× mês anterior</th></tr>'
+    +Q.map(q=>'<tr><td><b>'+esc(q.nome)+'</b><br><span class="sub">meta: '+esc(q.origem==='placar'?'a do placar':q.origem)+'</span></td>'
+      +cel(q.hoje,q.metaDia,q.un)+cel(q.ontem,q.metaOntem,q.un)
+      +'<td class="n"><b>'+f(q.mes,q.un)+'</b>'+(q.metaMes?'<span class="sub"> / '+f(q.metaMes,q.un)+'</span>':'')+(q.desafio?'<br><span class="sub">desafio '+f(q.desafio,q.un)+'</span>':'')+'</td>'
+      +'<td class="n">'+(q.metaAteOntem?pc(q.comp,q.metaAteOntem)+'<br><span class="sub">até ontem</span>':'<span class="sub">—</span>')+'</td>'
+      +'<td class="n">'+varia(q.comp,q.ant)+'</td></tr>').join('')
+    +'</table></div><p class="sub" style="margin-top:8px;font-size:.76rem">Contagem igual ao "Conferir com o Alpha" (buffet inteiro ou meia = 1, pesagem por quilo = 1, ficha combo ou avulsa = 1). Ritmo = vendido até ontem ÷ meta até ontem. × mês anterior = até ontem × mesmos dias do mês anterior.</p></div>';
 }
 function kpi(t,v,s,extra){ return '<div class="card kpi"><span class="rot">'+t+'</span><b>'+v+'</b><span class="sub">'+(s||'')+'</span>'+(extra||'')+'</div>'; }
 function canais(can,tot){ const ks=Object.keys(CANAIS).filter(k=>can&&can[k]); if(!ks.length) return '<p class="sub" style="margin-top:8px">Sem vendas.</p>';
