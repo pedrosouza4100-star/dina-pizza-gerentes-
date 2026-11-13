@@ -160,7 +160,7 @@ function extrasCards(X){
   const f=(v,un)=>(un==='L'?(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR')+' L':Math.round(Number(v)||0).toLocaleString('pt-BR'));
   const pc=(v,m)=>m?'<b style="color:'+cor(v/m*100)+'">'+P(v/m*100)+'</b>':'<span class="sub">sem meta</span>';
   const cel=(v,m,un)=>'<td class="n"><b>'+f(v,un)+'</b>'+(m?'<span class="sub"> / '+f(m,un)+'</span><br>'+pc(v,m):'<br><span class="sub">sem meta</span>')+'</td>';
-  return '<div class="card"><span class="rot">🍽️ Buffets · 🕹️ fichas · 🍺 chope · 🍹 coquetéis — quantidades e metas</span><div class="tab"><table><tr><th>Item</th><th class="n">Hoje</th><th class="n">Ontem</th><th class="n">No mês</th><th class="n">Ritmo do mês</th><th class="n">× mês anterior</th></tr>'
+  return '<div class="card"><span class="rot">🍽️ Quantidades do dia e do mês — buffets, fichas, bebidas e sobremesas</span><div class="tab"><table><tr><th>Item</th><th class="n">Hoje</th><th class="n">Ontem</th><th class="n">No mês</th><th class="n">Ritmo do mês</th><th class="n">× mês anterior</th></tr>'
     +Q.map(q=>'<tr><td><b>'+esc(q.nome)+'</b><br><span class="sub">meta: '+esc(q.origem==='placar'?'a do placar':q.origem)+'</span></td>'
       +cel(q.hoje,q.metaDia,q.un)+cel(q.ontem,q.metaOntem,q.un)
       +'<td class="n"><b>'+f(q.mes,q.un)+'</b>'+(q.metaMes?'<span class="sub"> / '+f(q.metaMes,q.un)+'</span>':'')+(q.desafio?'<br><span class="sub">desafio '+f(q.desafio,q.un)+'</span>':'')+'</td>'
