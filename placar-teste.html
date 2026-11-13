@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta name="robots" content="noindex,nofollow">
-<!-- PÁGINA DE TESTE DO PLACAR (para o Robson testar no celular com a senha do Admin = modo teste). É uma CÓPIA do placar.html: a cada publicação do placar, atualize esta cópia também (mesmas 2 mudanças: esta meta e o "const u=null"). -->
 <script>if(location.protocol==='http:'&&!/^(localhost|127\.)/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);/* GPS e câmera só funcionam em https */</script>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<!-- PÁGINA DE TESTE DO PLACAR (para o Robson testar no celular com a senha do Admin = modo teste). É uma CÓPIA do placar.html: a cada publicação do placar, atualize esta cópia também (mesmas 2 mudanças: esta meta e o "const u=null"). -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Placar Diário — Dina Pizza</title>
 <meta name="theme-color" content="#07090E">
@@ -495,6 +495,11 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
 
     <!-- Etapa 2: início do turno -->
     <div class="etapa-titulo"><b>2</b> Início do turno</div>
+    <!-- Missão de hoje (Painel da Diretoria, 13/11/2026): só gerente; não trava nada -->
+    <div class="card card-full" id="cardMissao" style="display:none">
+      <div class="card-label">🎯 Missão de hoje</div>
+      <div id="missaoCorpo"></div>
+    </div>
     <!-- Start Dina -->
     <div class="card card-full" id="cardStartDina">
       <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
@@ -1624,10 +1629,43 @@ function mostrarMsgEscalada(diasSemMeta, pctMeta){
   }
 }
 
+// 🎯 Missão de hoje: o que a loja precisa vender hoje (faturamento, buffets, fichas) e o que cobrar da equipe; "Li e vou cobrar" fica registrado
+function missaoHash(u){ try{ return MODO_TESTE?(sessionStorage.getItem('dina_teste_admin')||''):(localStorage.getItem('dina_senha_'+u)||''); }catch(e){ return ''; } }
+async function missaoCarregar(u){
+  const card=document.getElementById('cardMissao'); if(!card) return;
+  const papel=localStorage.getItem('dina_papel_'+u)||'gerente';
+  if(!MODO_TESTE&&papel!=='gerente'){ card.style.display='none'; return; }
+  try{
+    const r=await chkJsonp({action:'pnlMissao',unidade:u,hash:missaoHash(u)},20000);
+    if(!r||!r.ok||!r.itens||!r.itens.length){ card.style.display='none'; return; }
+    window._missao=r; missaoDesenhar(); card.style.display='';
+  }catch(e){ card.style.display='none'; }
+}
+function missaoDesenhar(){
+  const r=window._missao, el=document.getElementById('missaoCorpo'); if(!r||!el) return;
+  const fmt=(v,rs)=>rs?'R$ '+Math.round(v).toLocaleString('pt-BR'):Math.round(v).toLocaleString('pt-BR');
+  const atras=r.itens.filter(i=>i.atrasado);
+  let h=atras.length?'<div style="font-size:0.9rem;margin:4px 0 8px;color:var(--d-text2)">Para voltar ao ritmo do mês, hoje a loja precisa de:</div>'
+    :'<div style="font-weight:700;color:var(--d-green);margin:4px 0 8px">✅ Loja no ritmo do mês. Mantenha!</div>';
+  h+=r.itens.map(i=>'<div style="padding:9px 0;border-top:1px solid var(--d-line)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span>'+(i.atrasado?'⚠️ ':'✅ ')+'<b>'+i.nome+'</b></span><b style="font-size:1.1rem;color:'+(i.atrasado?'var(--d-red-vivo)':'var(--d-green)')+'">'+fmt(i.precisa,i.rs)+'</b></div>'
+    +'<div style="font-size:0.8rem;color:var(--d-muted);margin-top:2px">'+(i.atrasado?'meta normal do dia '+fmt(i.metaDia,i.rs)+' + recuperar o atraso (mês em '+Math.round(i.ritmo)+'% do ritmo)':'no ritmo — meta do dia')+'</div>'
+    +(i.atrasado&&i.acao?'<div style="font-size:0.85rem;margin-top:5px">👉 '+i.acao+'</div>':'')+'</div>').join('');
+  h+=r.lida?'<div style="margin-top:10px;font-weight:700;color:var(--d-green)">✅ Você confirmou às '+r.lida+'. Bom trabalho!</div>'
+    :'<button class="camera-btn" id="btnMissaoLi" onclick="missaoLi()" style="margin-top:10px">✅ Li e vou cobrar a equipe</button>';
+  el.innerHTML=h;
+}
+async function missaoLi(){
+  const b=document.getElementById('btnMissaoLi'); if(b){ b.disabled=true; b.textContent='Salvando...'; }
+  try{ const r=await chkJsonp({action:'pnlMissaoLi',unidade:unidadeAtual,hash:missaoHash(unidadeAtual)},20000);
+    if(r&&r.ok){ window._missao.lida=r.hora; missaoDesenhar(); return; } }catch(e){}
+  if(b){ b.disabled=false; b.textContent='✅ Li e vou cobrar a equipe'; }
+  alert('Não consegui salvar agora. Tente de novo em instantes.');
+}
 // Botão "📊 Minha loja" (Painel da Diretoria, 13/11/2026): só para o GERENTE (não o assistente) e fora do modo teste
 function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(b) b.style.display=(!MODO_TESTE&&(localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
 function iniciarApp(u){
   mlMostrar(u);
+  missaoCarregar(u);
   unidadeAtual=u;
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').style.display='flex';
