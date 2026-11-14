@@ -221,6 +221,8 @@ function metas(){
        +'<td style="white-space:nowrap"><input id="'+id+'" type="number" step="100" value="'+Math.round(m&&m.aprovada?m.meta:s.meta)+'" style="width:110px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--inner);color:var(--text);padding:0 8px"> '
        +'<button class="btn prim" onclick="aprovar(\''+u.replace(/'/g,"\\'")+'\',\''+id+'\')">Aprovar</button>'+(m&&m.aprovada?' <button class="btn" onclick="aprovar(\''+u.replace(/'/g,"\\'")+'\',\''+id+'\',1)">Desfazer</button>':'')+'</td></tr>'; }).join('')
     +'</table></div><p class="sub" style="margin-top:10px">Pode ajustar o valor antes de aprovar. O desafio acompanha a meta aprovada. A meta diária respeita o peso de cada dia da semana.</p></div>';
+  if(D.regras.missaoPct!=null) h+='<div class="card"><span class="rot">🎯 Missão de hoje — metas dos produtos, balcão e iFood</span><p class="sub" style="margin-top:6px">Meta de cada loja = média do <b>mesmo dia da semana nas últimas 4 semanas</b> + o % abaixo, arredondada para cima (mínimo '+D.regras.missaoMin+'). Vale para a rede toda, sem aprovar loja por loja. Buffets e fichas usam a meta oficial do placar.</p>'
+    +'<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Aumento sobre a média:</span><input id="missaoPct" type="number" min="0" max="50" step="1" value="'+D.regras.missaoPct+'" style="width:80px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--inner);color:var(--text);padding:0 8px"> % <button class="btn prim" onclick="salvarMissaoPct()">Salvar</button></div></div>';
   return h;
 }
 async function aprovar(u,id,desfazer){ const L=D.lojas[u], s=L.sugerida||L.meta, v=Number(document.getElementById(id).value);
@@ -229,6 +231,10 @@ async function aprovar(u,id,desfazer){ const L=D.lojas[u], s=L.sugerida||L.meta,
   try{ const j=await jsonp({action:'pnlMetaAprovar',chave:chave(),mes:D.mes,unidade:u,meta:desfazer?1:v,base:s.base,origem:s.origem||'',desfazer:desfazer?1:0},120000);
     if(!j.ok) return alert(j.erro); await carregar(); aba('metas'); }catch(e){ alert(e.message); } }
 
+async function salvarMissaoPct(){ const v=Number(document.getElementById('missaoPct').value);
+  if(!(v>=0&&v<=50)) return alert('Digite um número de 0 a 50.');
+  if(!confirm('Metas da Missão de hoje = média de 4 semanas + '+v+'%?')) return;
+  try{ const j=await jsonp({action:'pnlMissaoPct',chave:chave(),pct:v},120000); if(!j.ok) return alert(j.erro); await carregar(); aba('metas'); }catch(e){ alert(e.message); } }
 // ── Alertas ──
 function listaAlertas(l){ const cores={alto:'var(--red)',medio:'var(--gold)',baixo:'var(--blue)',bom:'var(--green)'};
   return l.length?l.map(a=>'<div class="alerta"><i style="background:'+cores[a.nivel]+'"></i><div><b>'+esc(a.txt)+'</b><small>'+esc(a.loja)+'</small></div></div>').join(''):'<p class="sub" style="margin-top:8px">Nenhum alerta. 👏</p>'; }

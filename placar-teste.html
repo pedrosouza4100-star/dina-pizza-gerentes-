@@ -1658,6 +1658,7 @@ async function missaoCarregar(u){
 }
 function missaoDesenhar(){
   const r=window._missao, el=document.getElementById('missaoCorpo'); if(!r||!el) return;
+  if(r.itens.some(i=>i.g)) return missaoDesenharNovo(r,el); // servidor 16/11/2026 em diante
   const fmt=(v,rs)=>rs?'R$ '+Math.round(v).toLocaleString('pt-BR'):Math.round(v).toLocaleString('pt-BR');
   const atras=r.itens.filter(i=>i.atrasado);
   let h=atras.length?'<div style="font-size:0.9rem;margin:4px 0 8px;color:var(--d-text2)">Para voltar ao ritmo do mês, hoje a loja precisa de:</div>'
@@ -1665,6 +1666,43 @@ function missaoDesenhar(){
   h+=r.itens.map(i=>'<div style="padding:9px 0;border-top:1px solid var(--d-line)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span>'+(i.atrasado?'⚠️ ':'✅ ')+'<b>'+i.nome+'</b></span><b style="font-size:1.1rem;color:'+(i.atrasado?'var(--d-red-vivo)':'var(--d-green)')+'">'+fmt(i.precisa,i.rs)+'</b></div>'
     +'<div style="font-size:0.8rem;color:var(--d-muted);margin-top:2px">'+(i.atrasado?'meta normal do dia '+fmt(i.metaDia,i.rs)+' + recuperar o atraso (mês em '+Math.round(i.ritmo)+'% do ritmo)':'no ritmo — meta do dia')+'</div>'
     +(i.atrasado&&i.acao?'<div style="font-size:0.85rem;margin-top:5px">👉 '+i.acao+'</div>':'')+'</div>').join('');
+  h+=r.lida?'<div style="margin-top:10px;font-weight:700;color:var(--d-green)">✅ Você confirmou às '+r.lida+'. Bom trabalho!</div>'
+    :'<button class="camera-btn" id="btnMissaoLi" onclick="missaoLi()" style="margin-top:10px">✅ Li e vou cobrar a equipe</button>';
+  el.innerHTML=h;
+}
+// Missão de hoje — versão 16/11/2026 (pedido do Robson): faturamento em linguagem simples, "além do buffet" com meta pelo histórico,
+// lembrete do buffet, balcão e iFood com o "como fazer" e a dica do dia
+function missaoDesenharNovo(r,el){
+  const N=v=>Math.round(v||0).toLocaleString('pt-BR'), R=v=>'R$ '+N(v), esc=t=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  const sec=(t,c)=>'<div style="padding:10px 0;border-top:1px solid var(--d-line)"><div style="font-weight:800;margin-bottom:4px">'+t+'</div>'+c+'</div>';
+  const sub=t=>'<div style="font-size:0.85rem;color:var(--d-text2);margin-top:3px">'+t+'</div>';
+  const grande=(t,v,cor)=>'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:4px"><span>'+t+'</span><b style="font-size:1.25rem;color:'+(cor||'var(--d-text)')+'">'+v+'</b></div>';
+  const lista=a=>a&&a.length?'<ul style="margin:6px 0 0 18px;padding:0;font-size:0.85rem;line-height:1.45">'+a.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'';
+  const ont=i=>i.metaOntem>0?N(i.ontem)+' de '+N(i.metaOntem)+' '+(i.ontem>=i.metaOntem?'✅':'❌'):N(i.ontem);
+  const dicaDia=r.itens.find(i=>i.dicaDoDia);
+  let h='';
+  const f=r.itens.find(i=>i.g==='fat');
+  if(f){
+    let c='';
+    if(f.metaOntem>0){ const d=f.ontem-f.metaOntem; c+='<div>Ontem: <b>'+R(f.ontem)+'</b> — '+(d>=0?'<span style="color:var(--d-green)">passou '+R(d)+' da meta ✅</span>':'<span style="color:var(--d-red-vivo)">faltaram '+R(-d)+' da meta ❌</span>')+'</div>'; }
+    c+=f.atraso>0?'<div style="margin-top:3px">No mês a loja está <b style="color:var(--d-red-vivo)">'+R(f.atraso)+' atrás</b> da meta. O atraso vai acumulando: <b>a equipe precisa saber.</b></div>'
+      :'<div style="margin-top:3px;color:var(--d-green)">✅ No mês a loja está no ritmo da meta. Mantenha!</div>';
+    c+=grande('<b>Hoje a loja precisa vender</b>',R(f.precisa),f.atraso>0?'var(--d-red-vivo)':'var(--d-green)');
+    c+=sub(f.atraso>0?'meta do dia '+R(f.metaDia)+' + '+R(f.precisa-f.metaDia)+' para ir recuperando ('+f.diasRestantes+' dias até o fim do mês)':'meta do dia');
+    if(f.acao) c+='<div style="font-size:0.85rem;margin-top:6px">💬 '+esc(f.acao)+'</div>';
+    h+=sec('💰 Faturamento',c);
+  }
+  const prods=r.itens.filter(i=>i.g==='prod');
+  if(prods.length){
+    const td='padding:6px 4px;border-top:1px solid var(--d-line)';
+    h+=sec('🍹 Além do buffet — meta de hoje','<table style="width:100%;border-collapse:collapse;font-size:0.9rem"><tr style="color:var(--d-muted);font-size:0.75rem"><td>Item</td><td style="text-align:right">Ontem</td><td style="text-align:right">Hoje</td></tr>'
+      +prods.map(i=>'<tr><td style="'+td+'">'+esc(i.nome)+'</td><td style="'+td+';text-align:right;white-space:nowrap">'+ont(i)+'</td><td style="'+td+';text-align:right"><b style="font-size:1.1rem">'+N(i.precisa)+'</b></td></tr>').join('')+'</table>'
+      +(dicaDia&&dicaDia.acao?'<div style="font-size:0.85rem;margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,208,0,.08);border:1px solid rgba(255,208,0,.35)">💡 <b>Dica do dia — '+esc(dicaDia.nome)+':</b> '+esc(dicaDia.acao)+'</div>':''));
+  }
+  const b=r.itens.find(i=>i.g==='buf');
+  if(b) h+=sec('🍽️ Buffet (lembrete)','<div>Ontem '+ont(b)+' · <b>hoje '+N(b.precisa)+'</b></div>'+sub('Buffet sempre cheio, quente e bonito. O garçom oferece logo na chegada da mesa.'));
+  [['balcao','🏪 Balcão e retirada','vendas'],['ifood','🛵 iFood (motoboy do iFood)','pedidos']].forEach(([g,t,u])=>{ const i=r.itens.find(x=>x.g===g); if(!i) return;
+    h+=sec(t,'<div>Ontem: '+ont(i)+' '+u+'</div>'+grande('<b>Hoje</b>',N(i.precisa)+' '+u)+lista(i.como)+(i.acao?'<div style="font-size:0.85rem;margin-top:6px">💡 '+esc(i.acao)+'</div>':'')); });
   h+=r.lida?'<div style="margin-top:10px;font-weight:700;color:var(--d-green)">✅ Você confirmou às '+r.lida+'. Bom trabalho!</div>'
     :'<button class="camera-btn" id="btnMissaoLi" onclick="missaoLi()" style="margin-top:10px">✅ Li e vou cobrar a equipe</button>';
   el.innerHTML=h;
@@ -2813,7 +2851,7 @@ window.addEventListener('load',()=>{
   // voltando da escala em modo teste: continua no modo teste (nesta aba)
   let tLoja=null, tHash=null; try{ tLoja=sessionStorage.getItem('dina_teste_loja'); tHash=sessionStorage.getItem('dina_teste_admin'); }catch(e){}
   if(tLoja&&tHash){ carregarMetas(); ehSenhaAdmin(tHash).then(ok=>{ if(ok) entrarTeste(tLoja); else { try{sessionStorage.removeItem('dina_teste_loja');}catch(e){} mostrar('telaEscolha'); } }); return; }
-  const u=null; /* placar-teste: sempre pede loja + senha */
+  ; /* placar-teste: sempre pede loja + senha */
   if(u&&localStorage.getItem('dina_senha_'+u)){ iniciarApp(u); verificarSessaoServidor(u); }
   else mostrar('telaEscolha');
   // Carrega metas sem bloquear
