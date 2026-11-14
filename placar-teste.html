@@ -227,6 +227,15 @@
 .hf-txt{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;font-size:.9rem;margin-bottom:8px;font-family:inherit}
 .hf-aviso{background:rgba(255,208,0,.12);border:1px solid #FFD000;border-radius:10px;padding:10px;font-size:.84rem;line-height:1.5;margin:8px 0;color:var(--text)}
 .hf-forn{font-size:.84rem;line-height:1.55;border-top:1px solid var(--border);margin-top:12px;padding-top:10px}
+.hf-q{display:grid;grid-template-columns:1fr 92px 58px;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;margin:6px 0;font-size:.92rem}
+.hf-q.on{border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.10);font-weight:700}
+.hf-q input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:1rem;text-align:right;font-family:inherit}
+.hf-qu{font-size:.8rem;color:var(--muted)}
+.hf-sug{font-size:.7rem;color:var(--gold,#FFD000);font-weight:700;margin-left:4px}
+.hf-c{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.88rem}
+.hf-c .hf-cl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.hf-c select,.hf-c input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:.92rem;font-family:inherit}
+.hf-alerta{background:rgba(239,68,68,.12);border:1px solid var(--danger,#ef4444);border-radius:10px;padding:10px;font-size:.85rem;line-height:1.5;margin:8px 0}
 .hf-frow{border:1px solid var(--border);border-radius:10px;padding:8px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .hf-frow b{grid-column:1/-1;font-size:.8rem}
 .hf-frow input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px;font-size:.88rem;font-family:inherit;min-width:0}
@@ -3444,6 +3453,7 @@ async function hfPreparar(){
   document.getElementById('hforaBtn').style.display=r.precisaFornec===false?'none':'block';
   if(r.precisaFornec===false) document.getElementById('hfAjuda').innerHTML='Confira o estoque e marque <b>o que precisa comprar</b>. A lista vai para o <b>Sidinei às 9h</b>, que compra para a loja.';
   const sel=(r.listaHoje&&r.listaHoje.itens)||[];
+  if(r.catalogo){ hfRenderQtd(r); } else
   document.getElementById('hfItens').innerHTML=r.itens.map((it,i)=>'<label class="hf-it'+(sel.includes(it)?' on':'')+'"><input type="checkbox" data-hf="'+escR(it)+'"'+(sel.includes(it)?' checked':'')+' onchange="hfMudou(this)"> '+escR(it)+'</label>').join('');
   document.getElementById('hfNada').checked=!!(r.listaHoje&&r.listaHoje.nadaFalta);
   document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
@@ -3451,28 +3461,52 @@ async function hfPreparar(){
   hfRenderForn(); hfRenderCompra();
   verificarBotaoRegistrar();
 }
-function hfMarcados(){ return [...document.querySelectorAll('#hfItens input[data-hf]')].filter(e=>e.checked).map(e=>e.dataset.hf); }
+// Lista com quantidades (13/11/2026, servidor 2026-11-13-d, recurso hortifrutiQtd): cada item com a unidade da loja (Isaac em caixas)
+function hfNumL(v){ let t=String(v||'').trim(); if(!t) return 0; if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.'); const n=Number(t); return isNaN(n)?NaN:n; }
+function hfRenderQtd(r){
+  const q=(r.listaHoje&&r.listaHoje.qtd)||{}, sug=(!r.listaHoje&&r.sugestao&&r.sugestao.ativa)?(r.sugestao.itens||{}):{}, temSug=Object.keys(sug).length>0;
+  document.getElementById('hfAjuda').innerHTML=(r.precisaFornec===false?'Confira o estoque e coloque <b>quanto precisa comprar</b> de cada item (deixe em branco o que não precisa). A lista vai para o <b>Sidinei às 9h</b>, que compra para a loja.':'Confira o estoque e coloque <b>quanto precisa comprar</b> de cada item (deixe em branco o que não precisa). A lista chega no seu WhatsApp às <b>15h</b>, pronta para encaminhar ao fornecedor.')
+    +(r.caixa?'<br>📦 Aqui a lista é em <b>caixas</b> (cerca de '+escR(r.caixaKg||21)+' kg cada).':'')
+    +(temSug?'<br>🤖 <b>Pedido sugerido</b> pelo histórico da loja (mesmo dia da semana das últimas semanas). Confira e ajuste.':(r.sugestao&&!r.sugestao.ativa&&r.sugestao.faltam>0?'<br><span style="font-size:.78rem">Com mais '+escR(r.sugestao.faltam)+' dias de listas o sistema passa a sugerir o pedido.</span>':''));
+  document.getElementById('hfItens').className='';
+  document.getElementById('hfItens').innerHTML=r.catalogo.map(it=>{ const v=q[it.nome]!==undefined?q[it.nome]:(sug[it.nome]!==undefined?sug[it.nome]:''), s=q[it.nome]===undefined&&sug[it.nome]!==undefined;
+    return '<div class="hf-q'+(v!==''?' on':'')+'"><span>'+escR(it.nome)+(s?'<span class="hf-sug">sugerido</span>':'')+'</span><input type="text" inputmode="decimal" data-hfq="'+escR(it.nome)+'" data-un="'+escR(it.un)+'" value="'+escR(String(v).replace('.',','))+'" placeholder="0" oninput="hfMudou(this)"><span class="hf-qu">'+escR(it.un)+'</span></div>'; }).join('');
+  document.getElementById('hfOutros').placeholder='Outros itens com quantidade (ex.: abacaxi 3 unidades) — opcional';
+}
+function hfMarcados(){
+  if(HF&&HF.catalogo) return [...document.querySelectorAll('#hfItens input[data-hfq]')].filter(e=>hfNumL(e.value)>0).map(e=>e.dataset.hfq);
+  return [...document.querySelectorAll('#hfItens input[data-hf]')].filter(e=>e.checked).map(e=>e.dataset.hf); }
 function hfMudou(el){
-  if(el&&el.parentElement) el.parentElement.classList.toggle('on',el.checked);
+  if(el&&el.dataset&&el.dataset.hfq!==undefined){ el.parentElement.classList.toggle('on',hfNumL(el.value)>0); const sg=el.parentElement.querySelector('.hf-sug'); if(sg) sg.remove(); }
+  else if(el&&el.parentElement) el.parentElement.classList.toggle('on',el.checked);
   if(hfMarcados().length||document.getElementById('hfOutros').value.trim()) document.getElementById('hfNada').checked=false;
   HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
 }
 function hfNadaMudou(){
-  if(document.getElementById('hfNada').checked){ document.querySelectorAll('#hfItens input[data-hf]').forEach(e=>{ e.checked=false; e.parentElement.classList.remove('on'); }); document.getElementById('hfOutros').value=''; }
+  if(document.getElementById('hfNada').checked){ document.querySelectorAll('#hfItens input[data-hf]').forEach(e=>{ e.checked=false; e.parentElement.classList.remove('on'); }); document.querySelectorAll('#hfItens input[data-hfq]').forEach(e=>{ e.value=''; e.parentElement.classList.remove('on'); const sg=e.parentElement.querySelector('.hf-sug'); if(sg) sg.remove(); }); document.getElementById('hfOutros').value=''; }
   HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
 }
-async function hfSalvar(){
+async function hfSalvar(confirmado){
   const itens=hfMarcados(), nada=document.getElementById('hfNada').checked, outros=document.getElementById('hfOutros').value.trim(), msg=document.getElementById('hfMsg'), bt=document.getElementById('hfBtn');
   if(!nada&&!itens.length&&!outros){ msg.innerHTML='<span style="color:var(--danger)">Marque o que precisa comprar ou "Conferi o estoque, não falta nada".</span>'; return; }
   if(HF&&HF.bloqueado){ document.getElementById('hfOverlay').style.display='block'; return; }
   if(geoForaAgora&&geoForaAgora()){ msg.innerHTML='<span style="color:var(--danger)">📍 Confirme que está na loja para salvar.</span>'; return; }
+  let corpo={action:'hfSalvarLista',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens,nadaFalta:nada,outros};
+  if(HF&&HF.catalogo){
+    const ruins=[...document.querySelectorAll('#hfItens input[data-hfq]')].filter(e=>isNaN(hfNumL(e.value))||hfNumL(e.value)<0).map(e=>e.dataset.hfq);
+    if(ruins.length){ msg.innerHTML='<span style="color:var(--danger)">Quantidade inválida em: '+escR(ruins.join(', '))+'. Use só números (ex.: 2 ou 1,5).</span>'; return; }
+    corpo.pedidos=[...document.querySelectorAll('#hfItens input[data-hfq]')].filter(e=>hfNumL(e.value)>0).map(e=>({nome:e.dataset.hfq,qtd:hfNumL(e.value)}));
+    if(confirmado===true) corpo.confirmado=true;
+  }
   bt.disabled=true; msg.textContent='Salvando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfSalvarLista',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens,nadaFalta:nada,outros})});
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(corpo)});
     const r=await resp.json();
+    if(r&&r.confirmar){ msg.innerHTML='<div class="hf-aviso">⚠️ <b>Pedido bem acima do normal:</b><br>'+(r.acima||[]).map(a=>'• '+escR(a.nome)+': '+escR(String(a.qtd).replace('.',','))+' '+escR(a.un)+' (a média da loja é '+escR(String(a.media).replace('.',','))+')').join('<br>')+'<br>Confira o estoque. Se estiver certo, confirme.<br><button type="button" class="alp-btn" style="margin-top:8px" onclick="hfSalvar(true)">✅ Está certo, salvar assim</button></div>'; logProva('HF_ACIMA_DO_NORMAL',(r.acima||[]).map(a=>a.nome+' '+a.qtd).join(', ')); return; }
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; if(r&&r.bloqueado){ HF.bloqueado=true; hfRenderForn(); } return; }
     HF_SALVO=true; msg.innerHTML='<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva'+(r.hora?' às '+escR(r.hora):'')+'. '+(HF.precisaFornec===false?'Vai para o Sidinei amanhã às 9h.':'Chega no seu WhatsApp amanhã às 15h.')+'</span>';
-    logProva('HF_LISTA_SALVA',nada?'nada falta':itens.join(', ')+(outros?' + '+outros:''));
+    logProva('HF_LISTA_SALVA',nada?'nada falta':(corpo.pedidos?corpo.pedidos.map(p=>p.nome+' '+p.qtd).join(', '):itens.join(', '))+(outros?' + '+outros:''));
+    if(HF&&corpo.pedidos){ HF.listaHoje={itens:corpo.pedidos.map(p=>p.nome),qtd:Object.fromEntries(corpo.pedidos.map(p=>[p.nome,p.qtd])),nadaFalta:nada,outros:outros,hora:r.hora||''}; }
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
   finally{ bt.disabled=false; verificarBotaoRegistrar(); }
 }
@@ -3534,8 +3568,9 @@ function hfRenderCompra(){
   const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
   if(!c){ box.style.display='none'; return; }
   box.style.display='block';
-  if(c.feita){ box.innerHTML='<div class="hf-aviso" style="border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.1)">✓ Compra de hoje registrada às '+escR(c.hora)+' e enviada ao Sidinei. <a href="#" onclick="HF.compra.feita=false;hfRenderCompra();verificarBotaoRegistrar();return false" style="color:var(--gold)">corrigir</a></div>'; return; }
+  if(c.feita){ box.innerHTML=hfAlertasHtml(c.alertas)+'<div class="hf-aviso" style="border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.1)">✓ Compra de hoje registrada às '+escR(c.hora)+(c.total?' (nota de R$ '+escR(hfR(c.total))+')':'')+' e enviada ao Sidinei. <a href="#" onclick="HF.compra.feita=false;hfRenderCompra();verificarBotaoRegistrar();return false" style="color:var(--gold)">corrigir</a></div>'; return; }
   const forn=(HF.fornecedores||[]).map(f=>f.nome);
+  if(c.unidades){ hfRenderCompraQtd(box,c,forn); return; }
   box.innerHTML='<div style="font-weight:800;margin:6px 0 4px">🧾 Compra de hoje (lista de '+escR(c.diaLista)+')</div><div class="muted" style="font-size:.82rem;margin-bottom:6px">Marque o que você <b>comprou</b>, diga onde e tire a <b>foto da compra</b> (mercadoria e cupom). Vai direto para o Sidinei.</div>'
     +'<div class="hf-grid">'+c.itens.map(it=>'<label class="hf-it"><input type="checkbox" data-hfc="'+escR(it)+'" onchange="this.parentElement.classList.toggle(\'on\',this.checked)"> '+escR(it)+'</label>').join('')+'</div>'
     +'<select class="hf-txt" id="hfcOnde"><option value="">Onde comprou?</option>'+forn.map(n=>'<option>'+escR(n)+'</option>').join('')+'<option>Outro varejão / mercado pequeno</option><option>Mercado grande (avisei pelo botão)</option></select>'
@@ -3544,8 +3579,35 @@ function hfRenderCompra(){
     +'<button type="button" class="alp-btn" style="margin-top:8px" onclick="hfcSalvar()">💾 Salvar compra e enviar ao Sidinei</button><div id="hfcMsg" class="alp-info"></div>'
     +'<div style="border-top:1px solid var(--border);margin:12px 0 4px"></div><div style="font-weight:800;margin:6px 0 2px">📝 Lista para amanhã</div>';
 }
+// Compra do dia com quantidade e preço (13/11/2026): cada item chegou certo / a menos / qualidade ruim / não comprei; a soma tem que bater com a nota
+function hfR(n){ return Number(n||0).toFixed(2).replace('.',','); }
+function hfAlertasHtml(al){ if(!al||!al.length) return ''; return '<div class="hf-alerta">💸 <b>Você pagou mais caro que a média da rede:</b><br>'+al.map(a=>'• '+escR(a.nome)+': R$ '+hfR(a.pago)+' por '+escR(a.un)+' — '+escR(a.pct)+'% acima da média (R$ '+hfR(a.media)+')').join('<br>')+'<br>Negocie com o fornecedor ou compare com os outros da sua lista na próxima compra.</div>'; }
+function hfRenderCompraQtd(box,c,forn){
+  const linhas=c.itens.map((nome,i)=>{ const un=(c.unidades||{})[nome]||'unidade', ped=c.qtd&&c.qtd[nome]!==undefined?c.qtd[nome]:'', med=(c.precoMedio||{})[nome];
+    return '<div class="hf-c" data-hfci="'+i+'"><div><b>'+escR(nome)+'</b>'+(ped!==''?' <span class="muted">· pedido: '+escR(String(ped).replace('.',','))+' '+escR(un)+'</span>':'')+'</div>'
+      +'<div class="hf-cl"><select data-k="chegou" onchange="hfcConta()" style="grid-column:1/3"><option value="">O que aconteceu?</option><option value="igual">✅ Chegou certo</option><option value="menos">⚠️ Chegou a menos</option><option value="ruim">👎 Qualidade ruim</option><option value="nao">❌ Não comprei</option></select>'
+      +'<input data-k="qtd" inputmode="decimal" placeholder="Qtd. ('+escR(un)+')" value="'+escR(String(ped).replace('.',','))+'" oninput="hfcConta()">'
+      +'<input data-k="preco" inputmode="decimal" placeholder="R$ por '+escR(un)+(med?' (média '+hfR(med)+')':'')+'" oninput="hfcConta()"></div><div class="muted" data-k="tot" style="font-size:.78rem;margin-top:4px"></div></div>'; }).join('');
+  box.innerHTML='<div style="font-weight:800;margin:6px 0 4px">🧾 Compra de hoje (lista de '+escR(c.diaLista)+')</div><div class="muted" style="font-size:.82rem;margin-bottom:6px">Para cada item: o que aconteceu, <b>quanto chegou</b> e o <b>preço por unidade</b>, como está na nota. Depois o <b>total da nota</b> e a foto. Vai direto para o Sidinei.</div>'
+    +linhas
+    +'<div class="hf-c"><b>Total da nota (R$)</b><input id="hfcTotal" inputmode="decimal" placeholder="0,00" oninput="hfcConta()" style="margin-top:6px"><div id="hfcSoma" class="muted" style="font-size:.8rem;margin-top:4px"></div></div>'
+    +'<select class="hf-txt" id="hfcOnde"><option value="">Onde comprou?</option>'+forn.map(n=>'<option>'+escR(n)+'</option>').join('')+'<option>Outro varejão / mercado pequeno</option><option>Mercado grande (avisei pelo botão)</option></select>'
+    +'<input class="hf-txt" id="hfcObs" maxlength="200" placeholder="Observação (obrigatória se algo não veio, veio a menos ou ruim)">'
+    +'<button type="button" class="hf-mg" id="hfcFotoBtn" onclick="hfcFoto()">📷 Tirar foto da compra e da nota</button>'
+    +'<button type="button" class="alp-btn" style="margin-top:8px" onclick="hfcSalvar()">💾 Salvar compra e enviar ao Sidinei</button><div id="hfcMsg" class="alp-info"></div>'
+    +'<div style="border-top:1px solid var(--border);margin:12px 0 4px"></div><div style="font-weight:800;margin:6px 0 2px">📝 Lista para amanhã</div>';
+  hfcConta();
+}
+function hfcLer(){ return [...document.querySelectorAll('#hfCompraBox [data-hfci]')].map(el=>{ const i=+el.dataset.hfci, g=k=>el.querySelector('[data-k="'+k+'"]'); return {el, nome:HF.compra.itens[i], chegou:g('chegou').value, qtd:hfNumL(g('qtd').value), preco:hfNumL(g('preco').value)}; }); }
+function hfcConta(){
+  let soma=0; hfcLer().forEach(x=>{ const nao=x.chegou==='nao'; x.el.querySelector('[data-k="qtd"]').disabled=nao; x.el.querySelector('[data-k="preco"]').disabled=nao;
+    const t=(!nao&&x.qtd>0&&x.preco>0)?x.qtd*x.preco:0; soma+=t; x.el.querySelector('[data-k="tot"]').textContent=t?'= R$ '+hfR(t):''; });
+  const el=document.getElementById('hfcSoma'); if(!el) return; const tn=hfNumL((document.getElementById('hfcTotal')||{}).value);
+  el.innerHTML='Soma dos itens: <b>R$ '+hfR(soma)+'</b>'+(tn>0?(Math.abs(tn-soma)>Math.max(1,tn*0.02)?' — <span style="color:var(--danger)">não bate com a nota</span>':' — <span style="color:var(--d-t-ok,#22c55e)">confere ✓</span>'):'');
+}
 function hfcFoto(){ chkAbrirCamera('hfcompra', f=>{ HFC_FOTO=f; document.getElementById('hfcFotoBtn').textContent='✓ Foto tirada — tirar outra'; }, {msg:'🧾 Fotografe a <b>compra feita</b> (as mercadorias e o cupom).'}); }
 async function hfcSalvar(){
+  if(HF&&HF.compra&&HF.compra.unidades) return hfcSalvarQtd();
   const comprados=[...document.querySelectorAll('#hfCompraBox input[data-hfc]')].filter(e=>e.checked).map(e=>e.dataset.hfc), onde=document.getElementById('hfcOnde').value, obs=document.getElementById('hfcObs').value.trim(), msg=document.getElementById('hfcMsg');
   if(comprados.length&&!onde){ msg.innerHTML='<span style="color:var(--danger)">Informe onde comprou.</span>'; return; }
   if(comprados.length&&!HFC_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da compra.</span>'; return; }
@@ -3556,6 +3618,25 @@ async function hfcSalvar(){
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
     HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
+    hfRenderCompra(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+async function hfcSalvarQtd(){
+  const l=hfcLer(), msg=document.getElementById('hfcMsg'), onde=document.getElementById('hfcOnde').value, obs=document.getElementById('hfcObs').value.trim(), tn=hfNumL(document.getElementById('hfcTotal').value);
+  const semEsc=l.filter(x=>!x.chegou).map(x=>x.nome); if(semEsc.length){ msg.innerHTML='<span style="color:var(--danger)">Diga o que aconteceu com: '+escR(semEsc.join(', '))+'.</span>'; return; }
+  const comp=l.filter(x=>x.chegou!=='nao');
+  const faltaN=comp.filter(x=>!(x.qtd>0)||!(x.preco>0)).map(x=>x.nome); if(faltaN.length){ msg.innerHTML='<span style="color:var(--danger)">Informe quantidade e preço de: '+escR(faltaN.join(', '))+'.</span>'; return; }
+  if(comp.length&&!(tn>0)){ msg.innerHTML='<span style="color:var(--danger)">Informe o total da nota.</span>'; return; }
+  if(comp.length&&!onde){ msg.innerHTML='<span style="color:var(--danger)">Informe onde comprou.</span>'; return; }
+  if(comp.length&&!HFC_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da compra e da nota.</span>'; return; }
+  if(l.some(x=>x.chegou!=='igual')&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">Algo não veio, veio a menos ou ruim? Explique na observação (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>({nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco})),totalNota:tn,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
+    const r=await resp.json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); HF.compra.alertas=r.alertas||[]; HF.compra.total=r.total;
+    logProva('HF_COMPRA',comp.map(x=>x.nome+' '+x.qtd+'×'+x.preco).join(', ')+' · nota '+tn+' · '+onde+((r.alertas||[]).length?' · ACIMA DA MÉDIA: '+r.alertas.map(a=>a.nome+' '+a.pct+'%').join(', '):''));
     hfRenderCompra(); verificarBotaoRegistrar();
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
 }
