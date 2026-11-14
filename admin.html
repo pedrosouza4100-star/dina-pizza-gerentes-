@@ -655,6 +655,12 @@
         <div id="estCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px"></div>
         <details><summary style="cursor:pointer;font-size:0.8rem;color:var(--muted)">Últimos lançamentos</summary><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Quando</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Esperado</th><th>Diferença</th><th>Obs</th><th></th></tr></thead><tbody id="estLanc"></tbody></table></div></details>
       </div>
+      <div id="hfCatSecao" style="display:none">
+        <div class="section-title">🥬 Itens da lista de hortifrúti</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.6">O gerente coloca <b>quanto pedir</b> de cada item, na unidade daqui. A <b>Isaac</b> tem lista própria em caixas (cerca de 21 kg cada). <b>Só nas lojas</b>: vazio = todas; para limitar, escreva os nomes separados por vírgula (ex.: Fazenda Rio Grande, Isaac Noite). Desmarque <b>Ativo</b> para tirar da lista (fruta fora de safra) sem perder o histórico.</div>
+        <div class="table-wrap"><table><thead><tr><th>Item</th><th>Unidade nas lojas</th><th>Unidade na Isaac</th><th>Só nas lojas</th><th>Ativo</th></tr></thead><tbody id="hfCatTab"></tbody></table></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px"><button class="action-btn btn-nova" onclick="hfCatAdd()">➕ Adicionar item</button><button class="action-btn btn-nova" onclick="hfCatSalvar()">💾 Salvar itens</button><span id="hfCatInfo" style="font-size:0.78rem;color:var(--muted);align-self:center"></span></div>
+      </div>
       <div>
         <div class="section-title">📱 Celulares autorizados</div>
         <div style="font-size:0.78rem;color:var(--muted);margin:-2px 0 10px;line-height:1.5">Cada senha (gerente e assistente) só funciona em um celular aprovado aqui. Pedidos novos aparecem também em “Hoje na rede”. Remover um celular faz ele parar de abrir o placar na hora.</div>
@@ -1109,7 +1115,7 @@
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); LOJAS_HOJE=r;
     }
     catch(e){ gt.innerHTML='<tr><td colspan="5" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; at.innerHTML=''; return; }
-    gglCarregar(); alpCarregar(); estCarregar();
+    gglCarregar(); alpCarregar(); estCarregar(); hfCatCarregar();
     gt.innerHTML=LOJAS_HOJE.lojas.map((l,i)=>{ const g=l.geo;
       const coord=g?`${g.lat.toFixed(6)}, ${g.lng.toFixed(6)}`:'';
       return `<tr data-u="${escH(l.unidade)}"><td style="font-weight:600;white-space:nowrap">${escH(l.unidade)}</td>
@@ -1189,6 +1195,26 @@
   async function hfDecidir(id,decisao){
     try{ await admPost({action:'hfForaDecidir',senhaAdmin:ADM.hash||'',id,decisao,motivo:(document.getElementById('hfpm_'+id)||{}).value||'',quem:'Robson'}); showToast(decisao==='aprovar'?'Compra autorizada':'Compra não autorizada','ok'); registrarLog('Hortifrúti: compra em mercado grande '+(decisao==='aprovar'?'autorizada':'não autorizada'),'ok'); carregarHoje(); }
     catch(e){ showToast(e.message,'erro'); }
+  }
+  // ── Itens da lista de hortifrúti (13/11/2026, servidor 2026-11-13-d) ──
+  let HFCAT=null;
+  async function hfCatCarregar(){
+    const sec=document.getElementById('hfCatSecao');
+    let r; try{ r=await admJsonp({action:'hfCatalogo'}); }catch(e){ return; }
+    if(!r||r.ok!==true){ sec.style.display='none'; return; }
+    HFCAT=r; sec.style.display='block'; hfCatRender();
+    document.getElementById('hfCatInfo').textContent=r.padrao?'Lista padrão (ainda não editada).':'';
+  }
+  function hfCatRender(){
+    const op=(v)=>HFCAT.unidades.map(u=>'<option'+(u===v?' selected':'')+'>'+escH(u)+'</option>').join('');
+    document.getElementById('hfCatTab').innerHTML=HFCAT.itens.map((x,i)=>'<tr data-hfcat="'+i+'"><td><input class="cont-in" data-k="nome" value="'+escH(x.nome)+'" placeholder="Nome do item" style="min-width:130px"></td><td><select class="cont-in" data-k="un">'+op(x.un)+'</select></td><td><select class="cont-in" data-k="unCx">'+op(x.unCx||x.un)+'</select></td><td><input class="cont-in" data-k="lojas" value="'+escH(x.lojas||'')+'" placeholder="todas" style="min-width:180px"></td><td style="text-align:center"><input type="checkbox" data-k="ativo"'+(x.ativo!==false?' checked':'')+' style="width:20px;height:20px"></td></tr>').join('');
+  }
+  function hfCatLer(){ HFCAT.itens=[...document.querySelectorAll('#hfCatTab tr[data-hfcat]')].map(tr=>{ const g=k=>tr.querySelector('[data-k="'+k+'"]'); return {nome:g('nome').value.trim(),un:g('un').value,unCx:g('unCx').value,lojas:g('lojas').value.trim(),ativo:g('ativo').checked}; }); }
+  function hfCatAdd(){ hfCatLer(); HFCAT.itens.push({nome:'',un:'kg',unCx:'caixa',lojas:'',ativo:true}); hfCatRender(); const l=document.querySelectorAll('#hfCatTab input[data-k="nome"]'); if(l.length) l[l.length-1].focus(); }
+  async function hfCatSalvar(){
+    hfCatLer(); const info=document.getElementById('hfCatInfo'); info.textContent='Salvando…';
+    try{ const r=await admPost({action:'hfCatalogoSalvar',senhaAdmin:ADM.hash||'',itens:HFCAT.itens.filter(x=>x.nome)}); HFCAT.itens=r.itens; HFCAT.padrao=false; hfCatRender(); info.textContent='✓ Salvo. Os placares já mostram a lista nova.'; showToast('Itens do hortifrúti salvos','ok'); registrarLog('Hortifrúti: itens da lista ('+r.itens.filter(x=>x.ativo).length+' ativos)','ok'); }
+    catch(e){ info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(e.message)+'</span>'; }
   }
   // ── Controle de estoque — piloto (09/11/2026) ──
   async function estCarregar(forcar){
