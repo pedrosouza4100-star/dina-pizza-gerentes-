@@ -417,6 +417,13 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div style="margin-top:14px;font-size:0.8rem;color:#999;text-align:center">Esta tela some quando o GDI autorizar. Enquanto isso o placar de hoje não pode ser enviado.</div>
     </div>
   </div>
+  <div id="pvChOverlay" style="display:none;position:fixed;inset:0;background:var(--d-bg,#07090E);z-index:1120;overflow-y:auto;padding:28px 16px 40px">
+    <div style="max-width:520px;margin:0 auto">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--danger);text-align:center">📣 O CALL CENTER ESTÁ CHAMANDO</div>
+      <div style="text-align:center;color:var(--muted);font-size:.9rem;margin:6px 0 14px">Toque em <b>"Vi, estou resolvendo"</b>. Sem resposta no prazo, o chamado vai para o assistente e depois para o GDI.</div>
+      <div id="pvChLista"></div>
+    </div>
+  </div>
   <div id="regPendOverlay" style="display:none;position:fixed;inset:0;background:#0A0A0A;z-index:700;overflow-y:auto;padding:22px 16px 40px">
     <div style="max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px">
       <div style="text-align:center;font-size:2.4rem">📋</div>
@@ -503,6 +510,11 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
 
     <!-- Etapa 2: início do turno -->
     <div class="etapa-titulo"><b>2</b> Início do turno</div>
+    <!-- Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) -->
+    <div class="card card-full" id="cardPV" style="display:none">
+      <div class="card-label">📞 Call center — chamados e pós-venda</div>
+      <div id="pvCorpo"></div>
+    </div>
     <!-- Missão de hoje (Painel da Diretoria, 13/11/2026): só gerente; não trava nada -->
     <div class="card card-full" id="cardMissao" style="display:none">
       <div class="card-label">🎯 Missão de hoje</div>
@@ -1714,6 +1726,7 @@ function iniciarApp(u){
   alpPreparar();
   alpcPreparar();
   hfPreparar();
+  pvIniciar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -3194,6 +3207,7 @@ function verificarBotaoRegistrar(){
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
   if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
+  if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
@@ -3243,7 +3257,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3402,6 +3416,97 @@ const ALPC_BEB_BALCAO=[['sobremesas','bebSobremesas','Sobremesas'],['refri2l','b
 function bebLista(){ return temFliperBuffet(unidadeAtual)?ALPC_BEB:ALPC_BEB_BALCAO; }
 // ── Lista de compras de hortifrúti (10/11/2026) ──
 let HF_ATIVO=false, HF=null, HF_SALVO=false, HFORA_FOTO=null;
+// ── Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) ──
+// Chamado aberto = tela pvChOverlay com "👀 Vi, estou resolvendo" (POST pvVisto) e depois a resposta (pvChamadoResponder).
+// Reclamação do pós-venda = card cardPV; o placar não envia sem responder (o que fez + o que ofereceu, POST pvResponder).
+let PV_ON=false, PV_DATA=null, _pvTimer=null, _pvVistos={};
+function pvSenha(){ try{ return MODO_TESTE?(sessionStorage.getItem('dina_teste_admin')||''):(localStorage.getItem('dina_senha_'+unidadeAtual)||''); }catch(e){ return ''; } }
+function pvEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function pvIniciar(){
+  PV_ON=false; PV_DATA=null; if(_pvTimer) clearInterval(_pvTimer);
+  document.getElementById('cardPV').style.display='none'; document.getElementById('pvChOverlay').style.display='none';
+  try{ const rc=await chkRecursos(); if(!rc.includes('posVenda')) return; }catch(e){ return; }
+  PV_ON=true; await pvCarregar();
+  _pvTimer=setInterval(()=>{ if(document.visibilityState==='visible') pvCarregar(); },60000);
+  document.addEventListener('visibilitychange',()=>{ if(PV_ON&&document.visibilityState==='visible') pvCarregar(); });
+}
+async function pvCarregar(){
+  let r; try{ r=await chkJsonp({action:'pvLoja',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){ return; }
+  if(!r||!r.ok){ return; }
+  const antes=PV_DATA; PV_DATA=r; pvRender(); verificarBotaoRegistrar();
+  const novos=(r.chamados||[]).filter(c=>c.situacao==='aberto'&&!_pvVistos[c.id]);
+  if(novos.length) pvMostrarChamados(novos); else document.getElementById('pvChOverlay').style.display='none';
+  if(antes&&(r.pendentes||[]).length>(antes.pendentes||[]).length) try{ navigator.vibrate&&navigator.vibrate([300,150,300]); }catch(e){}
+}
+function pvMostrarChamados(lista){
+  const ov=document.getElementById('pvChOverlay');
+  document.getElementById('pvChLista').innerHTML=lista.map(c=>'<div style="background:var(--card);border:2px solid '+(c.urgente?'var(--danger)':'var(--gold)')+';border-radius:16px;padding:16px;margin-bottom:12px">'
+    +'<div style="font-weight:900;font-size:1.05rem">'+(c.urgente?'🚨 URGENTE · ':'')+pvEsc(c.motivoTxt)+'</div>'
+    +(c.texto?'<div style="margin-top:8px;font-size:1rem">'+pvEsc(c.texto)+'</div>':'')
+    +'<div style="color:var(--muted);font-size:.82rem;margin-top:6px">'+pvEsc(c.atendente)+' às '+pvEsc(c.hora)+' · responda em até '+c.prazoMin+' min'+(c.nivel?' · <b style="color:var(--danger)">já foi para o '+(c.nivel===2?'GDI':'assistente')+'</b>':'')+'</div>'
+    +'<button type="button" class="alp-btn" style="margin-top:12px;width:100%" onclick="pvVi(\''+c.id+'\',this)">👀 Vi, estou resolvendo</button></div>').join('');
+  if(ov.style.display!=='block'){ ov.style.display='block'; try{ navigator.vibrate&&navigator.vibrate([400,200,400,200,400]); }catch(e){} logProva('CHAMADO_MOSTRADO',lista.map(c=>c.id).join(',')); }
+}
+async function pvVi(id,btn){
+  btn.disabled=true; btn.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'pvVisto',unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',id})})).json();
+    if(!r.ok){ btn.disabled=false; btn.textContent='👀 Vi, estou resolvendo'; alert(r.erro||'Não foi possível. Tente de novo.'); return; } }
+  catch(e){ btn.disabled=false; btn.textContent='👀 Vi, estou resolvendo'; alert('Sem conexão. Tente de novo.'); return; }
+  _pvVistos[id]=1; logProva('CHAMADO_VISTO',id);
+  const c=(PV_DATA.chamados||[]).find(x=>x.id===id); if(c) c.situacao='visto';
+  const rest=(PV_DATA.chamados||[]).filter(x=>x.situacao==='aberto'&&!_pvVistos[x.id]);
+  if(rest.length) pvMostrarChamados(rest); else document.getElementById('pvChOverlay').style.display='none';
+  pvRender(); irParaFalta('Responder reclamação');
+}
+function pvRender(){
+  const d=PV_DATA, card=document.getElementById('cardPV'); if(!d) return;
+  const chs=(d.chamados||[]), pend=(d.pendentes||[]), rec=(d.recentes||[]);
+  if(!chs.length&&!pend.length&&!rec.length&&!d.ranking){ card.style.display='none'; return; }
+  card.style.display='block';
+  const ofs=Object.keys(d.ofertas||{}).map(k=>'<option value="'+k+'">'+pvEsc(d.ofertas[k])+'</option>').join('');
+  let h='';
+  h+=chs.map(c=>'<div class="hf-aviso" style="border-color:'+(c.urgente?'var(--danger)':'var(--gold)')+';margin-top:8px"><b>📣 '+(c.urgente?'URGENTE · ':'')+pvEsc(c.motivoTxt)+'</b>'+(c.texto?'<div>'+pvEsc(c.texto)+'</div>':'')
+    +'<div style="font-size:.78rem;color:var(--muted)">'+pvEsc(c.atendente)+' às '+pvEsc(c.hora)+(c.visto?' · você viu às '+pvEsc(c.visto):'')+'</div>'
+    +(c.situacao==='aberto'&&!_pvVistos[c.id]?'<button type="button" class="alp-btn" style="margin-top:8px" onclick="pvVi(\''+c.id+'\',this)">👀 Vi, estou resolvendo</button>'
+      :'<textarea id="pvChR_'+c.id+'" rows="2" placeholder="Resposta para o call center (ex.: saiu às 19h50, chega em 10 min)" style="width:100%;margin-top:8px"></textarea><button type="button" class="alp-btn" style="margin-top:6px" onclick="pvChResponder(\''+c.id+'\',this)">Enviar resposta ao call center</button>')
+    +'</div>').join('');
+  h+=pend.map(x=>'<div class="hf-aviso" style="border-color:var(--danger);margin-top:8px">'
+    +'<b>'+(x.grave?'🚨 GRAVE · ':'')+'Reclamação do pós-venda</b> <span style="font-size:.78rem;color:var(--muted)">'+pvEsc(x.quando)+' · '+pvEsc(x.atendente)+'</span>'
+    +'<div style="margin-top:4px">Cliente: <b>'+pvEsc(x.cliente)+'</b> · <a href="tel:'+pvEsc(String(x.telefone||'').replace(/[^0-9+]/g,''))+'" style="color:var(--gold);font-weight:800">📞 '+pvEsc(x.telefone)+'</a><br>Pedido '+pvEsc(x.pedido)+' ('+pvEsc(x.canal)+') · '+pvEsc(x.tipoTxt)+'</div>'
+    +'<div style="margin-top:4px">'+pvEsc(x.relato)+'</div>'
+    +(x.motivoNao?'<div style="margin-top:6px;color:var(--danger);font-weight:700">❌ O cliente disse que não foi resolvido: '+pvEsc(x.motivoNao)+'</div>':'')
+    +'<div style="font-size:.8rem;margin-top:8px;font-weight:700">Ligue para o cliente e conte o que fez:</div>'
+    +'<textarea id="pvR_'+x.id+'" rows="2" placeholder="Ex.: liguei, pedi desculpas e expliquei o atraso" style="width:100%;margin-top:4px"></textarea>'
+    +'<select id="pvO_'+x.id+'" style="width:100%;margin-top:6px"><option value="">O que ofereceu ao cliente?</option>'+ofs+'</select>'
+    +'<button type="button" class="alp-btn" style="margin-top:6px" onclick="pvResponder(\''+x.id+'\',this)">Enviar resposta</button><div id="pvM_'+x.id+'" style="font-size:.8rem;margin-top:4px"></div></div>').join('');
+  const sit={respondida:'⏳ esperando o call center confirmar com o cliente',sem_confirmacao:'✓ respondida (sem confirmação do cliente)',resolvida:'✅ cliente confirmou: resolvido'};
+  if(rec.length) h+='<div style="font-size:.8rem;margin-top:10px;color:var(--muted)">Respondidas nos últimos dias:</div>'+rec.map(x=>'<div style="font-size:.82rem;margin-top:4px">• '+pvEsc(x.cliente)+' (pedido '+pvEsc(x.pedido)+'): '+(sit[x.situacao]||x.situacao)+'</div>').join('');
+  if(d.ranking&&d.ranking.lojas){ const eu=d.ranking.lojas.find(x=>x.unidade===unidadeAtual);
+    h+='<div style="margin-top:10px;font-size:.84rem">🏆 <b>Atendimento ao call center — semana '+pvEsc(d.ranking.semana)+'</b>'+(eu?': sua loja ficou em <b>'+eu.posicao+'º de '+d.ranking.lojas.length+'</b> ('+eu.reclamacoes+' reclamaç'+(eu.reclamacoes===1?'ão':'ões')+(eu.taxa!=null?', '+String(eu.taxa).replace('.',',')+'% dos clientes':'')+(eu.tempoMedioMin!=null?'; respondeu os chamados em '+eu.tempoMedioMin+' min em média':'')+')':'')
+      +'<div style="color:var(--muted);font-size:.78rem;margin-top:2px">'+d.ranking.lojas.map(x=>x.posicao+'º '+pvEsc(x.unidade)).join(' · ')+'</div></div>'; }
+  if(!chs.length&&!pend.length) h='<div style="font-size:.86rem;color:var(--d-t-ok)">✅ Nenhum chamado ou reclamação esperando você.</div>'+h;
+  document.getElementById('pvCorpo').innerHTML=h;
+}
+async function pvResponder(id,btn){
+  const t=document.getElementById('pvR_'+id).value.trim(), o=document.getElementById('pvO_'+id).value, m=document.getElementById('pvM_'+id);
+  if(t.length<10){ m.innerHTML='<span style="color:var(--danger)">Escreva o que você fez (mínimo 10 letras).</span>'; return; }
+  if(!o){ m.innerHTML='<span style="color:var(--danger)">Escolha o que ofereceu ao cliente.</span>'; return; }
+  if(geoForaAgora()){ m.innerHTML='<span style="color:var(--danger)">Você está fora da loja.</span>'; return; }
+  btn.disabled=true; btn.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'pvResponder',unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',id,resposta:t,oferta:o})})).json();
+    if(!r.ok){ btn.disabled=false; btn.textContent='Enviar resposta'; m.innerHTML='<span style="color:var(--danger)">'+pvEsc(r.erro||'Não foi possível.')+'</span>'; return; } }
+  catch(e){ btn.disabled=false; btn.textContent='Enviar resposta'; m.innerHTML='<span style="color:var(--danger)">Sem conexão. Tente de novo.</span>'; return; }
+  logProva('POSVENDA_RESPONDIDA',id);
+  PV_DATA.pendentes=PV_DATA.pendentes.filter(x=>x.id!==id); pvRender(); verificarBotaoRegistrar(); setTimeout(pvCarregar,1500);
+}
+async function pvChResponder(id,btn){
+  const t=(document.getElementById('pvChR_'+id)||{}).value||''; if(t.trim().length<3){ alert('Escreva a resposta para o call center.'); return; }
+  btn.disabled=true; btn.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'pvChamadoResponder',unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',id,resposta:t.trim()})})).json();
+    if(!r.ok){ btn.disabled=false; btn.textContent='Enviar resposta ao call center'; alert(r.erro||'Não foi possível.'); return; } }
+  catch(e){ btn.disabled=false; btn.textContent='Enviar resposta ao call center'; alert('Sem conexão. Tente de novo.'); return; }
+  PV_DATA.chamados=PV_DATA.chamados.filter(x=>x.id!==id); pvRender(); setTimeout(pvCarregar,1500);
+}
 async function hfPreparar(){
   HF_ATIVO=false; HF=null; HF_SALVO=false;
   const c=document.getElementById('cardHF'); if(c) c.style.display='none';
@@ -3971,6 +4076,7 @@ async function registrar(){
       if(_eqFalhasEnvio<3){ alert('⏳ Não consegui conferir a equipe do dia com o servidor (internet ou servidor lento).\n\nEspere alguns segundos e toque em Registrar Placar de novo.'); return; }
     }
   }
+  if(PV_ON){ await pvCarregar(); if(PV_DATA&&(PV_DATA.pendentes||[]).length){ verificarBotaoRegistrar(); alert('📞 Você tem reclamação do pós-venda sem resposta.\n\nLigue para o cliente e registre o que fez antes de enviar o placar.'); irParaFalta('Responder reclamação'); return; } }
   logProva('TENTATIVA_ENVIO','fat='+valFat()+' fotos='+(fotoBase64?1:0)+'/'+(fotoMotoBase64?1:0));
   if(!chkFechamentoFeito){
     alert('⚠️ Você precisa preencher o Checklist de Fechamento antes de registrar o placar.\n\nEle fica logo acima do botão de enviar: "🌙 Checklist de Fechamento da Unidade".');
