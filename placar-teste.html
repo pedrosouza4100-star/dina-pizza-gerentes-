@@ -746,9 +746,9 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
-        <div class="card-label">💳 Vendas Canceladas no Caixa</div>
-        <div class="card-meta muted">Meta: zero — se houver, descreva o motivo</div>
-        <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">vend.</span></div>
+        <div class="card-label">💳 Itens cancelados</div>
+        <div class="card-meta muted">Copie o <b>TOTAL CANCELAMENTO</b> do relatório de fechamento (quantidade). Meta: zero — se houver, descreva o motivo</div>
+        <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">itens</span></div>
         <div id="vendasCanceladasMotivoArea" style="display:none;margin-top:8px">
           <div class="card-label" style="margin-bottom:6px;color:var(--danger)">⚠️ Descreva o motivo do(s) cancelamento(s):</div>
           <textarea id="vendasCanceladasMotivo" placeholder="Ex: Cliente desistiu após aguardar, erro no pedido, problema no pagamento..." style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:80px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="validarMotivoVendas()"></textarea>
@@ -3335,10 +3335,10 @@ function verificarBotaoRegistrar(){
     const apenasRepetido = motivo.length > 0 && /^(.)\1+$/.test(motivo);
     const soCars = motivo.length > 0 && /^[^a-zA-ZÀ-ú0-9\s]+$/.test(motivo);
     if(!motivo || motivo.length < 10 || apenasRepetido || soCars){
-      faltando.push('💳 Motivo das Vendas Canceladas no Caixa');
+      faltando.push('💳 Motivo dos Itens cancelados');
     }
   }
-  if(!filled('vendasCanceladas')) faltando.push('💳 Vendas Canceladas no Caixa');
+  if(!filled('vendasCanceladas')) faltando.push('💳 Itens cancelados (TOTAL CANCELAMENTO)');
   if(!startDinaSalvo) faltando.push(SD&&SD.hoje?'⭐ Start Dina do fim da noite (abre às '+SD.abre.replace(':00','h')+')':'⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
@@ -3373,7 +3373,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Itens cancelados','cardVendasCanceladas'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3905,7 +3905,7 @@ function alpcCampos(){ // o que entra na conferência nesta loja
   const c=[['faturamento','fat','Faturamento líquido',true]];
   if(temFliperBuffet(unidadeAtual)){ c.push(['buffets','buffets','Buffets']); c.push(['fichas','fichas','Fichas']); }
   bebLista().forEach(b=>c.push(b));
-  c.push(['vendasCanceladas','vendasCanceladas','Vendas canceladas no caixa']); // 08/11/2026: cancelamentos também conferidos com o Alpha
+  c.push(['vendasCanceladas','vendasCanceladas','Itens cancelados']); // 08/11/2026: cancelamentos também conferidos com o Alpha
   return c;
 }
 function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar(); }
