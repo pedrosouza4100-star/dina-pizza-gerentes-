@@ -304,6 +304,13 @@
         </div>
       </div>
       <div>
+        <div class="section-title">Senha do Call center</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+          <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">As atendentes entram em <a href="posvenda" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/posvenda</a> com esta senha para chamar as lojas e registrar o pós-venda. <span id="ccStatus"></span></div></div>
+          <button class="action-btn btn-nova" style="padding:8px 20px;font-size:0.8rem" onclick="definirSenhaCC()">Definir senha do call center</button>
+        </div>
+      </div>
+      <div>
         <div class="section-title">Senha de Administrador</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">Altere sua senha de administrador quando necessário. Ela vale em qualquer aparelho e é conferida pelo servidor em cada alteração.</div></div>
@@ -1599,6 +1606,14 @@
     catch(e){ showToast('Não salvou: '+e.message,'warn'); }
   }
 
+  // Senha do call center (pós-venda e chamados, servidor 2026-11-14-d)
+  async function definirSenhaCC(){
+    const sn=prompt('Nova senha do call center (mínimo 4 caracteres):'); if(sn==null) return;
+    if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
+    try{ const r=await admPost({action:'authDefinirSenhaCC',hash:hash(sn)}); if(r&&r.ok===false) throw new Error(r.erro||'O Apps Script publicado ainda não tem o pós-venda.'); showToast('Senha do call center salva.','ok'); registrarLog('Senha do call center definida.','ok'); mostrarLista([['Call center',sn]],'Senha do call center:\n📣 gerentes.dinapizza.com.br/posvenda'); renderTabela(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
+
   // ── Senhas das lojas (no servidor) ──
   async function renderTabelaServidor(){
     const tbody=document.getElementById('tabelaLojas');
@@ -1614,6 +1629,7 @@
       tbody.innerHTML=r.lojas.map(l=>`<tr><td style="font-weight:600">${l.unidade}</td>${cel(l.unidade,l,'gerente')}${cel(l.unidade,l.assistente||{situacao:'sem'},'assistente')}</tr>`).join('');
       const ta=document.getElementById('tabelaAgenda');
       if(ta) ta.innerHTML=r.agenda?Object.keys(r.agenda).map(k=>{ const a=r.agenda[k]; return `<tr><td style="font-weight:600">${escH(a.rotulo)}</td><td>${a.ativa?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${quando(a.em)}</div>`:'<span class="badge sem">Sem senha</span>'}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',true)">Gerar</button><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',false)">Escolher</button></div></td></tr>`; }).join(''):'<tr><td colspan="2" style="color:var(--yellow)">Falta colar o código novo no Apps Script.</td></tr>';
+      const cs=document.getElementById('ccStatus'); if(cs) cs.innerHTML=r.callcenter===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.callcenter?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const gs=document.getElementById('gestaoStatus'); if(gs) gs.innerHTML=r.gestao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>';
     }catch(e){ tbody.innerHTML='<tr><td colspan="3" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; }
   }
