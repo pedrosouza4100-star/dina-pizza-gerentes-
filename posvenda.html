@@ -59,6 +59,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
 #login{max-width:380px;margin:60px auto}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:800px){.cols,.grid2{grid-template-columns:1fr}}
+@media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit b{white-space:nowrap}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}.aba{flex:1;padding:10px 8px;font-size:.84rem}main{padding:12px 3vw 60px}}
 </style>
 </head>
 <body>
@@ -91,7 +92,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
           <label>Loja</label><select id="chLoja"></select>
           <label>Motivo</label><select id="chMotivo" onchange="chMotivoMudou()"></select>
           <label>O que precisa (uma frase)</label><textarea id="chTexto" placeholder="Ex.: Cliente do pedido 4512 pergunta se já saiu"></textarea>
-          <label class="chk"><input type="checkbox" id="chUrg"> 🚨 Urgente (cliente esperando) — prazo <span id="chPrazoU">5</span> min; normal <span id="chPrazoN">15</span> min</label>
+          <label class="chk"><input type="checkbox" id="chUrg"><span>🚨 Urgente (cliente esperando) — prazo <b id="chPrazoU">5</b> min; normal <b id="chPrazoN">15</b> min</span></label>
           <button class="btn" style="width:100%" id="chBtn" onclick="chamar()">📣 Chamar a loja</button>
         </div>
         <div class="card"><div class="tit">Chamados de hoje</div><div id="chLista" class="muted">Carregando…</div></div>
@@ -111,7 +112,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
             <div><label>Telefone (com DDD)</label><input id="pvTel" inputmode="tel" placeholder="(41) 99999-9999"></div>
           </div>
           <label>O que aconteceu (breve relato)</label><textarea id="pvRelato"></textarea>
-          <label class="chk"><input type="checkbox" id="pvGrave"> 🚨 Grave (cliente muito irritado, pediu reembolso ou falou em Reclame Aqui) — avisa também o GDI</label>
+          <label class="chk"><input type="checkbox" id="pvGrave"><span>🚨 Grave (cliente muito irritado, pediu reembolso ou falou em Reclame Aqui) — avisa também o GDI</span></label>
           <label>Print da conversa (opcional)</label><input type="file" id="pvFoto" accept="image/*">
           <button class="btn" style="width:100%" id="pvBtn" onclick="registrar()">Registrar e avisar o gerente</button>
         </div>
