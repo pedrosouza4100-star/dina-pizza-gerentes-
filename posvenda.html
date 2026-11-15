@@ -210,7 +210,7 @@ function render(){
   const ce=document.getElementById('contLista'); if(!ce.dataset.ok){ ce.dataset.ok=1;
     ce.innerHTML=D.lojas.map(u=>'<div class="cont"><span class="lj">'+esc(u)+'</span><input type="number" min="0" max="500" inputmode="numeric" id="ct_'+esc(u).replace(/\W/g,'')+'" value="'+((D.contatosHoje[u]||{}).qtd??'')+'"><button class="btn sec peq" onclick="salvarCont(\''+esc(u)+'\')">Salvar</button></div>').join(''); }
   // ranking
-  const tab=rk=>rk&&rk.lojas.length?'<table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table>':'<div class="muted">Sem dados.</div>';
+  const tab=rk=>rk&&rk.lojas.length?'<div style="overflow-x:auto"><table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table></div>':'<div class="muted">Sem dados.</div>';
   document.getElementById('rkAtual').innerHTML=tab(D.ranking); document.getElementById('rkPassada').innerHTML=tab(D.rankingPassada);
 }
 
