@@ -3669,7 +3669,8 @@ function hfRenderCompraQtd(box,c,forn){
   const linhas=c.itens.map((nome,i)=>{ const un=(c.unidades||{})[nome]||'unidade', med=(c.precoMedio||{})[nome];
     let ped=c.qtd&&c.qtd[nome]!==undefined?c.qtd[nome]:'';
     if(multi&&HFC_NOTA_N>1&&ped!==''){ const ja=(c.jaComprado||{})[nome]||0, outras=(c.notas||[]).some(n=>n.nota===HFC_NOTA_N)?0:ja; ped=Math.round((Number(ped)-outras)*1000)/1000; if(!(ped>0)) ped=''; }
-    return '<div class="hf-c" data-hfci="'+i+'"><div><b>'+escR(nome)+'</b>'+(ped!==''?' <span class="muted">· pedido: '+escR(String(ped).replace('.',','))+' '+escR(un)+'</span>':'')+'</div>'
+    const escrito=(c.outrosItens||[]).includes(nome)&&Array.isArray(c.unOpcoes); // escrito à mão na lista: o gerente escolhe a unidade (padrão kg) — 15/11/2026
+    return '<div class="hf-c" data-hfci="'+i+'"><div><b>'+escR(nome)+'</b>'+(escrito?' <select data-k="un" onchange="hfcUnTrocar(this)" style="width:auto;padding:2px 6px;margin-left:4px">'+c.unOpcoes.map(o=>'<option'+(o===un?' selected':'')+'>'+escR(o)+'</option>').join('')+'</select>':'')+(ped!==''?' <span class="muted">· pedido: '+escR(String(ped).replace('.',','))+' '+escR(un)+'</span>':'')+'</div>'
       +'<div class="hf-cl"><select data-k="chegou" onchange="hfcConta()" style="grid-column:1/3"><option value="">O que aconteceu?</option><option value="igual">✅ Chegou certo</option><option value="menos">⚠️ Chegou a menos</option><option value="ruim">👎 Qualidade ruim</option><option value="nao">'+(multi?'➖ Não está nesta nota':'❌ Não comprei')+'</option></select>'
       +'<input data-k="qtd" inputmode="decimal" placeholder="Qtd. ('+escR(un)+')" value="'+escR(String(ped).replace('.',','))+'" oninput="hfcConta()">'
       +'<input data-k="preco" inputmode="decimal" placeholder="R$ por '+escR(un)+(med?' (média '+hfR(med)+')':'')+'" oninput="hfcConta()"></div><div class="muted" data-k="tot" style="font-size:.78rem;margin-top:4px"></div></div>'; }).join('');
@@ -3686,7 +3687,8 @@ function hfRenderCompraQtd(box,c,forn){
     +'<div style="border-top:1px solid var(--border);margin:12px 0 4px"></div><div style="font-weight:800;margin:6px 0 2px">📝 Lista para amanhã</div>';
   hfcConta();
 }
-function hfcLer(){ return [...document.querySelectorAll('#hfCompraBox [data-hfci]')].map(el=>{ const i=+el.dataset.hfci, g=k=>el.querySelector('[data-k="'+k+'"]'); return {el, nome:HF.compra.itens[i], chegou:g('chegou').value, qtd:hfNumL(g('qtd').value), preco:hfNumL(g('preco').value)}; }); }
+function hfcLer(){ return [...document.querySelectorAll('#hfCompraBox [data-hfci]')].map(el=>{ const i=+el.dataset.hfci, g=k=>el.querySelector('[data-k="'+k+'"]'); return {el, nome:HF.compra.itens[i], chegou:g('chegou').value, qtd:hfNumL(g('qtd').value), preco:hfNumL(g('preco').value), un:g('un')?g('un').value:undefined}; }); }
+function hfcUnTrocar(sel){ const el=sel.closest('[data-hfci]'), un=sel.value; el.querySelector('[data-k="qtd"]').placeholder='Qtd. ('+un+')'; el.querySelector('[data-k="preco"]').placeholder='R$ por '+un; }
 function hfcConta(){
   let soma=0; hfcLer().forEach(x=>{ const nao=x.chegou==='nao'; x.el.querySelector('[data-k="qtd"]').disabled=nao; x.el.querySelector('[data-k="preco"]').disabled=nao;
     const t=(!nao&&x.qtd>0&&x.preco>0)?x.qtd*x.preco:0; soma+=t; x.el.querySelector('[data-k="tot"]').textContent=t?'= R$ '+hfR(t):''; });
@@ -3744,7 +3746,7 @@ async function hfcSalvarQtd(){
   if(hfcMulti()&&!comp.length){ msg.innerHTML='<span style="color:var(--danger)">Esta nota não tem nenhum item. Marque o que veio nela.</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,un:x.un,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
       foto:lerOn?(HFC_NOTA?{base64:HFC_NOTA}:null):(HFC_FOTO?{base64:HFC_FOTO}:null),fotoMerc:lerOn&&HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
