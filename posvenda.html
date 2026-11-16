@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <!-- Pós-venda e chamados do call center (14/11/2026, servidor 2026-11-14-d). Senha do call center (Admin > Gerentes e mensagens).
-     GET pvPainel; POST pvLogin, pvChamar, pvChamadoCancelar, pvRegistrar, pvContatos, pvValidar. -->
+     GET pvPainel; POST pvLogin, pvChamar, pvChamadoCancelar, pvRegistrar, pvContatos, pvValidar, pvNps, pvNpsExcluir (15/11/2026, servidor 2026-11-15-e:
+     NPS de cada ligação, ligações ok x reclamação por loja, "gerente viu às"). -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -58,6 +59,16 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.9rem;font-weight:700;z-index:200;display:none;max-width:92vw;text-align:center}
 #login{max-width:380px;margin:60px auto}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.notas{display:grid;grid-template-columns:repeat(11,1fr);gap:6px;margin-top:8px}
+.nt{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:12px 0;font-weight:900;font-size:1.05rem;cursor:pointer}
+.nt.d{border-color:rgba(255,77,77,.5)}.nt.n{border-color:rgba(255,208,0,.5)}.nt.p{border-color:rgba(61,220,151,.55)}
+.nt.on.d{background:var(--danger);color:#fff}.nt.on.n{background:var(--yellow);color:#111}.nt.on.p{background:var(--green);color:#06110b}
+.npsb{display:inline-block;min-width:54px;text-align:center;font-weight:900;border-radius:10px;padding:4px 8px;font-size:.9rem;border:1px solid var(--border)}
+.npsb.p{color:var(--d-t-ok);border-color:rgba(61,220,151,.5)}.npsb.n{color:var(--d-t-info);border-color:rgba(255,208,0,.5)}.npsb.d{color:var(--d-t-err);border-color:var(--danger)}
+.lj-res{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--surface)}
+.lj-res .l1{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800}
+.ult{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:.86rem;padding:6px 0;border-bottom:1px solid var(--border)}
+@media(max-width:600px){.notas{grid-template-columns:repeat(6,1fr)}}
 @media(max-width:800px){.cols,.grid2{grid-template-columns:1fr}}
 @media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit b{white-space:nowrap}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}.aba{flex:1;padding:10px 8px;font-size:.84rem}main{padding:12px 3vw 60px}}
 </style>
@@ -100,6 +111,17 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
     </section>
 
     <section id="s-pv" style="display:none">
+      <div class="card" id="npsCard">
+        <div class="tit">📞 Ligação de pós-venda</div>
+        <div class="muted">Registre <b>toda ligação</b> (com ou sem reclamação). Pergunte: <b>"De 0 a 10, quanto você recomendaria o delivery da Dina Pizza para um amigo?"</b></div>
+        <div class="grid2"><div><label>Loja</label><select id="npsLoja"></select></div><div></div></div>
+        <label>Nota do cliente</label>
+        <div class="notas" id="npsNotas"></div>
+        <div id="npsMotWrap" style="display:none"><label>Motivo da nota baixa (poucas palavras)</label><input id="npsMotivo" maxlength="300" placeholder="Ex.: pizza chegou fria, demorou 1h30"></div>
+        <div class="cont" style="margin-top:4px"><button class="btn ok" id="npsBtn" onclick="npsSalvar(false)">💾 Salvar nota</button><button class="btn sec" onclick="npsSalvar(true)">📵 Não atendeu / não quis responder</button></div>
+        <div id="npsVirar"></div>
+        <div style="margin-top:12px;font-weight:800;font-size:.9rem">Suas últimas ligações de hoje</div><div id="npsUlt" class="muted">—</div>
+      </div>
       <div class="cols">
         <div class="card">
           <div class="tit">➕ Registrar reclamação</div>
@@ -117,9 +139,10 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
           <button class="btn" style="width:100%" id="pvBtn" onclick="registrar()">Registrar e avisar o gerente</button>
         </div>
         <div class="card">
-          <div class="tit">📊 Clientes contatados hoje</div>
-          <div class="muted">Quantos clientes você ligou no pós-venda de cada loja hoje (com ou sem reclamação). É o que mostra a taxa de reclamação.</div>
-          <div id="contLista"></div>
+          <div class="tit">📊 Ligações de hoje por loja</div>
+          <div class="muted">Contatados = ligações com nota. NPS = % de notas 9–10 menos % de notas 0–6.</div>
+          <div id="resLojas"></div>
+          <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Digitar o número de contatados à mão (só se não registrou as notas)</summary><div id="contLista"></div></details>
         </div>
       </div>
       <div class="card"><div class="tit">✅ Para confirmar com o cliente</div><div class="muted">O gerente já respondeu. Fale com o cliente e marque se resolveu.</div><div id="pvConfirmar"></div></div>
@@ -128,6 +151,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
     </section>
 
     <section id="s-rk" style="display:none">
+      <div class="card"><div class="tit">⭐ NPS do delivery — semana atual</div><div class="muted">Nas 2 primeiras semanas é só acompanhamento: o NPS ainda não muda a posição no ranking. A meta será definida depois, com os números reais.</div><div id="npsSem"></div></div>
       <div class="card"><div class="tit">🏆 Atendimento ao call center — semana atual</div><div class="muted">Posição = taxa de reclamação (reclamações ÷ clientes contatados) + tempo médio até o gerente responder aos chamados. Menor é melhor.</div><div id="rkAtual"></div></div>
       <div class="card"><div class="tit">Semana passada</div><div id="rkPassada"></div></div>
     </section>
@@ -137,7 +161,9 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
 
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
-let CHAVE='', NOME='', D=null, ABA='ch';
+let CHAVE='', NOME='', D=null, ABA='ch', NPS_NOTA=null, NPS_ID='';
+function npsCls(v){ return v==null?'':(v>=50?'p':(v>=0?'n':'d')); }
+function npsBadge(c){ return c&&c.n?'<span class="npsb '+npsCls(c.nps)+'" title="'+c.n+' notas">NPS '+c.nps+'</span>':'<span class="npsb">NPS —</span>'; }
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',5000); }
@@ -175,6 +201,9 @@ function montarFormularios(){
   opts(document.getElementById('pvCanal'),Object.assign({'':'— escolha —'},D.canais),'');
   opts(document.getElementById('pvTipo'),Object.assign({'':'— escolha —'},D.tipos),'');
   document.getElementById('pvLoja').innerHTML='<option value="">— escolha —</option>'+D.lojas.map(u=>'<option>'+esc(u)+'</option>').join('');
+  const nl=document.getElementById('npsLoja'); nl.innerHTML='<option value="">— escolha —</option>'+D.lojas.map(u=>'<option>'+esc(u)+'</option>').join(''); nl.value=ls('pv_nps_loja');
+  nl.onchange=()=>ls('pv_nps_loja',nl.value);
+  document.getElementById('npsNotas').innerHTML=[0,1,2,3,4,5,6,7,8,9,10].map(n=>'<button type="button" class="nt '+(n<=6?'d':(n<=8?'n':'p'))+'" data-n="'+n+'" onclick="npsNota('+n+')">'+n+'</button>').join('');
   document.getElementById('chPrazoU').textContent=D.prazos.urgente; document.getElementById('chPrazoN').textContent=D.prazos.normal;
 }
 function chMotivoMudou(){ const m=document.getElementById('chMotivo').value; document.getElementById('chUrg').checked=['pedido','tempo','reclamacao'].includes(m); }
@@ -206,12 +235,26 @@ function render(){
     +'<div class="resp">💬 '+esc(x.respPor)+' ('+esc(x.respQuando)+'): '+esc(x.resposta)+'<br><b>Ofereceu:</b> '+esc(x.ofertaTxt)+'</div>'
     +(x.situacao==='sem_confirmacao'?'<div class="muted">Passou de 48 h: conta como resolvido pelo gerente, sem confirmação.</div>':'')
     +'<div class="cont"><button class="btn ok peq" onclick="validar(\''+x.id+'\',true)">✅ Cliente confirmou: resolvido</button><button class="btn peq" onclick="validar(\''+x.id+'\',false)">❌ Não resolvido</button></div></div>').join(''):'<div class="muted" style="margin-top:8px">Nada para confirmar.</div>';
-  document.getElementById('pvEsperando').innerHTML=esp.length?esp.map(x=>'<div class="item'+(x.grave?' urg':'')+'">'+cab(x)+(x.motivoNao?'<div class="resp" style="border-color:var(--danger)">❌ Voltou para o gerente: '+esc(x.motivoNao)+'</div>':'')+'</div>').join(''):'<div class="muted" style="margin-top:8px">Nenhuma esperando o gerente.</div>';
+  const viu=x=>x.visto?'<div style="margin-top:6px"><span class="tag t-am">👀 '+esc(x.vistoPor==='assistente'?'Assistente':'Gerente')+' viu às '+esc(String(x.visto).slice(6))+' — falta responder</span></div>'
+    :(x.minDesde!=null?'<div style="margin-top:6px"><span class="tag t-red">🔴 Ainda não viu'+(x.minDesde>=1?' (há '+(x.minDesde>=60?Math.floor(x.minDesde/60)+' h '+(x.minDesde%60)+' min':x.minDesde+' min')+')':'')+'</span></div>':'');
+  document.getElementById('pvEsperando').innerHTML=esp.length?esp.map(x=>'<div class="item'+(x.grave?' urg':'')+'">'+cab(x)+viu(x)+(x.motivoNao?'<div class="resp" style="border-color:var(--danger)">❌ Voltou para o gerente: '+esc(x.motivoNao)+'</div>':'')+'</div>').join(''):'<div class="muted" style="margin-top:8px">Nenhuma esperando o gerente.</div>';
   document.getElementById('pvResolvidas').innerHTML=res.length?res.map(x=>'<div class="item ok">'+cab(x)+'<div class="resp">✅ '+esc(x.resposta)+' · confirmado por '+esc(x.valPor)+' ('+esc(x.valQuando)+')</div></div>').join(''):'<div class="muted" style="margin-top:8px">—</div>';
   const ce=document.getElementById('contLista'); if(!ce.dataset.ok){ ce.dataset.ok=1;
     ce.innerHTML=D.lojas.map(u=>'<div class="cont"><span class="lj">'+esc(u)+'</span><input type="number" min="0" max="500" inputmode="numeric" id="ct_'+esc(u).replace(/\W/g,'')+'" value="'+((D.contatosHoje[u]||{}).qtd??'')+'"><button class="btn sec peq" onclick="salvarCont(\''+esc(u)+'\')">Salvar</button></div>').join(''); }
+  // ligações de hoje por loja: contatados, ok, reclamações, NPS
+  if(D.npsHoje){
+    const tot={c:0,r:0,na:0}; D.lojas.forEach(u=>{ tot.c+=(D.contatosHoje[u]||{}).qtd||0; tot.r+=(D.reclHoje||{})[u]||0; tot.na+=(D.npsHoje[u]||{}).naoAtendeu||0; });
+    const linha=(c,r,na)=>c+' contatados · ✅ '+Math.max(0,c-r)+' sem reclamação · ⚠️ '+r+' reclamaç'+(r===1?'ão':'ões')+(c?' ('+String(Math.round(r/c*1000)/10).replace('.',',')+'%)':'')+(na?' · 📵 '+na+' não atenderam':'');
+    document.getElementById('resLojas').innerHTML='<div class="lj-res" style="border-color:var(--gold)"><div class="l1"><span>🌐 Rede hoje</span>'+npsBadge(D.npsHoje.__rede__)+'</div><div class="muted">'+linha(tot.c,tot.r,tot.na)+'</div></div>'
+      +D.lojas.map(u=>{ const c=(D.contatosHoje[u]||{}).qtd||0, r=(D.reclHoje||{})[u]||0, nh=D.npsHoje[u]||{}; return '<div class="lj-res"><div class="l1"><span>'+esc(u)+'</span>'+npsBadge(nh)+'</div><div class="muted">'+linha(c,r,nh.naoAtendeu||0)+((D.contatosHoje[u]||{}).origem==='manual'?' <i>(número digitado)</i>':'')+'</div></div>'; }).join('');
+    const ult=(D.npsRecentes||[]).filter(x=>x.atendente===NOME);
+    document.getElementById('npsUlt').innerHTML=ult.length?ult.map(x=>'<div class="ult"><span>'+esc(x.hora)+' · '+esc(x.unidade)+' · '+(x.situacao==='nao_atendeu'?'📵 não atendeu':'<b>nota '+x.nota+'</b>'+(x.motivo?' — '+esc(x.motivo):''))+(x.reclamacao?' · <span class="tag t-am">virou reclamação</span>':'')+'</span>'+(x.reclamacao?'':'<button class="btn sec peq" style="margin:0" onclick="npsDesfazer(\''+x.id+'\')">Desfazer</button>')+'</div>').join(''):'—';
+    const S=D.npsSemana||{}, ls2=D.lojas.slice().sort((a,b)=>((S[b]||{}).nps??-999)-((S[a]||{}).nps??-999));
+    document.getElementById('npsSem').innerHTML='<div style="overflow-x:auto"><table><tr><th>Loja</th><th>NPS</th><th>Notas</th><th>9–10</th><th>7–8</th><th>0–6</th><th>Não atenderam</th></tr>'
+      +ls2.concat(['__rede__']).map(u=>{ const c=S[u]||{}; return '<tr'+(u==='__rede__'?' style="font-weight:800"':'')+'><td>'+(u==='__rede__'?'🌐 Rede':esc(u))+'</td><td>'+npsBadge(c)+'</td><td>'+(c.n||0)+'</td><td>'+(c.promotores||0)+'</td><td>'+(c.neutros||0)+'</td><td>'+(c.detratores||0)+'</td><td>'+(c.naoAtendeu||0)+'</td></tr>'; }).join('')+'</table></div>';
+  } else { document.getElementById('npsCard').style.display='none'; document.getElementById('resLojas').innerHTML=''; const dt=document.querySelector('#s-pv details'); if(dt) dt.open=true; }
   // ranking
-  const tab=rk=>rk&&rk.lojas.length?'<div style="overflow-x:auto"><table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table></div>':'<div class="muted">Sem dados.</div>';
+  const tab=rk=>rk&&rk.lojas.length?'<div style="overflow-x:auto"><table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>NPS</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+(x.npsN?x.nps:'—')+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table></div>':'<div class="muted">Sem dados.</div>';
   document.getElementById('rkAtual').innerHTML=tab(D.ranking); document.getElementById('rkPassada').innerHTML=tab(D.rankingPassada);
 }
 
@@ -229,14 +272,34 @@ async function registrar(){
   const g=id=>document.getElementById(id), b=g('pvBtn');
   const o={action:'pvRegistrar',unidade:g('pvLoja').value,canal:g('pvCanal').value,pedido:g('pvPedido').value,tipo:g('pvTipo').value,cliente:g('pvCliente').value,telefone:g('pvTel').value,relato:g('pvRelato').value,grave:g('pvGrave').checked};
   if(!o.unidade){ toast('Escolha a loja.'); return; }
+  if(NPS_ID) o.npsId=NPS_ID;
   b.disabled=true; b.textContent='Enviando…';
   try{ const f=await lerFoto(g('pvFoto')); if(f) o.foto={base64:f};
     const r=await post(o);
-    if(r.ok){ toast('✅ '+(r.msg||'Registrada.')); ['pvPedido','pvCliente','pvTel','pvRelato','pvFoto'].forEach(i=>g(i).value=''); g('pvGrave').checked=false; g('pvTipo').value=''; g('pvCanal').value=''; }
+    if(r.ok){ toast('✅ '+(r.msg||'Registrada.')); ['pvPedido','pvCliente','pvTel','pvRelato','pvFoto'].forEach(i=>g(i).value=''); g('pvGrave').checked=false; g('pvTipo').value=''; g('pvCanal').value=''; NPS_ID=''; document.getElementById('npsVirar').innerHTML=''; }
     else toast('⚠️ '+(r.erro||'Não foi possível.'));
   }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
   b.disabled=false; b.textContent='Registrar e avisar o gerente'; carregar();
 }
+function npsNota(n){ NPS_NOTA=n; document.querySelectorAll('#npsNotas .nt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n)); document.getElementById('npsMotWrap').style.display=n<=6?'':'none'; if(n<=6) document.getElementById('npsMotivo').focus(); }
+async function npsSalvar(nao){
+  const u=document.getElementById('npsLoja').value, mot=document.getElementById('npsMotivo').value.trim();
+  if(!u){ toast('Escolha a loja.'); return; }
+  if(!nao&&NPS_NOTA===null){ toast('Toque na nota que o cliente deu (0 a 10).'); return; }
+  if(!nao&&NPS_NOTA<=6&&mot.length<3){ toast('Nota de 0 a 6: escreva o motivo em poucas palavras.'); return; }
+  const b=document.getElementById('npsBtn'); b.disabled=true;
+  try{ const r=await post(nao?{action:'pvNps',unidade:u,naoAtendeu:true}:{action:'pvNps',unidade:u,nota:NPS_NOTA,motivo:mot});
+    if(!r.ok){ toast('⚠️ '+(r.erro||'Não salvou.')); }
+    else{
+      toast(nao?'📵 Registrado: não atendeu.':'✅ Nota '+NPS_NOTA+' registrada ('+u+').');
+      document.getElementById('npsVirar').innerHTML=r.detrator?'<div class="item urg" style="margin-top:10px"><b>Nota baixa.</b> Foi problema do pedido (atraso, erro, frio, entregador, cobrança)?<div class="cont"><button class="btn peq" onclick="npsVirar(\''+r.id+'\',\''+esc(u)+'\','+JSON.stringify(mot).replace(/"/g,'&quot;')+')">📝 Virar reclamação para o gerente</button><button class="btn sec peq" onclick="document.getElementById(\'npsVirar\').innerHTML=\'\'">Não, só a nota</button></div></div>':'';
+      NPS_NOTA=null; document.getElementById('npsMotivo').value=''; npsNota(-1); document.getElementById('npsMotWrap').style.display='none';
+    }
+  }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
+  b.disabled=false; carregar();
+}
+function npsVirar(id,u,mot){ NPS_ID=id; const g=x=>document.getElementById(x); g('pvLoja').value=u; g('pvRelato').value=mot; g('npsVirar').innerHTML='<div class="muted" style="margin-top:8px">⬇️ Complete os dados do pedido e do cliente em "Registrar reclamação".</div>'; g('pvPedido').scrollIntoView({behavior:'smooth',block:'center'}); g('pvPedido').focus(); }
+async function npsDesfazer(id){ if(!confirm('Desfazer esta ligação?')) return; try{ const r=await post({action:'pvNpsExcluir',id}); toast(r.ok?'↩️ Ligação desfeita.':'⚠️ '+(r.erro||'Não foi possível.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(); }
 async function salvarCont(u){ const v=document.getElementById('ct_'+u.replace(/\W/g,'')).value; if(v===''){ toast('Digite a quantidade.'); return; }
   try{ const r=await post({action:'pvContatos',unidade:u,qtd:Number(v)}); toast(r.ok?'✅ '+u+': '+v+' clientes contatados hoje.':'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } }
 async function validar(id,ok){
