@@ -3478,22 +3478,30 @@ function pvRender(){
     +'<div style="font-size:.8rem;margin-top:8px;font-weight:700">Ligue para o cliente e conte o que fez:</div>'
     +'<textarea id="pvR_'+x.id+'" rows="2" placeholder="Ex.: liguei, pedi desculpas e expliquei o atraso" style="width:100%;margin-top:4px"></textarea>'
     +'<select id="pvO_'+x.id+'" style="width:100%;margin-top:6px"><option value="">O que ofereceu ao cliente?</option>'+ofs+'</select>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:700;font-size:.86rem"><input type="checkbox" id="pvL_'+x.id+'" style="width:auto"> Liguei para o cliente às <input type="time" id="pvH_'+x.id+'" value="'+new Date().toTimeString().slice(0,5)+'" style="width:auto;padding:4px 6px"></label>'
+    +(x.grave?'<div style="font-size:.76rem;color:var(--muted);margin-top:4px">Caso grave: o call center ainda confirma com o cliente.</div>':'')
     +'<button type="button" class="alp-btn" style="margin-top:6px" onclick="pvResponder(\''+x.id+'\',this)">Enviar resposta</button><div id="pvM_'+x.id+'" style="font-size:.8rem;margin-top:4px"></div></div>').join('');
-  const sit={respondida:'⏳ esperando o call center confirmar com o cliente',sem_confirmacao:'✓ respondida (sem confirmação do cliente)',resolvida:'✅ cliente confirmou: resolvido'};
+  const sit={respondida:'⏳ esperando o call center confirmar com o cliente',sem_confirmacao:'✓ respondida (sem confirmação do cliente)',resolvida:'✅ resolvida'};
   if(rec.length) h+='<div style="font-size:.8rem;margin-top:10px;color:var(--muted)">Respondidas nos últimos dias:</div>'+rec.map(x=>'<div style="font-size:.82rem;margin-top:4px">• '+pvEsc(x.cliente)+' (pedido '+pvEsc(x.pedido)+'): '+(sit[x.situacao]||x.situacao)+'</div>').join('');
   if(d.ranking&&d.ranking.lojas){ const eu=d.ranking.lojas.find(x=>x.unidade===unidadeAtual);
     h+='<div style="margin-top:10px;font-size:.84rem">🏆 <b>Atendimento ao call center — semana '+pvEsc(d.ranking.semana)+'</b>'+(eu?': sua loja ficou em <b>'+eu.posicao+'º de '+d.ranking.lojas.length+'</b> ('+eu.reclamacoes+' reclamaç'+(eu.reclamacoes===1?'ão':'ões')+(eu.taxa!=null?', '+String(eu.taxa).replace('.',',')+'% dos clientes':'')+(eu.tempoMedioMin!=null?'; respondeu os chamados em '+eu.tempoMedioMin+' min em média':'')+')':'')
       +'<div style="color:var(--muted);font-size:.78rem;margin-top:2px">'+d.ranking.lojas.map(x=>x.posicao+'º '+pvEsc(x.unidade)).join(' · ')+'</div></div>'; }
   if(!chs.length&&!pend.length) h='<div style="font-size:.86rem;color:var(--d-t-ok)">✅ Nenhum chamado ou reclamação esperando você.</div>'+h;
-  document.getElementById('pvCorpo').innerHTML=h;
+  // guarda o que o gerente já digitou: a lista recarrega a cada 1 min e quando ele volta da ligação para o cliente
+  const corpo=document.getElementById('pvCorpo'), guard={}; corpo.querySelectorAll('textarea[id],select[id],input[id]').forEach(e=>{ guard[e.id]=e.type==='checkbox'?e.checked:e.value; });
+  corpo.innerHTML=h;
+  Object.keys(guard).forEach(k=>{ const e=document.getElementById(k); if(!e) return; if(e.type==='checkbox') e.checked=guard[k]; else if(guard[k]!=='') e.value=guard[k]; });
 }
 async function pvResponder(id,btn){
   const t=document.getElementById('pvR_'+id).value.trim(), o=document.getElementById('pvO_'+id).value, m=document.getElementById('pvM_'+id);
   if(t.length<10){ m.innerHTML='<span style="color:var(--danger)">Escreva o que você fez (mínimo 10 letras).</span>'; return; }
   if(!o){ m.innerHTML='<span style="color:var(--danger)">Escolha o que ofereceu ao cliente.</span>'; return; }
+  const lig=document.getElementById('pvL_'+id), hr=document.getElementById('pvH_'+id);
+  if(lig&&!lig.checked){ m.innerHTML='<span style="color:var(--danger)">Ligue para o cliente antes e marque "Liguei para o cliente".</span>'; return; }
+  if(lig&&!/^\d\d:\d\d$/.test(hr.value)){ m.innerHTML='<span style="color:var(--danger)">Informe a hora em que ligou.</span>'; return; }
   if(geoForaAgora()){ m.innerHTML='<span style="color:var(--danger)">Você está fora da loja.</span>'; return; }
   btn.disabled=true; btn.textContent='Enviando…';
-  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'pvResponder',unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',id,resposta:t,oferta:o})})).json();
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'pvResponder',unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',id,resposta:t,oferta:o,ligou:lig?lig.checked:undefined,ligouHora:hr?hr.value:undefined})})).json();
     if(!r.ok){ btn.disabled=false; btn.textContent='Enviar resposta'; m.innerHTML='<span style="color:var(--danger)">'+pvEsc(r.erro||'Não foi possível.')+'</span>'; return; } }
   catch(e){ btn.disabled=false; btn.textContent='Enviar resposta'; m.innerHTML='<span style="color:var(--danger)">Sem conexão. Tente de novo.</span>'; return; }
   logProva('POSVENDA_RESPONDIDA',id);
