@@ -145,7 +145,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
           <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Digitar o número de contatados à mão (só se não registrou as notas)</summary><div id="contLista"></div></details>
         </div>
       </div>
-      <div class="card"><div class="tit">✅ Para confirmar com o cliente</div><div class="muted">O gerente já respondeu. Fale com o cliente e marque se resolveu.</div><div id="pvConfirmar"></div></div>
+      <div class="card"><div class="tit">✅ Para confirmar com o cliente</div><div class="muted">Só os casos 🚨 graves: o gerente já respondeu. Fale com o cliente e marque se resolveu. As reclamações comuns fecham com a resposta do gerente (ele declara que ligou).</div><div id="pvConfirmar"></div></div>
       <div class="card"><div class="tit">⏳ Esperando o gerente</div><div id="pvEsperando"></div></div>
       <div class="card"><div class="tit">Resolvidas (últimos 3 dias)</div><div id="pvResolvidas"></div></div>
     </section>
@@ -238,7 +238,9 @@ function render(){
   const viu=x=>x.visto?'<div style="margin-top:6px"><span class="tag t-am">👀 '+esc(x.vistoPor==='assistente'?'Assistente':'Gerente')+' viu às '+esc(String(x.visto).slice(6))+' — falta responder</span></div>'
     :(x.minDesde!=null?'<div style="margin-top:6px"><span class="tag t-red">🔴 Ainda não viu'+(x.minDesde>=1?' (há '+(x.minDesde>=60?Math.floor(x.minDesde/60)+' h '+(x.minDesde%60)+' min':x.minDesde+' min')+')':'')+'</span></div>':'');
   document.getElementById('pvEsperando').innerHTML=esp.length?esp.map(x=>'<div class="item'+(x.grave?' urg':'')+'">'+cab(x)+viu(x)+(x.motivoNao?'<div class="resp" style="border-color:var(--danger)">❌ Voltou para o gerente: '+esc(x.motivoNao)+'</div>':'')+'</div>').join(''):'<div class="muted" style="margin-top:8px">Nenhuma esperando o gerente.</div>';
-  document.getElementById('pvResolvidas').innerHTML=res.length?res.map(x=>'<div class="item ok">'+cab(x)+'<div class="resp">✅ '+esc(x.resposta)+' · confirmado por '+esc(x.valPor)+' ('+esc(x.valQuando)+')</div></div>').join(''):'<div class="muted" style="margin-top:8px">—</div>';
+  const porGer=x=>x.valPor==='gerente'||x.valPor==='assistente';
+  document.getElementById('pvResolvidas').innerHTML=res.length?res.map(x=>'<div class="item ok">'+cab(x)+'<div class="resp">✅ '+esc(x.resposta)+'<br><b>Ofereceu:</b> '+esc(x.ofertaTxt)+' · '+(porGer(x)?'resolvida pelo '+esc(x.valPor):'confirmado por '+esc(x.valPor))+' ('+esc(x.valQuando)+')</div>'
+    +'<button class="btn sec peq" onclick="validar(\''+x.id+'\',false,true)">↩️ Cliente voltou a reclamar</button></div>').join(''):'<div class="muted" style="margin-top:8px">—</div>';
   const ce=document.getElementById('contLista'); if(!ce.dataset.ok){ ce.dataset.ok=1;
     ce.innerHTML=D.lojas.map(u=>'<div class="cont"><span class="lj">'+esc(u)+'</span><input type="number" min="0" max="500" inputmode="numeric" id="ct_'+esc(u).replace(/\W/g,'')+'" value="'+((D.contatosHoje[u]||{}).qtd??'')+'"><button class="btn sec peq" onclick="salvarCont(\''+esc(u)+'\')">Salvar</button></div>').join(''); }
   // ligações de hoje por loja: contatados, ok, reclamações, NPS
@@ -302,8 +304,8 @@ function npsVirar(id,u,mot){ NPS_ID=id; const g=x=>document.getElementById(x); g
 async function npsDesfazer(id){ if(!confirm('Desfazer esta ligação?')) return; try{ const r=await post({action:'pvNpsExcluir',id}); toast(r.ok?'↩️ Ligação desfeita.':'⚠️ '+(r.erro||'Não foi possível.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(); }
 async function salvarCont(u){ const v=document.getElementById('ct_'+u.replace(/\W/g,'')).value; if(v===''){ toast('Digite a quantidade.'); return; }
   try{ const r=await post({action:'pvContatos',unidade:u,qtd:Number(v)}); toast(r.ok?'✅ '+u+': '+v+' clientes contatados hoje.':'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } }
-async function validar(id,ok){
-  let motivo=''; if(!ok){ motivo=prompt('O que o cliente disse? (volta para o gerente e avisa o GDI)')||''; if(motivo.trim().length<10){ toast('Escreva o que o cliente disse (mínimo 10 letras).'); return; } }
+async function validar(id,ok,voltou){
+  let motivo=''; if(!ok){ motivo=prompt(voltou?'O cliente voltou a reclamar. O que ele disse? (reabre para o gerente e avisa o GDI)':'O que o cliente disse? (volta para o gerente e avisa o GDI)')||''; if(motivo.trim().length<10){ toast('Escreva o que o cliente disse (mínimo 10 letras).'); return; } }
   try{ const r=await post({action:'pvValidar',id,decisao:ok?'resolvido':'nao',motivo}); toast(r.ok?(ok?'✅ Confirmado como resolvido.':'↩️ Voltou para o gerente e o GDI foi avisado.'):'⚠️ '+(r.erro||'Não foi possível.')); }catch(e){ toast('⚠️ Sem conexão.'); }
   carregar();
 }
