@@ -3084,7 +3084,11 @@ function mostrarFotoStartDina(){
   btn.className='camera-btn captured';
   btn.textContent=`✓ Foto registrada às ${hora} — toque para refazer`;
   const tag=document.getElementById('startDinaTag');
-  tag.className='tag ok';tag.textContent='Registrado';
+  // 17/11/2026 (Araucária): a etiqueta dizia "Registrado" só com a foto, e o gerente achava que o Start Dina estava salvo.
+  // Agora: só a foto = aviso amarelo para tocar em SALVAR; "Salvo" só depois de salvar.
+  if(startDinaSalvo){ tag.className='tag ok';tag.textContent='Salvo'; return; }
+  tag.className='tag warn';tag.textContent='⚠️ Foto pronta — falta tocar em "💾 Salvar Start Dina"';
+  const bs=document.getElementById('btnSalvarStart'); if(bs){ bs.style.borderColor='var(--gold)'; bs.style.borderStyle='solid'; bs.classList.remove('falta-pisca'); void bs.offsetWidth; bs.classList.add('falta-pisca'); }
 }
 
 function salvarPautaLocal(){
