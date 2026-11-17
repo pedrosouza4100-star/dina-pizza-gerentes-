@@ -118,6 +118,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
         <label>Nota do cliente</label>
         <div class="notas" id="npsNotas"></div>
         <div id="npsMotWrap" style="display:none"><label>Motivo da nota baixa (poucas palavras)</label><input id="npsMotivo" maxlength="300" placeholder="Ex.: pizza chegou fria, demorou 1h30"></div>
+        <div id="npsEloWrap" style="display:none"><label>💬 Teve elogio? Escreva o que o cliente elogiou (opcional — vai para o gerente da loja)</label><input id="npsElogio" maxlength="300" placeholder="Ex.: pizza chegou quentinha, motoboy muito educado"></div>
         <div class="cont" style="margin-top:4px"><button class="btn ok" id="npsBtn" onclick="npsSalvar(false)">💾 Salvar nota</button><button class="btn sec" onclick="npsSalvar(true)">📵 Não atendeu / não quis responder</button></div>
         <div id="npsVirar"></div>
         <div style="margin-top:12px;font-weight:800;font-size:.9rem">Suas últimas ligações de hoje</div><div id="npsUlt" class="muted">—</div>
@@ -245,18 +246,20 @@ function render(){
     ce.innerHTML=D.lojas.map(u=>'<div class="cont"><span class="lj">'+esc(u)+'</span><input type="number" min="0" max="500" inputmode="numeric" id="ct_'+esc(u).replace(/\W/g,'')+'" value="'+((D.contatosHoje[u]||{}).qtd??'')+'"><button class="btn sec peq" onclick="salvarCont(\''+esc(u)+'\')">Salvar</button></div>').join(''); }
   // ligações de hoje por loja: contatados, ok, reclamações, NPS
   if(D.npsHoje){
-    const tot={c:0,r:0,na:0}; D.lojas.forEach(u=>{ tot.c+=(D.contatosHoje[u]||{}).qtd||0; tot.r+=(D.reclHoje||{})[u]||0; tot.na+=(D.npsHoje[u]||{}).naoAtendeu||0; });
-    const linha=(c,r,na)=>c+' contatados · ✅ '+Math.max(0,c-r)+' sem reclamação · ⚠️ '+r+' reclamaç'+(r===1?'ão':'ões')+(c?' ('+String(Math.round(r/c*1000)/10).replace('.',',')+'%)':'')+(na?' · 📵 '+na+' não atenderam':'');
-    document.getElementById('resLojas').innerHTML='<div class="lj-res" style="border-color:var(--gold)"><div class="l1"><span>🌐 Rede hoje</span>'+npsBadge(D.npsHoje.__rede__)+'</div><div class="muted">'+linha(tot.c,tot.r,tot.na)+'</div></div>'
-      +D.lojas.map(u=>{ const c=(D.contatosHoje[u]||{}).qtd||0, r=(D.reclHoje||{})[u]||0, nh=D.npsHoje[u]||{}; return '<div class="lj-res"><div class="l1"><span>'+esc(u)+'</span>'+npsBadge(nh)+'</div><div class="muted">'+linha(c,r,nh.naoAtendeu||0)+((D.contatosHoje[u]||{}).origem==='manual'?' <i>(número digitado)</i>':'')+'</div></div>'; }).join('');
+    // 17/11/2026: contatados · 😀 gostaram (9–10) · 😐 neutros (7–8) · 😞 não gostaram (0–6) · 💬 elogios · ⚠️ reclamações · 📵 não atenderam
+    const tot={c:0,r:0}; D.lojas.forEach(u=>{ tot.c+=(D.contatosHoje[u]||{}).qtd||0; tot.r+=(D.reclHoje||{})[u]||0; });
+    const linha=(c,r,nh)=>{ nh=nh||{}; return '<b>'+c+'</b> contatados · 😀 <b>'+(nh.promotores||0)+'</b> gostaram · 😐 '+(nh.neutros||0)+' neutros · 😞 '+(nh.detratores||0)+' não gostaram'
+      +' · 💬 <b>'+(nh.elogios||0)+'</b> elogio'+(nh.elogios===1?'':'s')+' · ⚠️ '+r+' reclamaç'+(r===1?'ão':'ões')+(c?' ('+String(Math.round(r/c*1000)/10).replace('.',',')+'%)':'')+' · 📵 '+(nh.naoAtendeu||0)+' não atenderam'; };
+    document.getElementById('resLojas').innerHTML='<div class="lj-res" style="border-color:var(--gold)"><div class="l1"><span>🌐 Rede hoje</span>'+npsBadge(D.npsHoje.__rede__)+'</div><div class="muted">'+linha(tot.c,tot.r,D.npsHoje.__rede__)+'</div></div>'
+      +D.lojas.map(u=>{ const c=(D.contatosHoje[u]||{}).qtd||0, r=(D.reclHoje||{})[u]||0, nh=D.npsHoje[u]||{}; return '<div class="lj-res"><div class="l1"><span>'+esc(u)+'</span>'+npsBadge(nh)+'</div><div class="muted">'+linha(c,r,nh)+((D.contatosHoje[u]||{}).origem==='manual'?' <i>(número digitado)</i>':'')+'</div></div>'; }).join('');
     const ult=(D.npsRecentes||[]).filter(x=>x.atendente===NOME);
-    document.getElementById('npsUlt').innerHTML=ult.length?ult.map(x=>'<div class="ult"><span>'+esc(x.hora)+' · '+esc(x.unidade)+' · '+(x.situacao==='nao_atendeu'?'📵 não atendeu':'<b>nota '+x.nota+'</b>'+(x.motivo?' — '+esc(x.motivo):''))+(x.reclamacao?' · <span class="tag t-am">virou reclamação</span>':'')+'</span>'+(x.reclamacao?'':'<button class="btn sec peq" style="margin:0" onclick="npsDesfazer(\''+x.id+'\')">Desfazer</button>')+'</div>').join(''):'—';
+    document.getElementById('npsUlt').innerHTML=ult.length?ult.map(x=>'<div class="ult"><span>'+esc(x.hora)+' · '+esc(x.unidade)+' · '+(x.situacao==='nao_atendeu'?'📵 não atendeu':'<b>nota '+x.nota+'</b>'+(x.motivo?' — '+esc(x.motivo):'')+(x.elogio?' · 💬 '+esc(x.elogio):''))+(x.reclamacao?' · <span class="tag t-am">virou reclamação</span>':'')+'</span>'+(x.reclamacao?'':'<button class="btn sec peq" style="margin:0" onclick="npsDesfazer(\''+x.id+'\')">Desfazer</button>')+'</div>').join(''):'—';
     const S=D.npsSemana||{}, ls2=D.lojas.slice().sort((a,b)=>((S[b]||{}).nps??-999)-((S[a]||{}).nps??-999));
-    document.getElementById('npsSem').innerHTML='<div style="overflow-x:auto"><table><tr><th>Loja</th><th>NPS</th><th>Notas</th><th>9–10</th><th>7–8</th><th>0–6</th><th>Não atenderam</th></tr>'
-      +ls2.concat(['__rede__']).map(u=>{ const c=S[u]||{}; return '<tr'+(u==='__rede__'?' style="font-weight:800"':'')+'><td>'+(u==='__rede__'?'🌐 Rede':esc(u))+'</td><td>'+npsBadge(c)+'</td><td>'+(c.n||0)+'</td><td>'+(c.promotores||0)+'</td><td>'+(c.neutros||0)+'</td><td>'+(c.detratores||0)+'</td><td>'+(c.naoAtendeu||0)+'</td></tr>'; }).join('')+'</table></div>';
+    document.getElementById('npsSem').innerHTML='<div style="overflow-x:auto"><table><tr><th>Loja</th><th>NPS</th><th>Notas</th><th>9–10</th><th>7–8</th><th>0–6</th><th>💬 Elogios</th><th>Não atenderam</th></tr>'
+      +ls2.concat(['__rede__']).map(u=>{ const c=S[u]||{}; return '<tr'+(u==='__rede__'?' style="font-weight:800"':'')+'><td>'+(u==='__rede__'?'🌐 Rede':esc(u))+'</td><td>'+npsBadge(c)+'</td><td>'+(c.n||0)+'</td><td>'+(c.promotores||0)+'</td><td>'+(c.neutros||0)+'</td><td>'+(c.detratores||0)+'</td><td>'+(c.elogios||0)+'</td><td>'+(c.naoAtendeu||0)+'</td></tr>'; }).join('')+'</table></div>';
   } else { document.getElementById('npsCard').style.display='none'; document.getElementById('resLojas').innerHTML=''; const dt=document.querySelector('#s-pv details'); if(dt) dt.open=true; }
   // ranking
-  const tab=rk=>rk&&rk.lojas.length?'<div style="overflow-x:auto"><table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>NPS</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+(x.npsN?x.nps:'—')+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table></div>':'<div class="muted">Sem dados.</div>';
+  const tab=rk=>rk&&rk.lojas.length?'<div style="overflow-x:auto"><table><tr><th>#</th><th>Loja</th><th>Reclamações</th><th>Taxa</th><th>NPS</th><th>💬 Elogios</th><th>Chamados</th><th>Tempo médio p/ ver</th></tr>'+rk.lojas.map(x=>'<tr><td><b>'+x.posicao+'º</b></td><td>'+esc(x.unidade)+'</td><td>'+x.reclamacoes+'</td><td>'+(x.taxa==null?'—':String(x.taxa).replace('.',',')+'%')+'</td><td>'+(x.npsN?x.nps:'—')+'</td><td>'+(x.elogios||0)+'</td><td>'+x.chamados+'</td><td>'+(x.tempoMedioMin==null?'—':x.tempoMedioMin+' min')+'</td></tr>').join('')+'</table></div>':'<div class="muted">Sem dados.</div>';
   document.getElementById('rkAtual').innerHTML=tab(D.ranking); document.getElementById('rkPassada').innerHTML=tab(D.rankingPassada);
 }
 
@@ -283,19 +286,20 @@ async function registrar(){
   }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
   b.disabled=false; b.textContent='Registrar e avisar o gerente'; carregar();
 }
-function npsNota(n){ NPS_NOTA=n; document.querySelectorAll('#npsNotas .nt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n)); document.getElementById('npsMotWrap').style.display=n<=6?'':'none'; if(n<=6) document.getElementById('npsMotivo').focus(); }
+function npsNota(n){ NPS_NOTA=n; document.querySelectorAll('#npsNotas .nt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n)); document.getElementById('npsMotWrap').style.display=n<=6?'':'none'; document.getElementById('npsEloWrap').style.display=n>=9?'':'none'; if(n<=6) document.getElementById('npsMotivo').focus(); }
 async function npsSalvar(nao){
-  const u=document.getElementById('npsLoja').value, mot=document.getElementById('npsMotivo').value.trim();
+  const u=document.getElementById('npsLoja').value, mot=document.getElementById('npsMotivo').value.trim(), elo=NPS_NOTA>=9?document.getElementById('npsElogio').value.trim():'';
+  if(!nao&&elo&&elo.length<5){ toast('Escreva o que o cliente elogiou (pelo menos 5 letras).'); return; }
   if(!u){ toast('Escolha a loja.'); return; }
   if(!nao&&NPS_NOTA===null){ toast('Toque na nota que o cliente deu (0 a 10).'); return; }
   if(!nao&&NPS_NOTA<=6&&mot.length<3){ toast('Nota de 0 a 6: escreva o motivo em poucas palavras.'); return; }
   const b=document.getElementById('npsBtn'); b.disabled=true;
-  try{ const r=await post(nao?{action:'pvNps',unidade:u,naoAtendeu:true}:{action:'pvNps',unidade:u,nota:NPS_NOTA,motivo:mot});
+  try{ const r=await post(nao?{action:'pvNps',unidade:u,naoAtendeu:true}:Object.assign({action:'pvNps',unidade:u,nota:NPS_NOTA,motivo:mot},elo?{elogio:elo}:{}));
     if(!r.ok){ toast('⚠️ '+(r.erro||'Não salvou.')); }
     else{
-      toast(nao?'📵 Registrado: não atendeu.':'✅ Nota '+NPS_NOTA+' registrada ('+u+').');
+      toast(nao?'📵 Registrado: não atendeu.':'✅ Nota '+NPS_NOTA+' registrada ('+u+')'+(elo?' com elogio 💬':'')+'.');
       document.getElementById('npsVirar').innerHTML=r.detrator?'<div class="item urg" style="margin-top:10px"><b>Nota baixa.</b> Foi problema do pedido (atraso, erro, frio, entregador, cobrança)?<div class="cont"><button class="btn peq" onclick="npsVirar(\''+r.id+'\',\''+esc(u)+'\','+JSON.stringify(mot).replace(/"/g,'&quot;')+')">📝 Virar reclamação para o gerente</button><button class="btn sec peq" onclick="document.getElementById(\'npsVirar\').innerHTML=\'\'">Não, só a nota</button></div></div>':'';
-      NPS_NOTA=null; document.getElementById('npsMotivo').value=''; npsNota(-1); document.getElementById('npsMotWrap').style.display='none';
+      NPS_NOTA=null; document.getElementById('npsMotivo').value=''; document.getElementById('npsElogio').value=''; npsNota(-1); document.getElementById('npsMotWrap').style.display='none';
     }
   }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
   b.disabled=false; carregar();
