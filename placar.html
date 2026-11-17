@@ -522,12 +522,19 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     </div>
     <!-- Start Dina -->
     <div class="card card-full" id="cardStartDina">
-      <div class="card-label">⭐ Start Dina — Reunião de Abertura</div>
+      <div class="card-label" id="sdTitulo">⭐ Start Dina — Reunião de Abertura</div>
       <div class="card-meta">Meta: 1 registro por turno — foto obrigatória na hora</div>
-      <div class="start-dina-wrap">
+      <div id="sdBox"></div>
+      <div class="start-dina-wrap" id="sdWrap">
         <button class="camera-btn" id="cameraBtnStart" onclick="abrirCamera()">📷 Fotografar reunião agora</button>
         <img class="foto-preview" id="fotoPreview" alt="Foto da reunião">
-        <div style="margin-top:8px">
+        <div id="sdRoteiro" style="display:none;margin-top:8px">
+          <div class="card-label" style="margin-bottom:6px">Reunião do fim da noite — com a equipe</div>
+          <textarea id="sdCerto" rows="2" placeholder="✅ O que deu certo hoje" oninput="sdGuardar()" style="width:100%;margin-bottom:6px"></textarea>
+          <textarea id="sdErrado" rows="2" placeholder="❌ O que deu errado e como evitar" oninput="sdGuardar()" style="width:100%;margin-bottom:6px"></textarea>
+          <textarea id="sdAmanha" rows="2" placeholder="📦 O que precisa para amanhã (falta, manutenção, equipe)" oninput="sdGuardar()" style="width:100%"></textarea>
+        </div>
+        <div style="margin-top:8px" id="sdPautaWrap">
           <div class="card-label" style="margin-bottom:6px">Assuntos abordados na reunião</div>
           <textarea id="pautaStartDina" placeholder="Descreva os assuntos discutidos no Start Dina..." style="background:var(--surface);border:1px dashed var(--border);border-radius:6px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:72px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="salvarPautaLocal()"></textarea>
         </div>
@@ -737,9 +744,9 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
-        <div class="card-label">💳 Vendas Canceladas no Caixa</div>
-        <div class="card-meta muted">Meta: zero — se houver, descreva o motivo</div>
-        <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">vend.</span></div>
+        <div class="card-label">💳 Itens cancelados</div>
+        <div class="card-meta muted">Copie o <b>TOTAL CANCELAMENTO</b> do relatório de fechamento (quantidade). Meta: zero — se houver, descreva o motivo</div>
+        <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">itens</span></div>
         <div id="vendasCanceladasMotivoArea" style="display:none;margin-top:8px">
           <div class="card-label" style="margin-bottom:6px;color:var(--danger)">⚠️ Descreva o motivo do(s) cancelamento(s):</div>
           <textarea id="vendasCanceladasMotivo" placeholder="Ex: Cliente desistiu após aguardar, erro no pedido, problema no pagamento..." style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;resize:none;height:80px;line-height:1.5;padding:10px;box-sizing:border-box" oninput="validarMotivoVendas()"></textarea>
@@ -1727,6 +1734,7 @@ function iniciarApp(u){
   alpcPreparar();
   hfPreparar();
   pvIniciar();
+  sdPreparar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -2882,6 +2890,14 @@ function atualizarMetas(){
 // ── Salvar Start Dina ──
 // Start Dina tem o mesmo horário do checklist de abertura; fora dele avisa e conta atraso (o servidor registra)
 function salvarStartDina(){
+  if(SD&&SD.hoje){ // Start Dina escolhido para o fim da noite (15/11/2026): só depois do horário, com o roteiro; não conta atraso
+    if(!sdAberto()){ alert('🌙 O Start Dina do fim da noite abre às '+SD.abre.replace(':00','h')+'.'); return; }
+    if(!fotoBase64){alert('📸 Tire a foto da reunião com a equipe antes de salvar!');return;}
+    const c=document.getElementById('sdCerto').value.trim(), e=document.getElementById('sdErrado').value.trim(), a=document.getElementById('sdAmanha').value.trim();
+    if(c.length<5||e.length<5||a.length<5){ alert('Preencha as 3 perguntas da reunião do fim da noite.'); return; }
+    document.getElementById('pautaStartDina').value='🌙 Reunião do fim da noite\n✅ Deu certo: '+c+'\n❌ Deu errado / como evitar: '+e+'\n📦 Para amanhã: '+a;
+    salvarPautaLocal(); salvarStartDinaAgora(); return;
+  }
   if(!fotoBase64){alert('📸 Tire a foto da reunião antes de salvar!');return;}
   if(!startDinaSalvo && CHK_SIT && chkPosicao()==='depois'){
     const jaHoje=chkAtrasoHoje();
@@ -2898,6 +2914,13 @@ function salvarStartDinaAgora(){
   startDinaSalvo=true;
   localStorage.setItem(chaveHoje('startdina_salvo'),'1');
   enviarTempoReal('startdina', {salvo:true}, d=>{
+    if(d&&d.status==='erro'){ // recusado pelo servidor (ex.: fim da noite ainda não abriu)
+      startDinaSalvo=false; localStorage.removeItem(chaveHoje('startdina_salvo'));
+      const i2=document.getElementById('startSalvoInfo'); if(i2) i2.style.display='none';
+      const b2=document.getElementById('btnSalvarStart'); if(b2){ b2.textContent='💾 Salvar Start Dina'; b2.style.background=''; }
+      const t2=document.getElementById('startDinaTag'); if(t2){ t2.className='tag'; t2.textContent=''; }
+      alert('⚠️ '+(d.erro||'O Start Dina não foi salvo.')); verificarBotaoRegistrar(); return;
+    }
     if(!d||!d.atraso||d.atraso.perdoado) return;
     if(CHK_SIT){ CHK_SIT.atrasosMes=d.atraso.n; CHK_SIT.ultimoAtraso={dia:CHK_SIT.hoje,hora:d.atraso.hora,n:d.atraso.n,oque:'Start Dina'}; }
     chkMostrarAviso(d.atraso.bloqueia?'🔒 PLACAR BLOQUEADO AMANHÃ':'🚨 START DINA FORA DO HORÁRIO', chkTextoAtraso(d.atraso.n, d.atraso.hora, true, d.atraso.bloqueiaEm, 'Start Dina'), 'Entendi', null);
@@ -2909,7 +2932,60 @@ function salvarStartDinaAgora(){
   if(btn){btn.textContent='✓ Start salvo — toque para regravar';btn.style.background='var(--green)';}
   const tag=document.getElementById('startDinaTag');
   if(tag){tag.className='tag ok';tag.textContent='Salvo';}
+  if(SD) sdRender();
   verificarBotaoRegistrar();
+}
+
+// ── Start Dina no fim da noite (15/11/2026, servidor 2026-11-15-a, recurso startFim) ──
+// Até o fim do horário do checklist o gerente pode escolher fazer no fim da noite, com justificativa; 5 vezes no mês.
+let SD=null, _sdTimer=null;
+function sdAberto(){ if(!SD||!SD.hoje) return false; const h=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}); return h>=SD.abre||h<'04:00'; }
+async function sdPreparar(){
+  SD=null; document.getElementById('sdBox').innerHTML='';
+  try{ const rc=await chkRecursos(); if(!rc.includes('startFim')) return; }catch(e){ return; }
+  let r; try{ r=await chkJsonp({action:'sdSituacao',unidade:unidadeAtual},12000); }catch(e){ return; }
+  if(!r||!r.ok) return;
+  SD=r; sdRender(); verificarBotaoRegistrar();
+  if(_sdTimer) clearInterval(_sdTimer); _sdTimer=setInterval(()=>{ if(SD&&SD.hoje&&!startDinaSalvo) sdRender(); },60000);
+}
+function sdGuardar(){ try{ localStorage.setItem(chaveHoje('sd_roteiro'),JSON.stringify({c:document.getElementById('sdCerto').value,e:document.getElementById('sdErrado').value,a:document.getElementById('sdAmanha').value})); }catch(e){} }
+function sdRender(){
+  const box=document.getElementById('sdBox'), wrap=document.getElementById('sdWrap'); if(!SD){ box.innerHTML=''; return; }
+  const fim=!!SD.hoje;
+  document.getElementById('sdTitulo').textContent=fim?'⭐ Start Dina — Reunião do fim da noite':'⭐ Start Dina — Reunião de Abertura';
+  document.getElementById('sdRoteiro').style.display=fim?'block':'none';
+  document.getElementById('sdPautaWrap').style.display=fim?'none':'block';
+  if(fim){ try{ const g=JSON.parse(localStorage.getItem(chaveHoje('sd_roteiro'))||'{}'); ['c','e','a'].forEach((k,i)=>{ const el=document.getElementById(['sdCerto','sdErrado','sdAmanha'][i]); if(g[k]&&!el.value) el.value=g[k]; }); }catch(e){} }
+  const aberto=sdAberto();
+  wrap.style.display=fim&&!aberto&&!startDinaSalvo?'none':'';
+  if(fim){
+    box.innerHTML='<div class="hf-aviso" style="border-color:var(--gold);margin:6px 0">🌙 <b>Hoje o Start Dina é no FIM DA NOITE</b>'+(SD.hoje.feito||startDinaSalvo?' — <b style="color:var(--d-t-ok)">feito ✓</b>':'')+'<div style="font-size:.82rem;margin-top:4px">Motivo: '+pvEsc(SD.hoje.motivo)+'</div>'
+      +(startDinaSalvo?'':(aberto?'<div style="font-size:.84rem;margin-top:6px;font-weight:700">Reúna a equipe antes de ir embora: foto, as 3 perguntas e salvar. <span style="color:var(--danger)">O placar não fecha sem o Start Dina.</span></div>'
+        :'<div style="font-size:.84rem;margin-top:6px;font-weight:700">Abre às '+pvEsc(SD.abre.replace(':00','h'))+'. Faça com a equipe ainda na loja. <span style="color:var(--danger)">O placar não fecha sem o Start Dina.</span></div>'))
+      +'<div style="font-size:.76rem;color:var(--muted);margin-top:4px">Usadas no mês: '+SD.usados+' de '+SD.limite+'</div></div>';
+    return;
+  }
+  if(startDinaSalvo){ box.innerHTML=''; return; }
+  if(SD.podeAdiar) box.innerHTML='<button type="button" class="camera-btn" style="margin:6px 0;background:transparent;border:1px dashed var(--gold);color:var(--gold)" onclick="sdAbrirForm()">🌙 Não consigo fazer agora — fazer no fim da noite (restam '+SD.restantes+' de '+SD.limite+' no mês)</button><div id="sdForm" style="display:none"></div>';
+  else if(SD.restantes===0) box.innerHTML='<div style="font-size:.8rem;color:var(--muted);margin:6px 0">🌙 Você já usou as '+SD.limite+' vezes do mês de Start Dina no fim da noite: faça agora, no início da noite.</div>';
+  else box.innerHTML='';
+}
+function sdAbrirForm(){
+  const f=document.getElementById('sdForm'); f.style.display='block';
+  f.innerHTML='<div class="hf-aviso" style="border-color:var(--gold)"><b>O padrão é o Start Dina no início da noite.</b> Use o fim da noite só quando realmente precisar: são '+SD.limite+' vezes no mês e o GDI acompanha cada uma.'
+    +'<textarea id="sdMotivo" rows="2" placeholder="Por que não dá para fazer agora? (mínimo 15 letras)" style="width:100%;margin-top:8px"></textarea>'
+    +'<button type="button" class="alp-btn" style="margin-top:6px" onclick="sdConfirmar(this)">Confirmar: vou fazer no fim da noite</button><div id="sdMsg" style="font-size:.8rem;margin-top:4px"></div></div>';
+}
+async function sdConfirmar(btn){
+  const m=document.getElementById('sdMotivo').value.trim(), msg=document.getElementById('sdMsg');
+  if(m.length<15){ msg.innerHTML='<span style="color:var(--danger)">Explique o motivo (mínimo 15 letras).</span>'; return; }
+  if(geoForaAgora()){ msg.innerHTML='<span style="color:var(--danger)">Você está fora da loja.</span>'; return; }
+  btn.disabled=true; btn.textContent='Enviando…';
+  let r; try{ r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'sdAdiar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m})})).json(); }
+  catch(e){ btn.disabled=false; btn.textContent='Confirmar: vou fazer no fim da noite'; msg.innerHTML='<span style="color:var(--danger)">Sem conexão. Tente de novo.</span>'; return; }
+  if(!r||!r.ok){ btn.disabled=false; btn.textContent='Confirmar: vou fazer no fim da noite'; msg.innerHTML='<span style="color:var(--danger)">'+pvEsc((r&&r.erro)||'Não foi possível.')+'</span>'; return; }
+  if(r.situacao) SD=r.situacao; else SD=Object.assign({},SD,{hoje:{motivo:m,hora:'',feito:false},usados:SD.usados+1,restantes:SD.restantes-1,podeAdiar:false}); // modo teste
+  logProva('START_FIM_ESCOLHIDO',m.slice(0,60)); sdRender(); verificarBotaoRegistrar();
 }
 
 // ── Salvar Motoboys ──
@@ -3219,11 +3295,11 @@ function verificarBotaoRegistrar(){
     const apenasRepetido = motivo.length > 0 && /^(.)\1+$/.test(motivo);
     const soCars = motivo.length > 0 && /^[^a-zA-ZÀ-ú0-9\s]+$/.test(motivo);
     if(!motivo || motivo.length < 10 || apenasRepetido || soCars){
-      faltando.push('💳 Motivo das Vendas Canceladas no Caixa');
+      faltando.push('💳 Motivo dos Itens cancelados');
     }
   }
-  if(!filled('vendasCanceladas')) faltando.push('💳 Vendas Canceladas no Caixa');
-  if(!startDinaSalvo) faltando.push('⭐ Start Dina');
+  if(!filled('vendasCanceladas')) faltando.push('💳 Itens cancelados (TOTAL CANCELAMENTO)');
+  if(!startDinaSalvo) faltando.push(SD&&SD.hoje?'⭐ Start Dina do fim da noite (abre às '+SD.abre.replace(':00','h')+')':'⭐ Start Dina');
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
   if(temLoja(unidadeAtual)){
@@ -3257,7 +3333,7 @@ function verificarBotaoRegistrar(){
 
 // leva até o card do item que falta e faz ele piscar
 function irParaFalta(txt){
-  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Itens cancelados','cardVendasCanceladas'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -3799,7 +3875,7 @@ function alpcCampos(){ // o que entra na conferência nesta loja
   const c=[['faturamento','fat','Faturamento líquido',true]];
   if(temFliperBuffet(unidadeAtual)){ c.push(['buffets','buffets','Buffets']); c.push(['fichas','fichas','Fichas']); }
   bebLista().forEach(b=>c.push(b));
-  c.push(['vendasCanceladas','vendasCanceladas','Vendas canceladas no caixa']); // 08/11/2026: cancelamentos também conferidos com o Alpha
+  c.push(['vendasCanceladas','vendasCanceladas','Itens cancelados']); // 08/11/2026: cancelamentos também conferidos com o Alpha
   return c;
 }
 function alpcMudou(){ try{ fechGuardar(); }catch(e){} verificarBotaoRegistrar(); }
