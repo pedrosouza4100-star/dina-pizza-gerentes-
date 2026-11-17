@@ -134,6 +134,11 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
     </section>
   </div>
 </main>
+<div id="camModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:10px">
+  <video id="camVideo" playsinline autoplay muted style="max-width:100%;max-height:68vh;border-radius:12px;background:#000"></video>
+  <div id="camMsg" style="color:#fff;text-align:center;font-size:.9rem;max-width:420px"></div>
+  <div style="display:flex;gap:10px"><button class="btn" id="camBater" onclick="camBater()">📸 Bater foto</button><button class="btn sec" onclick="camFechar()">Cancelar</button></div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 // Manutenção das lojas (17/11/2026, servidor 2026-11-17-b, recurso manutencao).
@@ -154,12 +159,32 @@ function jsonp(params){ return new Promise((res,rej)=>{ const cb='mnCb_'+Date.no
   const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },25000);
   window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
   s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
-function lerFoto(input){ return new Promise(res=>{ const f=input&&input.files&&input.files[0]; if(!f) return res(null);
-  const img=new Image(), rd=new FileReader(); rd.onload=()=>{ img.onload=()=>{ const max=1280, k=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=img.width*k; c.height=img.height*k; c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.75).split(',')[1]); }; img.onerror=()=>res(null); img.src=rd.result; }; rd.onerror=()=>res(null); rd.readAsDataURL(f); }); }
 const pode=(...p)=>p.includes(PAPEL);
 function guardar(el){ const g={}; (el||document).querySelectorAll('input[id]:not([type=file]),select[id],textarea[id]').forEach(e=>{ g[e.id]=e.value; }); return g; }
 function repor(g){ Object.keys(g).forEach(k=>{ const e=document.getElementById(k); if(e&&!e.value) e.value=g[k]; }); }
 
+
+// ---------- câmera (17/11/2026, pedido do Robson): foto só tirada AGORA pela câmera, nunca da galeria; carimbo com data, hora e loja ----------
+const FOTOS={}; let _camAlvo='', _camStream=null;
+function camBotao(id){ const f=FOTOS[id]; return '<div id="cb_'+id+'">'+(f?'<img src="'+f+'" style="max-width:180px;border-radius:8px;display:block;margin:6px 0"><button type="button" class="btn sec peq" onclick="camAbrir(\''+id+'\')">📷 Tirar de novo</button>':'<button type="button" class="btn sec" style="width:100%" onclick="camAbrir(\''+id+'\')">📷 Tirar foto agora</button>')+'</div>'; }
+function camAtualizar(id){ const el=document.getElementById('cb_'+id); if(el) el.outerHTML=camBotao(id); }
+async function camAbrir(id){
+  _camAlvo=id; const m=document.getElementById('camModal'), msg=document.getElementById('camMsg'), bt=document.getElementById('camBater');
+  m.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera…';
+  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ msg.innerHTML='Não consegui abrir a câmera neste aparelho. Abra pelo endereço <b>https://gerentes.dinapizza.com.br/manutencao</b> no Chrome ou no Safari.'; return; }
+  try{ _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});
+    const v=document.getElementById('camVideo'); v.srcObject=_camStream; await v.play().catch(()=>{}); msg.textContent='Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
+  }catch(e){ msg.innerHTML='A câmera foi bloqueada. '+(/iPhone|iPad|iPod/.test(navigator.userAgent)?'No iPhone: toque no ícone à esquerda do endereço › <b>Ajustes do Site</b> › <b>Câmera</b> › <b>Permitir</b> e tente de novo.':'Toque no cadeado ao lado do endereço, permita a <b>Câmera</b> e tente de novo.'); }
+}
+function camFechar(){ if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; } const v=document.getElementById('camVideo'); if(v) v.srcObject=null; document.getElementById('camModal').style.display='none'; }
+function camBater(){
+  const v=document.getElementById('camVideo'); if(!v||!v.videoWidth||!_camAlvo) return;
+  const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+  const x=c.getContext('2d'); x.drawImage(v,0,0,c.width,c.height);
+  const loja=LOJA||(document.getElementById('abLoja')||{}).value||'', carimbo=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+(loja?' · '+loja:'')+' · Manutenção';
+  const fs=Math.max(16,Math.round(c.width/40)); x.font='bold '+fs+'px sans-serif'; x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(0,c.height-fs-16,c.width,fs+16); x.fillStyle='#FFD000'; x.fillText(carimbo,10,c.height-8);
+  FOTOS[_camAlvo]=c.toDataURL('image/jpeg',.75); const id=_camAlvo; camFechar(); camAtualizar(id);
+}
 // ---------- formulário de anotar (loja e equipe) ----------
 function cats(){ return (LOJA?LD:D).categorias; }
 function formMontar(alvo,u){
@@ -173,7 +198,7 @@ function formMontar(alvo,u){
     +(c&&!c.vermelho?'<div class="muted" style="margin-top:4px">🔴 Vermelho só para refrigeração ou freezer parado, forno, gás, falta de energia ou vazamento de água.</div>':'')
     +'<label>Onde é</label><input id="'+alvo+'_local" maxlength="80" placeholder="Ex.: geladeira da cozinha, fachada, banheiro">'
     +'<label>O que está acontecendo</label><textarea id="'+alvo+'_desc" maxlength="400" placeholder="Ex.: parou de gelar, está a 12 graus"></textarea>'
-    +'<label>Foto do problema (obrigatória)</label><input type="file" id="'+alvo+'_foto" accept="image/*" capture="environment">'
+    +'<label>Foto do problema (obrigatória, tirada agora pela câmera)</label>'+camBotao(alvo+'_foto')
     +'<button class="btn" style="width:100%" id="'+alvo+'_btn" onclick="anotar(\''+alvo+'\')">Enviar</button>';
   repor(g);
 }
@@ -182,12 +207,12 @@ async function anotar(alvo){
   const o={action:LOJA?'manutLojaAbrir':'manutAbrir',unidade:u,categoria:f.cat,cor:f.cor,local:g('local').value.trim(),descricao:g('desc').value.trim()};
   if(!u) return toast('Escolha a loja.'); if(!o.categoria) return toast('Escolha o tipo do problema.'); if(!o.cor) return toast('Escolha a prioridade.');
   if(o.local.length<3) return toast('Diga onde é o problema.'); if(o.descricao.length<10) return toast('Descreva o problema (mínimo 10 letras).');
-  if(!(g('foto').files||[]).length) return toast('Tire a foto do problema.');
+  if(!FOTOS[alvo+'_foto']) return toast('Tire a foto do problema pela câmera.');
   b.disabled=true; b.textContent='Enviando…';
-  try{ const ft=await lerFoto(g('foto')); if(!ft){ toast('Não consegui ler a foto. Tire de novo.'); b.disabled=false; b.textContent='Enviar'; return; } o.foto={base64:ft};
+  try{ o.foto={base64:FOTOS[alvo+'_foto'].split(',')[1]};
     const r=await post(o);
     if(!r.ok) toast('⚠️ '+(r.erro==='senha'?'Senha da loja mudou: entre de novo no placar.':(r.erro||'Não enviou.')));
-    else { toast(r.msg||'Anotado.'); FORM[alvo]={cat:'',cor:''}; g('local').value=''; g('desc').value=''; g('foto').value=''; formMontar(alvo,u); carregar(false); }
+    else { toast(r.msg||'Anotado.'); FORM[alvo]={cat:'',cor:''}; g('local').value=''; g('desc').value=''; delete FOTOS[alvo+'_foto']; formMontar(alvo,u); carregar(false); }
   }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
   b.disabled=false; b.textContent='Enviar';
 }
@@ -221,7 +246,7 @@ function renderLoja(){
   const conf=P.filter(x=>x.situacao==='concluida');
   document.getElementById('lConfirmar').innerHTML=conf.length?'<div class="card" style="border-color:var(--gold)"><div class="tit">❓ Foi feito? ('+conf.length+')</div><div class="muted">O Sidinei marcou como feito. Confira na loja e responda.</div>'
     +conf.map(x=>itemHtml(x,'<div class="acoes"><button class="btn ok peq" onclick="confirmar(\''+x.id+'\',\'sim\')">✅ Sim, foi feito</button><button class="btn sec peq" onclick="NAO[\''+x.id+'\']=1;renderLoja()">❌ Não foi feito</button></div>'
-      +(NAO[x.id]?'<div style="margin-top:8px"><label>O que não foi feito</label><textarea id="nf_'+x.id+'" maxlength="300" placeholder="Ex.: a lâmpada continua queimada"></textarea><label>Foto de como está (obrigatória)</label><input type="file" id="nff_'+x.id+'" accept="image/*" capture="environment"><button class="btn peq" onclick="confirmar(\''+x.id+'\',\'nao\')">Enviar ao Sidinei</button></div>':''))).join('')+'</div>':'';
+      +(NAO[x.id]?'<div style="margin-top:8px"><label>O que não foi feito</label><textarea id="nf_'+x.id+'" maxlength="300" placeholder="Ex.: a lâmpada continua queimada"></textarea><label>Foto de como está (obrigatória, pela câmera)</label>'+camBotao('nff_'+x.id)+'<button class="btn peq" onclick="confirmar(\''+x.id+'\',\'nao\')">Enviar ao Sidinei</button></div>':''))).join('')+'</div>':'';
   repor(g);
   const e=r.espera, ab=P.filter(x=>x.situacao==='aberta');
   document.getElementById('lEspera').innerHTML='<div class="esp">'+(e.qtd?'<b>'+e.qtd+' de '+e.lote+'</b> — faltam '+e.faltam+' para o relatório ir ao Sidinei'+(e.diasMaisAntigo?' (o mais antigo tem '+e.diasMaisAntigo+' dia'+(e.diasMaisAntigo>1?'s':'')+'; com '+e.prazoDias+' dias vai sozinho)':' (ou quando o mais antigo fizer '+e.prazoDias+' dias)'):'Nada esperando.')+'</div>'
@@ -238,8 +263,8 @@ function renderLoja(){
 async function confirmar(id,feito){
   const o={action:'manutLojaConfirmar',id,feito};
   if(feito==='nao'){ o.obs=(document.getElementById('nf_'+id).value||'').trim(); if(o.obs.length<10) return toast('Explique o que não foi feito (mínimo 10 letras).');
-    const f=await lerFoto(document.getElementById('nff_'+id)); if(!f) return toast('Tire a foto de como está.'); o.foto={base64:f}; }
-  try{ const r=await post(o); if(!r.ok) return toast('⚠️ '+(r.erro||'Não salvou.')); toast(feito==='sim'?'✅ Obrigado! Fechado.':(r.msg||'Avisamos o Sidinei.')); delete NAO[id]; carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); }
+    const f=FOTOS['nff_'+id]; if(!f) return toast('Tire a foto de como está pela câmera.'); o.foto={base64:f.split(',')[1]}; }
+  try{ const r=await post(o); if(!r.ok) return toast('⚠️ '+(r.erro||'Não salvou.')); toast(feito==='sim'?'✅ Obrigado! Fechado.':(r.msg||'Avisamos o Sidinei.')); delete NAO[id]; delete FOTOS['nff_'+id]; carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); }
 }
 async function apagar(id){ if(!confirm('Apagar este problema? (só se foi anotado errado)')) return; try{ const r=await post({action:'manutLojaCancelar',id}); toast(r.ok?'Apagado.':'⚠️ '+(r.erro||'Não apagou.')); carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); } }
 async function pedirRepor(it){ const q=Number(document.getElementById('rq_'+it).value); if(!q) return toast('Digite a quantidade.'); try{ const r=await post({action:'manutLojaRepor',item:it,qtd:q}); toast(r.ok?(r.teste?r.msg:'📦 Pedido enviado ao estoque central.'):'⚠️ '+(r.erro||'Não pediu.')); if(r.ok) document.getElementById('rq_'+it).value=''; carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); } }
