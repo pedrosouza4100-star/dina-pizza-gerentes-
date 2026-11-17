@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Manutenção das lojas e reposição central (17/11/2026, servidor 2026-11-17-b, recurso manutencao).
+     Loja: aberta pelo botão 🔧 do placar (?daloja=1), usa o login do placar do mesmo celular. Equipe: Sidinei (senha da manutenção), GDI e nutricionista (senha da agenda), Admin ou gestão. -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Manutenção — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--yellow:var(--d-yellow);--danger:var(--d-danger);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a{color:var(--gold);font-weight:700;text-decoration:none}
+main{padding:16px 4vw 60px;max-width:1200px;margin:0 auto}
+.abas{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.aba{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;font-size:.92rem}
+.aba.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.aba .n{background:var(--d-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;margin-left:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:10px}
+.muted{color:var(--muted);font-size:.82rem}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:.95rem;font-family:inherit}
+textarea{min-height:70px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:.95rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.ok{background:var(--green);color:var(--d-on-cor,#06110b)}
+.btn.peq{padding:7px 12px;font-size:.8rem;margin-top:6px}
+.btn:disabled{opacity:.55;cursor:default}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700;font-size:.9rem;text-transform:none;letter-spacing:0;color:var(--text)}
+.chk input{width:auto}
+.item{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface)}
+.item.urg{border-color:var(--danger)}
+.item.atr{border-color:var(--danger);background:var(--d-red-soft)}
+.item.ok{border-color:rgba(61,220,151,.45)}
+.item.amar{border-color:var(--yellow)}
+.it-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+.tag{font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.t-red{background:var(--d-red-soft);color:var(--d-t-err);border:1px solid var(--danger)}
+.t-ok{background:rgba(61,220,151,.12);color:var(--d-t-ok);border:1px solid rgba(61,220,151,.4)}
+.t-am{background:rgba(255,208,0,.12);color:var(--d-t-info);border:1px solid rgba(255,208,0,.45)}
+.linha{font-size:.88rem;margin-top:6px;line-height:1.45}
+.resp{margin-top:8px;padding:8px 10px;border-left:3px solid var(--gold);background:rgba(255,208,0,.06);border-radius:6px;font-size:.88rem}
+.cont{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.cont .lj{flex:1;min-width:140px;font-weight:700}
+.cont input{width:90px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.9rem;font-weight:700;z-index:200;display:none;max-width:92vw;text-align:center}
+#login{max-width:380px;margin:60px auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.cols,.grid2{grid-template-columns:1fr}}
+@media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit b{white-space:nowrap}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}.aba{flex:1;padding:10px 8px;font-size:.84rem}main{padding:12px 3vw 60px}}
+
+.cor{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.c-vermelho{background:#ff4d4d}.c-amarelo{background:#FFD000}.c-verde{background:#3ddc97}
+.item.vermelho{border-left:6px solid #ff4d4d}.item.amarelo{border-left:6px solid #FFD000}.item.verde{border-left:6px solid #3ddc97}
+.cores{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.cbt{flex:1;min-width:110px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px;font-weight:800;cursor:pointer;font-size:.86rem;text-align:left}
+.cbt small{display:block;font-weight:600;color:var(--muted);font-size:.72rem;margin-top:2px}
+.cbt.on{box-shadow:0 0 0 2px var(--gold) inset;border-color:var(--gold)}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.fl{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 12px;font-weight:700;font-size:.8rem;cursor:pointer}
+.fl.on{border-color:var(--gold);color:var(--gold)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}
+.acoes select{width:auto;padding:7px}
+.hl{box-shadow:0 0 0 3px var(--gold)}
+.esp{border:1px dashed var(--gold);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:.88rem;line-height:1.45}
+.cbt:disabled{opacity:.4;cursor:not-allowed}
+.sec-t{font-weight:800;margin:16px 0 4px;font-size:.95rem}
+</style>
+</head>
+<body>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Manutenção das lojas</b><small id="subt">Pedidos e reposição</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main>
+  <div id="login" class="card" style="display:none">
+    <div class="tit">🔧 Manutenção das lojas</div>
+    <div class="muted">Gerente e assistente: abram pelo botão <b>🔧 Manutenção</b> no topo do placar.<br>Sidinei (senha da manutenção), GDI e nutricionista (senha da agenda) ou gestão: entrem com a sua senha.</div>
+    <label>Senha</label><input id="lgSenha" type="password" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn" style="width:100%" onclick="entrar()">Entrar</button>
+    <div id="lgMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <!-- ===== página da LOJA (gerente ou assistente, login do placar no mesmo celular) ===== -->
+  <div id="loja" style="display:none">
+    <div id="lConfirmar"></div>
+    <div class="card">
+      <div class="tit">➕ Anotar um problema</div>
+      <div class="muted">Anote quando vir o problema, com foto. 🔴 Vermelho vai na hora para o Sidinei. 🟡 e 🟢 ficam juntando: com <b id="lLote">5</b> problemas (ou <b id="lPrazo">7</b> dias do mais antigo) o relatório vai sozinho para o Sidinei.</div>
+      <div id="lForm"></div>
+    </div>
+    <div class="card"><div class="tit">⏳ Esperando para ir ao Sidinei</div><div id="lEspera"></div></div>
+    <div class="card"><div class="tit">🔧 Com o Sidinei</div><div id="lEnviados"></div></div>
+    <div class="card"><div class="tit">📦 Pedir lâmpada do buffet</div><div class="muted">Sai do estoque central. Quem cuida do estoque recebe o pedido no WhatsApp.</div><div id="lRepor"></div></div>
+    <div class="card" id="lFechadosC" style="display:none"><div class="tit">✅ Fechados nos últimos dias</div><div id="lFechados"></div></div>
+  </div>
+
+  <!-- ===== página da EQUIPE (Sidinei, GDI, nutricionista, gestão) ===== -->
+  <div id="app" style="display:none">
+    <div class="abas" id="abas"></div>
+    <section id="s-ped" style="display:none">
+      <div class="card">
+        <div class="grid2"><div><label>Loja</label><select id="fLoja" onchange="render()"></select></div><div></div></div>
+        <div class="filtros" id="fSit"></div>
+        <div id="lista"></div>
+      </div>
+    </section>
+    <section id="s-abrir" style="display:none">
+      <div class="card"><div class="tit">➕ Anotar um problema</div>
+        <div class="muted">🔴 Vermelho só para o que precisa funcionar hoje (refrigeração ou freezer parado, forno, gás, falta de energia, vazamento de água): vai na hora ao Sidinei, com cópia ao GDI. 🟡 e 🟢 juntam na loja até 5 (ou 7 dias).</div>
+        <label>Loja</label><select id="abLoja" onchange="formMontar('eForm',this.value)"></select>
+        <div id="eForm"></div>
+      </div>
+    </section>
+    <section id="s-rel" style="display:none">
+      <div class="card"><div class="tit">⏳ Esperando por loja</div><div class="muted">Cada loja junta os 🟡 e 🟢 até 5 (ou 7 dias do mais antigo); aí o relatório em PDF vai sozinho para o WhatsApp do Sidinei.</div><div id="relEspera"></div></div>
+      <div class="card"><div class="tit">📄 Relatórios enviados</div><div id="relLista" class="muted">—</div></div>
+    </section>
+    <section id="s-est" style="display:none">
+      <div class="card"><div class="tit">📦 Estoque central de reposição</div><div class="muted">As lojas pedem pelo botão 🔧 do placar. Entregou: toque em "Entregue" e o saldo baixa. Comprou: lance a entrada. Lembre de fazer a transferência no Alpha.</div><div id="estItens"></div></div>
+      <div class="card"><div class="tit">Pedidos das lojas</div><div id="estPed" class="muted">—</div></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+// Manutenção das lojas (17/11/2026, servidor 2026-11-17-b, recurso manutencao).
+// Loja (placar no mesmo celular): GET manutLoja; POST manutLojaAbrir, manutLojaConfirmar, manutLojaCancelar, manutLojaRepor.
+// Equipe (senha): GET manutPainel; POST manutLogin, manutAbrir, manutConcluir, manutRebaixar, manutRecusar, manutEnviarAgora, manutReposicao.
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search);
+let CHAVE='', PAPEL='', D=null, ABA='', FSIT='abertos', LOJA='', LSENHA='', LD=null, FORM={}, NAO={};
+const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei',gdi:'GDI',nutri:'Nutricionista',gerente:'Gerente',assistente:'Assistente',teste:'🧪 Teste'};
+const SIT={aberta:'⏳ Esperando juntar',enviada:'🔧 Com o Sidinei',concluida:'❓ Loja confirmar',resolvida:'✅ Resolvida',recusada:'✖️ Recusada'};
+const CORN={vermelho:'Vermelho',amarelo:'Amarelo',verde:'Verde'}, CORT={vermelho:'precisa funcionar hoje',amarelo:'pode esperar',verde:'melhoria / orçamento'};
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6000); }
+function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k)||''; if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return ''; } }
+async function post(o){ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(LOJA?Object.assign({unidade:LOJA,senha:LSENHA},o):Object.assign({chave:CHAVE},o))}); return r.json(); }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='mnCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },25000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+function lerFoto(input){ return new Promise(res=>{ const f=input&&input.files&&input.files[0]; if(!f) return res(null);
+  const img=new Image(), rd=new FileReader(); rd.onload=()=>{ img.onload=()=>{ const max=1280, k=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=img.width*k; c.height=img.height*k; c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.75).split(',')[1]); }; img.onerror=()=>res(null); img.src=rd.result; }; rd.onerror=()=>res(null); rd.readAsDataURL(f); }); }
+const pode=(...p)=>p.includes(PAPEL);
+function guardar(el){ const g={}; (el||document).querySelectorAll('input[id]:not([type=file]),select[id],textarea[id]').forEach(e=>{ g[e.id]=e.value; }); return g; }
+function repor(g){ Object.keys(g).forEach(k=>{ const e=document.getElementById(k); if(e&&!e.value) e.value=g[k]; }); }
+
+// ---------- formulário de anotar (loja e equipe) ----------
+function cats(){ return (LOJA?LD:D).categorias; }
+function formMontar(alvo,u){
+  const f=FORM[alvo]=FORM[alvo]||{cat:'',cor:''}, el=document.getElementById(alvo); if(!el) return;
+  const g=guardar(el), cs=cats().filter(c=>!c.lojas||!u||c.lojas.includes(u)), c=cs.find(x=>x.id===f.cat);
+  if(f.cor==='vermelho'&&c&&!c.vermelho) f.cor='';
+  el.innerHTML='<label>Tipo do problema</label><select id="'+alvo+'_cat" onchange="FORM.'+alvo+'.cat=this.value;formMontar(\''+alvo+'\',\''+esc(u||'')+'\')"><option value="">— escolha —</option>'
+    +cs.map(x=>'<option value="'+x.id+'"'+(x.id===f.cat?' selected':'')+'>'+esc(x.nome)+'</option>').join('')+'</select>'
+    +'<label>Prioridade</label><div class="cores">'+['vermelho','amarelo','verde'].map(k=>{ const bloq=k==='vermelho'&&(!c||!c.vermelho);
+      return '<button type="button" class="cbt'+(f.cor===k?' on':'')+'"'+(bloq?' disabled title="Vermelho só para refrigeração ou freezer parado, forno, gás, falta de energia ou vazamento de água"':'')+' onclick="FORM.'+alvo+'.cor=\''+k+'\';formMontar(\''+alvo+'\',\''+esc(u||'')+'\')"><span class="cor c-'+k+'"></span>'+CORN[k]+'<small>'+CORT[k]+'</small></button>'; }).join('')+'</div>'
+    +(c&&!c.vermelho?'<div class="muted" style="margin-top:4px">🔴 Vermelho só para refrigeração ou freezer parado, forno, gás, falta de energia ou vazamento de água.</div>':'')
+    +'<label>Onde é</label><input id="'+alvo+'_local" maxlength="80" placeholder="Ex.: geladeira da cozinha, fachada, banheiro">'
+    +'<label>O que está acontecendo</label><textarea id="'+alvo+'_desc" maxlength="400" placeholder="Ex.: parou de gelar, está a 12 graus"></textarea>'
+    +'<label>Foto do problema (obrigatória)</label><input type="file" id="'+alvo+'_foto" accept="image/*" capture="environment">'
+    +'<button class="btn" style="width:100%" id="'+alvo+'_btn" onclick="anotar(\''+alvo+'\')">Enviar</button>';
+  repor(g);
+}
+async function anotar(alvo){
+  const g=k=>document.getElementById(alvo+'_'+k), b=g('btn'), f=FORM[alvo], u=LOJA||document.getElementById('abLoja').value;
+  const o={action:LOJA?'manutLojaAbrir':'manutAbrir',unidade:u,categoria:f.cat,cor:f.cor,local:g('local').value.trim(),descricao:g('desc').value.trim()};
+  if(!u) return toast('Escolha a loja.'); if(!o.categoria) return toast('Escolha o tipo do problema.'); if(!o.cor) return toast('Escolha a prioridade.');
+  if(o.local.length<3) return toast('Diga onde é o problema.'); if(o.descricao.length<10) return toast('Descreva o problema (mínimo 10 letras).');
+  if(!(g('foto').files||[]).length) return toast('Tire a foto do problema.');
+  b.disabled=true; b.textContent='Enviando…';
+  try{ const ft=await lerFoto(g('foto')); if(!ft){ toast('Não consegui ler a foto. Tire de novo.'); b.disabled=false; b.textContent='Enviar'; return; } o.foto={base64:ft};
+    const r=await post(o);
+    if(!r.ok) toast('⚠️ '+(r.erro==='senha'?'Senha da loja mudou: entre de novo no placar.':(r.erro||'Não enviou.')));
+    else { toast(r.msg||'Anotado.'); FORM[alvo]={cat:'',cor:''}; g('local').value=''; g('desc').value=''; g('foto').value=''; formMontar(alvo,u); carregar(false); }
+  }catch(e){ toast('⚠️ Sem conexão. Tente de novo.'); }
+  b.disabled=false; b.textContent='Enviar';
+}
+function itemHtml(x,acoes){
+  return '<div class="item '+esc(x.cor)+(x.atrasado?' atr':'')+'" id="p_'+x.id+'"><div class="it-top"><span><span class="cor c-'+esc(x.cor)+'"></span>'+(LOJA?'':esc(x.unidade)+' · ')+esc(x.categoriaNome)+'</span>'
+    +'<span class="tag '+(x.situacao==='resolvida'?'t-ok':(x.atrasado||x.cor==='vermelho'&&x.situacao!=='recusada'?'t-red':'t-am'))+'">'+esc(SIT[x.situacao]||x.situacao)+(x.atrasado?' · +20 h':'')+'</span></div>'
+    +'<div class="linha"><b>'+esc(x.local)+':</b> '+esc(x.descricao)+'</div>'
+    +'<div class="linha muted">Anotado por '+esc(x.abertoNome)+' em '+esc(x.quando)+(x.enviadoEm?' · ao Sidinei em '+esc(x.enviadoEm):'')+(x.concluidoEm?' · feito em '+esc(x.concluidoEm):'')+(x.naoFeito?' · ⚠️ a loja disse que NÃO foi feito ('+x.naoFeito+'x)':'')+'</div>'
+    +(x.foto?'<div class="linha"><a href="'+esc(x.foto)+'" target="_blank" style="color:var(--gold)">📷 Foto</a>'+(x.fotoNaoFeito?' · <a href="'+esc(x.fotoNaoFeito)+'" target="_blank" style="color:var(--gold)">📷 Como ficou (não feito)</a>':'')+'</div>':'')
+    +(x.naoFeitoObs&&x.situacao==='enviada'?'<div class="resp">Loja: '+esc(x.naoFeitoObs)+'</div>':'')
+    +(x.concluidoObs?'<div class="resp">Sidinei: '+esc(x.concluidoObs)+'</div>':'')
+    +(x.motivo?'<div class="resp">'+esc(x.motivo)+'</div>':'')
+    +(x.resolvidoEm?'<div class="linha muted">✅ Confirmado pela loja em '+esc(x.resolvidoEm)+'</div>':'')
+    +(acoes||'')+'</div>';
+}
+
+// ---------- LOJA ----------
+function iniciarLoja(){
+  document.getElementById('loja').style.display='block'; document.getElementById('subt').textContent=LOJA;
+  carregar(true); setInterval(()=>{ if(document.visibilityState==='visible') carregar(false); },120000);
+}
+async function carregarLoja(prim){
+  try{ const j=await jsonp({action:'manutLoja',unidade:LOJA,senha:LSENHA});
+    if(!j.ok){ if(j.erro==='senha') toast('Entre de novo no placar (a senha da loja mudou).'); return; }
+    const novo=!LD; LD=j; if(novo){ document.getElementById('quem').textContent='👤 '+(ROT[j.papel]||j.papel); document.getElementById('lLote').textContent=j.lote; document.getElementById('lPrazo').textContent=j.prazoDias; formMontar('lForm',LOJA); }
+    renderLoja();
+  }catch(e){ if(!LD) toast('Sem conexão com o servidor. Tentando de novo…'); }
+}
+function renderLoja(){
+  const r=LD, P=r.pedidos, g=guardar(document.getElementById('lConfirmar'));
+  const conf=P.filter(x=>x.situacao==='concluida');
+  document.getElementById('lConfirmar').innerHTML=conf.length?'<div class="card" style="border-color:var(--gold)"><div class="tit">❓ Foi feito? ('+conf.length+')</div><div class="muted">O Sidinei marcou como feito. Confira na loja e responda.</div>'
+    +conf.map(x=>itemHtml(x,'<div class="acoes"><button class="btn ok peq" onclick="confirmar(\''+x.id+'\',\'sim\')">✅ Sim, foi feito</button><button class="btn sec peq" onclick="NAO[\''+x.id+'\']=1;renderLoja()">❌ Não foi feito</button></div>'
+      +(NAO[x.id]?'<div style="margin-top:8px"><label>O que não foi feito</label><textarea id="nf_'+x.id+'" maxlength="300" placeholder="Ex.: a lâmpada continua queimada"></textarea><label>Foto de como está (obrigatória)</label><input type="file" id="nff_'+x.id+'" accept="image/*" capture="environment"><button class="btn peq" onclick="confirmar(\''+x.id+'\',\'nao\')">Enviar ao Sidinei</button></div>':''))).join('')+'</div>':'';
+  repor(g);
+  const e=r.espera, ab=P.filter(x=>x.situacao==='aberta');
+  document.getElementById('lEspera').innerHTML='<div class="esp">'+(e.qtd?'<b>'+e.qtd+' de '+e.lote+'</b> — faltam '+e.faltam+' para o relatório ir ao Sidinei'+(e.diasMaisAntigo?' (o mais antigo tem '+e.diasMaisAntigo+' dia'+(e.diasMaisAntigo>1?'s':'')+'; com '+e.prazoDias+' dias vai sozinho)':' (ou quando o mais antigo fizer '+e.prazoDias+' dias)'):'Nada esperando.')+'</div>'
+    +ab.map(x=>itemHtml(x,'<div class="acoes"><button class="btn sec peq" onclick="apagar(\''+x.id+'\')">Apagar (anotei errado)</button></div>')).join('');
+  const en=P.filter(x=>x.situacao==='enviada');
+  document.getElementById('lEnviados').innerHTML=en.length?en.map(x=>itemHtml(x)).join(''):'<div class="muted">Nada com o Sidinei agora.</div>';
+  const fe=P.filter(x=>x.situacao==='resolvida'||x.situacao==='recusada'); document.getElementById('lFechadosC').style.display=fe.length?'':'none';
+  document.getElementById('lFechados').innerHTML=fe.map(x=>itemHtml(x)).join('');
+  const R=r.reposicao, gr=guardar(document.getElementById('lRepor'));
+  document.getElementById('lRepor').innerHTML=R.itens.map(i=>'<div class="acoes"><div><label>Quantidade</label><input type="number" id="rq_'+i.id+'" min="1" max="50" style="width:110px"></div><button class="btn peq" onclick="pedirRepor(\''+i.id+'\')">Pedir '+esc(i.nome)+'</button></div>').join('')
+    +(R.pedidos.length?'<div class="linha muted" style="margin-top:8px">'+R.pedidos.map(p=>esc(p.quando)+' · '+p.qtd+'× '+esc(p.item)+' · <b>'+esc(p.situacao)+'</b>').join('<br>')+'</div>':'');
+  repor(gr);
+}
+async function confirmar(id,feito){
+  const o={action:'manutLojaConfirmar',id,feito};
+  if(feito==='nao'){ o.obs=(document.getElementById('nf_'+id).value||'').trim(); if(o.obs.length<10) return toast('Explique o que não foi feito (mínimo 10 letras).');
+    const f=await lerFoto(document.getElementById('nff_'+id)); if(!f) return toast('Tire a foto de como está.'); o.foto={base64:f}; }
+  try{ const r=await post(o); if(!r.ok) return toast('⚠️ '+(r.erro||'Não salvou.')); toast(feito==='sim'?'✅ Obrigado! Fechado.':(r.msg||'Avisamos o Sidinei.')); delete NAO[id]; carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); }
+}
+async function apagar(id){ if(!confirm('Apagar este problema? (só se foi anotado errado)')) return; try{ const r=await post({action:'manutLojaCancelar',id}); toast(r.ok?'Apagado.':'⚠️ '+(r.erro||'Não apagou.')); carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function pedirRepor(it){ const q=Number(document.getElementById('rq_'+it).value); if(!q) return toast('Digite a quantidade.'); try{ const r=await post({action:'manutLojaRepor',item:it,qtd:q}); toast(r.ok?(r.teste?r.msg:'📦 Pedido enviado ao estoque central.'):'⚠️ '+(r.erro||'Não pediu.')); if(r.ok) document.getElementById('rq_'+it).value=''; carregar(false); }catch(e){ toast('⚠️ Sem conexão.'); } }
+
+// ---------- EQUIPE ----------
+async function entrar(){
+  const sn=document.getElementById('lgSenha').value, msg=document.getElementById('lgMsg');
+  if(!sn){ msg.textContent='Digite a senha.'; return; }
+  msg.textContent='Conferindo…'; CHAVE=hash(sn);
+  try{ const r=await post({action:'manutLogin'}); if(!r.ok){ msg.textContent=r.erro==='senha'?'Senha incorreta.':(r.erro||'Não entrou.'); return; } PAPEL=r.papel; }catch(e){ msg.textContent='Sem conexão com o servidor.'; return; }
+  ls('man_chave',CHAVE); iniciarEquipe();
+}
+function sair(){ ls('man_chave',null); location.href='manutencao'; }
+function iniciarEquipe(){
+  document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
+  carregar(true); setInterval(()=>{ if(document.visibilityState==='visible') carregar(false); },60000);
+}
+function aba(a){ ABA=a; document.querySelectorAll('.aba').forEach(b=>b.classList.toggle('on',b.dataset.aba===a)); ['ped','abrir','rel','est'].forEach(x=>document.getElementById('s-'+x).style.display=x===a?'':'none'); }
+async function carregar(prim){ if(LOJA) return carregarLoja(prim);
+  try{ const j=await jsonp({action:'manutPainel',chave:CHAVE});
+    if(!j.ok){ if(j.erro==='senha'){ ls('man_chave',null); toast('A senha mudou. Entre de novo.'); setTimeout(()=>location.reload(),1500); } return; }
+    PAPEL=j.papel; const novo=!D; D=j; if(novo) montar(); render();
+  }catch(e){ if(!D) toast('Sem conexão com o servidor. Tentando de novo…'); }
+}
+function montar(){
+  document.getElementById('quem').innerHTML='👤 '+esc(ROT[PAPEL]||PAPEL)+' · <a href="#" onclick="sair();return false">sair</a>';
+  const abas=[['ped','📋 Pedidos'],['abrir','➕ Anotar'],['rel','📄 Relatórios']]; if(pode('sidinei','admin','gestao')) abas.push(['est','📦 Estoque central']);
+  document.getElementById('abas').innerHTML=abas.map(([k,t])=>'<button class="aba" data-aba="'+k+'" onclick="aba(\''+k+'\')">'+t+'<span class="n" id="n_'+k+'" style="display:none"></span></button>').join('');
+  const lj=D.lojas.map(u=>'<option>'+esc(u)+'</option>').join('');
+  document.getElementById('abLoja').innerHTML='<option value="">— escolha —</option>'+lj; document.getElementById('fLoja').innerHTML='<option value="">Todas as lojas</option>'+lj;
+  const ql=Q.get('loja'); if(ql&&D.lojas.includes(ql)){ document.getElementById('abLoja').value=ql; document.getElementById('fLoja').value=ql; }
+  formMontar('eForm',document.getElementById('abLoja').value);
+  const fs=[['abertos','Em aberto'],['vermelho','🔴 Vermelhos'],['enviada','🔧 Com o Sidinei'],['aberta','⏳ Esperando juntar'],['concluida','❓ Loja confirmar'],['resolvida','✅ Resolvidas'],['recusada','✖️ Recusadas']];
+  document.getElementById('fSit').innerHTML=fs.map(([k,t])=>'<button class="fl" data-f="'+k+'" onclick="FSIT=\''+k+'\';render()">'+t+'</button>').join('');
+  aba(Q.get('abrir')?'abrir':'ped');
+}
+function filtra(x){
+  if(FSIT==='abertos') return ['aberta','enviada','concluida'].includes(x.situacao);
+  if(FSIT==='vermelho') return x.cor==='vermelho'&&['aberta','enviada'].includes(x.situacao);
+  return x.situacao===FSIT;
+}
+function render(){
+  if(!D) return;
+  document.querySelectorAll('.fl').forEach(b=>b.classList.toggle('on',b.dataset.f===FSIT));
+  const g=guardar(document.getElementById('lista'));
+  const u=document.getElementById('fLoja').value, l=D.pedidos.filter(x=>(!u||x.unidade===u)&&filtra(x));
+  const ne=D.pedidos.filter(x=>x.situacao==='enviada').length, nn=document.getElementById('n_ped'); if(nn){ nn.textContent=ne; nn.style.display=ne&&pode('sidinei','admin','gestao')?'':'none'; }
+  document.getElementById('lista').innerHTML=l.length?l.map(x=>itemHtml(x,acoesEquipe(x))).join(''):'<div class="muted" style="margin-top:10px">Nenhum pedido aqui.</div>';
+  repor(g);
+  const hl=Q.get('id'); if(hl&&!render._f){ const el=document.getElementById('p_'+hl); if(el){ render._f=1; el.classList.add('hl'); el.scrollIntoView({block:'center'}); } }
+  renderRel(); if(pode('sidinei','admin','gestao')) renderEstoque();
+}
+function acoesEquipe(x){
+  if(!pode('sidinei','admin','gestao')||!['aberta','enviada'].includes(x.situacao)) return '';
+  return '<div class="acoes"><div style="flex:1;min-width:180px"><label>Observação (opcional)</label><input id="ob_'+x.id+'" maxlength="200" placeholder="Ex.: Dorival trocou o termostato"></div>'
+    +'<button class="btn ok peq" onclick="concluir(\''+x.id+'\')">✅ Concluído</button>'
+    +(x.cor==='vermelho'?'<button class="btn sec peq" onclick="rebaixar(\''+x.id+'\')">⬇️ Não é urgente (amarelo)</button>':'')
+    +'<button class="btn sec peq" onclick="recusar(\''+x.id+'\')">Recusar</button></div>';
+}
+async function concluir(id){ try{ const r=await post({action:'manutConcluir',id,obs:(document.getElementById('ob_'+id)||{}).value||''}); toast(r.ok?'✅ Concluído. A loja vai confirmar.':'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+async function rebaixar(id){ if(!confirm('Mudar para amarelo? Ele volta para a lista da loja e vai no próximo relatório.')) return; try{ const r=await post({action:'manutRebaixar',id,obs:(document.getElementById('ob_'+id)||{}).value||''}); toast(r.ok?'Agora é amarelo.':'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+async function recusar(id){ const m=prompt('Por que recusar? (ex.: não é manutenção, já foi arrumado)'); if(!m) return; try{ const r=await post({action:'manutRecusar',id,motivo:m}); toast(r.ok?'Recusado.':'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+function renderRel(){
+  const E=D.espera||{};
+  document.getElementById('relEspera').innerHTML=D.lojas.filter(u=>(E[u]||{}).qtd).map(u=>{ const e=E[u]; return '<div class="item amar"><div class="it-top"><span>'+esc(u)+'</span><span class="tag t-am">'+e.qtd+' de '+e.lote+' · mais antigo '+e.diasMaisAntigo+' dia'+(e.diasMaisAntigo===1?'':'s')+'</span></div>'
+    +(pode('sidinei','admin','gestao')?'<button class="btn sec peq" onclick="enviarAgora(\''+esc(u)+'\')">📄 Gerar o relatório agora</button>':'')+'</div>'; }).join('')||'<div class="muted" style="margin-top:8px">Nenhuma loja com problema esperando.</div>';
+  document.getElementById('relLista').innerHTML=D.relatorios.length?D.relatorios.map(r=>'<div class="item'+(r.vermelho?' urg':'')+'"><div class="it-top"><span>'+(r.vermelho?'🔴 ':'')+esc(r.unidade)+' · '+r.qtd+' problema'+(r.qtd>1?'s':'')+'</span><span class="tag">'+esc(r.quando)+'</span></div><div class="linha muted">'+esc(r.motivoTxt)+'</div>'
+    +(r.url?'<a class="btn peq" style="display:inline-block;text-decoration:none" href="'+esc(r.url)+'" target="_blank">📄 Abrir o PDF</a>':'<div class="linha muted">PDF não foi gerado</div>')+'</div>').join(''):'—';
+}
+async function enviarAgora(u){ if(!confirm('Gerar agora o relatório da '+u+' com o que está esperando?')) return; try{ const r=await post({action:'manutEnviarAgora',unidade:u}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não gerou.')); toast('📄 Relatório gerado ('+r.qtd+'). Ele também chega no WhatsApp.'); if(r.url) window.open(r.url,'_blank'); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+function renderEstoque(){
+  const R=D.reposicao, g=guardar(document.getElementById('estItens'));
+  document.getElementById('estItens').innerHTML=R.itens.map(i=>'<div class="item'+(i.saldo<=i.minimo?' atr':'')+'"><div class="it-top"><span>'+esc(i.nome)+'</span><span class="tag '+(i.saldo<=i.minimo?'t-red':'t-ok')+'">saldo '+i.saldo+' · mínimo '+i.minimo+'</span></div><div class="acoes"><div><label>Entrada (comprou)</label><input type="number" id="ent_'+i.id+'" min="1" style="width:110px"></div><button class="btn ok peq" onclick="entrada(\''+i.id+'\')">Lançar entrada</button></div></div>').join('');
+  repor(g);
+  const p=R.pedidos; document.getElementById('estPed').innerHTML=p.length?p.map(x=>'<div class="item'+(x.situacao==='pedido'?' amar':'')+'"><div class="it-top"><span>'+esc(x.unidade)+' · '+x.qtd+'× '+esc(x.itemNome)+'</span><span class="tag '+(x.situacao==='entregue'?'t-ok':'t-am')+'">'+esc(x.situacao)+'</span></div><div class="linha muted">'+esc(x.quando)+' · '+esc(x.quem)+(x.obs?' · '+esc(x.obs):'')+'</div>'
+    +(x.situacao==='pedido'?'<button class="btn ok peq" onclick="repAcao(\''+x.id+'\',\'entregue\')">✅ Entregue</button> <button class="btn sec peq" onclick="repAcao(\''+x.id+'\',\'cancelar\')">Cancelar</button>':'')+'</div>').join(''):'—';
+  const n=p.filter(x=>x.situacao==='pedido').length, ne=document.getElementById('n_est'); if(ne){ ne.textContent=n; ne.style.display=n?'':'none'; }
+}
+async function entrada(it){ const q=Number(document.getElementById('ent_'+it).value); if(!q) return toast('Digite a quantidade.'); try{ const r=await post({action:'manutReposicao',acao:'entrada',item:it,qtd:q}); toast(r.ok?'Saldo agora: '+r.saldo:'⚠️ '+(r.erro||'Não salvou.')); document.getElementById('ent_'+it).value=''; }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+async function repAcao(id,acao){ try{ const r=await post({action:'manutReposicao',acao,id}); toast(r.ok?(acao==='entregue'?'✅ Entregue. Saldo: '+r.saldo+'. Faça a transferência no Alpha.':'Cancelado.'):'⚠️ '+(r.erro||'Não salvou.')); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+
+// ---------- quem é ----------
+(function(){
+  const c=ls('man_chave');
+  const u=ls('dina_unidade_logada'), h=u?ls('dina_senha_'+u):'';
+  if(Q.get('daloja')&&u&&h&&ls('dina_login_v')==='2'){ LOJA=u; LSENHA=h; return iniciarLoja(); } // aberto pelo botão do placar
+  if(c){ CHAVE=c; return iniciarEquipe(); }
+  if(u&&h&&ls('dina_login_v')==='2'){ LOJA=u; LSENHA=h; return iniciarLoja(); }
+  document.getElementById('login').style.display='block';
+})();
+</script>
+</body>
+</html>
