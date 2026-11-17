@@ -943,7 +943,18 @@ function tempoRegDe(i){ return tempoRegistros.find(r=>r.idx===i); }
 // 3 tempos resolvidos = registrado ou janela já passou (não feito)
 function temposResolvidos(){ return [0,1,2].every(i=>tempoRegDe(i)||tempoJanelaPassou(i)); }
 function temposPerdidos(){ return [0,1,2].filter(i=>!tempoRegDe(i)&&tempoJanelaPassou(i)); }
-function motoTravado(){ return motoboySalvo && minAgoraTurno()>=MOTO_TRAVA_MIN; }
+function motoTravado(){ return motoboySalvo && !window._motoLiberar && minAgoraTurno()>=MOTO_TRAVA_MIN; }
+// 17/11/2026 (Colombo): o placar mostrava "Motoboys salvos" antes do servidor responder; se a gravação não chegava, a loja
+// ficava travada às 20h sem motoboys no servidor (tempos recusados e o call center sem o número). Agora só marca depois do OK.
+function motoNaoRecebido(msg){
+  motoboySalvo=false; window._motoLiberar=true; localStorage.removeItem(chaveHoje('motoboys_salvo'));
+  const inp=document.getElementById('motoboys'), btn=document.getElementById('btnSalvarMoto'), cam=document.getElementById('cameraBtnMoto'), info=document.getElementById('motoSalvoInfo'), tag=document.getElementById('motoboysTag');
+  if(inp) inp.disabled=false; if(cam) cam.disabled=false;
+  if(btn){ btn.style.display='block'; btn.disabled=false; btn.textContent='Salvar motoboys'; btn.style.background=''; }
+  if(info){ info.style.display='block'; info.textContent=msg; }
+  if(tag){ tag.className='tag'; tag.textContent='Pendente'; }
+  renderTempoRegistros(); verificarBotaoRegistrar();
+}
 
 function temLoja(u){return LOJAS_ENTREGA.includes(u);}
 
@@ -1162,7 +1173,7 @@ function enviarTempoReal(tipo, dados, aoResponder, ms, aoSemResposta){
   const s=document.createElement('script');
   const t=setTimeout(()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);if(aoSemResposta)try{aoSemResposta('tempo');}catch(e){}},ms||8000);
   window[cb]=(d)=>{clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);if(aoResponder)try{aoResponder(d);}catch(e){}};
-  s.onerror=()=>{clearTimeout(t);delete window[cb];};
+  s.onerror=()=>{clearTimeout(t);delete window[cb];if(aoSemResposta)try{aoSemResposta('rede');}catch(e){}}; // 17/11: falha de rede também avisa (antes ficava esperando para sempre)
   // Monta parâmetros simples
   let params='action=salvarTempoReal';
   params+='&unidade='+encodeURIComponent(unidadeAtual);
@@ -1216,6 +1227,7 @@ async function salvarTempoEntrega(){
   _tempoSalvando=true; if(btS){ btS.disabled=true; btS.textContent='⏳ Registrando o tempo...'; }
   let rs=null; try{ rs=await tempoServidor('tempo', Object.assign({app:app, ifood:ifoodT, horario:horario, registro:idx+1}, motivosJust.length?{justificativa:just}:{})); if(rs&&rs.semResposta==='tempo') rs=await tempoServidor('tempo', Object.assign({app:app, ifood:ifoodT, horario:horario, registro:idx+1}, motivosJust.length?{justificativa:just}:{})); }finally{ _tempoSalvando=false; if(btS){ btS.disabled=false; btS.textContent=txS; } }
   if(rs&&rs.semResposta){ alert(rs.semResposta==='fora'?'📍 Você está fora da loja: o tempo não foi registrado.':'⛔ O sistema não respondeu (internet fraca?).\n\nO tempo NÃO foi registrado. Toque em "Salvar registro de tempo" de novo.'); return; }
+  if(rs&&rs.status==='erro'&&/quantidade de motoboys/.test(rs.erro||'')){ logProva('MOTOBOYS_FALTAM_NO_SERVIDOR',''); motoNaoRecebido('⚠️ O sistema NÃO recebeu os motoboys de hoje. Fotografe a lista e toque em "Salvar motoboys" de novo; depois registre o tempo.'); alert('⛔ O sistema não recebeu os motoboys de hoje.\n\nO card dos motoboys foi liberado: fotografe a lista, toque em "Salvar motoboys" e depois registre o tempo de novo (as fotos do tempo continuam aqui).'); const c=document.getElementById('cardMotoboys'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if(rs&&rs.status==='erro'){ alert('⛔ '+(rs.erro||'O sistema não aceitou este tempo.')); logProva('TEMPO_RECUSADO',(idx+1)+'º: '+String(rs.erro||'').slice(0,150)); if(typeof plcConferir==='function') plcConferir(); return; }
   if(tempoRegDe(idx)) return;
   tempoRegistros.push({app,ifood:ifoodT,horario,idx,fotoApp:fotoTempoAppBase64,fotoIfood:fotoTempoIfoodBase64,just:motivosJust.length?just:''});
@@ -2996,28 +3008,32 @@ async function sdConfirmar(btn){
 }
 
 // ── Salvar Motoboys ──
-function salvarMotoboys(){
+let _motoSalvando=false;
+async function salvarMotoboys(){
+  if(_motoSalvando) return;
   if(motoTravado()){alert('🔒 Depois das 20h a quantidade de motoboys fica travada.');motoAplicarTrava();return;}
   if(!filled('motoboys')){alert('Informe a quantidade de motoboys.');return;}
   if(temLoja(unidadeAtual) && !((parseInt(document.getElementById('motoboys').value)||0)>=1)){alert('👥 Informe quantos motoboys estão trabalhando (1 ou mais).\n\nSe hoje não tem motoboy, avise o GDI: sem motoboy os tempos de entrega não podem ser registrados e o placar corre o risco de ser bloqueado.');return;}
   if(!fotoMotoBase64){alert('📋 Fotografe a lista de motoboys antes de salvar!');return;}
-  motoboySalvo=true;
-  localStorage.setItem(chaveHoje('motoboys_qtd'), document.getElementById('motoboys').value);
+  const qtd=parseInt(document.getElementById('motoboys').value)||0, btn=document.getElementById('btnSalvarMoto'), txt=btn?btn.textContent:'';
+  _motoSalvando=true; if(btn){ btn.disabled=true; btn.textContent='⏳ Salvando...'; }
+  let d=null; try{ d=await tempoServidor('motoboys',{quantidade:qtd}); if(d&&d.semResposta&&d.semResposta!=='fora') d=await tempoServidor('motoboys',{quantidade:qtd}); }finally{ _motoSalvando=false; if(btn){ btn.disabled=false; btn.textContent=txt; } }
+  if(d&&d.semResposta){ // 17/11/2026: só mostra "salvo" depois que o servidor confirma
+    logProva('MOTOBOYS_NAO_SALVOU',String(d.semResposta));
+    motoNaoRecebido('⛔ Os motoboys NÃO foram salvos ('+(d.semResposta==='fora'?'conferindo a sua localização':'sem resposta do sistema')+'). Toque em "Salvar motoboys" de novo.');
+    alert(d.semResposta==='fora'?'📍 Conferindo a sua localização... Os motoboys NÃO foram salvos. Espere alguns segundos dentro da loja e toque em "Salvar motoboys" de novo.':'📶 O sistema não respondeu (internet fraca?).\n\nOs motoboys NÃO foram salvos. Toque em "Salvar motoboys" de novo.');
+    return;
+  }
+  if(d&&d.status==='erro'){
+    if(/travada/.test(d.erro||'')){ d={status:'ok'}; } // depois das 20h o servidor já tem os motoboys de hoje: está salvo
+    else { motoNaoRecebido('⛔ Não foi salvo: '+(d.erro||'')); alert('⛔ '+(d.erro||'O sistema não aceitou a quantidade de motoboys.')); return; }
+  }
+  motoboySalvo=true; window._motoLiberar=false;
+  localStorage.setItem(chaveHoje('motoboys_qtd'), String(qtd));
   localStorage.setItem(chaveHoje('motoboys_salvo'),'1');
-  enviarTempoReal('motoboys', {quantidade:parseInt(document.getElementById('motoboys').value)||0}, d=>{
-    if(d&&d.status==='erro'){ // o servidor não aceitou: volta a pedir os motoboys
-      motoboySalvo=false; localStorage.removeItem(chaveHoje('motoboys_salvo'));
-      const info=document.getElementById('motoSalvoInfo'); if(info){info.style.display='block';info.textContent='⛔ Não foi salvo: '+(d.erro||'');}
-      const btn=document.getElementById('btnSalvarMoto'); if(btn){btn.textContent='Salvar motoboys';btn.style.background='';btn.disabled=false;}
-      const tag=document.getElementById('motoboysTag'); if(tag){tag.className='tag';tag.textContent='Pendente';}
-      alert('⛔ '+(d.erro||'O sistema não aceitou a quantidade de motoboys.'));
-      renderTempoRegistros(); verificarBotaoRegistrar();
-    }
-  });
   const info=document.getElementById('motoSalvoInfo');
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  if(info){info.style.display='block';info.textContent=`✅ Motoboys salvos às ${hora} — ${document.getElementById('motoboys').value} em serviço`;}
-  const btn=document.getElementById('btnSalvarMoto');
+  if(info){info.style.display='block';info.textContent=`✅ Motoboys salvos às ${hora} — ${qtd} em serviço`;}
   if(btn){btn.textContent='✓ Salvo — toque para regravar';btn.style.background='var(--green)';}
   const tag=document.getElementById('motoboysTag');
   if(tag){tag.className='tag ok';tag.textContent='Salvo';}
