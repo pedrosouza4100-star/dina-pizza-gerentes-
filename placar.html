@@ -230,6 +230,13 @@
 .hf-q input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:1rem;text-align:right;font-family:inherit}
 .hf-qu{font-size:.8rem;color:var(--muted)}
 .hf-sug{font-size:.7rem;color:var(--gold,#FFD000);font-weight:700;margin-left:4px}
+.hf-q.hf-e{grid-template-columns:1fr 80px 80px}
+.hf-e label{display:flex;flex-direction:column;gap:2px;font-size:.68rem;color:var(--muted);font-weight:600}
+.hf-dica{grid-column:1/-1;font-size:.8rem;line-height:1.35;font-weight:600}
+.hf-dica:empty{display:none}
+.hf-e.falta{border-color:var(--danger);background:rgba(255,77,77,.08)}
+#hfPerdaBox{margin:8px 0;border:1px dashed var(--border);border-radius:10px;padding:6px 10px}
+#hfPerdaBox summary{cursor:pointer;font-weight:700;font-size:.9rem}
 .hf-c{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.88rem}
 .hf-c .hf-cl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .hf-c select,.hf-c input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:.92rem;font-family:inherit}
@@ -3617,23 +3624,66 @@ function hfRenderQtd(r){
   const q=(r.listaHoje&&r.listaHoje.qtd)||{}, sug=(!r.listaHoje&&r.sugestao&&r.sugestao.ativa)?(r.sugestao.itens||{}):{}, temSug=Object.keys(sug).length>0;
   document.getElementById('hfAjuda').innerHTML=(r.precisaFornec===false?'Confira o estoque e coloque <b>quanto precisa comprar</b> de cada item (deixe em branco o que não precisa). A lista vai para o <b>Sidinei às 9h</b>, que compra para a loja.':'Confira o estoque e coloque <b>quanto precisa comprar</b> de cada item (deixe em branco o que não precisa). A lista chega no seu WhatsApp às <b>15h</b>, pronta para encaminhar ao fornecedor.')
     +(r.caixa?'<br>📦 Aqui a lista é em <b>caixas</b> (cerca de '+escR(r.caixaKg||21)+' kg cada).':'')
+    +(r.estoque?'<br>📦 Conte quanto <b>TEM</b> de cada item principal: o sistema mostra para quantos dias dá e sugere quanto pedir para amanhã.':'')
     +(temSug?'<br>🤖 <b>Pedido sugerido</b> pelo histórico da loja (mesmo dia da semana das últimas semanas). Confira e ajuste.':(r.sugestao&&!r.sugestao.ativa&&r.sugestao.faltam>0?'<br><span style="font-size:.92em;opacity:.85">Com mais '+escR(r.sugestao.faltam)+' dias de listas o sistema passa a sugerir o pedido.</span>':''));
   document.getElementById('hfItens').className='';
-  document.getElementById('hfItens').innerHTML=r.catalogo.map(it=>{ const v=q[it.nome]!==undefined?q[it.nome]:(sug[it.nome]!==undefined?sug[it.nome]:''), s=q[it.nome]===undefined&&sug[it.nome]!==undefined;
+  const ES={}; (r.estoque&&r.estoque.itens||[]).forEach(e=>{ ES[e.nome]=e; }); HF_EST=ES;
+  const eh=(r.listaHoje&&r.listaHoje.estoque)||{}, ph=(r.listaHoje&&r.listaHoje.perda)||{}, nv=v=>v===undefined||v===null?'':String(v).replace('.',',');
+  document.getElementById('hfItens').innerHTML=r.catalogo.map(it=>{ const e=ES[it.nome];
+    if(e) return '<div class="hf-q hf-e'+(q[it.nome]>0?' on':'')+'" data-hfrow="'+escR(it.nome)+'"><span>'+escR(it.nome)+'</span>'
+      +'<label>tem ('+escR(e.un)+')<input type="text" inputmode="decimal" data-hfe="'+escR(it.nome)+'" value="'+escR(nv(eh[it.nome]))+'" placeholder="?" oninput="hfeMudou(this)"></label>'
+      +'<label>pedir ('+escR(it.un)+')<input type="text" inputmode="decimal" data-hfq="'+escR(it.nome)+'" data-un="'+escR(it.un)+'" value="'+escR(nv(q[it.nome]))+'" placeholder="0" oninput="hfMudou(this)"></label>'
+      +'<div class="hf-dica"></div></div>';
+    const v=q[it.nome]!==undefined?q[it.nome]:(sug[it.nome]!==undefined?sug[it.nome]:''), s=q[it.nome]===undefined&&sug[it.nome]!==undefined;
     return '<div class="hf-q'+(v!==''?' on':'')+'"><span>'+escR(it.nome)+(s?'<span class="hf-sug">sugerido</span>':'')+'</span><input type="text" inputmode="decimal" data-hfq="'+escR(it.nome)+'" data-un="'+escR(it.un)+'" value="'+escR(String(v).replace('.',','))+'" placeholder="0" oninput="hfMudou(this)"><span class="hf-qu">'+escR(it.un)+'</span></div>'; }).join('');
   document.getElementById('hfOutros').placeholder='Outros itens com quantidade (ex.: abacaxi 3 unidades) — opcional';
+  // jogou fora (opcional) e as dicas de cada item contado (16/11/2026)
+  let pb=document.getElementById('hfPerdaBox'); if(pb) pb.remove();
+  if(r.estoque&&r.estoque.itens.length){
+    pb=document.createElement('details'); pb.id='hfPerdaBox'; if(Object.keys(ph).length) pb.open=true;
+    pb.innerHTML='<summary>🗑️ Joguei fora hoje (opcional)</summary><div style="font-size:.8rem;color:var(--muted);margin:4px 0">Mercadoria que estragou e foi para o lixo. Ajuda a pedir só o necessário.</div>'
+      +r.estoque.itens.map(e=>'<div class="hf-q"><span>'+escR(e.nome)+'</span><input type="text" inputmode="decimal" data-hfp="'+escR(e.nome)+'" value="'+escR(nv(ph[e.nome]))+'" placeholder="0" oninput="HF_SALVO=false;verificarBotaoRegistrar()"><span class="hf-qu">'+escR(e.un)+'</span></div>').join('');
+    document.getElementById('hfItens').after(pb);
+    document.querySelectorAll('#hfItens input[data-hfe]').forEach(el=>hfeDica(el.closest('.hf-e')));
+  }
 }
+// Estoque e consumo (servidor 2026-11-16-a, recurso hfEstoque): "dá para X dias" e pedido sugerido para amanhã
+let HF_EST={};
+function hfVazio(v){ return String(v||'').trim()===''; }
+function hfFmt(n){ return String(Math.round(n*10)/10).replace('.',','); }
+function hfeDica(row){
+  if(!row) return; const nome=row.dataset.hfrow, e=HF_EST[nome], d=row.querySelector('.hf-dica'), ie=row.querySelector('[data-hfe]'), iq=row.querySelector('[data-hfq]'); if(!e||!d) return;
+  row.classList.remove('falta');
+  if(hfVazio(ie.value)){ d.innerHTML=''; return; }
+  const E=hfNumL(ie.value); if(isNaN(E)||E<0){ d.innerHTML='<span style="color:var(--danger)">Use só números (ex.: 2 ou 1,5).</span>'; return; }
+  const c=e.consumoDia, M=(HF&&HF.estoque&&HF.estoque.margem)||0.15;
+  if(c===null||c===undefined){ const f=Math.max(1,((HF.estoque&&HF.estoque.minimo)||3)-(e.n||0)); d.innerHTML='<span style="color:var(--muted)">📊 Aprendendo o consumo da loja (mais '+f+' dia'+(f>1?'s':'')+' de contagem).</span>'; return; }
+  let h='';
+  if(c<=0) h='✅ Não gastou nos últimos dias.';
+  else {
+    const dias=E/c, falta=Math.max(0,c*(1+M)-E), fat=e.fator;
+    let ped=0; if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:(x>0?Math.max(1,Math.ceil(x-0.25)):0); if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
+    h=(ped>0?'🛒':'✅')+' Usa <b>'+hfFmt(c)+' '+escR(e.un)+'/dia</b>. O que tem dá para <b>'+hfFmt(dias)+' dia'+(dias>=1.05&&dias<1.95?'':'s')+'</b>. '
+      +(fat?(ped>0?'Sugerido pedir <b>'+hfFmt(ped)+' '+escR(e.unCompra)+'</b>.':'Não precisa pedir.'):'');
+    const nadaOn=(document.getElementById('hfNada')||{}).checked;
+    if(fat&&!nadaOn&&(hfVazio(iq.value)||iq.dataset.auto==='1')){ iq.value=ped>0?hfFmt(ped):''; iq.dataset.auto='1'; row.classList.toggle('on',ped>0); }
+    const P=hfNumL(iq.value)||0, total=E+(fat?P*fat:0), dur=total/c;
+    if(dur>e.frescor+0.01) h+='<br><span style="color:var(--danger)">⚠️ Vai ter para '+hfFmt(dur)+' dias: '+escR(nome.toLowerCase())+' dura cerca de '+e.frescor+'. Risco de estragar, peça menos.</span>';
+  }
+  d.innerHTML=h;
+}
+function hfeMudou(el){ hfeDica(el.closest('.hf-e')); HF_SALVO=false; const m=document.getElementById('hfMsg'); if(m) m.innerHTML=''; verificarBotaoRegistrar(); }
 function hfMarcados(){
   if(HF&&HF.catalogo) return [...document.querySelectorAll('#hfItens input[data-hfq]')].filter(e=>hfNumL(e.value)>0).map(e=>e.dataset.hfq);
   return [...document.querySelectorAll('#hfItens input[data-hf]')].filter(e=>e.checked).map(e=>e.dataset.hf); }
 function hfMudou(el){
-  if(el&&el.dataset&&el.dataset.hfq!==undefined){ el.parentElement.classList.toggle('on',hfNumL(el.value)>0); const sg=el.parentElement.querySelector('.hf-sug'); if(sg) sg.remove(); }
+  if(el&&el.dataset&&el.dataset.hfq!==undefined){ const row=el.closest('.hf-q')||el.parentElement; row.classList.toggle('on',hfNumL(el.value)>0); const sg=row.querySelector('.hf-sug'); if(sg) sg.remove(); delete el.dataset.auto; if(row.classList.contains('hf-e')) hfeDica(row); }
   else if(el&&el.parentElement) el.parentElement.classList.toggle('on',el.checked);
   if(hfMarcados().length||document.getElementById('hfOutros').value.trim()) document.getElementById('hfNada').checked=false;
   HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
 }
 function hfNadaMudou(){
-  if(document.getElementById('hfNada').checked){ document.querySelectorAll('#hfItens input[data-hf]').forEach(e=>{ e.checked=false; e.parentElement.classList.remove('on'); }); document.querySelectorAll('#hfItens input[data-hfq]').forEach(e=>{ e.value=''; e.parentElement.classList.remove('on'); const sg=e.parentElement.querySelector('.hf-sug'); if(sg) sg.remove(); }); document.getElementById('hfOutros').value=''; }
+  if(document.getElementById('hfNada').checked){ document.querySelectorAll('#hfItens input[data-hf]').forEach(e=>{ e.checked=false; e.parentElement.classList.remove('on'); }); document.querySelectorAll('#hfItens input[data-hfq]').forEach(e=>{ e.value=''; delete e.dataset.auto; const row=e.closest('.hf-q')||e.parentElement; row.classList.remove('on'); const sg=row.querySelector('.hf-sug'); if(sg) sg.remove(); }); document.getElementById('hfOutros').value=''; }
   HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; verificarBotaoRegistrar();
 }
 async function hfSalvar(confirmado){
@@ -3647,6 +3697,12 @@ async function hfSalvar(confirmado){
     if(ruins.length){ msg.innerHTML='<span style="color:var(--danger)">Quantidade inválida em: '+escR(ruins.join(', '))+'. Use só números (ex.: 2 ou 1,5).</span>'; return; }
     corpo.pedidos=[...document.querySelectorAll('#hfItens input[data-hfq]')].filter(e=>hfNumL(e.value)>0).map(e=>({nome:e.dataset.hfq,qtd:hfNumL(e.value)}));
     if(confirmado===true) corpo.confirmado=true;
+    if(HF.estoque&&HF.estoque.itens&&HF.estoque.itens.length){ // contagem obrigatória dos itens principais (16/11/2026)
+      const es=[...document.querySelectorAll('#hfItens input[data-hfe]')], vaz=es.filter(e=>hfVazio(e.value)||isNaN(hfNumL(e.value))||hfNumL(e.value)<0);
+      if(vaz.length){ vaz.forEach(e=>e.closest('.hf-e').classList.add('falta')); vaz[0].scrollIntoView({behavior:'smooth',block:'center'}); msg.innerHTML='<span style="color:var(--danger)">Informe quanto TEM agora de: '+escR(vaz.map(e=>e.dataset.hfe).join(', '))+' (se não tem, coloque 0).</span>'; return; }
+      corpo.estoque=es.map(e=>({nome:e.dataset.hfe,qtd:hfNumL(e.value)}));
+      corpo.perda=[...document.querySelectorAll('#hfPerdaBox input[data-hfp]')].filter(e=>hfNumL(e.value)>0).map(e=>({nome:e.dataset.hfp,qtd:hfNumL(e.value)}));
+    }
   }
   bt.disabled=true; msg.textContent='Salvando…';
   try{
@@ -3656,7 +3712,8 @@ async function hfSalvar(confirmado){
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; if(r&&r.bloqueado){ HF.bloqueado=true; hfRenderForn(); } return; }
     HF_SALVO=true; msg.innerHTML='<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva'+(r.hora?' às '+escR(r.hora):'')+'. '+(HF.precisaFornec===false?'Vai para o Sidinei amanhã às 9h.':'Chega no seu WhatsApp amanhã às 15h.')+'</span>';
     logProva('HF_LISTA_SALVA',nada?'nada falta':(corpo.pedidos?corpo.pedidos.map(p=>p.nome+' '+p.qtd).join(', '):itens.join(', '))+(outros?' + '+outros:''));
-    if(HF&&corpo.pedidos){ HF.listaHoje={itens:corpo.pedidos.map(p=>p.nome),qtd:Object.fromEntries(corpo.pedidos.map(p=>[p.nome,p.qtd])),nadaFalta:nada,outros:outros,hora:r.hora||''}; }
+    if(HF&&corpo.pedidos){ HF.listaHoje={itens:corpo.pedidos.map(p=>p.nome),qtd:Object.fromEntries(corpo.pedidos.map(p=>[p.nome,p.qtd])),nadaFalta:nada,outros:outros,hora:r.hora||'',
+      estoque:corpo.estoque?Object.fromEntries(corpo.estoque.map(p=>[p.nome,p.qtd])):null,perda:corpo.perda?Object.fromEntries(corpo.perda.map(p=>[p.nome,p.qtd])):null}; }
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
   finally{ bt.disabled=false; verificarBotaoRegistrar(); }
 }
