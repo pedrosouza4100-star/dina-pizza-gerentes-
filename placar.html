@@ -515,6 +515,11 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="card-label">📞 Call center — chamados e pós-venda</div>
       <div id="pvCorpo"></div>
     </div>
+    <!-- Manutenção da loja e reposição (17/11/2026, servidor 2026-11-17-a, recurso manutencao): não trava o envio -->
+    <div class="card card-full" id="cardMan" style="display:none">
+      <div class="card-label">🔧 Manutenção da loja</div>
+      <div id="manCorpo"></div>
+    </div>
     <!-- Missão de hoje (Painel da Diretoria, 13/11/2026): só gerente; não trava nada -->
     <div class="card card-full" id="cardMissao" style="display:none">
       <div class="card-label">🎯 Missão de hoje</div>
@@ -1726,7 +1731,7 @@ function iniciarApp(u){
   alpPreparar();
   alpcPreparar();
   hfPreparar();
-  pvIniciar();
+  pvIniciar(); manIniciar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
   // Bloqueia imediatamente — consulta em background se abertura já foi feita hoje
@@ -3417,6 +3422,82 @@ function bebLista(){ return temFliperBuffet(unidadeAtual)?ALPC_BEB:ALPC_BEB_BALC
 // ── Lista de compras de hortifrúti (10/11/2026) ──
 let HF_ATIVO=false, HF=null, HF_SALVO=false, HFORA_FOTO=null;
 // ── Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) ──
+// ===== Manutenção da loja e reposição central (17/11/2026, servidor 2026-11-17-a, recurso manutencao) =====
+// GET manutLoja; POST manutLojaAbrir (🔴 vai na hora ao Sidinei, GDI e responsável; 🟡🟢 o GDI confere), manutLojaResolver (foi consertado? com foto), manutLojaRepor.
+let MAN_DATA=null, MAN_FORM=false, MAN_COR='', MAN_FOTO={}, _manTimer=null;
+async function manIniciar(){
+  MAN_DATA=null; MAN_FORM=false; if(_manTimer) clearInterval(_manTimer); document.getElementById('cardMan').style.display='none';
+  try{ const rc=await chkRecursos(); if(!rc.includes('manutencao')) return; }catch(e){ return; }
+  await manCarregar(); _manTimer=setInterval(()=>{ if(document.visibilityState==='visible'&&!MAN_FORM) manCarregar(); },300000);
+}
+async function manCarregar(){
+  let r; try{ r=await chkJsonp({action:'manutLoja',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){ return; }
+  if(!r||!r.ok) return; MAN_DATA=r; document.getElementById('cardMan').style.display=''; manRender();
+}
+const MAN_SIT={validar:'⏳ GDI vai conferir',responsavel:'🔧 Com o técnico',orcamento:'💲 Em orçamento',resolvida:'✅ Resolvida',recusada:'✖️ Recusada'};
+const MAN_CORT={vermelho:['🔴','Vermelho','precisa funcionar hoje'],amarelo:['🟡','Amarelo','pode esperar'],verde:['🟢','Verde','melhoria / orçamento']};
+function manRender(){
+  const r=MAN_DATA, c=document.getElementById('manCorpo'); if(!r||!c) return;
+  const guard={}; c.querySelectorAll('input[id],select[id],textarea[id]').forEach(e=>{ guard[e.id]=e.value; });
+  let h='<div style="font-size:.82rem;color:var(--muted);line-height:1.45">Quebrou algo? Abra o pedido com foto. 🔴 Vermelho (geladeira, freezer, câmara) vai na hora para o Sidinei, o GDI e o técnico. Quando o técnico consertar, confirme aqui com a foto.</div>';
+  const ab=r.pedidos.filter(x=>['resolvida','recusada'].indexOf(x.situacao)<0), fe=r.pedidos.filter(x=>['resolvida','recusada'].indexOf(x.situacao)>=0);
+  h+=ab.map(x=>'<div style="border:1px solid var(--border);border-left:6px solid '+({vermelho:'#ff4d4d',amarelo:'#FFD000',verde:'#3ddc97'}[x.cor]||'var(--border)')+';border-radius:12px;padding:10px;margin-top:8px">'
+    +'<div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-weight:800"><span>'+pvEsc(x.categoriaNome)+'</span><span style="font-size:.75rem;color:var(--d-t-info)">'+pvEsc(MAN_SIT[x.situacao]||x.situacao)+'</span></div>'
+    +'<div style="font-size:.86rem;margin-top:4px"><b>'+pvEsc(x.local)+':</b> '+pvEsc(x.descricao)+'</div>'
+    +'<div style="font-size:.75rem;color:var(--muted);margin-top:3px">Aberto em '+pvEsc(x.quando)+' · técnico: '+pvEsc(x.responsavelNome)+'</div>'
+    +(x.situacao==='responsavel'?'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn-registrar" style="flex:1;min-width:150px;padding:10px;font-size:.85rem;margin:0" onclick="manConsertado(\''+x.id+'\')">✅ Foi consertado (foto)</button><button type="button" class="btn-registrar" style="flex:1;min-width:120px;padding:10px;font-size:.85rem;margin:0;background:var(--surface);color:var(--text);border:1px solid var(--border)" onclick="manAindaNao(\''+x.id+'\')">Ainda não</button></div>':'')
+    +'<div id="manM_'+x.id+'" style="font-size:.8rem;margin-top:4px"></div></div>').join('');
+  if(fe.length) h+='<div style="font-size:.78rem;color:var(--muted);margin-top:8px">'+fe.map(x=>(x.situacao==='resolvida'?'✅ ':'✖️ ')+pvEsc(x.categoriaNome)+' — '+pvEsc(x.local)+(x.motivo?' ('+pvEsc(x.motivo)+')':'')).join('<br>')+'</div>';
+  if(!MAN_FORM) h+='<button type="button" class="btn-registrar" style="width:100%;margin-top:10px;padding:11px;font-size:.9rem" onclick="MAN_FORM=true;MAN_COR=\'\';manRender()">➕ Abrir pedido de manutenção</button>';
+  else {
+    h+='<div style="border:1px solid var(--gold);border-radius:12px;padding:12px;margin-top:10px"><div style="font-weight:800">➕ Novo pedido</div>'
+      +'<select id="manCat" onchange="MAN_COR=(MAN_DATA.categorias.find(c=>c.id===this.value)||{}).cor||\'\';manRender()" style="width:100%;margin-top:8px"><option value="">Tipo do problema…</option>'+r.categorias.map(c=>'<option value="'+c.id+'">'+pvEsc(c.nome)+'</option>').join('')+'</select>'
+      +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+['vermelho','amarelo','verde'].map(k=>'<button type="button" onclick="MAN_COR=\''+k+'\';manRender()" style="flex:1;min-width:95px;padding:8px;border-radius:10px;border:1px solid '+(MAN_COR===k?'var(--gold)':'var(--border)')+';background:'+(MAN_COR===k?'rgba(255,208,0,.12)':'var(--surface)')+';color:var(--text);font-weight:800;font-size:.8rem;text-align:left">'+MAN_CORT[k][0]+' '+MAN_CORT[k][1]+'<br><small style="font-weight:600;color:var(--muted)">'+MAN_CORT[k][2]+'</small></button>').join('')+'</div>'
+      +'<input id="manLocal" maxlength="80" placeholder="Onde é (ex.: geladeira da cozinha)" style="width:100%;margin-top:8px">'
+      +'<textarea id="manDesc" maxlength="400" placeholder="O que está acontecendo (ex.: parou de gelar, está a 12 graus)" style="width:100%;margin-top:8px;min-height:60px"></textarea>'
+      +'<button type="button" class="chk-foto-btn" style="margin-top:8px" onclick="chkAbrirCamera(\'man_novo\',f=>{MAN_FOTO.novo=f;manRender();})">📷 '+(MAN_FOTO.novo?'Foto tirada — tirar outra':'Tirar foto do problema')+'</button>'
+      +'<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn-registrar" style="flex:2;margin:0;padding:11px" id="manBtn" onclick="manAbrir()">Enviar pedido</button><button type="button" class="btn-registrar" style="flex:1;margin:0;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--border)" onclick="MAN_FORM=false;MAN_FOTO={};manRender()">Cancelar</button></div>'
+      +'<div id="manMsg" style="font-size:.82rem;margin-top:6px"></div></div>';
+  }
+  if((r.reposicao||{}).itens&&r.reposicao.itens.length){
+    h+='<div style="border-top:1px dashed var(--border);margin-top:12px;padding-top:10px"><div style="font-weight:800;font-size:.9rem">💡 Pedir reposição ao estoque central</div>'
+      +'<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><select id="manRepItem" style="flex:2;min-width:150px">'+r.reposicao.itens.map(i=>'<option value="'+i.id+'">'+pvEsc(i.nome)+'</option>').join('')+'</select><input id="manRepQtd" type="number" min="1" max="50" placeholder="Qtd." style="flex:1;min-width:70px"><button type="button" class="btn-registrar" style="flex:1;margin:0;padding:9px;font-size:.85rem" onclick="manRepor()">Pedir</button></div>'
+      +((r.reposicao.pedidos||[]).length?'<div style="font-size:.78rem;color:var(--muted);margin-top:6px">'+r.reposicao.pedidos.map(p=>p.qtd+'× '+pvEsc(p.item)+' — '+(p.situacao==='pedido'?'⏳ aguardando entrega':p.situacao==='entregue'?'✅ entregue':'cancelado')+' ('+pvEsc(p.quando)+')').join('<br>')+'</div>':'')
+      +'<div id="manRepMsg" style="font-size:.82rem;margin-top:4px"></div></div>';
+  }
+  c.innerHTML=h;
+  Object.keys(guard).forEach(k=>{ const e=document.getElementById(k); if(e&&guard[k]!=='') e.value=guard[k]; });
+  const mc=document.getElementById('manCat'); if(mc&&!mc.value&&MAN_COR) {}
+}
+async function manPost(o){ return (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({unidade:unidadeAtual,senha:pvSenha()},o))})).json(); }
+async function manAbrir(){
+  const g=id=>document.getElementById(id), m=g('manMsg'), cat=g('manCat').value, local=g('manLocal').value.trim(), desc=g('manDesc').value.trim();
+  if(!cat){ m.innerHTML='<span style="color:var(--danger)">Escolha o tipo do problema.</span>'; return; }
+  if(!MAN_COR){ m.innerHTML='<span style="color:var(--danger)">Escolha a prioridade.</span>'; return; }
+  if(local.length<3){ m.innerHTML='<span style="color:var(--danger)">Diga onde é o problema.</span>'; return; }
+  if(desc.length<10){ m.innerHTML='<span style="color:var(--danger)">Descreva o problema (mínimo 10 letras).</span>'; return; }
+  if(!MAN_FOTO.novo){ m.innerHTML='<span style="color:var(--danger)">Tire a foto do problema.</span>'; return; }
+  const b=g('manBtn'); b.disabled=true; b.textContent='Enviando…';
+  try{ const r=await manPost({action:'manutLojaAbrir',categoria:cat,cor:MAN_COR,local,descricao:desc,foto:{base64:String(MAN_FOTO.novo).split(',')[1]}});
+    if(!r.ok){ m.innerHTML='<span style="color:var(--danger)">'+pvEsc(r.erro||'Não enviou.')+'</span>'; b.disabled=false; b.textContent='Enviar pedido'; return; }
+    MAN_FORM=false; MAN_FOTO={}; await manCarregar(); const c=document.getElementById('manCorpo'); if(c) c.insertAdjacentHTML('afterbegin','<div style="color:var(--green);font-weight:800;margin-bottom:6px">✅ '+pvEsc(r.msg||'Pedido aberto.')+'</div>');
+  }catch(e){ m.innerHTML='<span style="color:var(--danger)">Sem conexão. Tente de novo.</span>'; b.disabled=false; b.textContent='Enviar pedido'; }
+}
+function manConsertado(id){
+  chkAbrirCamera('man_'+id, async f=>{ const m=document.getElementById('manM_'+id); if(m) m.textContent='Enviando…';
+    try{ const r=await manPost({action:'manutLojaResolver',id,consertado:'sim',foto:{base64:String(f).split(',')[1]}}); if(!r.ok){ if(m) m.innerHTML='<span style="color:var(--danger)">'+pvEsc(r.erro||'Não salvou.')+'</span>'; return; } await manCarregar(); }
+    catch(e){ if(m) m.innerHTML='<span style="color:var(--danger)">Sem conexão. Tente de novo.</span>'; } }, {msg:'📷 Fotografe o que foi <b>consertado</b>.'});
+}
+async function manAindaNao(id){
+  const obs=prompt('O que aconteceu? (ex.: o técnico não veio, voltou a dar problema)')||''; const m=document.getElementById('manM_'+id);
+  try{ const r=await manPost({action:'manutLojaResolver',id,consertado:'nao',obs}); if(m) m.innerHTML=r.ok?'<span style="color:var(--d-t-info)">Registrado: ainda não consertado. O Sidinei fica sabendo.</span>':'<span style="color:var(--danger)">'+pvEsc(r.erro||'Não salvou.')+'</span>'; }catch(e){ if(m) m.textContent='Sem conexão.'; }
+}
+async function manRepor(){
+  const g=id=>document.getElementById(id), m=g('manRepMsg'), q=Number(g('manRepQtd').value);
+  if(!(q>=1&&q<=50)){ m.innerHTML='<span style="color:var(--danger)">Quantidade de 1 a 50.</span>'; return; }
+  try{ const r=await manPost({action:'manutLojaRepor',item:g('manRepItem').value,qtd:q}); if(!r.ok){ m.innerHTML='<span style="color:var(--danger)">'+pvEsc(r.erro||'Não pediu.')+'</span>'; return; } g('manRepQtd').value=''; await manCarregar(); const mm=document.getElementById('manRepMsg'); if(mm) mm.innerHTML='<span style="color:var(--green)">✅ Pedido enviado ao estoque central.</span>'; }
+  catch(e){ m.innerHTML='<span style="color:var(--danger)">Sem conexão.</span>'; }
+}
 // Chamado aberto = tela pvChOverlay com "👀 Vi, estou resolvendo" (POST pvVisto) e depois a resposta (pvChamadoResponder).
 // Reclamação do pós-venda = card cardPV; o placar não envia sem responder (o que fez + o que ofereceu, POST pvResponder).
 let PV_ON=false, PV_DATA=null, _pvTimer=null, _pvVistos={};
