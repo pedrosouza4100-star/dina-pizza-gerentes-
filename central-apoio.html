@@ -96,7 +96,7 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 const Q=new URLSearchParams(location.search);
 let CHAVE='', D=null, SEC='';
 const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei'};
-const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMV do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central']];
+const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMC do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central']];
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6000); }
@@ -182,13 +182,13 @@ function rNotas(){ const n=D.notas||{}, el=document.getElementById('s-notas'), r
   el.innerHTML=h;
 }
 function rCmv(){ const c=D.cmv||{}, el=document.getElementById('s-cmv'), r=D.regras.cmv;
-  let h='<div class="tit">📊 CMV do mês</div>'; if(c.semDados||c.erro) return el.innerHTML=h+(c.erro?erroDe(c):semDados(c));
+  let h='<div class="tit">📊 CMC do mês — custo da mercadoria comprada</div>'; if(c.semDados||c.erro) return el.innerHTML=h+(c.erro?erroDe(c):semDados(c));
   const cor={verde:'#3ddc97',amarelo:'#FFD000',vermelho:'#ff4d4d',sem:'#888'}, max=Math.max(45,...(c.lojas||[]).map(l=>l.pct||0));
   const linha=(nome,l)=>'<div class="blin"><span>'+esc(nome)+'</span><div class="bar"><i style="width:'+Math.min(100,(l.pct||0)/max*100)+'%;background:'+cor[l.sinal]+'"></i><span class="meta" style="left:'+(r.meta/max*100)+'%"></span></div><b style="text-align:right">'+pc(l.pct)+'</b></div>';
   if(c.rede) h+=linha('Rede',c.rede);
   h+=(c.lojas||[]).map(l=>linha(l.loja,l)).join('');
   h+='<div class="muted" style="margin-top:6px">Linha = meta de '+r.meta+'%. Compras do mês ÷ faturamento do mês · '+esc(c.origem||'')+' · '+esc(c.atualizadoEm||'')+(c.alertaAtivo?'':' · alerta no topo só a partir do dia '+r.alertaDesdeDia)+'</div>';
-  h+=como('Meta da Dina: <b>'+r.meta+'%</b>. Mercado: a Abrasel trabalha com 25% a 40% conforme o tipo de operação, média do setor perto de 33%; pizzaria saudável fica entre 28% e 35%. 🟢 até '+r.meta+'%, 🟡 até '+r.atencao+'%, 🔴 acima. No começo do mês o número balança (as compras vêm antes das vendas), por isso o alerta só liga do dia '+r.alertaDesdeDia+' em diante. Mesmo número do Painel da Diretoria.');
+  h+=como('<b>CMC</b> = tudo o que foi comprado no mês ÷ o que foi vendido no mês. Enquanto as fichas técnicas não estiverem 100% conferidas, é o número mais confiável para acompanhar o custo. Meta da Dina: <b>'+r.meta+'%</b> (Abrasel: 25% a 40% conforme a operação, média do setor perto de 33%). 🟢 até '+r.meta+'%, 🟡 até '+r.atencao+'%, 🔴 acima. Atenção: compra grande para estoque sobe o CMC no mês e baixa no seguinte; por isso o alerta só liga do dia '+r.alertaDesdeDia+' em diante. Próximos passos: <b>CMV real</b> do mês pelo inventário mensal do Alpha (estoque inicial + compras − estoque final) e, com as fichas conferidas, o <b>CMV teórico</b>.');
   el.innerHTML=h;
 }
 function rCanc(){ const c=D.cancelamentos||{}, el=document.getElementById('s-cancelamentos'), r=D.regras.cancel;
