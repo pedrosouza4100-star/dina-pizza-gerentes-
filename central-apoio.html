@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Central de Apoio — painel do Sidinei (Fase 1, 18/11/2026; servidor CentralApoio.gs 2026-11-18-a, prefixo apo).
+     Entra com a senha da manutenção (Sidinei), do Admin ou da gestão. Só leitura: manutenção, notas de entrada (Alpha), CMV,
+     cancelamentos, qualidade do Fábio, hortifrúti e estoque central. Lia, Márcia e Fábio entram quando o Portal Dina estiver pronto. -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Central de Apoio — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--yellow:var(--d-yellow);--danger:var(--d-danger);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a{color:var(--gold);font-weight:700;text-decoration:none;cursor:pointer}
+main{padding:16px 4vw 60px;max-width:1100px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:.82rem;line-height:1.45}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
+input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:.95rem}
+.btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:.95rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.peq{padding:7px 12px;font-size:.8rem;margin-top:0}
+#login{max-width:380px;margin:60px auto}
+.hoje{display:flex;flex-direction:column;gap:8px}
+.al{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:.9rem;line-height:1.4}
+.al.vermelho{border-left:6px solid #ff4d4d;background:var(--d-red-soft)}
+.al.amarelo{border-left:6px solid #FFD000}
+.al .lj{font-weight:800;white-space:nowrap}
+.al .ar{margin-left:auto;font-size:.7rem;color:var(--muted);white-space:nowrap}
+.tudo-ok{padding:12px;border-radius:12px;border:1px solid rgba(61,220,151,.45);background:rgba(61,220,151,.08);font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit}
+.tile .i{font-size:1.3rem}.tile .n{font-size:1.5rem;font-weight:800;margin-top:4px;font-family:'Space Grotesk',Inter,sans-serif}.tile .t{font-size:.78rem;color:var(--muted);font-weight:700}
+.tile.vermelho{border-color:#ff4d4d}.tile.amarelo{border-color:#FFD000}.tile.on{box-shadow:0 0 0 2px var(--gold) inset}
+.sec{display:none}.sec.on{display:block}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
+td.num,th.num{text-align:right;white-space:nowrap}
+.tw{overflow-x:auto}
+.s-verde{color:var(--d-t-ok);font-weight:800}.s-amarelo{color:#d4a800;font-weight:800}.s-vermelho{color:var(--d-t-err);font-weight:800}
+[data-theme="light"] .s-amarelo{color:#9a7a00}
+.bar{position:relative;height:22px;background:var(--surface);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px}
+.bar b{position:absolute;right:8px;top:2px;font-size:.78rem}
+.bar .meta{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text)}
+.blin{display:grid;grid-template-columns:120px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:.85rem;font-weight:700}
+.encx{padding:10px 12px;border:1px dashed var(--gold);border-radius:12px;margin-top:8px;font-size:.86rem;line-height:1.4}
+.como{margin-top:10px;font-size:.78rem;color:var(--muted);line-height:1.45}
+.como summary{cursor:pointer;font-weight:700}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.9rem;font-weight:700;z-index:200;display:none;max-width:92vw;text-align:center}
+@media(max-width:700px){header{padding:8px 4vw}.hdr-tit small{display:none}main{padding:12px 3vw 60px}.blin{grid-template-columns:96px 1fr 48px}}
+</style>
+</head>
+<body>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Central de Apoio</b><small id="subt">Compras, manutenção e qualidade</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main>
+  <div id="login" class="card" style="display:none">
+    <div class="tit">🧭 Central de Apoio</div>
+    <div class="muted">Sidinei: use a mesma senha da Manutenção. O Robson entra com a senha do Admin ou da gestão.</div>
+    <label>Senha</label><input id="lgSenha" type="password" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn" style="width:100%" onclick="entrar()">Entrar</button>
+    <div id="lgMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+  <div id="app" style="display:none">
+    <div class="card" id="cHoje">
+      <div class="tit"><span>📌 Precisa de você hoje</span><span class="muted" id="atual"></span></div>
+      <div id="hoje" class="hoje"><div class="muted">Carregando…</div></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <section class="sec card" id="s-manutencao"></section>
+    <section class="sec card" id="s-notas"></section>
+    <section class="sec card" id="s-cmv"></section>
+    <section class="sec card" id="s-cancelamentos"></section>
+    <section class="sec card" id="s-qualidade"></section>
+    <section class="sec card" id="s-hortifruti"></section>
+    <section class="sec card" id="s-estoque"></section>
+    <div class="card" id="cEncaixe"><div class="tit">🔌 Liga quando o Alpha entregar</div><div class="muted">Já está desenhado e com o lugar pronto no painel. Depende do Jean (JTclan) liberar estes dados:</div><div id="encaixes"></div></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+// Central de Apoio (servidor CentralApoio.gs 2026-11-18-a). GET apoPainel {chave}, apoAtualizar {chave}.
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search);
+let CHAVE='', D=null, SEC='';
+const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei'};
+const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMV do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central']];
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6000); }
+function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k)||''; if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return ''; } }
+function rs(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function pc(v){ return Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'; }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='apoCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },60000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+function como(t){ return '<details class="como"><summary>Como medimos</summary>'+t+'</details>'; }
+function semDados(x){ return '<div class="encx">'+esc(x&&x.motivo||'Ainda sem dados.')+'</div>'; }
+function erroDe(x){ return x&&x.erro?'<div class="encx">⚠️ Não consegui ler: '+esc(x.erro)+'</div>':''; }
+
+async function entrar(){
+  const sn=document.getElementById('lgSenha').value, msg=document.getElementById('lgMsg');
+  if(!sn){ msg.textContent='Digite a senha.'; return; }
+  msg.textContent='Conferindo…'; CHAVE=hash(sn);
+  try{ const j=await jsonp({action:'apoPainel',chave:CHAVE}); if(!j.ok){ msg.textContent=j.erro==='senha'?'Senha incorreta (ou esta senha ainda não abre a Central).':(j.erro||'Não entrou.'); return; }
+    ls('apo_chave',CHAVE); abrir(j); }catch(e){ msg.textContent='Sem conexão com o servidor.'; }
+}
+function sair(){ ls('apo_chave',null); location.href='central-apoio'; }
+function abrir(j){
+  document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
+  D=j; render(); if(!abrir._t) abrir._t=setInterval(()=>{ if(document.visibilityState==='visible') carregar(); },120000);
+}
+async function carregar(){
+  try{ const j=await jsonp({action:'apoPainel',chave:CHAVE});
+    if(!j.ok){ if(j.erro==='senha'){ ls('apo_chave',null); toast('A senha mudou. Entre de novo.'); setTimeout(()=>location.reload(),1500); } else toast('⚠️ '+(j.erro||'Não carregou.')); return; }
+    D=j; render(); }catch(e){ toast('⚠️ Sem conexão. Tento de novo em 2 min.'); }
+}
+async function atualizarNotas(){
+  const b=document.getElementById('btAtual'); if(b){ b.disabled=true; b.textContent='Lendo as notas no Alpha…'; }
+  try{ const r=await jsonp({action:'apoAtualizar',chave:CHAVE}); toast(r.ok?'✅ '+r.msg:'⚠️ '+(r.erro||'Não atualizou.')); if(r.ok) await carregar(); }catch(e){ toast('⚠️ Sem conexão.'); }
+  if(b){ b.disabled=false; b.textContent='🔄 Atualizar agora'; }
+}
+function ir(area){ SEC=SEC===area?'':area; renderTiles(); document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+SEC)); if(SEC) document.getElementById('s-'+SEC).scrollIntoView({behavior:'smooth',block:'start'}); }
+
+function render(){
+  document.getElementById('quem').innerHTML=esc(ROT[D.papel]||D.papel)+' · <a onclick="sair()">Sair</a>';
+  document.getElementById('atual').textContent='atualizado '+D.agora;
+  const h=D.hoje||[], el=document.getElementById('hoje');
+  const MAXH=6, mostra=render._todos?h:h.slice(0,MAXH);
+  el.innerHTML=h.length?mostra.map(x=>'<div class="al '+x.nivel+'" onclick="ir(\''+x.area+'\')"><span>'+(x.nivel==='vermelho'?'🔴':'🟡')+'</span><span>'+(x.unidade?'<span class="lj">'+esc(x.unidade)+'</span> · ':'')+esc(x.txt)+'</span><span class="ar">'+esc((AREAS.find(a=>a[0]===x.area)||['','',''])[2])+' ›</span></div>').join('')
+    +(h.length>MAXH?'<button class="btn sec peq" style="margin-top:4px" onclick="render._todos=!render._todos;render()">'+(render._todos?'Mostrar menos':'Ver todos ('+h.length+')')+'</button>':'')
+    :'<div class="tudo-ok">✅ Nada urgente agora. Bom trabalho!</div>';
+  renderTiles();
+  rMan(); rNotas(); rCmv(); rCanc(); rQual(); rHf(); rEst();
+  document.getElementById('encaixes').innerHTML=(D.encaixes||[]).map(e=>'<div class="encx">🔌 '+esc(e.txt)+'</div>').join('');
+  document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+SEC));
+}
+function contaArea(a){ const h=(D.hoje||[]).filter(x=>x.area===a); return { n:h.length, v:h.some(x=>x.nivel==='vermelho') }; }
+function renderTiles(){
+  const num={ manutencao:(D.manutencao||{}).total, notas:((D.notas||{}).alertas||[]).length, cmv:D.cmv&&D.cmv.rede?pc(D.cmv.rede.pct):'—',
+    cancelamentos:D.cancelamentos&&D.cancelamentos.rede?pc(D.cancelamentos.rede.pct):'—', qualidade:(D.qualidade||{}).media==null?'—':D.qualidade.media,
+    hortifruti:((D.hortifruti||{}).foraPendentes||[]).length, estoque:(((D.estoqueCentral||{}).entradas)||[]).length };
+  const sub={ manutencao:'abertas', notas:'alertas de preço', cmv:'da rede no mês', cancelamentos:'cancelado (7 dias)', qualidade:'nota média', hortifruti:'mercado grande a decidir', estoque:'entradas recentes' };
+  document.getElementById('tiles').innerHTML=AREAS.map(a=>{ const c=contaArea(a[0]); return '<button class="tile '+(c.v?'vermelho':c.n?'amarelo':'')+(SEC===a[0]?' on':'')+'" onclick="ir(\''+a[0]+'\')"><div class="i">'+a[1]+'</div><div class="t">'+a[2]+'</div><div class="n">'+esc(num[a[0]]==null?'—':num[a[0]])+'</div><div class="t">'+sub[a[0]]+(c.n?' · '+c.n+' alerta(s)':'')+'</div></button>'; }).join('');
+}
+function sinalTxt(s){ return s==='vermelho'?'🔴':s==='amarelo'?'🟡':s==='verde'?'🟢':'—'; }
+
+function rMan(){ const m=D.manutencao||{}, el=document.getElementById('s-manutencao');
+  if(m.erro) return el.innerHTML='<div class="tit">🔧 Manutenção</div>'+erroDe(m);
+  const ls_=Object.keys(m.porLoja||{}).filter(u=>m.porLoja[u].abertas||m.porLoja[u].resolvidas30);
+  el.innerHTML='<div class="tit"><span>🔧 Manutenção</span><a class="btn sec peq" href="manutencao" target="_blank" style="text-decoration:none">Abrir a página ›</a></div>'+
+    '<div class="tw"><table><tr><th>Loja</th><th class="num">Abertas</th><th class="num">🔴</th><th class="num">Juntando</th><th class="num">Tempo médio p/ resolver</th></tr>'+
+    (ls_.length?ls_.map(u=>{ const L=m.porLoja[u]; return '<tr><td>'+esc(u)+'</td><td class="num">'+L.abertas+'</td><td class="num">'+(L.vermelhos?'<span class="s-vermelho">'+L.vermelhos+'</span>':0)+'</td><td class="num">'+L.esperando+'</td><td class="num">'+(L.diasMedio==null?'—':L.diasMedio+' dias')+'</td></tr>'; }).join(''):'<tr><td colspan="5" class="muted">Nenhum pedido aberto.</td></tr>')+'</table></div>'+
+    (m.reposicaoPedidos?'<div class="muted" style="margin-top:8px">📦 '+m.reposicaoPedidos+' pedido(s) de reposição esperando entrega.</div>':'')+
+    como('Tempo médio para resolver = da hora em que a loja anotou até a loja confirmar que foi feito, nos últimos 30 dias. É o indicador principal dos sistemas de manutenção de redes (CMMS). 🔴 sem solução em 20 h aparece no topo.');
+}
+function rNotas(){ const n=D.notas||{}, el=document.getElementById('s-notas'), r=D.regras.preco;
+  let h='<div class="tit"><span>🧾 Preços das notas de entrada</span><button class="btn sec peq" id="btAtual" onclick="atualizarNotas()">🔄 Atualizar agora</button></div>';
+  if(n.semDados||n.ok===false) return el.innerHTML=h+semDados(n.semDados?n:{motivo:'O Alpha não respondeu: '+(n.erro||'')});
+  h+='<div class="muted">Últimos 30 dias ('+esc(n.periodo||'')+') · '+n.notas+' notas · '+rs(n.total)+' · lido '+esc(n.quando||'')+'</div>';
+  const al=n.alertas||[];
+  h+='<div style="margin-top:10px;font-weight:800">💸 Subiu de preço ('+al.length+') — '+rs(n.impactoTotal)+' a mais</div>';
+  h+=al.length?'<div class="tw"><table><tr><th>Produto</th><th class="num">Subiu</th><th class="num">A mais</th></tr>'+al.map(a=>'<tr><td><b>'+esc(a.produto)+'</b>'+(a.caro?' <span class="muted">(item caro)</span>':'')+'<div class="muted">'+esc(a.fornecedor)+' · '+rs(a.antes)+' → '+rs(a.agora)+'</div><div class="muted">'+esc(a.empresa)+' · '+esc(String(a.dia).slice(8,10)+'/'+String(a.dia).slice(5,7))+' · '+a.qtd+' '+esc(a.un)+'</div></td><td class="num '+(a.impacto>=200?'s-vermelho':'s-amarelo')+'">+'+pc(a.pct)+'</td><td class="num">'+rs(a.impacto)+'</td></tr>').join('')+'</table></div>':'<div class="tudo-ok" style="margin-top:6px">✅ Nenhum item subiu acima do limite.</div>';
+  h+='<div style="margin-top:14px;font-weight:800">🏪 Quem mais vendeu para a rede</div><div class="tw"><table><tr><th>Fornecedor</th><th class="num">Notas</th><th class="num">Total</th><th class="num">Alertas</th></tr>'+(n.fornecedores||[]).map(f=>'<tr><td>'+esc(f.fornecedor)+'</td><td class="num">'+f.notas+'</td><td class="num">'+rs(f.valor)+'</td><td class="num">'+(f.alertas||'')+'</td></tr>').join('')+'</table></div>';
+  if((n.planos||[]).length) h+='<div style="margin-top:14px;font-weight:800">📂 Por plano de contas</div><div class="tw"><table>'+n.planos.map(p=>'<tr><td>'+esc(p.plano)+'</td><td class="num">'+rs(p.valor)+'</td></tr>').join('')+'</table></div>';
+  const dg=n.diag||{}, faltam=['custoAnterior','valorUnitario','quantidade'].filter(c=>!(dg.campos||{})[c]);
+  if(faltam.length&&dg.itens) h+='<div class="encx">⚠️ Não achei estes campos nas notas: '+faltam.join(', ')+'. Os alertas de preço dependem deles — avisar o Claude da Central.</div>';
+  h+=como('Igual aos sistemas de compras de redes lá de fora (MarginEdge, Restaurant365): cada item da nota é comparado com o custo anterior do mesmo produto. Alerta quando sobe mais de <b>'+r.pctCaro+'%</b> nos itens caros (queijos, frios, carnes) ou <b>'+r.pct+'%</b> nos demais <b>e</b> a diferença na nota passa de <b>'+rs(r.minReais)+'</b> (para não encher de alerta pequeno). Acima de R$ 200 a mais = vermelho. Lê o Alpha todo dia às 5h.');
+  el.innerHTML=h;
+}
+function rCmv(){ const c=D.cmv||{}, el=document.getElementById('s-cmv'), r=D.regras.cmv;
+  let h='<div class="tit">📊 CMV do mês</div>'; if(c.semDados||c.erro) return el.innerHTML=h+(c.erro?erroDe(c):semDados(c));
+  const cor={verde:'#3ddc97',amarelo:'#FFD000',vermelho:'#ff4d4d',sem:'#888'}, max=Math.max(45,...(c.lojas||[]).map(l=>l.pct||0));
+  const linha=(nome,l)=>'<div class="blin"><span>'+esc(nome)+'</span><div class="bar"><i style="width:'+Math.min(100,(l.pct||0)/max*100)+'%;background:'+cor[l.sinal]+'"></i><span class="meta" style="left:'+(r.meta/max*100)+'%"></span></div><b style="text-align:right">'+pc(l.pct)+'</b></div>';
+  if(c.rede) h+=linha('Rede',c.rede);
+  h+=(c.lojas||[]).map(l=>linha(l.loja,l)).join('');
+  h+='<div class="muted" style="margin-top:6px">Linha = meta de '+r.meta+'%. Compras do mês ÷ faturamento do mês · '+esc(c.origem||'')+' · '+esc(c.atualizadoEm||'')+(c.alertaAtivo?'':' · alerta no topo só a partir do dia '+r.alertaDesdeDia)+'</div>';
+  h+=como('Meta da Dina: <b>'+r.meta+'%</b>. Mercado: a Abrasel trabalha com 25% a 40% conforme o tipo de operação, média do setor perto de 33%; pizzaria saudável fica entre 28% e 35%. 🟢 até '+r.meta+'%, 🟡 até '+r.atencao+'%, 🔴 acima. No começo do mês o número balança (as compras vêm antes das vendas), por isso o alerta só liga do dia '+r.alertaDesdeDia+' em diante. Mesmo número do Painel da Diretoria.');
+  el.innerHTML=h;
+}
+function rCanc(){ const c=D.cancelamentos||{}, el=document.getElementById('s-cancelamentos'), r=D.regras.cancel;
+  let h='<div class="tit">❌ Cancelamentos e descontos</div>'; if(c.semDados||c.erro) return el.innerHTML=h+(c.erro?erroDe(c):semDados({motivo:'O Alpha ainda não importou as vendas (todo dia às 4h30).'}));
+  const d=String(c.ontem||''); h+='<div class="muted">Ontem = '+d.slice(8,10)+'/'+d.slice(5,7)+' · semana = últimos 7 dias</div>';
+  h+='<div class="tw"><table><tr><th>Loja</th><th class="num">Ontem</th><th class="num">R$ cancelado</th><th class="num">7 dias</th><th class="num">Desc.+cortesia</th></tr>'+(c.lojas||[]).map(l=>'<tr><td>'+esc(l.unidade)+'</td><td class="num s-'+(l.ontem?l.ontem.sinal:'')+'">'+(l.ontem?sinalTxt(l.ontem.sinal)+' '+pc(l.ontem.pct):'—')+'</td><td class="num">'+(l.ontem?rs(l.ontem.valor):'—')+'</td><td class="num s-'+l.semana.sinal+'">'+pc(l.semana.pct)+'</td><td class="num">'+pc(l.semana.descPct)+'</td></tr>').join('')+
+    (c.rede?'<tr><td><b>Rede</b></td><td></td><td class="num"><b>'+rs(c.rede.valor)+'</b></td><td class="num"><b>'+pc(c.rede.pct)+'</b></td><td class="num"><b>'+pc(c.rede.descPct)+'</b></td></tr>':'')+'</table></div>';
+  h+=como('Cancelado = vendas inteiras e itens cancelados no Alpha, sobre o total vendido. Em prevenção de perdas de restaurantes o normal é ficar abaixo de 1% a 2% das vendas. 🟡 acima de '+pc(r.amarelo)+' no dia, 🔴 acima de '+pc(r.vermelho)+'. Próximo passo (sem depender do Jean): mostrar por operador e supervisor, como os sistemas de prevenção de perdas fazem.');
+  el.innerHTML=h;
+}
+function rQual(){ const q=D.qualidade||{}, el=document.getElementById('s-qualidade'), r=D.regras.qualidade;
+  let h='<div class="tit">✅ Qualidade (Fábio)</div>'; if(q.erro) return el.innerHTML=h+erroDe(q);
+  h+='<div class="muted">Nota média da rede: <b>'+(q.media==null?'—':q.media)+'</b> · '+(q.totalVisitas||0)+' visitas em 180 dias</div>';
+  h+='<div class="tw"><table><tr><th>Loja</th><th class="num">Última nota</th><th class="num">Dias sem visita</th><th class="num">Correções abertas</th><th class="num">Esperando o Fábio</th></tr>'+(q.lojas||[]).map(l=>'<tr><td>'+esc(l.unidade)+'</td><td class="num '+(l.ultima&&l.ultima.nota<r.notaMin?'s-vermelho':'')+'">'+(l.ultima?l.ultima.nota:'—')+'</td><td class="num '+(l.diasSemVisita==null||l.diasSemVisita>r.diasSemVisita?'s-amarelo':'')+'">'+(l.diasSemVisita==null?'nunca':l.diasSemVisita)+'</td><td class="num">'+(l.pendAbertas||0)+'</td><td class="num">'+(l.pendAguardando||0)+'</td></tr>').join('')+'</table></div>';
+  if((q.faltasRepetidas||[]).length) h+='<div style="margin-top:12px;font-weight:800">🚫 Falta de produto repetida</div>'+q.faltasRepetidas.map(f=>'<div class="encx">'+esc(f.unidade)+': '+esc(f.item)+' — '+f.dias+' dias seguidos</div>').join('');
+  if((q.itensMaisNao||[]).length) h+='<div style="margin-top:12px;font-weight:800">🔁 Itens que mais reprovam</div><div class="tw"><table>'+q.itensMaisNao.map(i=>'<tr><td>'+esc(i.item)+'<div class="muted">'+esc(i.secao||'')+' · '+esc((i.lojas||[]).join(', '))+'</div></td><td class="num">'+i.vezes+'×</td></tr>').join('')+'</table></div>';
+  h+=como('Nota abaixo de '+r.notaMin+' = 🔴. Loja sem visita há mais de '+r.diasSemVisita+' dias = 🟡 (auditoria de segurança dos alimentos pelo menos 1 vez por mês, como nas redes que usam Jolt/Crunchtime). Correção justificada pelo gerente há mais de 18 h sem o Fábio confirmar aparece no topo.');
+  el.innerHTML=h;
+}
+function rHf(){ const f=D.hortifruti||{}, el=document.getElementById('s-hortifruti');
+  let h='<div class="tit">🥬 Hortifrúti</div>'; if(f.erro) return el.innerHTML=h+erroDe(f);
+  const lo=f.listasOntem||{}; h+='<div class="muted">Listas de ontem: <b>'+(lo.feitas||0)+' de '+(lo.total||0)+'</b>'+((lo.faltando||[]).length?' · faltou: '+esc(lo.faltando.join(', ')):'')+'</div>';
+  if((f.foraPendentes||[]).length) h+='<div style="margin-top:10px;font-weight:800">🛒 Mercado grande esperando decisão</div>'+f.foraPendentes.map(x=>'<div class="encx"><b>'+esc(x.unidade)+'</b> · '+(x.valor?rs(x.valor):'')+' · '+esc(x.motivo)+(x.foto?' · <a href="'+esc(x.foto)+'" target="_blank">cupom</a>':'')+'</div>').join('');
+  if((f.compras||[]).length) h+='<div style="margin-top:12px;font-weight:800">🧾 Compras registradas (36 h)</div><div class="tw"><table><tr><th>Loja</th><th>Onde</th><th class="num">Total</th><th class="num">💸</th></tr>'+f.compras.map(c=>'<tr><td>'+esc(c.unidade)+'<div class="muted">'+esc(c.quando)+'</div></td><td>'+esc(c.onde)+'</td><td class="num">'+(c.total==null?'—':rs(c.total))+'</td><td class="num">'+(c.alertas?'<span class="s-amarelo">'+c.alertas+'</span>':'')+'</td></tr>').join('')+'</table></div>';
+  const rk=f.ranking||{}; if(rk.lojas) h+='<div style="margin-top:12px;font-weight:800">🏆 Ranking de preço ('+esc(rk.semana||'')+')</div><div class="tw"><table><tr><th>Loja</th><th class="num">Índice</th></tr>'+rk.lojas.map(l=>'<tr><td>'+sinalTxt(l.sinal)+' '+esc(l.unidade)+'</td><td class="num">'+l.indice+'</td></tr>').join('')+'</table></div>';
+  else h+='<div class="muted" style="margin-top:8px">🏆 Ranking de preço liga com 4 semanas de compras'+(rk.comecaEm?' ('+esc(rk.comecaEm)+')':'')+'.</div>';
+  el.innerHTML=h;
+}
+function rEst(){ const e=D.estoqueCentral||{}, el=document.getElementById('s-estoque');
+  el.innerHTML='<div class="tit"><span>📦 Estoque central (Lia)</span><a class="btn sec peq" href="manutencao" target="_blank" style="text-decoration:none">Abrir ›</a></div>'+(e.erro?erroDe(e):((e.entradas||[]).length?'<div class="tw"><table><tr><th>Quando</th><th>Produto</th><th class="num">Qtd</th><th>Quem</th></tr>'+e.entradas.map(x=>'<tr><td>'+esc(x.quando)+'</td><td>'+esc(x.produto)+'</td><td class="num">'+esc(x.qtd)+' '+esc(x.unid)+'</td><td>'+esc(x.quem)+'</td></tr>').join('')+'</table></div>':'<div class="muted">Nenhuma entrada recente.</div>'))+
+    '<div class="encx">🔌 Saldo do estoque e transferências da central entram quando o Alpha entregar (ver abaixo).</div>';
+}
+
+(function(){
+  CHAVE=ls('apo_chave')||ls('man_chave'); // Sidinei já entrou na Manutenção neste aparelho: mesma senha
+  if(CHAVE){ jsonp({action:'apoPainel',chave:CHAVE}).then(j=>{ if(j.ok){ ls('apo_chave',CHAVE); abrir(j); } else { ls('apo_chave',null); CHAVE=''; document.getElementById('login').style.display='block'; } }).catch(()=>{ document.getElementById('login').style.display='block'; document.getElementById('lgMsg').textContent='Sem conexão com o servidor.'; }); return; }
+  document.getElementById('login').style.display='block';
+})();
+</script>
+</body>
+</html>
