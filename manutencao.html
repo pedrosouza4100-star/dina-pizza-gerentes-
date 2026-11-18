@@ -129,6 +129,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
       <div class="card"><div class="tit">📄 Relatórios enviados</div><div id="relLista" class="muted">—</div></div>
     </section>
     <section id="s-est" style="display:none">
+      <div class="card" id="estNotaCard" style="display:none"><div class="tit">🍺 Entrada pela foto da nota</div><div class="muted">Chegou chope (ou carne do controle da Isaac)? Fotografe a nota inteira, esticada e de perto. O sistema lê os produtos, você confere e confirma. Barris de 30 e 50 L viram litros sozinhos.</div><div id="estNotaFotoBox"></div><div id="estNotaConf"></div><div id="estNotaUlt"></div></div>
       <div class="card"><div class="tit">📦 Estoque central de reposição</div><div class="muted">As lojas pedem pelo botão 🔧 do placar. Entregou: toque em "Entregue" e o saldo baixa. Comprou: lance a entrada. Lembre de fazer a transferência no Alpha.</div><div id="estItens"></div></div>
       <div class="card"><div class="tit">Pedidos das lojas</div><div id="estPed" class="muted">—</div></div>
     </section>
@@ -147,7 +148,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 const Q=new URLSearchParams(location.search);
 let CHAVE='', PAPEL='', D=null, ABA='', FSIT='abertos', LOJA='', LSENHA='', LD=null, FORM={}, NAO={};
-const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei',gdi:'GDI',nutri:'Nutricionista',gerente:'Gerente',assistente:'Assistente',teste:'🧪 Teste'};
+const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei',gdi:'GDI',nutri:'Nutricionista',estoque:'Estoque central',gerente:'Gerente',assistente:'Assistente',teste:'🧪 Teste'};
 const SIT={aberta:'⏳ Esperando juntar',enviada:'🔧 Com o Sidinei',concluida:'❓ Loja confirmar',resolvida:'✅ Resolvida',recusada:'✖️ Recusada'};
 const CORN={vermelho:'Vermelho',amarelo:'Amarelo',verde:'Verde'}, CORT={vermelho:'precisa funcionar hoje',amarelo:'pode esperar',verde:'melhoria / orçamento'};
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
@@ -172,18 +173,18 @@ async function camAbrir(id){
   _camAlvo=id; const m=document.getElementById('camModal'), msg=document.getElementById('camMsg'), bt=document.getElementById('camBater');
   m.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera…';
   if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ msg.innerHTML='Não consegui abrir a câmera neste aparelho. Abra pelo endereço <b>https://gerentes.dinapizza.com.br/manutencao</b> no Chrome ou no Safari.'; return; }
-  try{ _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});
+  try{ _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:/^nota/.test(id)?1920:1280},height:{ideal:/^nota/.test(id)?1440:960}},audio:false});
     const v=document.getElementById('camVideo'); v.srcObject=_camStream; await v.play().catch(()=>{}); msg.textContent='Aponte para o problema e toque em “Bater foto”.'; bt.disabled=false;
   }catch(e){ msg.innerHTML='A câmera foi bloqueada. '+(/iPhone|iPad|iPod/.test(navigator.userAgent)?'No iPhone: toque no ícone à esquerda do endereço › <b>Ajustes do Site</b> › <b>Câmera</b> › <b>Permitir</b> e tente de novo.':'Toque no cadeado ao lado do endereço, permita a <b>Câmera</b> e tente de novo.'); }
 }
 function camFechar(){ if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; } const v=document.getElementById('camVideo'); if(v) v.srcObject=null; document.getElementById('camModal').style.display='none'; }
 function camBater(){
   const v=document.getElementById('camVideo'); if(!v||!v.videoWidth||!_camAlvo) return;
-  const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+  const k=Math.min(1,(/^nota/.test(_camAlvo)?2200:1280)/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
   const x=c.getContext('2d'); x.drawImage(v,0,0,c.width,c.height);
   const loja=LOJA||(document.getElementById('abLoja')||{}).value||'', carimbo=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+(loja?' · '+loja:'')+' · Manutenção';
   const fs=Math.max(16,Math.round(c.width/40)); x.font='bold '+fs+'px sans-serif'; x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(0,c.height-fs-16,c.width,fs+16); x.fillStyle='#FFD000'; x.fillText(carimbo,10,c.height-8);
-  FOTOS[_camAlvo]=c.toDataURL('image/jpeg',.75); const id=_camAlvo; camFechar(); camAtualizar(id);
+  FOTOS[_camAlvo]=c.toDataURL('image/jpeg',/^nota/.test(_camAlvo)?.85:.75); const id=_camAlvo; camFechar(); if(/^nota/.test(id)) estNotaRender(); else camAtualizar(id);
 }
 // ---------- formulário de anotar (loja e equipe) ----------
 function cats(){ return (LOJA?LD:D).categorias; }
@@ -291,7 +292,7 @@ async function carregar(prim){ if(LOJA) return carregarLoja(prim);
 }
 function montar(){
   document.getElementById('quem').innerHTML='👤 '+esc(ROT[PAPEL]||PAPEL)+' · <a href="#" onclick="sair();return false">sair</a>';
-  const abas=[['ped','📋 Pedidos'],['abrir','➕ Anotar'],['rel','📄 Relatórios']]; if(pode('sidinei','admin','gestao')) abas.push(['est','📦 Estoque central']);
+  const abas=PAPEL==='estoque'?[]:[['ped','📋 Pedidos'],['abrir','➕ Anotar'],['rel','📄 Relatórios']]; if(pode('sidinei','admin','gestao','estoque')) abas.push(['est','📦 Estoque central']);
   document.getElementById('abas').innerHTML=abas.map(([k,t])=>'<button class="aba" data-aba="'+k+'" onclick="aba(\''+k+'\')">'+t+'<span class="n" id="n_'+k+'" style="display:none"></span></button>').join('');
   const lj=D.lojas.map(u=>'<option>'+esc(u)+'</option>').join('');
   document.getElementById('abLoja').innerHTML='<option value="">— escolha —</option>'+lj; document.getElementById('fLoja').innerHTML='<option value="">Todas as lojas</option>'+lj;
@@ -299,7 +300,7 @@ function montar(){
   formMontar('eForm',document.getElementById('abLoja').value);
   const fs=[['abertos','Em aberto'],['vermelho','🔴 Vermelhos'],['enviada','🔧 Com o Sidinei'],['aberta','⏳ Esperando juntar'],['concluida','❓ Loja confirmar'],['resolvida','✅ Resolvidas'],['recusada','✖️ Recusadas']];
   document.getElementById('fSit').innerHTML=fs.map(([k,t])=>'<button class="fl" data-f="'+k+'" onclick="FSIT=\''+k+'\';render()">'+t+'</button>').join('');
-  aba(Q.get('abrir')?'abrir':'ped');
+  aba(PAPEL==='estoque'?'est':(Q.get('abrir')?'abrir':'ped'));
 }
 function filtra(x){
   if(FSIT==='abertos') return ['aberta','enviada','concluida'].includes(x.situacao);
@@ -315,7 +316,7 @@ function render(){
   document.getElementById('lista').innerHTML=l.length?l.map(x=>itemHtml(x,acoesEquipe(x))).join(''):'<div class="muted" style="margin-top:10px">Nenhum pedido aqui.</div>';
   repor(g);
   const hl=Q.get('id'); if(hl&&!render._f){ const el=document.getElementById('p_'+hl); if(el){ render._f=1; el.classList.add('hl'); el.scrollIntoView({block:'center'}); } }
-  renderRel(); if(pode('sidinei','admin','gestao')) renderEstoque();
+  renderRel(); if(pode('sidinei','admin','gestao','estoque')) renderEstoque();
 }
 function acoesEquipe(x){
   if(!pode('sidinei','admin','gestao')||!['aberta','enviada'].includes(x.situacao)) return '';
@@ -335,7 +336,41 @@ function renderRel(){
     +(r.url?'<a class="btn peq" style="display:inline-block;text-decoration:none" href="'+esc(r.url)+'" target="_blank">📄 Abrir o PDF</a>':'<div class="linha muted">PDF não foi gerado</div>')+'</div>').join(''):'—';
 }
 async function enviarAgora(u){ if(!confirm('Gerar agora o relatório da '+u+' com o que está esperando?')) return; try{ const r=await post({action:'manutEnviarAgora',unidade:u}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não gerou.')); toast('📄 Relatório gerado ('+r.qtd+'). Ele também chega no WhatsApp.'); if(r.url) window.open(r.url,'_blank'); }catch(e){ toast('⚠️ Sem conexão.'); } carregar(false); }
+// ---------- entrada pela foto da nota (17/11/2026, servidor 2026-11-17-e; a Lia lança o chope) ----------
+let EN=null;
+function estNotaRender(){
+  const card=document.getElementById('estNotaCard'); if(!card) return; card.style.display=D.estoqueNota?'':'none'; if(!D.estoqueNota) return;
+  const fb=document.getElementById('estNotaFotoBox'); if(!EN) fb.innerHTML=camBotao('nota_est')+(FOTOS.nota_est?'<button class="btn" style="width:100%;margin-top:8px" id="enLer" onclick="estNotaLer()">📄 Ler a nota</button>':''); else fb.innerHTML='';
+  const box=document.getElementById('estNotaConf'), g=guardar(box);
+  if(!EN){ box.innerHTML=''; } else {
+    const opt=v=>EN.produtos.map(p=>'<option value="'+p.id+'"'+(p.id===v?' selected':'')+'>'+esc(p.nome)+' ('+p.unid+')</option>').join('');
+    box.innerHTML='<div class="item" style="border-color:var(--gold);margin-top:10px"><b>📄 Confira antes de lançar</b><div class="linha muted">'+esc(EN.fornecedor||'')+(EN.numero?' · nota '+esc(EN.numero):'')+(EN.total?' · total R$ '+EN.total.toFixed(2).replace('.',','):'')+'</div>'
+      +(EN.duplicada?'<div class="resp" style="color:var(--red,#e74c3c)">⛔ Esta nota já foi lançada em '+esc(EN.duplicada)+'. Não lance de novo.</div>':'')
+      +(EN.itens.length?'':'<div class="linha" style="color:var(--gold)">Não achei chope (nem carne do controle) na nota. Se tiver, adicione abaixo.</div>')
+      +EN.itens.map((x,i)=>'<div class="acoes" style="align-items:flex-end"><div><label>Produto</label><select id="enP'+i+'">'+opt(x.produto)+'</select></div><div><label>Quantidade ('+esc(x.unid||'')+')</label><input id="enQ'+i+'" inputmode="decimal" style="width:110px" value="'+(x.qtd?String(x.qtd).replace('.',','):'')+'"></div><button class="btn sec peq" onclick="EN.itens.splice('+i+',1);estNotaRender()">🗑</button></div>'
+        +((x.detalhe||[]).length&&x.detalhe[0].n?'<div class="linha muted">'+x.detalhe.map(d=>d.n+' barril(is)'+(d.barril?' de '+d.barril+' L':'')).join(' + ')+'</div>':'')
+        +(x.semTamanho?'<div class="linha" style="color:var(--gold)">Não achei o tamanho do barril na nota: digite os litros (barril de 30 L ou 50 L).</div>':'')+(x.semPeso?'<div class="linha" style="color:var(--gold)">Não achei o peso: digite os kg.</div>':'')).join('')
+      +'<div class="acoes"><button class="btn sec peq" onclick="EN.itens.push({produto:\'chope_claro\',qtd:0,unid:\'L\'});estNotaRender()">➕ Adicionar produto</button>'+(EN.duplicada?'':'<button class="btn ok peq" onclick="estNotaConfirmar()">✅ Confirmar entrada</button>')+'<button class="btn sec peq" onclick="EN=null;delete FOTOS.nota_est;estNotaRender()">Cancelar</button></div></div>';
+    repor(g);
+  }
+  const u=D.entradasEstoque||[]; document.getElementById('estNotaUlt').innerHTML=u.length?'<div class="sec-t">Últimas entradas</div>'+u.map(x=>'<div class="linha muted">'+esc(x.quando)+' · <b>'+esc(x.produto)+' '+String(x.qtd).replace('.',',')+' '+esc(x.unid)+'</b> · '+esc(x.obs)+' · '+esc(x.quem)+'</div>').join(''):'';
+}
+async function estNotaLer(){
+  const b=document.getElementById('enLer'); if(b){ b.disabled=true; b.textContent='📄 Lendo a nota…'; }
+  try{ const r=await post({action:'manutEstqLer',foto:{base64:FOTOS.nota_est.split(',')[1]}}); if(!r.ok){ toast('⚠️ '+(r.erro||'Não consegui ler.')); if(b){ b.disabled=false; b.textContent='📄 Ler a nota'; } return; } EN=r; estNotaRender(); }
+  catch(e){ toast('⚠️ Sem conexão.'); if(b){ b.disabled=false; b.textContent='📄 Ler a nota'; } }
+}
+async function estNotaConfirmar(){
+  EN.itens.forEach((x,i)=>{ x.produto=document.getElementById('enP'+i).value; x.qtd=(document.getElementById('enQ'+i).value||'').replace(',','.'); });
+  const itens=EN.itens.filter(x=>Number(x.qtd)>0); if(!itens.length) return toast('Coloque a quantidade de pelo menos 1 produto.');
+  const nome=id=>(EN.produtos.find(p=>p.id===id)||{}).nome, un=id=>(EN.produtos.find(p=>p.id===id)||{}).unid;
+  if(!confirm('Lançar a entrada?\n\n'+itens.map(x=>nome(x.produto)+': '+String(x.qtd).replace('.',',')+' '+un(x.produto)).join('\n'))) return;
+  try{ const r=await post({action:'manutEstqLancar',itens:itens.map(x=>({produto:x.produto,qtd:x.qtd})),chaveNota:EN.chave,numero:EN.numero,fornecedor:EN.fornecedor,foto:{base64:FOTOS.nota_est.split(',')[1]}});
+    if(!r.ok) return toast('⚠️ '+(r.erro||'Não lançou.')); toast('✅ Entrada lançada: '+r.lancados.map(x=>x.nome+' '+String(x.qtd).replace('.',',')+' '+x.unid).join(', ')); EN=null; delete FOTOS.nota_est; carregar(false); }
+  catch(e){ toast('⚠️ Sem conexão.'); }
+}
 function renderEstoque(){
+  estNotaRender();
   const R=D.reposicao, g=guardar(document.getElementById('estItens'));
   document.getElementById('estItens').innerHTML=R.itens.map(i=>'<div class="item'+(i.saldo<=i.minimo?' atr':'')+'"><div class="it-top"><span>'+esc(i.nome)+'</span><span class="tag '+(i.saldo<=i.minimo?'t-red':'t-ok')+'">saldo '+i.saldo+' · mínimo '+i.minimo+'</span></div><div class="acoes"><div><label>Entrada (comprou)</label><input type="number" id="ent_'+i.id+'" min="1" style="width:110px"></div><button class="btn ok peq" onclick="entrada(\''+i.id+'\')">Lançar entrada</button></div></div>').join('');
   repor(g);

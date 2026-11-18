@@ -318,6 +318,13 @@
         </div>
       </div>
       <div>
+        <div class="section-title">Senha do Estoque central (Lia)</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+          <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">A Lia entra em <a href="manutencao" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/manutencao</a> com esta senha e vê <b>só</b> o Estoque central: entrada do chope pela foto da nota e entregas das lâmpadas do buffet. Os pedidos de manutenção não aparecem para ela. <span id="estSenhaStatus"></span></div></div>
+          <button class="action-btn btn-nova" style="padding:8px 20px;font-size:0.8rem" onclick="definirSenhaEst()">Definir senha do estoque central</button>
+        </div>
+      </div>
+      <div>
         <div class="section-title">Senha de Administrador</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">Altere sua senha de administrador quando necessário. Ela vale em qualquer aparelho e é conferida pelo servidor em cada alteração.</div></div>
@@ -664,7 +671,10 @@
           <label style="font-size:0.75rem;color:var(--muted);flex:1;min-width:160px">Observação<br><input class="modal-input" id="estObs" placeholder="ex.: nota 1234, 2 barris de 50 L"></label>
           <button class="action-btn btn-nova" onclick="estLancar()">💾 Lançar</button>
           <button class="action-btn btn-nova" onclick="estCarregar(true)">🔄 Atualizar</button>
+          <button class="action-btn btn-nova" style="background:var(--gold);color:#000" onclick="document.getElementById('estNotaFoto').click()">📷 Entrada pela foto da nota</button>
+          <input type="file" id="estNotaFoto" accept="image/*" capture="environment" style="display:none" onchange="estNotaLer(this)">
         </div>
+        <div id="estNota"></div>
         <div id="estInfo" style="font-size:0.78rem;margin-bottom:8px"></div>
         <div id="estCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px"></div>
         <details><summary style="cursor:pointer;font-size:0.8rem;color:var(--muted)">Últimos lançamentos</summary><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Quando</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Esperado</th><th>Diferença</th><th>Obs</th><th></th></tr></thead><tbody id="estLanc"></tbody></table></div></details>
@@ -1266,6 +1276,35 @@
       info.innerHTML='<span style="color:var(--green)">✓ Lançado ('+escH(r.quando)+')'+(r.diferenca!==null&&r.diferenca!==undefined?' — esperado '+String(r.esperado).replace('.',',')+', diferença <b>'+(r.diferenca>0?'+':'')+String(r.diferenca).replace('.',',')+'</b>':'')+'</span>';
     }catch(e){ info.innerHTML='<span style="color:var(--danger)">⚠ '+escH(e.message)+'</span>'; }
   }
+  // ── Entrada pela foto da nota (17/11/2026, servidor 2026-11-17-e) ──
+  let EST_NOTA=null;
+  function estNotaFotoB64(input){ return new Promise(res=>{ const f=input.files&&input.files[0]; if(!f) return res(null);
+    const rd=new FileReader(), img=new Image(); rd.onload=()=>{ img.onload=()=>{ const k=Math.min(1,2000/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.85).split(',')[1]); }; img.onerror=()=>res(null); img.src=rd.result; }; rd.readAsDataURL(f); }); }
+  async function estNotaLer(input){
+    const box=document.getElementById('estNota'); box.innerHTML='<div style="font-size:0.8rem;color:var(--muted);margin:8px 0">📄 Lendo a nota…</div>';
+    const b64=await estNotaFotoB64(input); input.value=''; if(!b64){ box.innerHTML='<div style="color:var(--danger);font-size:0.8rem">Não consegui abrir a foto.</div>'; return; }
+    try{ const r=await admPost({action:'estqLerNota',senhaAdmin:ADM.hash||'',foto:{base64:b64}}); EST_NOTA=Object.assign(r,{foto:b64}); estNotaRender(); }
+    catch(e){ box.innerHTML='<div style="color:var(--danger);font-size:0.8rem;margin:8px 0">⚠ '+escH(e.message)+'</div>'; }
+  }
+  function estNotaRender(){
+    const r=EST_NOTA, box=document.getElementById('estNota'); if(!r){ box.innerHTML=''; return; }
+    const opt=v=>r.produtos.map(p=>'<option value="'+p.id+'"'+(p.id===v?' selected':'')+'>'+escH(p.nome)+' ('+p.unid+')</option>').join('');
+    box.innerHTML='<div style="border:1px solid var(--gold);border-radius:10px;padding:12px;margin:8px 0 12px;background:var(--card)">'
+      +'<div style="font-weight:800">📄 Confira antes de lançar</div><div style="font-size:0.78rem;color:var(--muted);margin:4px 0 8px">'+escH(r.fornecedor||'')+(r.numero?' · nota '+escH(r.numero):'')+(r.total?' · total R$ '+String(r.total.toFixed(2)).replace('.',','):'')+'</div>'
+      +(r.duplicada?'<div style="color:var(--danger);font-weight:700;margin-bottom:8px">⛔ Esta nota já foi lançada em '+escH(r.duplicada)+'. Não lance de novo.</div>':'')
+      +(r.itens.length?'':'<div style="color:var(--yellow);font-size:0.8rem;margin-bottom:8px">Não achei na nota nenhum produto do controle (alcatra, contra filé, chope). Se tiver, adicione abaixo.</div>')
+      +r.itens.map((x,i)=>'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select class="modal-input" id="enP'+i+'">'+opt(x.produto)+'</select><input class="modal-input" id="enQ'+i+'" inputmode="decimal" style="max-width:110px" value="'+(x.qtd?String(x.qtd).replace('.',','):'')+'"><span style="font-size:0.78rem;color:var(--muted)">'+escH(x.unid)+' · '+x.linhas+' linha(s) na nota'+(x.semTamanho?' — <b style="color:var(--yellow)">não achei o tamanho do barril: digite os litros</b>':'')+(x.semPeso?' — <b style="color:var(--yellow)">não achei o peso: digite os kg</b>':'')+'</span><button class="action-btn" style="padding:2px 8px" onclick="EST_NOTA.itens.splice('+i+',1);estNotaRender()">🗑</button></div>').join('')
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="action-btn" onclick="EST_NOTA.itens.push({produto:EST_NOTA.produtos[0].id,qtd:0,unid:EST_NOTA.produtos[0].unid,linhas:0});estNotaRender()">➕ Adicionar produto</button>'
+      +(r.duplicada?'':'<button class="action-btn btn-nova" onclick="estNotaConfirmar()">✅ Confirmar entrada</button>')+'<button class="action-btn" onclick="EST_NOTA=null;estNotaRender()">Cancelar</button></div></div>';
+  }
+  async function estNotaConfirmar(){
+    const r=EST_NOTA; r.itens.forEach((x,i)=>{ x.produto=document.getElementById('enP'+i).value; x.qtd=(document.getElementById('enQ'+i).value||'').replace(',','.'); });
+    const itens=r.itens.filter(x=>Number(x.qtd)>0); if(!itens.length){ showToast('Coloque a quantidade de pelo menos 1 produto.','warn'); return; }
+    if(!confirm('Lançar a entrada?\n\n'+itens.map(x=>(r.produtos.find(p=>p.id===x.produto)||{}).nome+': '+String(x.qtd).replace('.',',')+' '+((r.produtos.find(p=>p.id===x.produto)||{}).unid||'')).join('\n'))) return;
+    try{ const j=await admPost({action:'estqLancarNota',senhaAdmin:ADM.hash||'',itens:itens.map(x=>({produto:x.produto,qtd:x.qtd})),chaveNota:r.chave,numero:r.numero,fornecedor:r.fornecedor,foto:{base64:r.foto}});
+      showToast('✅ Entrada lançada: '+j.lancados.map(x=>x.nome+' '+String(x.qtd).replace('.',',')+' '+x.unid).join(', '),'ok'); registrarLog('Estoque: entrada pela nota '+(r.numero||''),'ok'); EST_NOTA=null; estNotaRender(); estCarregar(true); }
+    catch(e){ showToast('Não lançou: '+e.message,'warn'); }
+  }
   async function estExcluir(id){
     if(!confirm('Apagar este lançamento?')) return;
     try{ await admPost({action:'estqExcluir',senhaAdmin:ADM.hash||'',id}); estCarregar(true); }catch(e){ showToast(e.message,'erro'); }
@@ -1622,6 +1661,12 @@
   }
 
   // Senha da manutenção (Sidinei), servidor 2026-11-17-b
+  async function definirSenhaEst(){
+    const sn=prompt('Nova senha do estoque central — Lia (mínimo 4 caracteres):'); if(sn==null) return;
+    if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
+    try{ const r=await admPost({action:'authDefinirSenhaEst',hash:hash(sn)}); if(!r||r.ok!==true) throw new Error((r&&r.erro)||'O Apps Script publicado ainda não tem o estoque central.'); showToast('Senha do estoque central salva.','ok'); registrarLog('Senha do estoque central definida.','ok'); mostrarLista([['Estoque central (Lia)',sn]],'Senha do estoque central:\n📦 gerentes.dinapizza.com.br/manutencao'); renderTabela(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
   async function definirSenhaMan(){
     const sn=prompt('Nova senha da manutenção (mínimo 4 caracteres):'); if(sn==null) return;
     if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
@@ -1645,6 +1690,7 @@
       const ta=document.getElementById('tabelaAgenda');
       if(ta) ta.innerHTML=r.agenda?Object.keys(r.agenda).map(k=>{ const a=r.agenda[k]; return `<tr><td style="font-weight:600">${escH(a.rotulo)}</td><td>${a.ativa?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${quando(a.em)}</div>`:'<span class="badge sem">Sem senha</span>'}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',true)">Gerar</button><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',false)">Escolher</button></div></td></tr>`; }).join(''):'<tr><td colspan="2" style="color:var(--yellow)">Falta colar o código novo no Apps Script.</td></tr>';
       const cs=document.getElementById('ccStatus'); if(cs) cs.innerHTML=r.callcenter===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.callcenter?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
+      const es=document.getElementById('estSenhaStatus'); if(es) es.innerHTML=r.estoque===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.estoque?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const ms=document.getElementById('manStatus'); if(ms) ms.innerHTML=r.manutencao===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.manutencao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const gs=document.getElementById('gestaoStatus'); if(gs) gs.innerHTML=r.gestao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>';
     }catch(e){ tbody.innerHTML='<tr><td colspan="3" style="color:var(--danger)">⚠ '+e.message+'</td></tr>'; }
