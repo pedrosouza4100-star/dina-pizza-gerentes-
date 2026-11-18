@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Portal Dina — porta de entrada (etapa 1, 18/11/2026; servidor Portal.gs 2026-11-18-a, ações apoPtl* pela rota apo).
+     Cada pessoa entra com o usuário (primeiro nome) e a senha pessoal (6+ números); vê só os botões do seu setor.
+     Robson: usuário "robson" + senha do Admin. Robson, Rosi e Sidinei cuidam das pessoas (cadastrar, refazer senha, desligar). -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Portal Dina</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a{color:var(--gold);font-weight:700;cursor:pointer}
+main{padding:16px 4vw 60px;max-width:900px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.05rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:.82rem;line-height:1.45}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
+input,select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:1rem;font-family:inherit}
+.btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:.95rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px;font-family:inherit}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.peq{padding:7px 11px;font-size:.78rem;margin:4px 4px 0 0}
+.btn.w{width:100%}
+.caixa{max-width:400px;margin:40px auto}
+.msg{margin-top:10px;font-size:.88rem;font-weight:700;min-height:1.2em}
+.msg.err{color:var(--d-t-err)}.msg.ok{color:var(--d-t-ok)}
+.ola{font-size:1.3rem;font-weight:800}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
+.bt{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px 14px;border-radius:16px;background:var(--card);border:1px solid var(--border);color:var(--text);text-decoration:none;font-weight:800;font-size:.95rem;min-height:104px}
+.bt .i{font-size:1.7rem}
+.bt .n{position:absolute;top:10px;right:10px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:#ff4d4d;color:#fff;font-size:.82rem;display:flex;align-items:center;justify-content:center}
+.bt .n.z{background:var(--d-green);color:#05140c}
+.bt .ant{font-size:.68rem;color:var(--muted);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
+.tw{overflow-x:auto}
+.sit{font-size:.72rem;font-weight:800;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.sit.ativa{background:rgba(61,220,151,.15);color:var(--d-t-ok)}.sit.desligada{background:rgba(255,77,77,.15);color:var(--d-t-err)}.sit.pausada{background:rgba(255,208,0,.15);color:#d4a800}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:300;padding:16px}
+.modal .card{width:100%;max-width:420px;margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.9rem;font-weight:700;z-index:400;display:none;max-width:92vw;text-align:center}
+@media(max-width:700px){.hdr-tit small{display:none}.grade{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Portal Dina</b><small>Entrada da equipe</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main>
+  <!-- entrar -->
+  <div id="vEntrar" class="card caixa" style="display:none">
+    <div class="tit">👋 Entrar</div>
+    <div class="muted">Use o seu usuário (o primeiro nome) e a sua senha pessoal. A senha é só sua: não passe para ninguém.</div>
+    <label>Usuário</label><input id="eUsu" autocapitalize="none" autocomplete="username" placeholder="ex.: lia">
+    <label>Senha</label><input id="eSen" type="password" inputmode="numeric" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn w" onclick="entrar()">Entrar</button>
+    <div id="eMsg" class="msg err"></div>
+    <div class="muted" style="margin-top:10px">Esqueceu a senha? Peça ao Sidinei, à Rosi ou ao Robson para refazer.</div>
+  </div>
+  <!-- trocar senha -->
+  <div id="vTrocar" class="card caixa" style="display:none">
+    <div class="tit">🔑 Crie a sua senha</div>
+    <div class="muted" id="tTxt">Você entrou com uma senha provisória. Crie agora a sua senha pessoal, só com números, de no mínimo 6 dígitos.</div>
+    <label>Senha atual (a provisória)</label><input id="tAt" type="password" inputmode="numeric">
+    <label>Senha nova (6 números ou mais)</label><input id="tN1" type="password" inputmode="numeric">
+    <label>Repita a senha nova</label><input id="tN2" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')trocar()">
+    <button class="btn w" onclick="trocar()">Salvar a senha</button>
+    <div id="tMsg" class="msg err"></div>
+  </div>
+  <!-- início -->
+  <div id="vInicio" style="display:none">
+    <div class="card"><div class="ola" id="ola"></div><div class="muted" id="setor"></div>
+      <div class="grade" id="grade"></div>
+      <div class="muted" style="margin-top:12px" id="notaAnt"></div>
+    </div>
+    <div class="card" id="cPessoas" style="display:none">
+      <div class="tit"><span>👥 Pessoas</span><button class="btn peq" onclick="abrirCad()">➕ Cadastrar</button></div>
+      <div class="muted">Quem sai da empresa: toque em <b>Desligar</b> e o acesso cai na hora. Quem passa 30 dias sem entrar fica pausado sozinho (toque em Reativar).</div>
+      <div class="tw" style="margin-top:8px"><table id="tbP"></table></div>
+    </div>
+    <div class="card" id="cReg" style="display:none">
+      <div class="tit"><span>🗂️ Registro (7 dias)</span><button class="btn sec peq" onclick="carregarReg()">Atualizar</button></div>
+      <div class="tw"><table id="tbR"></table></div>
+    </div>
+    <div class="card"><button class="btn sec" id="btTrocar" onclick="mostrarTrocar(true)">🔑 Trocar a minha senha</button> <button class="btn sec" onclick="sair()">Sair deste aparelho</button></div>
+  </div>
+</main>
+<!-- modal genérico -->
+<div class="modal" id="modal"><div class="card"><div class="tit" id="mTit"></div><div id="mCorpo"></div><button class="btn w" id="mOk">Confirmar</button><button class="btn sec w" onclick="fecharModal()">Cancelar</button><div id="mMsg" class="msg err"></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+// Portal Dina (servidor Portal.gs 2026-11-18-a pela rota apo). Sessão no aparelho: localStorage portal_token (30 dias).
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+let TOKEN='', EU=null, PAPEIS={}, SO_ADMIN=[], PODE_ADMIN=false;
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k)||''; if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return ''; } }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',5000); }
+function aparelho(){ const u=navigator.userAgent; const so=/iPhone|iPad/.test(u)?'iPhone':/Android/.test(u)?'Android':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Outro'; const nav=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':/Firefox/.test(u)?'Firefox':'Navegador'; return so+' · '+nav; }
+function api(params){ return new Promise((res,rej)=>{ const cb='ptlCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },45000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign({token:TOKEN},params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+function ver(id){ ['vEntrar','vTrocar','vInicio'].forEach(v=>document.getElementById(v).style.display=v===id?'block':'none'); }
+const so6=v=>/^\d{6,}$/.test(v);
+
+async function entrar(){
+  const u=document.getElementById('eUsu').value.trim(), sn=document.getElementById('eSen').value, m=document.getElementById('eMsg');
+  if(!u||!sn){ m.textContent='Digite o usuário e a senha.'; return; }
+  m.className='msg'; m.textContent='Conferindo…';
+  try{ const r=await api({action:'apoPtlEntrar',usuario:u,senha:hash(sn),aparelho:aparelho()}); m.className='msg err';
+    if(!r.ok){ m.textContent=r.erro==='senha'?'Usuário ou senha não conferem'+(r.restam<3?' (restam '+r.restam+' tentativas)':'')+'.':r.erro==='bloqueado'?'Muitas tentativas erradas. Espere '+r.minutos+' minutos ou peça para refazer a senha.':r.erro==='desligada'?'Este acesso foi desligado. Fale com o seu responsável.':r.erro==='pausada'?'Acesso pausado (mais de 30 dias sem entrar). Peça ao Sidinei, à Rosi ou ao Robson para reativar.':(r.erro||'Não entrou.'); return; }
+    TOKEN=r.token; ls('portal_token',TOKEN); document.getElementById('eSen').value='';
+    if(r.trocar){ mostrarTrocar(false); return; } inicio();
+  }catch(e){ m.textContent='Sem conexão com o servidor.'; }
+}
+function mostrarTrocar(voluntario){
+  document.getElementById('tTxt').textContent=voluntario?'Digite a sua senha atual e a nova (só números, no mínimo 6).':'Você entrou com uma senha provisória. Crie agora a sua senha pessoal, só com números, de no mínimo 6 dígitos.';
+  document.getElementById('tAt').previousElementSibling.textContent=voluntario?'Senha atual':'Senha atual (a provisória)';
+  ['tAt','tN1','tN2'].forEach(i=>document.getElementById(i).value=''); document.getElementById('tMsg').textContent=''; mostrarTrocar.vol=voluntario; ver('vTrocar');
+}
+async function trocar(){
+  const a=document.getElementById('tAt').value, n1=document.getElementById('tN1').value, n2=document.getElementById('tN2').value, m=document.getElementById('tMsg');
+  if(!so6(n1)){ m.textContent='A senha nova precisa ter só números, no mínimo 6.'; return; }
+  if(n1!==n2){ m.textContent='As duas senhas novas não são iguais.'; return; }
+  if(/^(\d)\1+$/.test(n1)||'0123456789'.includes(n1)||'9876543210'.includes(n1)){ m.textContent='Senha muito fácil (sequência ou número repetido). Escolha outra.'; return; }
+  try{ const r=await api({action:'apoPtlTrocar',atual:hash(a),nova:hash(n1)}); if(!r.ok){ m.textContent=r.erro==='sessao'?'Sessão encerrada. Entre de novo.':r.erro; if(r.erro==='sessao') setTimeout(sair,1500); return; }
+    toast('✅ Senha salva.'); inicio(); }catch(e){ m.textContent='Sem conexão.'; }
+}
+async function inicio(){
+  try{ const r=await api({action:'apoPtlInicio'});
+    if(!r.ok){ if(r.erro==='trocar') return mostrarTrocar(false); ls('portal_token',null); TOKEN=''; ver('vEntrar'); if(r.erro==='sessao') document.getElementById('eMsg').textContent='Entre de novo.'; return; }
+    EU=r.pessoa; ver('vInicio');
+    document.getElementById('quem').innerHTML=esc(EU.nome)+' · <a onclick="sair()">Sair</a>';
+    const hora=new Date().getHours(); document.getElementById('ola').textContent=(hora<12?'Bom dia':hora<18?'Boa tarde':'Boa noite')+', '+EU.nome.split(' ')[0]+'!';
+    document.getElementById('setor').textContent=EU.papelNome;
+    document.getElementById('btTrocar').style.display=EU.usuario==='robson'?'none':''; // a senha do Robson é a do Admin
+    document.getElementById('grade').innerHTML=r.botoes.map(b=>'<a class="bt" href="'+esc(b.link)+'">'+(b.n!=null?'<span class="n'+(b.n?'':' z')+'">'+(b.n?b.n:'✓')+'</span>':'')+'<span class="i">'+b.icone+'</span>'+esc(b.nome)+(b.id!=='central'?'<span class="ant">ainda pede a senha antiga</span>':'')+'</a>').join('');
+    document.getElementById('notaAnt').textContent=r.botoes.some(b=>b.id!=='central')?'Por enquanto só a Central de Apoio abre direto com esta senha. As outras telas passam a aceitar o Portal aos poucos.':'';
+    document.getElementById('cPessoas').style.display=document.getElementById('cReg').style.display=r.gerencia?'block':'none';
+    if(r.gerencia){ carregarPessoas(); carregarReg(); }
+  }catch(e){ toast('⚠️ Sem conexão com o servidor.'); }
+}
+async function carregarPessoas(){
+  const r=await api({action:'apoPtlPessoas'}); if(!r.ok){ toast('⚠️ '+r.erro); return; }
+  PAPEIS=r.papeis; SO_ADMIN=r.soAdmin; PODE_ADMIN=r.podeAdmin;
+  const pode=p=>PODE_ADMIN||SO_ADMIN.indexOf(p.papel)<0;
+  document.getElementById('tbP').innerHTML='<tr><th>Pessoa</th><th>Situação</th><th>Último acesso</th><th></th></tr>'+(r.pessoas.length?r.pessoas.map(p=>'<tr><td><b>'+esc(p.nome)+'</b><div class="muted">'+esc(p.usuario)+' · '+esc(p.papelNome)+'</div></td><td><span class="sit '+p.situacao+'">'+({ativa:'ativo',desligada:'desligado',pausada:'pausado'}[p.situacao]||p.situacao)+'</span>'+(p.trocar?'<div class="muted">senha provisória</div>':'')+(p.motivo&&p.situacao!=='ativa'?'<div class="muted">'+esc(p.motivo)+'</div>':'')+'</td><td class="muted">'+(p.ultimo||'nunca entrou')+'</td><td>'+(pode(p)?
+    '<button class="btn sec peq" onclick="redefinir(\''+esc(p.usuario)+'\')">🔑 Senha</button>'+(p.situacao==='ativa'&&p.usuario!==EU.usuario?'<button class="btn sec peq" onclick="desligar(\''+esc(p.usuario)+'\')">⛔ Desligar</button>':'')+(p.situacao!=='ativa'?'<button class="btn sec peq" onclick="reativar(\''+esc(p.usuario)+'\')">✅ Reativar</button>':'')+'<button class="btn sec peq" onclick="abrirCad(\''+esc(p.usuario)+'\')">✏️</button>':'<span class="muted">só o Robson</span>')+'</td></tr>').join(''):'<tr><td colspan="4" class="muted">Ninguém cadastrado ainda. Toque em ➕ Cadastrar.</td></tr>');
+  carregarPessoas.lista=r.pessoas;
+}
+async function carregarReg(){
+  const r=await api({action:'apoPtlRegistro',dias:7}); if(!r.ok) return;
+  document.getElementById('tbR').innerHTML='<tr><th>Quando</th><th>Quem</th><th>O quê</th></tr>'+(r.registro.slice(0,80).map(x=>'<tr><td class="muted">'+esc(x.quando.slice(0,16))+'</td><td>'+esc(x.usuario)+'</td><td>'+esc(x.acao)+(x.por&&x.por!==x.usuario?' <span class="muted">por '+esc(x.por)+'</span>':'')+(x.aparelho?' <span class="muted">· '+esc(x.aparelho)+'</span>':'')+'</td></tr>').join('')||'<tr><td class="muted" colspan="3">Nada nos últimos 7 dias.</td></tr>');
+}
+function modal(tit,corpo,ok){ document.getElementById('mTit').textContent=tit; document.getElementById('mCorpo').innerHTML=corpo; document.getElementById('mMsg').textContent=''; document.getElementById('mOk').onclick=ok; document.getElementById('modal').style.display='flex'; }
+function fecharModal(){ document.getElementById('modal').style.display='none'; }
+function mErr(t){ document.getElementById('mMsg').textContent=t; }
+function abrirCad(usu){
+  const p=usu?(carregarPessoas.lista||[]).find(x=>x.usuario===usu):null;
+  const ops=Object.keys(PAPEIS).filter(k=>PODE_ADMIN||SO_ADMIN.indexOf(k)<0).map(k=>'<option value="'+k+'"'+(p&&p.papel===k?' selected':'')+'>'+esc(PAPEIS[k])+'</option>').join('');
+  modal(p?'✏️ '+p.nome:'➕ Cadastrar pessoa','<label>Usuário (primeiro nome, sem espaço)</label><input id="cUsu" autocapitalize="none" value="'+esc(p?p.usuario:'')+'"'+(p?' disabled':'')+'><label>Nome</label><input id="cNome" value="'+esc(p?p.nome:'')+'"><label>Setor</label><select id="cPapel"><option value="">Escolha…</option>'+ops+'</select>'+(p?'':'<label>Senha provisória (6 números ou mais)</label><input id="cSen" inputmode="numeric"><div class="muted" style="margin-top:6px">Passe a provisória para a pessoa. No 1º acesso ela cria a senha dela.</div>'),
+    async()=>{ const sn=p?'':document.getElementById('cSen').value; if(!p&&!so6(sn)) return mErr('Senha provisória: só números, no mínimo 6.');
+      const r=await api({action:'apoPtlSalvar',usuario:p?p.usuario:document.getElementById('cUsu').value,nome:document.getElementById('cNome').value,papel:document.getElementById('cPapel').value,senha:sn?hash(sn):''});
+      if(!r.ok) return mErr(r.erro); fecharModal(); toast(r.novo?'✅ Cadastrado. Usuário: '+r.usuario:'✅ Salvo.'); carregarPessoas(); carregarReg(); });
+}
+function redefinir(u){ modal('🔑 Refazer a senha de '+u,'<label>Senha provisória (6 números ou mais)</label><input id="rSen" inputmode="numeric"><div class="muted" style="margin-top:6px">Os aparelhos em que a pessoa estava saem. No próximo acesso ela cria a senha dela.</div>',
+  async()=>{ const sn=document.getElementById('rSen').value; if(!so6(sn)) return mErr('Só números, no mínimo 6.'); const r=await api({action:'apoPtlRedefinir',usuario:u,senha:hash(sn)}); if(!r.ok) return mErr(r.erro); fecharModal(); toast('✅ Senha provisória pronta. Passe para a pessoa.'); carregarPessoas(); carregarReg(); }); }
+function desligar(u){ modal('⛔ Desligar '+u,'<div class="muted">O acesso cai na hora, em todos os aparelhos. Dá para reativar depois.</div><label>Motivo</label><input id="dMot" placeholder="ex.: saiu da empresa">',
+  async()=>{ const r=await api({action:'apoPtlSituacao',usuario:u,situacao:'desligada',motivo:document.getElementById('dMot').value}); if(!r.ok) return mErr(r.erro); fecharModal(); toast('⛔ Desligado.'); carregarPessoas(); carregarReg(); }); }
+async function reativar(u){ const r=await api({action:'apoPtlSituacao',usuario:u,situacao:'ativa'}); toast(r.ok?'✅ Reativado.':'⚠️ '+r.erro); carregarPessoas(); carregarReg(); }
+async function sair(){ try{ if(TOKEN) await api({action:'apoPtlSair'}); }catch(e){} ls('portal_token',null); TOKEN=''; document.getElementById('quem').textContent=''; ver('vEntrar'); }
+
+(function(){ TOKEN=ls('portal_token'); if(TOKEN) inicio(); else ver('vEntrar'); })();
+</script>
+</body>
+</html>

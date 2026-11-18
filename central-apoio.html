@@ -68,7 +68,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
 <main>
   <div id="login" class="card" style="display:none">
     <div class="tit">🧭 Central de Apoio</div>
-    <div class="muted">Sidinei: use a mesma senha da Manutenção. O Robson entra com a senha do Admin ou da gestão.</div>
+    <div class="muted">Entre pelo <a href="portal" style="color:var(--gold);font-weight:700">Portal Dina</a> com a sua senha pessoal. Sidinei: também vale a senha da Manutenção.</div>
     <label>Senha</label><input id="lgSenha" type="password" onkeydown="if(event.key==='Enter')entrar()">
     <button class="btn" style="width:100%" onclick="entrar()">Entrar</button>
     <div id="lgMsg" class="muted" style="margin-top:8px"></div>
@@ -95,7 +95,8 @@ td.num,th.num{text-align:right;white-space:nowrap}
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 const Q=new URLSearchParams(location.search);
 let CHAVE='', D=null, SEC='';
-const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei'};
+const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei',compras:'Compras e estoque',notas:'Notas',nutri:'Nutricionista'};
+const CHAVE_DE={estoque:'estoqueCentral'}; // quadro → campo do servidor
 const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMC do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central']];
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -118,7 +119,7 @@ async function entrar(){
   try{ const j=await jsonp({action:'apoPainel',chave:CHAVE}); if(!j.ok){ msg.textContent=j.erro==='senha'?'Senha incorreta (ou esta senha ainda não abre a Central).':(j.erro||'Não entrou.'); return; }
     ls('apo_chave',CHAVE); abrir(j); }catch(e){ msg.textContent='Sem conexão com o servidor.'; }
 }
-function sair(){ ls('apo_chave',null); location.href='central-apoio'; }
+function sair(){ if(CHAVE&&CHAVE===ls('portal_token')){ location.href='portal'; return; } ls('apo_chave',null); location.href='central-apoio'; }
 function abrir(j){
   document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
   D=j; render(); if(!abrir._t) abrir._t=setInterval(()=>{ if(document.visibilityState==='visible') carregar(); },120000);
@@ -136,7 +137,9 @@ async function atualizarNotas(){
 function ir(area){ SEC=SEC===area?'':area; renderTiles(); document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+SEC)); if(SEC) document.getElementById('s-'+SEC).scrollIntoView({behavior:'smooth',block:'start'}); }
 
 function render(){
-  document.getElementById('quem').innerHTML=esc(ROT[D.papel]||D.papel)+' · <a onclick="sair()">Sair</a>';
+  const viaPortal=CHAVE&&CHAVE===ls('portal_token');
+  document.getElementById('quem').innerHTML=esc(ROT[D.papel]||D.papel)+' · <a onclick="sair()">'+(viaPortal?'‹ Portal':'Sair')+'</a>';
+  document.getElementById('cEncaixe').style.display=(D.encaixes||[]).length?'block':'none';
   document.getElementById('atual').textContent='atualizado '+D.agora;
   const h=D.hoje||[], el=document.getElementById('hoje');
   const MAXH=6, mostra=render._todos?h:h.slice(0,MAXH);
@@ -154,7 +157,7 @@ function renderTiles(){
     cancelamentos:D.cancelamentos&&D.cancelamentos.rede?pc(D.cancelamentos.rede.pct):'—', qualidade:(D.qualidade||{}).media==null?'—':D.qualidade.media,
     hortifruti:((D.hortifruti||{}).foraPendentes||[]).length, estoque:(((D.estoqueCentral||{}).entradas)||[]).length };
   const sub={ manutencao:'abertas', notas:'alertas de preço', cmv:'da rede no mês', cancelamentos:'cancelado (7 dias)', qualidade:'nota média', hortifruti:'mercado grande a decidir', estoque:'entradas recentes' };
-  document.getElementById('tiles').innerHTML=AREAS.map(a=>{ const c=contaArea(a[0]); return '<button class="tile '+(c.v?'vermelho':c.n?'amarelo':'')+(SEC===a[0]?' on':'')+'" onclick="ir(\''+a[0]+'\')"><div class="i">'+a[1]+'</div><div class="t">'+a[2]+'</div><div class="n">'+esc(num[a[0]]==null?'—':num[a[0]])+'</div><div class="t">'+sub[a[0]]+(c.n?' · '+c.n+' alerta(s)':'')+'</div></button>'; }).join('');
+  document.getElementById('tiles').innerHTML=AREAS.filter(a=>D[CHAVE_DE[a[0]]||a[0]]!==undefined).map(a=>{ const c=contaArea(a[0]); return '<button class="tile '+(c.v?'vermelho':c.n?'amarelo':'')+(SEC===a[0]?' on':'')+'" onclick="ir(\''+a[0]+'\')"><div class="i">'+a[1]+'</div><div class="t">'+a[2]+'</div><div class="n">'+esc(num[a[0]]==null?'—':num[a[0]])+'</div><div class="t">'+sub[a[0]]+(c.n?' · '+c.n+' alerta(s)':'')+'</div></button>'; }).join('');
 }
 function sinalTxt(s){ return s==='vermelho'?'🔴':s==='amarelo'?'🟡':s==='verde'?'🟢':'—'; }
 
@@ -223,8 +226,8 @@ function rEst(){ const e=D.estoqueCentral||{}, el=document.getElementById('s-est
 }
 
 (function(){
-  CHAVE=ls('apo_chave')||ls('man_chave'); // Sidinei já entrou na Manutenção neste aparelho: mesma senha
-  if(CHAVE){ jsonp({action:'apoPainel',chave:CHAVE}).then(j=>{ if(j.ok){ ls('apo_chave',CHAVE); abrir(j); } else { ls('apo_chave',null); CHAVE=''; document.getElementById('login').style.display='block'; } }).catch(()=>{ document.getElementById('login').style.display='block'; document.getElementById('lgMsg').textContent='Sem conexão com o servidor.'; }); return; }
+  CHAVE=ls('portal_token')||ls('apo_chave')||ls('man_chave'); // Portal Dina (18/11) primeiro; Sidinei que já entrou na Manutenção: mesma senha
+  if(CHAVE){ jsonp({action:'apoPainel',chave:CHAVE}).then(j=>{ if(j.ok){ if(CHAVE!==ls('portal_token')) ls('apo_chave',CHAVE); abrir(j); } else { if(CHAVE===ls('portal_token')){ location.href='portal'; return; } ls('apo_chave',null); CHAVE=''; document.getElementById('login').style.display='block'; } }).catch(()=>{ document.getElementById('login').style.display='block'; document.getElementById('lgMsg').textContent='Sem conexão com o servidor.'; }); return; }
   document.getElementById('login').style.display='block';
 })();
 </script>
