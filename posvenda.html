@@ -115,12 +115,15 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
         <div class="tit">📞 Ligação de pós-venda</div>
         <div class="muted">Registre <b>toda ligação</b> (com ou sem reclamação). Pergunte: <b>"De 0 a 10, quanto você recomendaria o delivery da Dina Pizza para um amigo?"</b></div>
         <div class="grid2"><div><label>Loja</label><select id="npsLoja"></select></div><div></div></div>
+        <div id="npsTentAviso" class="item" style="display:none;margin-top:8px;border-color:var(--gold)"></div>
         <label>Nota do cliente</label>
         <div class="notas" id="npsNotas"></div>
         <div id="npsMotWrap" style="display:none"><label>Motivo da nota baixa (poucas palavras)</label><input id="npsMotivo" maxlength="300" placeholder="Ex.: pizza chegou fria, demorou 1h30"></div>
         <div id="npsEloWrap" style="display:none"><label>💬 Teve elogio? Escreva o que o cliente elogiou (opcional — vai para o gerente da loja)</label><input id="npsElogio" maxlength="300" placeholder="Ex.: pizza chegou quentinha, motoboy muito educado"></div>
-        <div class="cont" style="margin-top:4px"><button class="btn ok" id="npsBtn" onclick="npsSalvar(false)">💾 Salvar nota</button><button class="btn sec" onclick="npsSalvar(true)">📵 Não atendeu / não quis responder</button></div>
+        <div class="cont" style="margin-top:4px"><button class="btn ok" id="npsBtn" onclick="npsSalvar(false)">💾 Salvar nota</button><button class="btn sec" onclick="npsSem('nao_atendeu')">📵 Não atendeu</button><button class="btn sec" onclick="npsSem('recusou')">🙅 Atendeu, não quis responder</button></div>
+        <div id="npsSemBox" style="display:none;margin-top:10px" class="item"><div id="npsSemTit" style="font-weight:800"></div><div class="grid2"><div><label>Nome do cliente</label><input id="npsCli" maxlength="60"></div><div><label>Telefone (com DDD)</label><input id="npsTel" inputmode="tel" maxlength="20" placeholder="(41) 99999-9999"></div></div><div class="cont"><button class="btn peq" onclick="npsSalvar(NPS_SEM)">Salvar</button><button class="btn sec peq" onclick="npsSemFechar()">Cancelar</button></div></div>
         <div id="npsVirar"></div>
+        <div id="tentWrap" style="display:none;margin-top:14px"><div style="font-weight:800;font-size:.9rem">📞 Tentar de novo <span class="muted" style="font-weight:400">— não atenderam nos últimos 3 dias</span></div><div id="tentLista"></div></div>
         <div style="margin-top:12px;font-weight:800;font-size:.9rem">Suas últimas ligações de hoje</div><div id="npsUlt" class="muted">—</div>
       </div>
       <div class="cols">
@@ -141,7 +144,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
         </div>
         <div class="card">
           <div class="tit">📊 Ligações de hoje por loja</div>
-          <div class="muted">Contatados = ligações com nota. NPS = % de notas 9–10 menos % de notas 0–6.</div>
+          <div class="muted">Ligações = todas as ligações registradas. Responderam = deram nota (só elas entram no NPS). NPS = % de notas 9–10 menos % de notas 0–6.</div>
           <div id="resLojas"></div>
           <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Digitar o número de contatados à mão (só se não registrou as notas)</summary><div id="contLista"></div></details>
         </div>
@@ -248,12 +251,17 @@ function render(){
   if(D.npsHoje){
     // 17/11/2026: contatados · 😀 gostaram (9–10) · 😐 neutros (7–8) · 😞 não gostaram (0–6) · 💬 elogios · ⚠️ reclamações · 📵 não atenderam
     const tot={c:0,r:0}; D.lojas.forEach(u=>{ tot.c+=(D.contatosHoje[u]||{}).qtd||0; tot.r+=(D.reclHoje||{})[u]||0; });
-    const linha=(c,r,nh)=>{ nh=nh||{}; return '<b>'+c+'</b> contatados · 😀 <b>'+(nh.promotores||0)+'</b> gostaram · 😐 '+(nh.neutros||0)+' neutros · 😞 '+(nh.detratores||0)+' não gostaram'
-      +' · 💬 <b>'+(nh.elogios||0)+'</b> elogio'+(nh.elogios===1?'':'s')+' · ⚠️ '+r+' reclamaç'+(r===1?'ão':'ões')+(c?' ('+String(Math.round(r/c*1000)/10).replace('.',',')+'%)':'')+' · 📵 '+(nh.naoAtendeu||0)+' não atenderam'; };
+    // 17/11/2026 (servidor 2026-11-17-d): 📞 ligações · ✅ responderam · 📵 não atenderam · 🙅 não quiseram responder; depois o que acharam
+    const linha=(c,r,nh)=>{ nh=nh||{}; const lig=nh.ligacoes||0;
+      return (lig?'📞 <b>'+lig+'</b> ligaç'+(lig===1?'ão':'ões')+' · ✅ <b>'+(nh.n||0)+'</b> responderam · 📵 '+(nh.naoAtendeu||0)+' não atenderam · 🙅 '+(nh.recusou||0)+' não quiseram responder':'<b>'+c+'</b> contatados')
+      +'<br>😀 <b>'+(nh.promotores||0)+'</b> gostaram · 😐 '+(nh.neutros||0)+' neutros · 😞 '+(nh.detratores||0)+' não gostaram'
+      +' · 💬 <b>'+(nh.elogios||0)+'</b> elogio'+(nh.elogios===1?'':'s')+' · ⚠️ '+r+' reclamaç'+(r===1?'ão':'ões')+(c?' ('+String(Math.round(r/c*1000)/10).replace('.',',')+'%)':''); };
     document.getElementById('resLojas').innerHTML='<div class="lj-res" style="border-color:var(--gold)"><div class="l1"><span>🌐 Rede hoje</span>'+npsBadge(D.npsHoje.__rede__)+'</div><div class="muted">'+linha(tot.c,tot.r,D.npsHoje.__rede__)+'</div></div>'
       +D.lojas.map(u=>{ const c=(D.contatosHoje[u]||{}).qtd||0, r=(D.reclHoje||{})[u]||0, nh=D.npsHoje[u]||{}; return '<div class="lj-res"><div class="l1"><span>'+esc(u)+'</span>'+npsBadge(nh)+'</div><div class="muted">'+linha(c,r,nh)+((D.contatosHoje[u]||{}).origem==='manual'?' <i>(número digitado)</i>':'')+'</div></div>'; }).join('');
+    const tl=D.tentarDeNovo||[]; document.getElementById('tentWrap').style.display=tl.length?'':'none';
+    document.getElementById('tentLista').innerHTML=tl.map(x=>'<div class="ult"><span>'+esc(x.unidade)+' · <b>'+esc(x.cliente)+'</b> · '+esc(x.telefoneTxt)+' · '+esc(x.quando)+(x.tentativas>1?' · '+x.tentativas+'ª tentativa':'')+'</span><button class="btn peq" style="margin:0" onclick="npsTentar(\''+x.id+'\')">📞 Ligar de novo</button></div>').join('');
     const ult=(D.npsRecentes||[]).filter(x=>x.atendente===NOME);
-    document.getElementById('npsUlt').innerHTML=ult.length?ult.map(x=>'<div class="ult"><span>'+esc(x.hora)+' · '+esc(x.unidade)+' · '+(x.situacao==='nao_atendeu'?'📵 não atendeu':'<b>nota '+x.nota+'</b>'+(x.motivo?' — '+esc(x.motivo):'')+(x.elogio?' · 💬 '+esc(x.elogio):''))+(x.reclamacao?' · <span class="tag t-am">virou reclamação</span>':'')+'</span>'+(x.reclamacao?'':'<button class="btn sec peq" style="margin:0" onclick="npsDesfazer(\''+x.id+'\')">Desfazer</button>')+'</div>').join(''):'—';
+    document.getElementById('npsUlt').innerHTML=ult.length?ult.map(x=>'<div class="ult"><span>'+esc(x.hora)+' · '+esc(x.unidade)+' · '+(x.situacao==='nao_atendeu'?'📵 não atendeu'+(x.cliente?' — '+esc(x.cliente):''):x.situacao==='recusou'?'🙅 não quis responder'+(x.cliente?' — '+esc(x.cliente):''):'<b>nota '+x.nota+'</b>'+(x.motivo?' — '+esc(x.motivo):'')+(x.elogio?' · 💬 '+esc(x.elogio):''))+(x.reclamacao?' · <span class="tag t-am">virou reclamação</span>':'')+'</span>'+(x.reclamacao?'':'<button class="btn sec peq" style="margin:0" onclick="npsDesfazer(\''+x.id+'\')">Desfazer</button>')+'</div>').join(''):'—';
     const S=D.npsSemana||{}, ls2=D.lojas.slice().sort((a,b)=>((S[b]||{}).nps??-999)-((S[a]||{}).nps??-999));
     document.getElementById('npsSem').innerHTML='<div style="overflow-x:auto"><table><tr><th>Loja</th><th>NPS</th><th>Notas</th><th>9–10</th><th>7–8</th><th>0–6</th><th>💬 Elogios</th><th>Não atenderam</th></tr>'
       +ls2.concat(['__rede__']).map(u=>{ const c=S[u]||{}; return '<tr'+(u==='__rede__'?' style="font-weight:800"':'')+'><td>'+(u==='__rede__'?'🌐 Rede':esc(u))+'</td><td>'+npsBadge(c)+'</td><td>'+(c.n||0)+'</td><td>'+(c.promotores||0)+'</td><td>'+(c.neutros||0)+'</td><td>'+(c.detratores||0)+'</td><td>'+(c.elogios||0)+'</td><td>'+(c.naoAtendeu||0)+'</td></tr>'; }).join('')+'</table></div>';
@@ -287,17 +295,34 @@ async function registrar(){
   b.disabled=false; b.textContent='Registrar e avisar o gerente'; carregar();
 }
 function npsNota(n){ NPS_NOTA=n; document.querySelectorAll('#npsNotas .nt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n)); document.getElementById('npsMotWrap').style.display=n<=6?'':'none'; document.getElementById('npsEloWrap').style.display=n>=9?'':'none'; if(n<=6) document.getElementById('npsMotivo').focus(); }
+// 17/11/2026 (servidor 2026-11-17-d): 📵 não atendeu e 🙅 não quis responder pedem nome e telefone; 📞 Tentar de novo
+let NPS_SEM='', NPS_TENT=null;
+function npsSem(tipo){ NPS_SEM=tipo; const b=document.getElementById('npsSemBox'); b.style.display='';
+  document.getElementById('npsSemTit').textContent=tipo==='recusou'?'🙅 Atendeu, mas não quis responder':'📵 Não atendeu';
+  if(NPS_TENT){ document.getElementById('npsCli').value=NPS_TENT.cliente; document.getElementById('npsTel').value=NPS_TENT.telefoneTxt; }
+  document.getElementById('npsCli').focus(); }
+function npsSemFechar(){ NPS_SEM=''; document.getElementById('npsSemBox').style.display='none'; }
+function npsTentar(id){ const x=(D.tentarDeNovo||[]).find(y=>y.id===id); if(!x) return; NPS_TENT=x; document.getElementById('npsLoja').value=x.unidade;
+  const b=document.getElementById('npsTentAviso'); b.style.display=''; b.innerHTML='📞 Ligando de novo para <b>'+esc(x.cliente)+'</b> · '+esc(x.telefoneTxt)+' ('+esc(x.unidade)+'). Marque a nota ou o resultado. <button class="btn sec peq" style="margin:0 0 0 6px" onclick="npsTentCancelar()">Cancelar</button>';
+  document.getElementById('npsCard').scrollIntoView({behavior:'smooth',block:'start'}); }
+function npsTentCancelar(){ NPS_TENT=null; const b=document.getElementById('npsTentAviso'); b.style.display='none'; b.innerHTML=''; }
 async function npsSalvar(nao){
+  if(nao===true) nao='nao_atendeu';
   const u=document.getElementById('npsLoja').value, mot=document.getElementById('npsMotivo').value.trim(), elo=NPS_NOTA>=9?document.getElementById('npsElogio').value.trim():'';
   if(!nao&&elo&&elo.length<5){ toast('Escreva o que o cliente elogiou (pelo menos 5 letras).'); return; }
   if(!u){ toast('Escolha a loja.'); return; }
   if(!nao&&NPS_NOTA===null){ toast('Toque na nota que o cliente deu (0 a 10).'); return; }
   if(!nao&&NPS_NOTA<=6&&mot.length<3){ toast('Nota de 0 a 6: escreva o motivo em poucas palavras.'); return; }
+  const cli=nao?document.getElementById('npsCli').value.trim():(NPS_TENT?NPS_TENT.cliente:''), tel=nao?document.getElementById('npsTel').value.replace(/\D/g,''):(NPS_TENT?NPS_TENT.telefone:'');
+  if(nao&&cli.length<2){ toast('Informe o nome do cliente.'); return; }
+  if(nao&&tel.length<10){ toast('Informe o telefone do cliente com DDD.'); return; }
   const b=document.getElementById('npsBtn'); b.disabled=true;
-  try{ const r=await post(nao?{action:'pvNps',unidade:u,naoAtendeu:true}:Object.assign({action:'pvNps',unidade:u,nota:NPS_NOTA,motivo:mot},elo?{elogio:elo}:{}));
+  try{ const r=await post(nao?{action:'pvNps',unidade:u,semResposta:nao,naoAtendeu:nao==='nao_atendeu',cliente:cli,telefone:tel}:Object.assign({action:'pvNps',unidade:u,nota:NPS_NOTA,motivo:mot},elo?{elogio:elo}:{},tel?{cliente:cli,telefone:tel}:{}));
     if(!r.ok){ toast('⚠️ '+(r.erro||'Não salvou.')); }
     else{
-      toast(nao?'📵 Registrado: não atendeu.':'✅ Nota '+NPS_NOTA+' registrada ('+u+')'+(elo?' com elogio 💬':'')+'.');
+      if(nao){ npsSemFechar(); document.getElementById('npsCli').value=''; document.getElementById('npsTel').value=''; }
+      npsTentCancelar();
+      toast(nao==='recusou'?'🙅 Registrado: não quis responder.':nao?'📵 Registrado: não atendeu (vai para "Tentar de novo").':'✅ Nota '+NPS_NOTA+' registrada ('+u+')'+(elo?' com elogio 💬':'')+'.');
       document.getElementById('npsVirar').innerHTML=r.detrator?'<div class="item urg" style="margin-top:10px"><b>Nota baixa.</b> Foi problema do pedido (atraso, erro, frio, entregador, cobrança)?<div class="cont"><button class="btn peq" onclick="npsVirar(\''+r.id+'\',\''+esc(u)+'\','+JSON.stringify(mot).replace(/"/g,'&quot;')+')">📝 Virar reclamação para o gerente</button><button class="btn sec peq" onclick="document.getElementById(\'npsVirar\').innerHTML=\'\'">Não, só a nota</button></div></div>':'';
       NPS_NOTA=null; document.getElementById('npsMotivo').value=''; document.getElementById('npsElogio').value=''; npsNota(-1); document.getElementById('npsMotWrap').style.display='none';
     }
