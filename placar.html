@@ -2133,6 +2133,8 @@ function conferirLocal(agora, envio, origem){
     try{
       if(!unidadeAtual || !(await chkRecursos()).includes('geoLoja')) return true;
       if(excValendo()){ document.getElementById('geoOverlay').style.display='none'; return true; } // autorizado pelo GDI a ficar fora da loja
+      // 19/11/2026: placar do dia já enviado → só confere o GPS se for salvar de novo (Araucária 18/11: o gerente foi para casa com o app aberto e contou como tentativa fora)
+      try{ if((!envio||origem==='abrir') && localStorage.getItem(chaveHoje('enviado_em'))){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){}
       // loja sem localização cadastrada no Admin: não confere (nem pede o GPS)
       try{ const c=await chkJsonp({action:'geoConferir',unidade:unidadeAtual},12000); if(c&&c.ok&&c.configurado===false){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){ return true; }
       const travada=document.getElementById('geoOverlay').style.display==='flex'||getComputedStyle(document.getElementById('geoOverlay')).display!=='none';
