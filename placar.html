@@ -1723,7 +1723,7 @@ async function missaoLi(){
   alert('Não consegui salvar agora. Tente de novo em instantes.');
 }
 // Botão "📊 Minha loja" (Painel da Diretoria, 13/11/2026): só para o GERENTE (não o assistente) e fora do modo teste
-function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(b) b.style.display=(!MODO_TESTE&&(localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
+function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(!b) return; if(MODO_TESTE){ b.href='minha-loja.html?teste=1&gdi=1&loja='+encodeURIComponent(u); b.style.display=''; return; } /* 18/11: no teste abre só para ver */ b.href='minha-loja.html'; b.style.display=((localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
 function iniciarApp(u){
   mlMostrar(u);
   missaoCarregar(u);
@@ -3528,9 +3528,9 @@ let PV_ON=false, PV_DATA=null, _pvTimer=null, _pvVistos={};
 let _manTimer=null;
 async function manBotao(){
   const b=document.getElementById('btnMan'), n=document.getElementById('btnManN'); if(!b) return; b.style.display='none'; if(_manTimer){ clearInterval(_manTimer); _manTimer=null; }
-  if(MODO_TESTE) return;
   try{ const rc=await chkRecursos(); if(!rc.includes('manutencao')) return; }catch(e){ return; }
   b.style.display='';
+  if(MODO_TESTE){ b.href='manutencao.html?daloja=1&teste=1&loja='+encodeURIComponent(unidadeAtual); b.onclick=()=>confirm('🧪 Atenção: a Manutenção NÃO fica dentro do modo teste.\n\nO que você anotar lá vai DE VERDADE para o Sidinei (e o 🔴 vai na hora).\n\nAbrir mesmo assim?'); return; } // 18/11: no teste, mostra com aviso
   const contar=async()=>{ try{ const r=await chkJsonp({action:'manutLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok&&r.pedidos){ n.textContent=r.confirmar+' para confirmar'; n.style.display=r.confirmar?'':'none'; } }catch(e){} };
   contar(); _manTimer=setInterval(()=>{ if(document.visibilityState==='visible') contar(); },600000);
 }
