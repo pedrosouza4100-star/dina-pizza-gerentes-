@@ -49,6 +49,8 @@ dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro 
    (c) a cada 4 ou 5 mudanças percebidas pelos gerentes, mensagem pronta "Como era → Como ficou" para o grupo (lista na seção 5 do ESTADO);
    (d) todo dia 1 do mês, documento geral das mudanças do mês para o grupo (tarefa agendada).
 
+13. **Tudo visível no modo teste (Robson, 18/11/2026):** "preciso sentir o que eles vão sentir para ter propriedade para cobrar". Toda mudança que o gerente percebe tem que aparecer e funcionar no modo teste (placar-teste.html com a senha do Admin) do jeito que o gerente vê; o que grava de verdade fora do placar aparece com aviso e confirmação; o que o teste esconde por segurança (tela 📍, horário/bloqueio, celular, pausa) precisa de um jeito de ser visto. Ao entregar, dizer ao Robson como ver no teste. Regra 0d do ESTADO.
+
 11. **Nome do cargo:** o gerente regional (Marco) é chamado de **GDI** em todas as telas e mensagens (pedido do Robson em 02/11/2026). Os nomes técnicos (`regional.html`, `/regional`, `regPend*`, `__regional__`) continuam iguais.
 
 ## Visual novo (aprovado pelo Robson em 06/11/2026)
