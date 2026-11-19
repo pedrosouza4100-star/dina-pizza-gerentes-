@@ -742,6 +742,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="card card-full" id="cardHF" style="display:none">
         <div class="card-label">🥬 Lista de compras — hortifrúti</div>
         <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
+        <div id="hfPendBox" style="display:none"></div>
         <div id="hfCompraBox" style="display:none"></div>
         <div id="hfAvisoForn"></div>
         <div class="hf-grid" id="hfItens"></div>
@@ -3353,7 +3354,8 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(bebLista().map(b=>b[1]).some(id=>!filled(id))) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
-  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
@@ -3691,7 +3693,7 @@ async function hfPreparar(){
   document.getElementById('hfNada').checked=!!(r.listaHoje&&r.listaHoje.nadaFalta);
   document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
   document.getElementById('hfMsg').innerHTML=r.listaHoje?'<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva às '+escR(r.listaHoje.hora)+'. Mudou algo? Marque e salve de novo.</span>':'';
-  hfRenderForn(); hfRenderCompra();
+  HFC_DIA_PEND=''; hfRenderForn(); hfRenderCompra(); hfPendRender();
   verificarBotaoRegistrar();
 }
 // Lista com quantidades (13/11/2026, servidor 2026-11-13-d, recurso hortifrutiQtd): cada item com a unidade da loja (Isaac em caixas)
@@ -3848,8 +3850,16 @@ async function hfFornSalvar(pref){
 }
 let HFC_FOTO=null;
 function hfRenderCompra(){
+  hfRenderCompraBase();
+  // 19/11/2026 (recurso hfPendente): saída para quando a compra não salva (Fazenda 18/11 parou 01:36 sem enviar)
+  const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
+  if(!c||c.feita||c.pendente||HFC_DIA_PEND||!(_chkRecursos||[]).includes('hfPendente')) return;
+  box.insertAdjacentHTML('beforeend','<div style="margin-top:10px"><a href="#" onclick="document.getElementById(\'hfPendForm\').style.display=\'block\';return false" style="color:var(--muted);font-size:.82rem">⚠️ Não consegui registrar a compra agora</a><div id="hfPendForm" style="display:none;margin-top:6px"><textarea class="hf-txt" id="hfPendMotivo" maxlength="300" placeholder="O que aconteceu? (ex.: a nota não leu e não consegui preencher)" style="min-height:54px"></textarea><button type="button" class="hf-mg" onclick="hfPendMarcar()">Registrar amanhã — avisar o Sidinei</button><div id="hfPendMsg" class="alp-info"></div></div></div>');
+}
+function hfRenderCompraBase(){
   const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
   if(!c){ box.style.display='none'; return; }
+  if(c.pendente&&!HFC_DIA_PEND){ box.style.display='block'; box.innerHTML='<div class="hf-aviso">⏳ <b>Compra de hoje não registrada</b> ('+escR(c.pendente.hora)+'): '+escR(c.pendente.motivo)+'<br>O Sidinei foi avisado. <b>Amanhã</b> o placar pede para registrar esta compra: guarde a nota.</div>'; return; }
   box.style.display='block';
   if(c.feita&&hfcMulti()){ hfRenderNotas(box,c); return; }
   if(c.feita){ box.innerHTML=hfAlertasHtml(c.alertas)+'<div class="hf-aviso" style="border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.1)">✓ Compra de hoje registrada às '+escR(c.hora)+(c.total?' (nota de R$ '+escR(hfR(c.total))+')':'')+' e enviada ao Sidinei. <a href="#" onclick="HF.compra.feita=false;hfRenderCompra();verificarBotaoRegistrar();return false" style="color:var(--gold)">corrigir</a></div>'; return; }
@@ -3880,6 +3890,41 @@ function hfRenderNotas(box,c){
     +((c.falta||[]).length?'<div class="hf-aviso" style="margin-top:6px">⏳ <b>Ainda não comprou:</b> '+escR(c.falta.join(', '))+'</div>':'')
     +(ns.length<max?'<button type="button" class="hf-mg" style="margin-top:6px" onclick="hfcNovaNota('+(ns.length+1)+')">➕ Comprei em outro lugar (nota '+(ns.length+1)+' de '+max+')</button>':'<div class="muted" style="font-size:.8rem;margin-top:6px">Limite de '+max+' notas por dia.</div>');
 }
+// Compra pendente (19/11/2026): hoje não deu → amanhã registra a compra de ontem (diaPend) ou fecha sem registro
+let HFC_DIA_PEND='';
+async function hfPendMarcar(){
+  const m=document.getElementById('hfPendMotivo').value.trim(), msg=document.getElementById('hfPendMsg');
+  if(m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraPendente',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m})})).json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    HF.compra.pendente={motivo:m+(r.teste?' (teste: nada foi enviado)':''),hora:new Date().toTimeString().slice(0,5)}; logProva('HF_COMPRA_PENDENTE',m);
+    hfRenderCompra(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+function hfPendRender(){
+  const box=document.getElementById('hfPendBox'), a=HF&&HF.compraAtrasada; if(!box) return;
+  if(!a||!(_chkRecursos||[]).includes('hfPendente')){ box.style.display='none'; return; }
+  box.style.display='block';
+  if(HFC_DIA_PEND){ box.innerHTML='<div class="hf-aviso" style="border-color:var(--gold)">📝 Registrando a <b>compra de '+escR(a.diaBr)+'</b> (foto da nota e quantidades, como sempre). <a href="#" onclick="hfPendVoltar();return false" style="color:var(--gold)">voltar</a></div>'; return; }
+  box.innerHTML='<div class="hf-aviso" style="border-color:var(--danger)">🧾 <b>A compra de '+escR(a.diaBr)+' não foi registrada</b>'+(a.motivo?' ('+escR(a.motivo)+')':'')+'. Registre agora com a nota:'
+    +'<button type="button" class="alp-btn" style="margin-top:8px" onclick="hfPendRegistrar()">📝 Registrar a compra de '+escR(a.diaBr)+'</button>'
+    +'<a href="#" onclick="document.getElementById(\'hfPendSem\').style.display=\'block\';return false" style="display:block;margin-top:8px;color:var(--muted);font-size:.82rem">Não tenho mais a nota</a>'
+    +'<div id="hfPendSem" style="display:none;margin-top:6px"><textarea class="hf-txt" id="hfPendSemMotivo" maxlength="300" placeholder="O que aconteceu com a nota? (vai para o Sidinei e o GDI)" style="min-height:54px"></textarea><button type="button" class="hf-mg" onclick="hfPendSemNota()">Fechar sem registrar</button><div id="hfPendSemMsg" class="alp-info"></div></div></div>';
+}
+function hfPendRegistrar(){ const a=HF.compraAtrasada; if(!a||!a.compra) return; HF._compraHoje=HF.compra; HF.compra=a.compra; HFC_DIA_PEND=a.dia; HFC_NOTA_N=1; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); document.getElementById('hfCompraBox').scrollIntoView({behavior:'smooth',block:'start'}); }
+function hfPendVoltar(){ HF.compra=HF._compraHoje||null; HFC_DIA_PEND=''; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); }
+async function hfPendSemNota(){
+  const m=document.getElementById('hfPendSemMotivo').value.trim(), msg=document.getElementById('hfPendSemMsg');
+  if(m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraPendente',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m,diaPend:HF.compraAtrasada.dia})})).json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    logProva('HF_COMPRA_SEM_REGISTRO',HF.compraAtrasada.diaBr+' · '+m); HF.compraAtrasada=null; hfPendRender(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+// depois de registrar a compra pendente: volta para a de hoje
+async function hfPendDepoisDeSalvar(){ HF.compraAtrasada=null; HFC_DIA_PEND=''; HF.compra=HF._compraHoje||null; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); alert('✅ Compra pendente registrada e enviada ao Sidinei.'); }
 function hfcNovaNota(n){ HFC_NOTA_N=n; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; HF.compra.feita=false; hfRenderCompra(); verificarBotaoRegistrar(); }
 function hfRenderCompraQtd(box,c,forn){
   const multi=hfcMulti(); if(multi&&!c.notas.length) HFC_NOTA_N=1;
@@ -3942,9 +3987,10 @@ async function hfcSalvar(){
   if(comprados.length<HF.compra.itens.length&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">Não comprou tudo? Explique na observação (mínimo 10 letras).</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',diaPend:HFC_DIA_PEND||undefined,unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    if(HFC_DIA_PEND){ logProva('HF_COMPRA_PENDENTE_REGISTRADA',HFC_DIA_PEND); return hfPendDepoisDeSalvar(); }
     HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
     hfRenderCompra(); verificarBotaoRegistrar();
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
@@ -3963,10 +4009,11 @@ async function hfcSalvarQtd(){
   if(hfcMulti()&&!comp.length){ msg.innerHTML='<span style="color:var(--danger)">Esta nota não tem nenhum item. Marque o que veio nela.</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,un:x.un,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',diaPend:HFC_DIA_PEND||undefined,unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,un:x.un,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
       foto:lerOn?(HFC_NOTA?{base64:HFC_NOTA}:null):(HFC_FOTO?{base64:HFC_FOTO}:null),fotoMerc:lerOn&&HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    if(HFC_DIA_PEND){ logProva('HF_COMPRA_PENDENTE_REGISTRADA',HFC_DIA_PEND); return hfPendDepoisDeSalvar(); }
     HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); HF.compra.alertas=r.alertas||[]; HF.compra.total=r.total;
     if(Array.isArray(r.notas)){ HF.compra.notas=r.notas; HF.compra.falta=r.falta||[]; HF.compra.jaComprado=r.jaComprado||{}; }
     logProva('HF_COMPRA',comp.map(x=>x.nome+' '+x.qtd+'×'+x.preco).join(', ')+' · nota '+tn+' · '+onde+((r.alertas||[]).length?' · ACIMA DA MÉDIA: '+r.alertas.map(a=>a.nome+' '+a.pct+'%').join(', '):''));
