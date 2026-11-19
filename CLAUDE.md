@@ -1,5 +1,7 @@
 # Dina Pizza — Sistema de Gestão das Lojas
 
+**⛔ ANTES DE TUDO: leia `REGRAS_DE_TODOS_OS_CHATS.md` no repositório privado `dina-pizza-backend`.** Só muda o que o Robson combinou; erro fora do combinado = avisar e esperar o "pode"; anotar o arquivo no quadro "Quem está mexendo" antes de mexer (vale também para os arquivos deste repositório).
+
 Sistema interno da Dina Pizza Gastronomia (Robson Pontes): placar diário, checklists,
 dashboards e escala de funcionários das 11 unidades. Leia este arquivo inteiro antes de mexer em qualquer coisa.
 **Estado atual, versão publicada e pendências:** arquivo `ESTADO_DO_PROJETO.md` no repositório privado `dina-pizza-backend` (leia também; atualize ao fim de cada entrega).
