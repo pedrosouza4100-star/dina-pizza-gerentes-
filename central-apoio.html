@@ -140,7 +140,7 @@ function render(){
   const viaPortal=CHAVE&&CHAVE===ls('portal_token');
   document.getElementById('quem').innerHTML=esc(ROT[D.papel]||D.papel)+' · <a onclick="sair()">'+(viaPortal?'‹ Portal':'Sair')+'</a>';
   document.getElementById('cEncaixe').style.display=(D.encaixes||[]).length?'block':'none';
-  document.getElementById('atual').textContent='atualizado '+D.agora;
+  document.getElementById('atual').textContent='atualizado '+D.agora+' · servidor '+(D.versao||'?');
   const h=D.hoje||[], el=document.getElementById('hoje');
   const MAXH=6, mostra=render._todos?h:h.slice(0,MAXH);
   el.innerHTML=h.length?mostra.map(x=>'<div class="al '+x.nivel+'" onclick="ir(\''+x.area+'\')"><span>'+(x.nivel==='vermelho'?'🔴':'🟡')+'</span><span>'+(x.unidade?'<span class="lj">'+esc(x.unidade)+'</span> · ':'')+esc(x.txt)+'</span><span class="ar">'+esc((AREAS.find(a=>a[0]===x.area)||['','',''])[2])+' ›</span></div>').join('')
