@@ -57,7 +57,8 @@ const qs=new URLSearchParams(location.search);
 const ler=k=>{ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 const UG=ler('dina_unidade_logada'), HG=UG?ler('dina_senha_'+UG):'', PAPEL=UG?ler('dina_papel_'+UG):'';
-let CHAVE=ler('dina_gestao_hash'), MODO=(qs.get('gdi')==='1'||!HG)&&CHAVE?'gdi':(HG?'gerente':''), LOJA=MODO==='gerente'?UG:(qs.get('loja')||''), D=null;
+const TESTE=qs.get('teste')==='1'&&(()=>{ try{ return sessionStorage.getItem('dina_teste_admin')||''; }catch(e){ return ''; } })(); // 18/11: aberto pelo modo teste do placar
+let CHAVE=TESTE||ler('dina_gestao_hash'), MODO=(qs.get('gdi')==='1'||!HG)&&CHAVE?'gdi':(HG?'gerente':''), LOJA=MODO==='gerente'?UG:(qs.get('loja')||''), D=null;
 const R=x=>'R$ '+Math.round(Number(x)||0).toLocaleString('pt-BR');
 const P=x=>(Number(x)||0).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -88,7 +89,7 @@ async function carregar(primeiro){
     const p={action:'pnlLoja',unidade:LOJA}; if(MODO==='gdi') p.chave=CHAVE; else p.hash=HG;
     const j=await jsonp(p);
     if(!j.ok){ if(j.semAcesso&&MODO==='gdi'){ CHAVE=''; pedirSenha('Senha inválida. Tente de novo.'); } else tela('<div class="card"><div class="frase">'+esc(j.erro||'Não foi possível carregar.')+'</div></div>'); return; }
-    if(MODO==='gdi'){ try{ localStorage.setItem('dina_gestao_hash',CHAVE); }catch(e){}
+    if(MODO==='gdi'){ try{ if(!TESTE) localStorage.setItem('dina_gestao_hash',CHAVE); }catch(e){}
       const sel=document.getElementById('lojaSel'); document.getElementById('gdiBar').style.display='block';
       sel.innerHTML='<option value="">Escolha a loja…</option>'+j.lojas.map(u=>'<option'+(u===LOJA?' selected':'')+'>'+esc(u)+'</option>').join('');
       if(!LOJA){ tela('<div class="card"><div class="frase">Escolha a loja acima.</div></div>'); document.getElementById('sub').textContent='Atualizado em '+j.atualizadoEm; return; } }

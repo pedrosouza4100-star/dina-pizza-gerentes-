@@ -385,6 +385,8 @@ async function repAcao(id,acao){ try{ const r=await post({action:'manutReposicao
 (function(){
   const c=ls('man_chave');
   const u=ls('dina_unidade_logada'), h=u?ls('dina_senha_'+u):'';
+  const th=(()=>{ try{ return sessionStorage.getItem('dina_teste_admin')||''; }catch(e){ return ''; } })();
+  if(Q.get('daloja')&&Q.get('teste')==='1'&&th&&Q.get('loja')){ LOJA=Q.get('loja'); LSENHA=th; const f=document.createElement('div'); f.id='testeFaixa'; f.style.cssText='background:#e74c3c;color:#fff;text-align:center;font-weight:800;padding:8px;font-size:.85rem;position:sticky;top:0;z-index:50'; f.textContent='🧪 Aberto pelo MODO TESTE do placar — ATENÇÃO: aqui é de verdade, o que você anotar vai para o Sidinei'; document.body.prepend(f); return iniciarLoja(); } // 18/11: modo teste
   if(Q.get('daloja')&&u&&h&&ls('dina_login_v')==='2'){ LOJA=u; LSENHA=h; return iniciarLoja(); } // aberto pelo botão do placar
   if(c){ CHAVE=c; return iniciarEquipe(); }
   if(u&&h&&ls('dina_login_v')==='2'){ LOJA=u; LSENHA=h; return iniciarLoja(); }
