@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Vagas e quadro das lojas (19/11/2026, servidor 2026-11-19-a, recurso vagaPedido).
+     GDI e gestora de RH (senha da agenda) dão o 1º ok; a Rosi (senha própria) aprova as vagas FIXAS no fim; taxa vale com o 1º ok.
+     RH, Rosi e Admin revisam as vagas antigas e mudam o quadro ideal das lojas. Links do WhatsApp: ?pedido=<id>. -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Vagas — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--yellow:var(--d-yellow);--danger:var(--d-danger);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a{color:var(--gold);font-weight:700;text-decoration:none}
+main{padding:16px 4vw 60px;max-width:1200px;margin:0 auto}
+.abas{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.aba{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;font-size:.92rem}
+.aba.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.aba .n{background:var(--d-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;margin-left:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:10px}
+.muted{color:var(--muted);font-size:.82rem}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:.95rem;font-family:inherit}
+textarea{min-height:70px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.btn{border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:.95rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.ok{background:var(--green);color:var(--d-on-cor,#06110b)}
+.btn.peq{padding:7px 12px;font-size:.8rem;margin-top:6px}
+.btn:disabled{opacity:.55;cursor:default}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700;font-size:.9rem;text-transform:none;letter-spacing:0;color:var(--text)}
+.chk input{width:auto}
+.item{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface)}
+.item.urg{border-color:var(--danger)}
+.item.atr{border-color:var(--danger);background:var(--d-red-soft)}
+.item.ok{border-color:rgba(61,220,151,.45)}
+.item.amar{border-color:var(--yellow)}
+.it-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+.tag{font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.t-red{background:var(--d-red-soft);color:var(--d-t-err);border:1px solid var(--danger)}
+.t-ok{background:rgba(61,220,151,.12);color:var(--d-t-ok);border:1px solid rgba(61,220,151,.4)}
+.t-am{background:rgba(255,208,0,.12);color:var(--d-t-info);border:1px solid rgba(255,208,0,.45)}
+.linha{font-size:.88rem;margin-top:6px;line-height:1.45}
+.resp{margin-top:8px;padding:8px 10px;border-left:3px solid var(--gold);background:rgba(255,208,0,.06);border-radius:6px;font-size:.88rem}
+.cont{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.cont .lj{flex:1;min-width:140px;font-weight:700}
+.cont input{width:90px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.9rem;font-weight:700;z-index:200;display:none;max-width:92vw;text-align:center}
+#login{max-width:380px;margin:60px auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.cols,.grid2{grid-template-columns:1fr}}
+@media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit b{white-space:nowrap}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}.aba{flex:1;padding:10px 8px;font-size:.84rem}main{padding:12px 3vw 60px}}
+
+.cor{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.c-vermelho{background:#ff4d4d}.c-amarelo{background:#FFD000}.c-verde{background:#3ddc97}
+.item.vermelho{border-left:6px solid #ff4d4d}.item.amarelo{border-left:6px solid #FFD000}.item.verde{border-left:6px solid #3ddc97}
+.cores{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.cbt{flex:1;min-width:110px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px;font-weight:800;cursor:pointer;font-size:.86rem;text-align:left}
+.cbt small{display:block;font-weight:600;color:var(--muted);font-size:.72rem;margin-top:2px}
+.cbt.on{box-shadow:0 0 0 2px var(--gold) inset;border-color:var(--gold)}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.fl{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 12px;font-weight:700;font-size:.8rem;cursor:pointer}
+.fl.on{border-color:var(--gold);color:var(--gold)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}
+.acoes select{width:auto;padding:7px}
+.hl{box-shadow:0 0 0 3px var(--gold)}
+.esp{border:1px dashed var(--gold);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:.88rem;line-height:1.45}
+.cbt:disabled{opacity:.4;cursor:not-allowed}
+.sec-t{font-weight:800;margin:16px 0 4px;font-size:.95rem}
+</style>
+</head>
+<body>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Vagas e quadro das lojas</b><small id="subt">Pedidos dos gerentes</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main>
+  <div id="login" class="card" style="display:none">
+    <div class="tit">📋 Vagas e quadro das lojas</div>
+    <div class="muted">GDI e gestora de RH: senha da agenda. Rosi: a sua senha. Ou a senha da gestão.</div>
+    <label>Senha</label><input id="lgSenha" type="password" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn" onclick="entrar()" style="width:100%">Entrar</button>
+    <div id="lgMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+  <div id="app" style="display:none">
+    <div class="abas" id="abas"></div>
+    <section id="s-ped"></section>
+    <section id="s-vag" style="display:none"></section>
+    <section id="s-qua" style="display:none"></section>
+  </div>
+</main>
+<div id="toast" class="toast" style="display:none"></div>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search);
+const ls=k=>{ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>e.style.display='none',3500); }
+async function post(o){ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({chave:CHAVE},o))}); return r.json(); }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='vgCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },25000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+let CHAVE=ls('vg_chave'), D=null, ABA='ped', QLOJA='';
+async function entrar(){ const s=document.getElementById('lgSenha').value.trim(); if(!s) return; CHAVE=hash(s); const ok=await carregar(true); if(ok) try{ localStorage.setItem('vg_chave',CHAVE); }catch(e){} }
+function sair(){ try{ localStorage.removeItem('vg_chave'); }catch(e){} CHAVE=''; location.reload(); }
+async function carregar(prim){
+  let j=null; try{ j=await jsonp({action:'equipeVagaPainel',chave:CHAVE}); }catch(e){ if(prim) document.getElementById('lgMsg').textContent='Sem conexão. Tente de novo.'; return false; }
+  if(!j||!j.ok){ document.getElementById('app').style.display='none'; document.getElementById('login').style.display='block'; document.getElementById('lgMsg').textContent=(j&&j.erro)||'Senha inválida.'; try{ localStorage.removeItem('vg_chave'); }catch(e){} return false; }
+  D=j; document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
+  document.getElementById('quem').innerHTML=esc(j.nome)+' · <a href="#" onclick="sair();return false">sair</a>';
+  if(prim&&!QLOJA) QLOJA=j.lojas[0];
+  render(); return true;
+}
+function minhaVez(p){ return D.papel==='admin'?(p.situacao==='pedido'||p.situacao==='preaprovado'):D.papel==='rosi'?p.situacao==='preaprovado':p.situacao==='pedido'; }
+function render(){
+  const vez=D.pedidos.filter(minhaVez), antigas=D.vagas.filter(v=>v.antiga&&!v.revisada);
+  const abas=[['ped','📋 Pedidos',vez.length],['vag','📢 Vagas abertas',D.podeRevisar?antigas.length:0]]; if(D.podeQuadro) abas.push(['qua','👥 Quadro das lojas',0]);
+  document.getElementById('abas').innerHTML=abas.map(([k,t,n])=>'<button class="aba'+(ABA===k?' on':'')+'" onclick="ABA=\''+k+'\';render()">'+t+(n?'<span class="n">'+n+'</span>':'')+'</button>').join('');
+  ['ped','vag','qua'].forEach(k=>document.getElementById('s-'+k).style.display=ABA===k?'':'none');
+  renderPedidos(vez); renderVagas(antigas); if(D.podeQuadro) renderQuadro();
+}
+function cardPedido(p,decide){
+  const destaque=Q.get('pedido')===p.id;
+  return '<div class="item'+(p.situacao==='recusado'?' urg':p.situacao==='aprovado'?' ok':destaque?' amar':'')+'" id="p_'+p.id+'"><div class="it-top"><span>'+esc(p.unidade)+' — '+esc(p.setorNome)+' ('+p.qtd+')</span><span class="tag '+(p.tipo==='taxa'?'t-am':'t-ok')+'">'+esc(p.tipoNome)+'</span></div>'
+    +'<div class="linha">'+esc(p.motivoNome)+(p.nome?': <b>'+esc(p.nome)+'</b>':'')+(p.obs?' · '+esc(p.obs):'')+'</div>'
+    +'<div class="linha muted">Pedido em '+esc(p.pedidoEm)+' ('+esc(p.papel)+')'+(p.ok1Por?' · 1º ok: '+esc(p.ok1Por)+' '+esc(p.ok1Em):'')+(p.finalPor?' · '+(p.situacao==='recusado'?'recusado':'aprovado')+' por '+esc(p.finalPor)+' '+esc(p.finalEm):'')+'</div>'
+    +(p.motivoRecusa?'<div class="resp">Motivo da recusa: '+esc(p.motivoRecusa)+'</div>':'')
+    +(decide?'<div class="linha"><b>'+(p.situacao==='preaprovado'?'Aprovação final (Rosi)':p.tipo==='taxa'?'Aprovar: a vaga já vale e o gerente arruma o taxa em '+D.taxaDias+' dias':'1º ok: depois vai para a Rosi aprovar')+'</b></div>'
+      +'<textarea id="mr_'+p.id+'" placeholder="Motivo (obrigatório só para recusar)" style="margin-top:6px;min-height:50px"></textarea>'
+      +'<div style="display:flex;gap:8px"><button class="btn ok peq" onclick="decidir(\''+p.id+'\',\'aprovar\')">✅ Aprovar</button><button class="btn peq" onclick="decidir(\''+p.id+'\',\'recusar\')">❌ Recusar</button></div>':'<div class="linha"><b>'+esc(p.situacaoNome)+'</b></div>')
+    +'</div>';
+}
+function renderPedidos(vez){
+  const outros=D.pedidos.filter(p=>!minhaVez(p));
+  document.getElementById('s-ped').innerHTML='<div class="card"><div class="tit">⏳ Esperando a sua decisão ('+vez.length+')</div>'
+    +(vez.length?vez.map(p=>cardPedido(p,true)).join(''):'<div class="muted">Nada esperando você agora.</div>')+'</div>'
+    +'<div class="card"><div class="tit">🗂️ Últimos 15 dias</div>'+(outros.length?outros.map(p=>cardPedido(p,false)).join(''):'<div class="muted">Nenhum pedido.</div>')+'</div>';
+  const alvo=Q.get('pedido')&&document.getElementById('p_'+Q.get('pedido')); if(alvo&&!renderPedidos._ja){ renderPedidos._ja=1; setTimeout(()=>alvo.scrollIntoView({behavior:'smooth',block:'center'}),200); }
+}
+async function decidir(id,decisao){
+  const m=(document.getElementById('mr_'+id)||{}).value||'';
+  if(decisao==='recusar'&&m.trim().length<5) return toast('Escreva o motivo da recusa.');
+  if(!confirm((decisao==='aprovar'?'Aprovar':'Recusar')+' este pedido de vaga?')) return;
+  let r=null; try{ r=await post({action:'equipeVagaPedidoDecidir',id,decisao,motivo:m}); }catch(e){}
+  if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
+  toast(r.situacao==='preaprovado'?'✅ Ok dado. Agora vai para a Rosi aprovar.':r.situacao==='aprovado'?'✅ Vaga aprovada e aberta.':'❌ Pedido recusado. O gerente será avisado.');
+  carregar(false);
+}
+function renderVagas(antigas){
+  const novas=D.vagas.filter(v=>!(v.antiga&&!v.revisada));
+  const linha=(v,rev)=>'<div class="item'+(v.atrasada?' atr':v.taxa?' amar':'')+'"><div class="it-top"><span>'+esc(v.unidade)+' — '+esc(v.cargo||v.setorNome)+' ('+v.qtd+')</span><span class="tag '+(v.taxa?'t-am':'t-ok')+'">'+(v.taxa?'Taxa — gerente arruma':'Fixo — RH')+'</span></div>'
+    +'<div class="linha muted">Aberta em '+esc(v.dia)+' · prazo '+esc(String(v.prazo).slice(0,5))+(v.atrasada?' · <b style="color:var(--danger)">VENCIDA</b>':'')+(v.motivoPedido?' · '+esc(v.motivoPedido):'')+(v.antiga?' · abriu sozinha pela Equipe do dia (antes da mudança)':'')+'</div>'
+    +(rev?'<div style="display:flex;gap:8px"><button class="btn ok peq" onclick="revisar(\''+v.id+'\',\'confirmar\')">✅ Confirmar (a vaga existe)</button><button class="btn peq" onclick="revisar(\''+v.id+'\',\'cancelar\')">🗑️ Cancelar (não existe)</button></div>':'')+'</div>';
+  document.getElementById('s-vag').innerHTML=(D.podeRevisar&&antigas.length?'<div class="card"><div class="tit">🔎 Revisar as vagas que abriram sozinhas ('+antigas.length+')</div><div class="muted">Antes da mudança, marcar "vaga" na Equipe do dia abria a vaga automaticamente. Confirme as que existem e cancele as outras.</div>'+antigas.map(v=>linha(v,true)).join('')+'</div>':'')
+    +'<div class="card"><div class="tit">📢 Vagas abertas ('+novas.length+')</div>'+(novas.length?novas.map(v=>linha(v,false)).join(''):'<div class="muted">Nenhuma.</div>')+'</div>';
+}
+async function revisar(id,acao){
+  if(!confirm(acao==='confirmar'?'Confirmar que esta vaga existe?':'Cancelar esta vaga (ela não existe)?')) return;
+  let r=null; try{ r=await post({action:'equipeVagaRevisar',id,acao}); }catch(e){}
+  if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
+  toast(acao==='confirmar'?'✅ Vaga confirmada.':'🗑️ Vaga cancelada.'); carregar(false);
+}
+function renderQuadro(){
+  const q=D.quadros[QLOJA]||{semana:{},fds:{}}, tot=t=>D.setores.reduce((a,s)=>a+(q[t][s.id]||0),0);
+  document.getElementById('s-qua').innerHTML='<div class="card"><div class="tit">👥 Quadro ideal da loja</div><div class="muted">Quantas pessoas trabalham em cada função num dia normal. É com este número que o gerente confere a Equipe do dia. Cada mudança fica registrada e o Robson é avisado.</div>'
+    +'<label>Loja</label><select onchange="QLOJA=this.value;renderQuadro()">'+D.lojas.map(u=>'<option'+(u===QLOJA?' selected':'')+'>'+esc(u)+'</option>').join('')+'</select>'
+    +'<table style="margin-top:10px"><tr><th>Função</th><th>Seg a qui</th><th>Sex a dom / feriado</th></tr>'
+    +D.setores.map(s=>'<tr><td>'+esc(s.nome)+'</td><td><input id="q_semana_'+s.id+'" type="number" inputmode="numeric" min="0" max="30" value="'+(q.semana[s.id]||0)+'" style="width:80px"></td><td><input id="q_fds_'+s.id+'" type="number" inputmode="numeric" min="0" max="30" value="'+(q.fds[s.id]||0)+'" style="width:80px"></td></tr>').join('')
+    +'<tr><td><b>Total</b></td><td><b>'+tot('semana')+'</b></td><td><b>'+tot('fds')+'</b></td></tr></table>'
+    +'<button class="btn ok" onclick="salvarQuadro()" style="width:100%">💾 Salvar quadro de '+esc(QLOJA)+'</button></div>';
+}
+async function salvarQuadro(){
+  const o={action:'equipeQuadroSalvar',unidade:QLOJA,semana:{},fds:{}};
+  D.setores.forEach(s=>{ o.semana[s.id]=Number(document.getElementById('q_semana_'+s.id).value)||0; o.fds[s.id]=Number(document.getElementById('q_fds_'+s.id).value)||0; });
+  let r=null; try{ r=await post(o); }catch(e){}
+  if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
+  toast(r.mudou?'✅ Quadro salvo ('+r.mudou+' mudança'+(r.mudou>1?'s':'')+').':'Nada mudou.'); carregar(false);
+}
+(function(){ if(CHAVE) carregar(true); else document.getElementById('login').style.display='block'; })();
+</script>
+</body>
+</html>

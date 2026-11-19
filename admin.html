@@ -318,6 +318,13 @@
         </div>
       </div>
       <div>
+        <div class="section-title">Senha da Rosi (vagas e quadro das lojas)</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+          <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">A Rosi entra em <a href="vagas" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/vagas</a> com esta senha: dá a <b>aprovação final</b> das vagas FIXAS (depois do ok do GDI ou da RH), revisa as vagas abertas e muda o quadro ideal das lojas. <span id="rosiSenhaStatus"></span></div></div>
+          <button class="action-btn btn-nova" style="padding:8px 20px;font-size:0.8rem" onclick="definirSenhaRosi()">Definir senha da Rosi</button>
+        </div>
+      </div>
+      <div>
         <div class="section-title">Senha do Estoque central (Lia)</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px">
           <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">A Lia entra em <a href="manutencao" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/manutencao</a> com esta senha e vê <b>só</b> o Estoque central: entrada do chope pela foto da nota e entregas das lâmpadas do buffet. Os pedidos de manutenção não aparecem para ela. <span id="estSenhaStatus"></span></div></div>
@@ -1661,6 +1668,12 @@
   }
 
   // Senha da manutenção (Sidinei), servidor 2026-11-17-b
+  async function definirSenhaRosi(){
+    const sn=prompt('Nova senha da Rosi (mínimo 4 caracteres):'); if(sn==null) return;
+    if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
+    try{ const r=await admPost({action:'authDefinirSenhaRosi',hash:hash(sn)}); if(!r||r.ok!==true) throw new Error((r&&r.erro)||'O Apps Script publicado ainda não tem a senha da Rosi.'); showToast('Senha da Rosi salva.','ok'); registrarLog('Senha da Rosi definida.','ok'); mostrarLista([['Rosi',sn]],'Senha da Rosi:\n📋 gerentes.dinapizza.com.br/vagas'); renderTabela(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
   async function definirSenhaEst(){
     const sn=prompt('Nova senha do estoque central — Lia (mínimo 4 caracteres):'); if(sn==null) return;
     if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
@@ -1690,6 +1703,7 @@
       const ta=document.getElementById('tabelaAgenda');
       if(ta) ta.innerHTML=r.agenda?Object.keys(r.agenda).map(k=>{ const a=r.agenda[k]; return `<tr><td style="font-weight:600">${escH(a.rotulo)}</td><td>${a.ativa?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${quando(a.em)}</div>`:'<span class="badge sem">Sem senha</span>'}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',true)">Gerar</button><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',false)">Escolher</button></div></td></tr>`; }).join(''):'<tr><td colspan="2" style="color:var(--yellow)">Falta colar o código novo no Apps Script.</td></tr>';
       const cs=document.getElementById('ccStatus'); if(cs) cs.innerHTML=r.callcenter===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.callcenter?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
+      const rs=document.getElementById('rosiSenhaStatus'); if(rs) rs.innerHTML=r.rosi===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.rosi?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const es=document.getElementById('estSenhaStatus'); if(es) es.innerHTML=r.estoque===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.estoque?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const ms=document.getElementById('manStatus'); if(ms) ms.innerHTML=r.manutencao===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.manutencao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const gs=document.getElementById('gestaoStatus'); if(gs) gs.innerHTML=r.gestao?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>';
