@@ -179,7 +179,7 @@ let VAGAS=null;
 function renderVagas(){
   if(!VAGAS) return '';
   const ab=VAGAS.filter(v=>v.situacao==='aberta'), fe=VAGAS.filter(v=>v.situacao!=='aberta').slice(0,5);
-  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">O gerente informa no placar quando a equipe está incompleta. A vaga é sempre aberta como <b>auxiliar</b> (nunca a categoria principal). Prazo: 10 dias úteis. Se não for conseguir, peça mais prazo aqui dizendo o motivo: a Rosi e o GDI recebem.</div>';
+  let h='<div class="card"><h2 style="margin:0 0 6px">📢 Vagas abertas nas lojas'+(ab.length?' ('+ab.length+')':'')+'</h2><div class="muted" style="font-size:0.82rem;margin-bottom:8px">Desde 19/11 a vaga só abre quando o <b>pedido do gerente</b> é aprovado (GDI ou RH; fixo também pela Rosi). <a href="vagas" style="color:var(--d-gold,#FFD000);font-weight:800">📋 Pedidos de vaga, revisar vagas e quadro das lojas →</a><br>A vaga é sempre aberta como <b>auxiliar</b> (nunca a categoria principal). Taxa é do gerente e não aparece aqui. Prazo: 10 dias úteis. Se não for conseguir, peça mais prazo aqui dizendo o motivo: a Rosi e o GDI recebem.</div>';
   if(!ab.length) h+='<div class="muted">Nenhuma vaga aberta. 👏</div>';
   ab.forEach(v=>{
     const cor=v.atrasada?'var(--danger)':v.uteisRestantes<=3?'#FFD000':'var(--green)';

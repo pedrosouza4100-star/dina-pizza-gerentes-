@@ -4132,8 +4132,74 @@ function eqRender(){
   }).join('');
   document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
+  vpRender();
   eqAtualizar();
 }
+// ── Pedido de vaga (19/11/2026, servidor 2026-11-19-a, recurso vagaPedido): a vaga só nasce do pedido aprovado ──
+let VP_FORM=false;
+function vpRender(){
+  const box=document.getElementById('eqVagas'); if(!box||!EQ) return;
+  const v=EQ.vp;
+  if(!v||!v.ativo){ return; } // servidor antigo: fica o texto antigo das vagas
+  const dd=t=>escR(String(t||'').slice(0,5)), bt='border:none;border-radius:8px;font-weight:700;font-size:0.8rem;padding:7px 10px;cursor:pointer';
+  let h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-weight:800;font-size:0.85rem">📋 Vagas da loja</div>';
+  h+=(v.vagas||[]).length?(v.vagas||[]).map(x=>'<div style="font-size:0.8rem;margin-top:6px;padding:7px 9px;border-radius:8px;border:1px solid '+(x.taxa?'#FFD000':'var(--border)')+'">'+(x.taxa?'⚡ <b>TAXA</b>':'📢 <b>Fixo</b>')+' · '+escR(x.setorNome)+' ('+x.qtd+') · '
+      +(x.taxa?('<b style="color:'+(x.atrasada?'#ff6b6b':'#FFD000')+'">você arruma até '+dd(x.prazo)+(x.atrasada?' — PRAZO VENCIDO':'')+'</b> <button onclick="vpTaxaOk(\''+x.id+'\')" style="'+bt+';background:var(--green);color:#000;margin-left:4px">✅ Arrumei</button>'):('com a RH, prazo '+dd(x.prazo)))+'</div>').join('')
+    :'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px">Nenhuma vaga aberta.</div>';
+  const pend=(v.pedidos||[]).filter(p=>p.situacao!=='aprovado'||p.ms>Date.now()-2*86400000);
+  if(pend.length) h+='<div style="font-size:0.78rem;color:var(--muted);margin-top:10px">Seus pedidos</div>'+pend.map(p=>'<div style="font-size:0.8rem;margin-top:5px">'+(p.situacao==='recusado'?'❌':p.situacao==='aprovado'?'✅':p.situacao==='cancelado'?'↩️':'⏳')+' '+escR(p.setorNome)+' ('+p.qtd+', '+(p.tipo==='taxa'?'taxa':'fixo')+') — <b>'+escR(p.situacaoNome)+'</b>'+(p.motivoRecusa?': '+escR(p.motivoRecusa):'')+((p.situacao==='pedido'||p.situacao==='preaprovado')?' <a href="#" onclick="vpCancelar(\''+p.id+'\');return false" style="color:var(--muted)">cancelar</a>':'')+'</div>').join('');
+  h+='<button onclick="VP_FORM=!VP_FORM;vpRender()" style="'+bt+';background:transparent;border:1px solid var(--gold);color:var(--gold);margin-top:10px;width:100%">➕ Pedir vaga</button>';
+  if(VP_FORM){
+    const sel='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;margin-top:6px;font-size:0.9rem';
+    const fun=(EQ.setores||[]).map(s=>'<option value="'+s.setor+'">'+escR(s.nome)+'</option>').join('');
+    h+='<div id="vpForm" style="margin-top:8px;border:1px solid var(--gold);border-radius:10px;padding:10px">'
+      +'<div style="font-size:0.8rem;color:var(--muted)">A vaga só abre depois de aprovada: <b>fixo</b> pelo GDI ou a RH e depois pela Rosi; <b>taxa</b> pelo GDI ou a RH, e quem arruma é você, em '+(v.taxaDias||2)+' dias.</div>'
+      +'<select id="vpSetor" style="'+sel+'"><option value="">Função</option>'+fun+'</select>'
+      +'<input id="vpQtd" type="number" inputmode="numeric" min="1" max="10" placeholder="Quantas vagas" style="'+sel+'">'
+      +'<div style="display:flex;gap:8px;margin-top:6px"><label style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:0.85rem"><input type="radio" name="vpTipo" value="fixo"> Fixo (registrado)</label><label style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:0.85rem"><input type="radio" name="vpTipo" value="taxa"> Taxa (extra/diarista)</label></div>'
+      +'<select id="vpMotivo" onchange="document.getElementById(\'vpNome\').style.display=this.value===\'substituir\'?\'block\':\'none\'" style="'+sel+'"><option value="">Motivo</option>'+Object.keys(v.motivos||{}).map(k=>'<option value="'+k+'">'+escR(v.motivos[k])+'</option>').join('')+'</select>'
+      +'<input id="vpNome" placeholder="Nome de quem saiu" style="'+sel+';display:none">'
+      +'<input id="vpObs" placeholder="Observação (opcional)" style="'+sel+'">'
+      +'<div id="vpMsg" style="font-size:0.8rem;min-height:14px;margin-top:6px"></div>'
+      +'<button onclick="vpEnviar()" style="'+bt+';background:var(--gold);color:#000;width:100%;margin-top:4px;padding:11px">Enviar pedido</button></div>';
+  }
+  box.innerHTML=h+'</div>';
+}
+async function vpPost(o){ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'},o))}); return JSON.parse(await resp.text()); }
+async function vpEnviar(){
+  const m=document.getElementById('vpMsg'), g=id=>(document.getElementById(id)||{}).value||'';
+  const tipo=(document.querySelector('input[name="vpTipo"]:checked')||{}).value||'';
+  const o={action:'equipeVagaPedir',setor:g('vpSetor'),qtd:g('vpQtd'),tipo,motivo:g('vpMotivo'),nome:g('vpNome').trim(),obs:g('vpObs').trim()};
+  if(!o.setor){ m.innerHTML='<span style="color:#ff6b6b">Escolha a função.</span>'; return; }
+  if(!(Number(o.qtd)>=1)){ m.innerHTML='<span style="color:#ff6b6b">Quantas vagas?</span>'; return; }
+  if(!tipo){ m.innerHTML='<span style="color:#ff6b6b">Escolha FIXO ou TAXA.</span>'; return; }
+  if(!o.motivo){ m.innerHTML='<span style="color:#ff6b6b">Escolha o motivo.</span>'; return; }
+  if(o.motivo==='substituir'&&o.nome.length<3){ m.innerHTML='<span style="color:#ff6b6b">Escreva o nome de quem saiu.</span>'; return; }
+  m.style.color='#888'; m.textContent='Enviando...';
+  let r=null; try{ r=await vpPost(o); }catch(e){}
+  if(!(r&&r.ok)){ m.innerHTML='<span style="color:#ff6b6b">Não enviou ('+escR((r&&r.erro)||'sem conexão')+').</span>'; return; }
+  const s=(EQ.setores||[]).find(x=>x.setor===o.setor)||{};
+  if(r.teste){ (EQ.vp.pedidos=EQ.vp.pedidos||[]).unshift({id:'teste'+Date.now(),setorNome:s.nome||o.setor,qtd:Number(o.qtd),tipo,situacao:'pedido',situacaoNome:'Esperando o GDI ou a RH (teste: nada foi enviado)',ms:Date.now()}); }
+  if(typeof logProva==='function') logProva('VAGA_PEDIDA', o.setor+' '+o.qtd+' '+tipo);
+  VP_FORM=false; vpRender();
+  alert('✅ Pedido de vaga enviado.\n\n'+(tipo==='taxa'?'O GDI ou a RH vai aprovar. Aprovado, você tem '+((EQ.vp&&EQ.vp.taxaDias)||2)+' dias para arrumar o taxa.':'O GDI ou a RH confere e depois a Rosi aprova. Aprovada, a vaga vai para a RH.')+(r.teste?'\n\n(MODO TESTE: nada foi enviado)':''));
+  if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1200);
+}
+async function vpCancelar(id){
+  if(!confirm('Cancelar este pedido de vaga?')) return;
+  if(String(id).indexOf('teste')===0){ EQ.vp.pedidos=EQ.vp.pedidos.filter(p=>p.id!==id); vpRender(); return; }
+  let r=null; try{ r=await vpPost({action:'equipeVagaPedidoCancelar',id}); }catch(e){}
+  if(!(r&&r.ok)){ alert('Não cancelou: '+((r&&r.erro)||'sem conexão')); return; }
+  if(!MODO_TESTE) eqCarregar();
+}
+async function vpTaxaOk(id){
+  if(!confirm('Você já arrumou a pessoa (taxa) desta vaga?')) return;
+  let r=null; try{ r=await vpPost({action:'equipeVagaTaxaOk',id}); }catch(e){}
+  if(!(r&&r.ok)){ alert('Não salvou: '+((r&&r.erro)||'sem conexão')); return; }
+  if(r.teste){ EQ.vp.vagas=EQ.vp.vagas.filter(v=>v.id!==id); vpRender(); return; }
+  eqCarregar();
+}
+
 // ── Conferência do dia do feriado (03/11/2026): 3 perguntas SIM/NÃO; NÃO exige o que está errado e vai para o GDI ──
 const FER_PERG=[['equipe','Sua equipe está completa, conforme orientado ontem?'],['precos','Os valores do buffet e do boliche estão corretos no sistema?'],['promo','As promoções de hoje são válidas para o feriado?']];
 let FER_RESP={};
@@ -4181,7 +4247,9 @@ function eqAtualizar(){
     if(falta>0){
       box.style.display='block';
       const ok=soma===falta;
-      aviso.innerHTML=ok?'<span style="color:var(--green)">✓ '+falta+' pessoa(s) explicada(s)'+(item.vaga?' · a RH será avisada da vaga':'')+'</span>'
+      const vpAb=EQ.vp&&EQ.vp.ativo?((EQ.vp.vagasPorSetor||{})[s.setor]||0):null, vpExc=vpAb!==null&&item.vaga>vpAb; // 19/11: "vaga" só até as vagas abertas da função
+      if(vpExc){ aviso.innerHTML='<span style="color:#ff6b6b">'+(vpAb?'Esta função só tem <b>'+vpAb+'</b> vaga aberta.':'Esta função <b>não tem vaga aberta</b>.')+' Marque como <b>faltou</b> ou peça a vaga em <b>➕ Pedir vaga</b> (logo abaixo).</span>'; tudo=false; out.push(item); return; }
+      aviso.innerHTML=ok?'<span style="color:var(--green)">✓ '+falta+' pessoa(s) explicada(s)'+(item.vaga?(vpAb!==null?' · '+item.vaga+' vaga(s) já aberta(s)':' · a RH será avisada da vaga'):'')+'</span>'
         :'<span style="color:#ff6b6b">Faltam <b>'+falta+'</b> pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').</span>';
       if(!ok) tudo=false;
     } else if(box){ box.style.display='none'; EQ_MOT.forEach(([k])=>item[k]=0); }
@@ -4200,6 +4268,8 @@ async function eqSalvarEquipe(){
       const pres=eqNum('eq_'+st.setor+'_pres');
       if(pres===null){ alvo=st; campo='eq_'+st.setor+'_pres'; txt='Informe quantas pessoas estão trabalhando hoje em <b>'+escR(st.nome)+'</b>.'; break; }
       const falta=st.ideal-pres, soma=EQ_MOT.reduce((a,[k])=>a+(eqNum('eq_'+st.setor+'_'+k)||0),0);
+      const vab=EQ.vp&&EQ.vp.ativo?((EQ.vp.vagasPorSetor||{})[st.setor]||0):null, vq=eqNum('eq_'+st.setor+'_vaga')||0;
+      if(falta>0 && vab!==null && vq>vab){ alvo=st; campo='eq_'+st.setor+'_falta'; txt='Em <b>'+escR(st.nome)+'</b> você marcou '+vq+' vaga(s), mas '+(vab?'só tem '+vab+' vaga aberta':'não tem vaga aberta')+'. Marque como faltou ou peça a vaga em ➕ Pedir vaga.'; break; }
       if(falta>0 && soma!==falta){ alvo=st; campo='eq_'+st.setor+'_folga'; txt='Em <b>'+escR(st.nome)+'</b> faltam '+falta+' pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').'; break; }
     }
     msg.innerHTML='<span style="color:#ff6b6b">⬆️ Ainda não dá para salvar. '+(txt||'Preencha todas as funções e explique quem está faltando.')+'</span>';
