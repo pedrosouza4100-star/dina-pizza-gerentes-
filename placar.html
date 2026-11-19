@@ -576,6 +576,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div id="eqFeriado"></div>
       <div id="eqSetores"></div>
       <div id="eqVagas"></div>
+      <div id="fgrBox"></div>
       <div id="eqMsg" style="font-size:0.82rem;margin-top:6px;min-height:14px"></div>
       <button class="camera-btn" id="eqSalvarBtn" onclick="eqSalvarEquipe()" style="margin-top:8px">💾 Salvar equipe do dia</button>
       <span class="tag" id="eqTag"></span>
@@ -1723,7 +1724,7 @@ async function missaoLi(){
   alert('Não consegui salvar agora. Tente de novo em instantes.');
 }
 // Botão "📊 Minha loja" (Painel da Diretoria, 13/11/2026): só para o GERENTE (não o assistente) e fora do modo teste
-function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(b) b.style.display=(!MODO_TESTE&&(localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
+function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(!b) return; if(MODO_TESTE){ b.href='minha-loja.html?teste=1&gdi=1&loja='+encodeURIComponent(u); b.onclick=()=>{ window.open(b.href,'_blank'); return false; }; b.style.display=''; return; } /* 18/11: no teste abre só para ver, em aba nova */ b.onclick=null; b.href='minha-loja.html'; b.style.display=((localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
 function iniciarApp(u){
   mlMostrar(u);
   missaoCarregar(u);
@@ -3528,9 +3529,9 @@ let PV_ON=false, PV_DATA=null, _pvTimer=null, _pvVistos={};
 let _manTimer=null;
 async function manBotao(){
   const b=document.getElementById('btnMan'), n=document.getElementById('btnManN'); if(!b) return; b.style.display='none'; if(_manTimer){ clearInterval(_manTimer); _manTimer=null; }
-  if(MODO_TESTE) return;
   try{ const rc=await chkRecursos(); if(!rc.includes('manutencao')) return; }catch(e){ return; }
   b.style.display='';
+  if(MODO_TESTE){ b.href='manutencao.html?daloja=1&teste=1&loja='+encodeURIComponent(unidadeAtual); b.onclick=()=>{ if(confirm('🧪 Atenção: a Manutenção NÃO fica dentro do modo teste.\n\nO que você anotar lá vai DE VERDADE para o Sidinei (e o 🔴 vai na hora).\n\nAbrir mesmo assim? (abre em outra aba; o placar continua aqui)')) window.open(b.href,'_blank'); return false; }; return; } // 18/11: no teste, mostra com aviso, em aba nova
   const contar=async()=>{ try{ const r=await chkJsonp({action:'manutLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok&&r.pedidos){ n.textContent=r.confirmar+' para confirmar'; n.style.display=r.confirmar?'':'none'; } }catch(e){} };
   contar(); _manTimer=setInterval(()=>{ if(document.visibilityState==='visible') contar(); },600000);
 }
@@ -4132,8 +4133,123 @@ function eqRender(){
   }).join('');
   document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
+  vpRender(); fgrRender();
   eqAtualizar();
 }
+
+// ── Folgas do gerente e do assistente lançadas pela RH (19/11/2026, servidor 2026-11-19-c, recurso folgasRh) ──
+let FGR_FORM=false;
+function fgrPapel(){ try{ return localStorage.getItem('dina_papel_'+unidadeAtual)==='assistente'?'assistente':'gerente'; }catch(e){ return 'gerente'; } }
+function fgrRender(){
+  const box=document.getElementById('fgrBox'); if(!box) return; let F=EQ&&EQ.fgr; if(!F||!F.ativo){ box.innerHTML=''; return; }
+  if(MODO_TESTE&&!F.lancado&&!(F.proximas.gerente.length||F.proximas.assistente.length)){ // regra 13: no teste, mostra um exemplo enquanto a RH não lança a loja
+    const d=n=>{ const x=new Date(F.hoje+'T12:00:00'); x.setDate(x.getDate()+n); const iso=x.toISOString().slice(0,10); return {dia:iso,br:iso.slice(8,10)+'/'+iso.slice(5,7),tipo:'folga',tipoNome:'Folga'}; };
+    F=EQ.fgr=Object.assign({},F,{lancado:true,exemplo:true,proximas:{gerente:[d(2),d(9),d(16)],assistente:[d(4),d(11),d(18)]}});
+  }
+  const eu=fgrPapel(), bt='border:none;border-radius:8px;font-weight:700;font-size:0.8rem;padding:7px 10px;cursor:pointer', sel='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;margin-top:6px;font-size:0.9rem';
+  const lista=p=>{ const l=(F.proximas[p]||[]); return l.length?l.slice(0,8).map(x=>'<span style="display:inline-block;margin:3px 4px 0 0;padding:3px 8px;border-radius:12px;font-size:0.76rem;border:1px solid '+(x.tipo==='folga'?'rgba(61,220,151,.5)':'rgba(255,208,0,.5)')+'">'+escR(x.br)+(x.tipo==='folga'?'':' '+escR(x.tipoNome))+'</span>').join(''):'<span style="font-size:0.78rem;color:var(--muted)">nenhuma nos próximos 45 dias</span>'; };
+  let h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-weight:800;font-size:0.85rem">📅 Folgas lançadas pela RH</div>'+(F.exemplo?'<div style="font-size:0.74rem;color:#c4b5fd;margin-top:2px">🧪 Exemplo do teste: a RH ainda não lançou esta loja.</div>':'');
+  if(!F.lancado&&!(F.proximas.gerente.length||F.proximas.assistente.length)){ box.innerHTML=h+'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px">A RH ainda não lançou as folgas deste mês. Por enquanto vale a escala.</div></div>'; return; }
+  h+='<div style="font-size:0.8rem;margin-top:6px"><b>Gerente</b>'+(F.nomes.gerente?' ('+escR(F.nomes.gerente.split(' ')[0])+')':'')+'<br>'+lista('gerente')+'</div>'
+    +'<div style="font-size:0.8rem;margin-top:8px"><b>Assistente</b>'+(F.nomes.assistente?' ('+escR(F.nomes.assistente.split(' ')[0])+')':'')+'<br>'+lista('assistente')+'</div>';
+  const tr=(F.trocas||[]).filter(t=>t.papel===eu);
+  if(tr.length) h+='<div style="font-size:0.78rem;color:var(--muted);margin-top:10px">Seus pedidos de troca</div>'+tr.map(t=>'<div style="font-size:0.8rem;margin-top:5px">'+(t.situacao==='aprovada'?'✅':t.situacao==='recusada'?'❌':t.situacao==='cancelada'?'↩️':'⏳')+' '+escR(t.deBR)+' → '+escR(t.paraBR)+' — <b>'+escR(t.situacaoNome)+'</b>'+(t.motivoRecusa?': '+escR(t.motivoRecusa):'')+(t.situacao==='pedido'?' <a href="#" onclick="fgrCancelar(\''+t.id+'\');return false" style="color:var(--muted)">cancelar</a>':'')+'</div>').join('');
+  const minhas=(F.proximas[eu]||[]).filter(x=>x.tipo==='folga');
+  h+='<div style="font-size:0.74rem;color:var(--muted);margin-top:8px">As suas folgas não mudam pela escala. Para trocar, peça à RH:</div>'
+    +'<button onclick="FGR_FORM=!FGR_FORM;fgrRender()" style="'+bt+';background:transparent;border:1px solid var(--gold);color:var(--gold);margin-top:6px;width:100%">🔄 Pedir troca de folga</button>';
+  if(FGR_FORM) h+='<div id="fgrForm" style="margin-top:8px;border:1px solid var(--gold);border-radius:10px;padding:10px">'
+    +(minhas.length?'<select id="fgrDe" style="'+sel+'"><option value="">Qual folga você quer trocar?</option>'+minhas.map(x=>'<option value="'+x.dia+'">'+escR(x.br)+'</option>').join('')+'</select>'
+      +'<div style="font-size:0.78rem;color:var(--muted);margin-top:8px">Novo dia da folga</div><input id="fgrPara" type="date" min="'+F.hoje+'" style="'+sel+'">'
+      +'<input id="fgrMotivo" placeholder="Motivo (ex.: consulta médica marcada)" style="'+sel+'">'
+      +'<div id="fgrMsg" style="font-size:0.8rem;min-height:14px;margin-top:6px"></div><button onclick="fgrPedir()" style="'+bt+';background:var(--gold);color:#000;width:100%;margin-top:4px;padding:11px">Enviar pedido à RH</button>'
+      :'<div style="font-size:0.8rem;color:var(--muted)">Você não tem folga lançada nos próximos 45 dias para trocar.</div>')+'</div>';
+  box.innerHTML=h+'</div>';
+}
+async function fgrPedir(){
+  const m=document.getElementById('fgrMsg'), g=id=>(document.getElementById(id)||{}).value||'';
+  const o={action:'equipeFolgaTroca',de:g('fgrDe'),para:g('fgrPara'),motivo:g('fgrMotivo').trim(),papel:fgrPapel()};
+  if(!o.de){ m.innerHTML='<span style="color:#ff6b6b">Escolha a folga que quer trocar.</span>'; return; }
+  if(!o.para){ m.innerHTML='<span style="color:#ff6b6b">Escolha o novo dia.</span>'; return; }
+  if(o.motivo.length<10){ m.innerHTML='<span style="color:#ff6b6b">Escreva o motivo (pelo menos 10 letras).</span>'; return; }
+  m.style.color='#888'; m.textContent='Enviando...';
+  let r=null; if(EQ.fgr.exemplo) r={ok:true,teste:true}; else try{ r=await vpPost(o); }catch(e){}
+  if(!(r&&r.ok)){ m.innerHTML='<span style="color:#ff6b6b">Não enviou ('+escR((r&&r.erro)||'sem conexão')+').</span>'; return; }
+  const br=x=>x.slice(8,10)+'/'+x.slice(5,7);
+  (EQ.fgr.trocas=EQ.fgr.trocas||[]).unshift({id:r.teste?'teste'+Date.now():r.id,papel:o.papel,de:o.de,para:o.para,deBR:br(o.de),paraBR:br(o.para),situacao:'pedido',situacaoNome:'Esperando a RH'+(r.teste?' (teste: nada foi enviado)':'')});
+  if(typeof logProva==='function') logProva('FOLGA_TROCA_PEDIDA', o.de+' > '+o.para);
+  FGR_FORM=false; fgrRender();
+  alert('✅ Pedido de troca enviado à RH.'+(r.juntos?'\n\n⚠️ Nesse dia o '+(o.papel==='gerente'?'assistente':'gerente')+' também está de folga: a RH vai conferir.':'')+(r.teste?'\n\n(MODO TESTE: nada foi enviado)':''));
+}
+async function fgrCancelar(id){
+  if(!confirm('Cancelar este pedido de troca?')) return;
+  if(String(id).indexOf('teste')!==0){ let r=null; try{ r=await vpPost({action:'equipeFolgaTrocaCancelar',id}); }catch(e){} if(!(r&&r.ok)){ alert('Não cancelou ('+((r&&r.erro)||'sem conexão')+').'); return; } }
+  EQ.fgr.trocas=(EQ.fgr.trocas||[]).map(t=>t.id===id?Object.assign({},t,{situacao:'cancelada',situacaoNome:'Cancelada'}):t); fgrRender();
+}
+// ── Pedido de vaga (19/11/2026, servidor 2026-11-19-a, recurso vagaPedido): a vaga só nasce do pedido aprovado ──
+let VP_FORM=false;
+function vpRender(){
+  const box=document.getElementById('eqVagas'); if(!box||!EQ) return;
+  const v=EQ.vp;
+  if(!v||!v.ativo){ return; } // servidor antigo: fica o texto antigo das vagas
+  const dd=t=>escR(String(t||'').slice(0,5)), bt='border:none;border-radius:8px;font-weight:700;font-size:0.8rem;padding:7px 10px;cursor:pointer';
+  let h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-weight:800;font-size:0.85rem">📋 Vagas da loja</div>';
+  h+=(v.vagas||[]).length?(v.vagas||[]).map(x=>'<div style="font-size:0.8rem;margin-top:6px;padding:7px 9px;border-radius:8px;border:1px solid '+(x.taxa?'#FFD000':'var(--border)')+'">'+(x.taxa?'⚡ <b>TAXA</b>':'📢 <b>Fixo</b>')+' · '+escR(x.setorNome)+' ('+x.qtd+') · '
+      +(x.taxa?('<b style="color:'+(x.atrasada?'#ff6b6b':'#FFD000')+'">você arruma até '+dd(x.prazo)+(x.atrasada?' — PRAZO VENCIDO':'')+'</b> <button onclick="vpTaxaOk(\''+x.id+'\')" style="'+bt+';background:var(--green);color:#000;margin-left:4px">✅ Arrumei</button>'):('com a RH, prazo '+dd(x.prazo)))+'</div>').join('')
+    :'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px">Nenhuma vaga aberta.</div>';
+  const pend=(v.pedidos||[]).filter(p=>p.situacao!=='aprovado'||p.ms>Date.now()-2*86400000);
+  if(pend.length) h+='<div style="font-size:0.78rem;color:var(--muted);margin-top:10px">Seus pedidos</div>'+pend.map(p=>'<div style="font-size:0.8rem;margin-top:5px">'+(p.situacao==='recusado'?'❌':p.situacao==='aprovado'?'✅':p.situacao==='cancelado'?'↩️':'⏳')+' '+escR(p.setorNome)+' ('+p.qtd+', '+(p.tipo==='taxa'?'taxa':'fixo')+') — <b>'+escR(p.situacaoNome)+'</b>'+(p.motivoRecusa?': '+escR(p.motivoRecusa):'')+((p.situacao==='pedido'||p.situacao==='preaprovado')?' <a href="#" onclick="vpCancelar(\''+p.id+'\');return false" style="color:var(--muted)">cancelar</a>':'')+'</div>').join('');
+  h+='<button onclick="VP_FORM=!VP_FORM;vpRender()" style="'+bt+';background:transparent;border:1px solid var(--gold);color:var(--gold);margin-top:10px;width:100%">➕ Pedir vaga</button>';
+  if(VP_FORM){
+    const sel='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;margin-top:6px;font-size:0.9rem';
+    const fun=(EQ.setores||[]).map(s=>'<option value="'+s.setor+'">'+escR(s.nome)+'</option>').join('');
+    h+='<div id="vpForm" style="margin-top:8px;border:1px solid var(--gold);border-radius:10px;padding:10px">'
+      +'<div style="font-size:0.8rem;color:var(--muted)">A vaga só abre depois de aprovada: <b>fixo</b> pelo GDI ou a RH e depois pela Rosi; <b>taxa</b> pelo GDI ou a RH, e quem arruma é você, em '+(v.taxaDias||2)+' dias.</div>'
+      +'<select id="vpSetor" style="'+sel+'"><option value="">Função</option>'+fun+'</select>'
+      +'<input id="vpQtd" type="number" inputmode="numeric" min="1" max="10" placeholder="Quantas vagas" style="'+sel+'">'
+      +'<div style="display:flex;gap:8px;margin-top:6px"><label style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:0.85rem"><input type="radio" name="vpTipo" value="fixo"> Fixo (registrado)</label><label style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:0.85rem"><input type="radio" name="vpTipo" value="taxa"> Taxa (extra/diarista)</label></div>'
+      +'<select id="vpMotivo" onchange="document.getElementById(\'vpNome\').style.display=this.value===\'substituir\'?\'block\':\'none\'" style="'+sel+'"><option value="">Motivo</option>'+Object.keys(v.motivos||{}).map(k=>'<option value="'+k+'">'+escR(v.motivos[k])+'</option>').join('')+'</select>'
+      +'<input id="vpNome" placeholder="Nome de quem saiu" style="'+sel+';display:none">'
+      +'<input id="vpObs" placeholder="Observação (opcional)" style="'+sel+'">'
+      +'<div id="vpMsg" style="font-size:0.8rem;min-height:14px;margin-top:6px"></div>'
+      +'<button onclick="vpEnviar()" style="'+bt+';background:var(--gold);color:#000;width:100%;margin-top:4px;padding:11px">Enviar pedido</button></div>';
+  }
+  box.innerHTML=h+'</div>';
+}
+async function vpPost(o){ const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({unidade:unidadeAtual,senha:pvSenha(),papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'},o))}); return JSON.parse(await resp.text()); }
+async function vpEnviar(){
+  const m=document.getElementById('vpMsg'), g=id=>(document.getElementById(id)||{}).value||'';
+  const tipo=(document.querySelector('input[name="vpTipo"]:checked')||{}).value||'';
+  const o={action:'equipeVagaPedir',setor:g('vpSetor'),qtd:g('vpQtd'),tipo,motivo:g('vpMotivo'),nome:g('vpNome').trim(),obs:g('vpObs').trim()};
+  if(!o.setor){ m.innerHTML='<span style="color:#ff6b6b">Escolha a função.</span>'; return; }
+  if(!(Number(o.qtd)>=1)){ m.innerHTML='<span style="color:#ff6b6b">Quantas vagas?</span>'; return; }
+  if(!tipo){ m.innerHTML='<span style="color:#ff6b6b">Escolha FIXO ou TAXA.</span>'; return; }
+  if(!o.motivo){ m.innerHTML='<span style="color:#ff6b6b">Escolha o motivo.</span>'; return; }
+  if(o.motivo==='substituir'&&o.nome.length<3){ m.innerHTML='<span style="color:#ff6b6b">Escreva o nome de quem saiu.</span>'; return; }
+  m.style.color='#888'; m.textContent='Enviando...';
+  let r=null; try{ r=await vpPost(o); }catch(e){}
+  if(!(r&&r.ok)){ m.innerHTML='<span style="color:#ff6b6b">Não enviou ('+escR((r&&r.erro)||'sem conexão')+').</span>'; return; }
+  const s=(EQ.setores||[]).find(x=>x.setor===o.setor)||{};
+  if(r.teste){ (EQ.vp.pedidos=EQ.vp.pedidos||[]).unshift({id:'teste'+Date.now(),setorNome:s.nome||o.setor,qtd:Number(o.qtd),tipo,situacao:'pedido',situacaoNome:'Esperando o GDI ou a RH (teste: nada foi enviado)',ms:Date.now()}); }
+  if(typeof logProva==='function') logProva('VAGA_PEDIDA', o.setor+' '+o.qtd+' '+tipo);
+  VP_FORM=false; vpRender();
+  alert('✅ Pedido de vaga enviado.\n\n'+(tipo==='taxa'?'O GDI ou a RH vai aprovar. Aprovado, você tem '+((EQ.vp&&EQ.vp.taxaDias)||2)+' dias para arrumar o taxa.':'O GDI ou a RH confere e depois a Rosi aprova. Aprovada, a vaga vai para a RH.')+(r.teste?'\n\n(MODO TESTE: nada foi enviado)':''));
+  if(!MODO_TESTE) setTimeout(()=>eqCarregar(),1200);
+}
+async function vpCancelar(id){
+  if(!confirm('Cancelar este pedido de vaga?')) return;
+  if(String(id).indexOf('teste')===0){ EQ.vp.pedidos=EQ.vp.pedidos.filter(p=>p.id!==id); vpRender(); return; }
+  let r=null; try{ r=await vpPost({action:'equipeVagaPedidoCancelar',id}); }catch(e){}
+  if(!(r&&r.ok)){ alert('Não cancelou: '+((r&&r.erro)||'sem conexão')); return; }
+  if(!MODO_TESTE) eqCarregar();
+}
+async function vpTaxaOk(id){
+  if(!confirm('Você já arrumou a pessoa (taxa) desta vaga?')) return;
+  let r=null; try{ r=await vpPost({action:'equipeVagaTaxaOk',id}); }catch(e){}
+  if(!(r&&r.ok)){ alert('Não salvou: '+((r&&r.erro)||'sem conexão')); return; }
+  if(r.teste){ EQ.vp.vagas=EQ.vp.vagas.filter(v=>v.id!==id); vpRender(); return; }
+  eqCarregar();
+}
+
 // ── Conferência do dia do feriado (03/11/2026): 3 perguntas SIM/NÃO; NÃO exige o que está errado e vai para o GDI ──
 const FER_PERG=[['equipe','Sua equipe está completa, conforme orientado ontem?'],['precos','Os valores do buffet e do boliche estão corretos no sistema?'],['promo','As promoções de hoje são válidas para o feriado?']];
 let FER_RESP={};
@@ -4181,7 +4297,9 @@ function eqAtualizar(){
     if(falta>0){
       box.style.display='block';
       const ok=soma===falta;
-      aviso.innerHTML=ok?'<span style="color:var(--green)">✓ '+falta+' pessoa(s) explicada(s)'+(item.vaga?' · a RH será avisada da vaga':'')+'</span>'
+      const vpAb=EQ.vp&&EQ.vp.ativo?((EQ.vp.vagasPorSetor||{})[s.setor]||0):null, vpExc=vpAb!==null&&item.vaga>vpAb; // 19/11: "vaga" só até as vagas abertas da função
+      if(vpExc){ aviso.innerHTML='<span style="color:#ff6b6b">'+(vpAb?'Esta função só tem <b>'+vpAb+'</b> vaga aberta.':'Esta função <b>não tem vaga aberta</b>.')+' Marque como <b>faltou</b> ou peça a vaga em <b>➕ Pedir vaga</b> (logo abaixo).</span>'; tudo=false; out.push(item); return; }
+      aviso.innerHTML=ok?'<span style="color:var(--green)">✓ '+falta+' pessoa(s) explicada(s)'+(item.vaga?(vpAb!==null?' · '+item.vaga+' vaga(s) já aberta(s)':' · a RH será avisada da vaga'):'')+'</span>'
         :'<span style="color:#ff6b6b">Faltam <b>'+falta+'</b> pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').</span>';
       if(!ok) tudo=false;
     } else if(box){ box.style.display='none'; EQ_MOT.forEach(([k])=>item[k]=0); }
@@ -4200,6 +4318,8 @@ async function eqSalvarEquipe(){
       const pres=eqNum('eq_'+st.setor+'_pres');
       if(pres===null){ alvo=st; campo='eq_'+st.setor+'_pres'; txt='Informe quantas pessoas estão trabalhando hoje em <b>'+escR(st.nome)+'</b>.'; break; }
       const falta=st.ideal-pres, soma=EQ_MOT.reduce((a,[k])=>a+(eqNum('eq_'+st.setor+'_'+k)||0),0);
+      const vab=EQ.vp&&EQ.vp.ativo?((EQ.vp.vagasPorSetor||{})[st.setor]||0):null, vq=eqNum('eq_'+st.setor+'_vaga')||0;
+      if(falta>0 && vab!==null && vq>vab){ alvo=st; campo='eq_'+st.setor+'_falta'; txt='Em <b>'+escR(st.nome)+'</b> você marcou '+vq+' vaga(s), mas '+(vab?'só tem '+vab+' vaga aberta':'não tem vaga aberta')+'. Marque como faltou ou peça a vaga em ➕ Pedir vaga.'; break; }
       if(falta>0 && soma!==falta){ alvo=st; campo='eq_'+st.setor+'_folga'; txt='Em <b>'+escR(st.nome)+'</b> faltam '+falta+' pessoa(s): diga quantas estão de folga, férias, atestado, faltaram ou são vaga aberta ('+soma+' de '+falta+').'; break; }
     }
     msg.innerHTML='<span style="color:#ff6b6b">⬆️ Ainda não dá para salvar. '+(txt||'Preencha todas as funções e explique quem está faltando.')+'</span>';
@@ -4425,8 +4545,60 @@ function limpar(){
 </script>
 <div id="testeFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:2147483000;background:#7a3cff;color:#fff;font:700 13px/1.2 system-ui,sans-serif;align-items:center;justify-content:center;gap:10px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.5)">
   <span>🧪 MODO TESTE — nada é gravado nem conta para a loja</span>
+  <button onclick="tvMenu()" style="background:#FFD000;color:#111;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">👁️ Telas do gerente</button>
   <button onclick="try{sessionStorage.removeItem('dina_teste_loja');sessionStorage.removeItem('dina_teste_admin');}catch(e){} location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">Sair do teste</button>
 </div>
+<script>
+// ── Modo teste: ver as telas que o teste esconde (18/11/2026, regra 13 — "sentir o que o gerente sente") ──
+// Só mostra a tela com um exemplo, como o gerente vê; nada é gravado (as gravações do teste já são interceptadas).
+const TV_TELAS=[
+  ['aviso','⚠️ Aviso ao abrir: fazer o checklist de abertura'],
+  ['antes','⏰ Abertura antes do horário ("Ainda não é hora")'],
+  ['atraso1','🚨 1º atraso do mês no horário'],
+  ['atraso2','🚨 2º atraso do mês (última chance)'],
+  ['atraso3','🚨 3º atraso (placar bloqueado amanhã)'],
+  ['bloq','🔒 Placar bloqueado (pedir desbloqueio)'],
+  ['geo','📍 Fora da loja (com o 🆘 pedido ao GDI)'],
+  ['apar','📱 Celular aguardando autorização'],
+  ['aparNao','⛔ Celular recusado'],
+  ['pausa','⏸️ Acesso pausado'],
+  ['feriado','🎉 Dia de feriado (3 perguntas)']
+];
+const TV_OVS=['chkAvisoOverlay','chkHorarioAviso','chkBloqPlacar','geoOverlay','aparOverlay','ferOverlay','tvPausa'];
+function tvJanela(){ try{ return chkJanelaTxt(); }catch(e){ return '17h00 às 19h20'; } }
+function tvMenu(){
+  if(!MODO_TESTE) return;
+  let m=document.getElementById('tvMenu');
+  if(!m){ m=document.createElement('div'); m.id='tvMenu'; m.style.cssText='position:fixed;inset:0;z-index:2147483100;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(m); }
+  m.innerHTML='<div style="background:#121722;border:1px solid #7a3cff;border-radius:14px;max-width:420px;width:100%;max-height:90vh;overflow:auto;padding:16px;color:#F2F4F8;font-family:Inter,system-ui,sans-serif">'
+    +'<div style="font-weight:900;font-size:17px;margin-bottom:4px">👁️ Telas do gerente</div><div style="font-size:13px;color:#A3ACBB;margin-bottom:12px">O modo teste não trava você. Toque numa tela para ver exatamente como o gerente vê. Nada é gravado.</div>'
+    +TV_TELAS.map(([k,t])=>'<button onclick="tvVer(\''+k+'\')" style="display:block;width:100%;text-align:left;background:#171D2A;border:1px solid #242B38;border-radius:10px;color:#F2F4F8;font:600 14px Inter,system-ui,sans-serif;padding:12px;margin-bottom:8px;cursor:pointer">'+t+'</button>').join('')
+    +'<button onclick="document.getElementById(\'tvMenu\').style.display=\'none\'" style="width:100%;background:transparent;border:1px solid #444;border-radius:10px;color:#aaa;padding:10px;margin-top:4px;cursor:pointer">Fechar</button></div>';
+  m.style.display='flex';
+}
+function tvFechar(){
+  TV_OVS.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  try{ clearTimeout(_aparTimer); }catch(e){}
+  const f=document.getElementById('tvVoltar'); if(f) f.style.display='none';
+}
+function tvVer(k){
+  tvFechar(); document.getElementById('tvMenu').style.display='none';
+  const u=unidadeAtual||'Loja', agora=new Date().toTimeString().slice(0,5);
+  if(k==='aviso'){ const h=document.getElementById('chkAvisoHorario'); if(h) h.innerHTML='⏰ Horário do checklist de abertura e do Start Dina: <b>'+tvJanela()+'</b>.'; document.getElementById('chkAvisoOverlay').style.display='flex'; }
+  else if(k==='antes') chkMostrarAviso('⏰ AINDA NÃO É HORA','O checklist de abertura só pode ser feito no horário.<br><br>Horário do checklist: <b>'+tvJanela()+'</b>. Volte no horário certo.','Entendi',null);
+  else if(k.indexOf('atraso')===0){ const n=+k.slice(6); chkMostrarAviso(n>=3?'🚨 PLACAR SERÁ BLOQUEADO':'🚨 FORA DO HORÁRIO', chkTextoAtraso(n,agora,true,''), 'Entendi', null); }
+  else if(k==='bloq'){ document.getElementById('chkBloqTexto').innerHTML='O <b>checklist de abertura</b> do dia <b>ontem</b> foi feito às <b>19h47</b>, fora do horário ('+tvJanela()+').<br><br>Foi o <b>3º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.'; const bt=document.getElementById('chkBloqBtn'); bt.style.display='block'; bt.disabled=false; document.getElementById('chkBloqStatus').textContent=''; document.getElementById('chkBloqPlacar').style.display='flex'; }
+  else if(k==='geo'){ mostrarGeo('fora',{distancia:850,precisao:20}); document.getElementById('excBox').style.display='block'; document.getElementById('geoOverlay').style.display='flex'; }
+  else if(k==='apar'||k==='aparNao'){ aplicarAparelho(k==='apar'?'pendente':'recusado'); document.getElementById('aparOverlay').style.display='flex'; try{ clearTimeout(_aparTimer); }catch(e){} }
+  else if(k==='pausa'){ let p=document.getElementById('tvPausa'); if(!p){ p=document.createElement('div'); p.id='tvPausa'; p.style.cssText='position:fixed;inset:0;z-index:950;background:#07090E;display:none;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,sans-serif'; document.body.appendChild(p); }
+    p.innerHTML='<div style="max-width:340px;width:100%;text-align:center;color:#F2F4F8"><div style="font-size:20px;font-weight:800;margin-bottom:6px">'+u+'</div><div style="font-size:13px;color:#A3ACBB;margin-bottom:12px">Digite a senha da loja</div><div style="background:#171D2A;border:1px solid #242B38;border-radius:10px;padding:14px;color:#666;margin-bottom:12px;text-align:left">••••••</div><div style="background:#2a1a00;border:1px solid #FFD000;border-radius:10px;padding:12px;color:#ffe9a8;font-weight:700">⏸️ Acesso pausado até '+new Date(Date.now()+7*864e5).toLocaleDateString('pt-BR').slice(0,5)+'. Fale com o GDI.</div><div style="font-size:12px;color:#A3ACBB;margin-top:10px">(É o que o gerente ou o assistente pausado vê ao digitar a senha. Quem já estava dentro volta para esta tela.)</div></div>';
+    p.style.display='flex'; }
+  else if(k==='feriado') ferAbrir('Feriado (exemplo do teste)');
+  let f=document.getElementById('tvVoltar');
+  if(!f){ f=document.createElement('button'); f.id='tvVoltar'; f.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:2147483200;background:#7a3cff;color:#fff;border:0;border-radius:24px;padding:12px 20px;font:800 14px Inter,system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer'; f.onclick=()=>{ tvFechar(); tvMenu(); }; document.body.appendChild(f); }
+  f.textContent='✖ Fechar e voltar ao teste'; f.style.display='block';
+}
+</script>
 <script src="atualizador.js?v=2"></script>
 </body>
 </html>
