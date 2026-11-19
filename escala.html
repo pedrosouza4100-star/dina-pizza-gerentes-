@@ -381,6 +381,7 @@ async function carregar(){
 
   if(resp && resp.ok){
     S.equipe=resp.equipe||[];
+    S.rh=resp.folgasRh||null; // folgas do gerente/assistente lançadas pela RH (servidor 2026-11-19-c)
     aplicarTurnos(resp.turnos);
     S.anteriores=(resp.anteriores||[null,null]).concat([null,null]);
     // 3ª e 4ª semanas para trás (para conferir a folga de domingo do mês)
@@ -396,7 +397,7 @@ async function carregar(){
   } else {
     // sem conexão: usa o que tiver neste aparelho
     const cache=JSON.parse(lerLS('esc_cache_'+S.unidade)||'null');
-    S.equipe=cache?cache.equipe:[]; aplicarTurnos(cache?cache.turnos:null);
+    S.equipe=cache?cache.equipe:[]; aplicarTurnos(cache?cache.turnos:null); S.rh=null;
     S.anteriores=[null,null]; S.grade={}; S.obs=''; S.salvoEm=null; S.regra=eRegraDaSemana(S.semana); S.regraManual=false;
     toast('⚠ '+((resp&&resp.erro)||(erroRede&&erroRede.message)||'Erro ao carregar')+'. Mostrando o que está neste aparelho.','err',5000);
   }
@@ -426,7 +427,16 @@ function trocarRegra(v){
 }
 
 /* ───────── Desenho ───────── */
+// Folgas do gerente e do assistente pela RH (19/11/2026): nos dias lançados a célula segue a RH e não abre para mudar
+function rhAplicar(){
+  if(!S.rh||!S.rh.dias) return;
+  Object.keys(S.rh.dias).forEach(pid=>S.rh.dias[pid].forEach((v,i)=>{ if(v===null||v===undefined) return; const cel=(S.grade[pid]||[])[i];
+    if(v){ if(!S.grade[pid]) S.grade[pid]=[null,null,null,null,null,null,null]; S.grade[pid][i]={t:v}; }
+    else if(cel&&(cel.t==='folga'||cel.t==='ferias'||cel.t==='atestado')) S.grade[pid][i]=null; }));
+}
+function rhDia(pid,dia){ const d=S.rh&&S.rh.dias&&S.rh.dias[pid]; return d&&d[dia]!==null&&d[dia]!==undefined?d[dia]:null; }
 function render(){
+  rhAplicar();
   const a=eAnalisar(S.equipe,S.grade,S.anteriores,S.regra,S.semana);
   S.analise=a;
   document.getElementById('selRegra').value=S.regra;
@@ -447,6 +457,7 @@ function render(){
   const auto=eRegraDaSemana(S.semana);
   b+='<div class="banner info"><b>'+a.regra.nome+'</b>'+(S.regraManual?' (simulação — pela data, esta semana segue a <b>'+ESCALA_REGRAS[auto].nome+'</b>)':'')+' · '+a.regra.descricao+'</div>';
   if(S.pendencias&&S.pendencias.length) b+='<div class="banner warn"><b>A escala automática não conseguiu cumprir tudo:</b><br>'+S.pendencias.map(eEsc).join('<br>')+'<br>Ajuste tocando nos dias, ou peça reforço.</div>';
+  if(S.rh&&S.rh.pessoas) b+='<div class="banner info">🔒 <b>Folgas do gerente e do assistente</b> ('+Object.keys(S.rh.pessoas).map(id=>eEsc(pessoaPorId(id).nome)).join(' e ')+') são lançadas pela RH. Nesses dias a escala segue a RH; para trocar uma folga, peça no placar (card Equipe do dia).</div>';
   if(S.rascunho) b+='<div class="banner warn">Há alterações feitas neste aparelho que ainda não foram salvas no sistema. Toque em <b>Salvar escala</b> para enviar.</div>';
   if(!a.pessoas.length) b+='<div class="banner warn">Comece cadastrando a equipe na aba <b>Equipe e turnos</b>.</div>';
   else if(a.erros===0 && a.vazios===0) b+='<div class="banner ok">✔ Escala completa e dentro das regras conferidas.</div>';
@@ -491,8 +502,11 @@ let D=null; // edição em andamento
 function pessoaPorId(id){ return S.equipe.find(p=>p.id===id)||{id,nome:'(removido)'}; }
 
 function abrirDia(pid,dia){
+  const rh=rhDia(pid,dia);
+  if(rh){ toast('🔒 '+(rh==='folga'?'Folga lançada':rh==='ferias'?'Férias lançadas':'Atestado lançado')+' pela RH. Para trocar, peça no placar.','err',4000); return; }
   const atual=(S.grade[pid]||[])[dia];
-  D={ pid, dia, t: atual&&atual.t ? atual.t : 'trab', p: atual&&atual.p ? JSON.parse(JSON.stringify(atual.p)) : [['','']], rep:new Set([dia]) };
+  D={ pid, dia, t: atual&&atual.t ? atual.t : 'trab', p: atual&&atual.p ? JSON.parse(JSON.stringify(atual.p)) : [['','']], rep:new Set([dia]), soTrab: rh==='' };
+  if(D.soTrab) D.t='trab';
   if(!D.p.length) D.p=[['','']];
   const p=pessoaPorId(pid);
   document.getElementById('diaTitulo').innerHTML=eEsc(p.nome)+'<small>'+DIAS_LONGO[dia]+', '+eDataBR(eSomarDias(S.semana,dia))+'</small>';
@@ -502,7 +516,7 @@ function abrirDia(pid,dia){
 }
 
 function desenharDia(){
-  document.querySelectorAll('#diaTipos .opt').forEach(b=>b.classList.toggle('on',b.dataset.t===D.t));
+  document.querySelectorAll('#diaTipos .opt').forEach(b=>{ b.classList.toggle('on',b.dataset.t===D.t); b.style.display=D.soTrab&&b.dataset.t!=='trab'?'none':''; });
   document.getElementById('diaHorario').style.display=D.t==='trab'?'flex':'none';
   // turnos prontos
   document.getElementById('diaTurnos').innerHTML=S.turnos.map((t,i)=>'<button class="chip" onclick="usarTurno('+i+')">'+eEsc(t.nome)+' <span style="color:var(--muted);font-weight:400">'+t.p.map(x=>x[0]+'–'+x[1]).join(' / ')+'</span></button>').join('')||'<span class="muted">Nenhum turno pronto cadastrado.</span>';
@@ -542,7 +556,7 @@ function aplicarDia(){
   const c=celulaDeD();
   if(c.t==='trab' && !c.p.length){ toast('Preencha entrada e saída ou escolha um turno.','err'); return; }
   if(!S.grade[D.pid]) S.grade[D.pid]=[null,null,null,null,null,null,null];
-  D.rep.forEach(i=>{ S.grade[D.pid][i]=JSON.parse(JSON.stringify(c)); });
+  D.rep.forEach(i=>{ const rh=rhDia(D.pid,i); if(rh||(rh===''&&c.t!=='trab')) return; S.grade[D.pid][i]=JSON.parse(JSON.stringify(c)); });
   fechar('ovDia'); marcarSujo(); render();
 }
 function limparDia(){

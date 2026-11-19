@@ -576,6 +576,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div id="eqFeriado"></div>
       <div id="eqSetores"></div>
       <div id="eqVagas"></div>
+      <div id="fgrBox"></div>
       <div id="eqMsg" style="font-size:0.82rem;margin-top:6px;min-height:14px"></div>
       <button class="camera-btn" id="eqSalvarBtn" onclick="eqSalvarEquipe()" style="margin-top:8px">💾 Salvar equipe do dia</button>
       <span class="tag" id="eqTag"></span>
@@ -4132,8 +4133,57 @@ function eqRender(){
   }).join('');
   document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
-  vpRender();
+  vpRender(); fgrRender();
   eqAtualizar();
+}
+
+// ── Folgas do gerente e do assistente lançadas pela RH (19/11/2026, servidor 2026-11-19-c, recurso folgasRh) ──
+let FGR_FORM=false;
+function fgrPapel(){ try{ return localStorage.getItem('dina_papel_'+unidadeAtual)==='assistente'?'assistente':'gerente'; }catch(e){ return 'gerente'; } }
+function fgrRender(){
+  const box=document.getElementById('fgrBox'); if(!box) return; let F=EQ&&EQ.fgr; if(!F||!F.ativo){ box.innerHTML=''; return; }
+  if(MODO_TESTE&&!F.lancado&&!(F.proximas.gerente.length||F.proximas.assistente.length)){ // regra 13: no teste, mostra um exemplo enquanto a RH não lança a loja
+    const d=n=>{ const x=new Date(F.hoje+'T12:00:00'); x.setDate(x.getDate()+n); const iso=x.toISOString().slice(0,10); return {dia:iso,br:iso.slice(8,10)+'/'+iso.slice(5,7),tipo:'folga',tipoNome:'Folga'}; };
+    F=EQ.fgr=Object.assign({},F,{lancado:true,exemplo:true,proximas:{gerente:[d(2),d(9),d(16)],assistente:[d(4),d(11),d(18)]}});
+  }
+  const eu=fgrPapel(), bt='border:none;border-radius:8px;font-weight:700;font-size:0.8rem;padding:7px 10px;cursor:pointer', sel='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px;margin-top:6px;font-size:0.9rem';
+  const lista=p=>{ const l=(F.proximas[p]||[]); return l.length?l.slice(0,8).map(x=>'<span style="display:inline-block;margin:3px 4px 0 0;padding:3px 8px;border-radius:12px;font-size:0.76rem;border:1px solid '+(x.tipo==='folga'?'rgba(61,220,151,.5)':'rgba(255,208,0,.5)')+'">'+escR(x.br)+(x.tipo==='folga'?'':' '+escR(x.tipoNome))+'</span>').join(''):'<span style="font-size:0.78rem;color:var(--muted)">nenhuma nos próximos 45 dias</span>'; };
+  let h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="font-weight:800;font-size:0.85rem">📅 Folgas lançadas pela RH</div>'+(F.exemplo?'<div style="font-size:0.74rem;color:#c4b5fd;margin-top:2px">🧪 Exemplo do teste: a RH ainda não lançou esta loja.</div>':'');
+  if(!F.lancado&&!(F.proximas.gerente.length||F.proximas.assistente.length)){ box.innerHTML=h+'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px">A RH ainda não lançou as folgas deste mês. Por enquanto vale a escala.</div></div>'; return; }
+  h+='<div style="font-size:0.8rem;margin-top:6px"><b>Gerente</b>'+(F.nomes.gerente?' ('+escR(F.nomes.gerente.split(' ')[0])+')':'')+'<br>'+lista('gerente')+'</div>'
+    +'<div style="font-size:0.8rem;margin-top:8px"><b>Assistente</b>'+(F.nomes.assistente?' ('+escR(F.nomes.assistente.split(' ')[0])+')':'')+'<br>'+lista('assistente')+'</div>';
+  const tr=(F.trocas||[]).filter(t=>t.papel===eu);
+  if(tr.length) h+='<div style="font-size:0.78rem;color:var(--muted);margin-top:10px">Seus pedidos de troca</div>'+tr.map(t=>'<div style="font-size:0.8rem;margin-top:5px">'+(t.situacao==='aprovada'?'✅':t.situacao==='recusada'?'❌':t.situacao==='cancelada'?'↩️':'⏳')+' '+escR(t.deBR)+' → '+escR(t.paraBR)+' — <b>'+escR(t.situacaoNome)+'</b>'+(t.motivoRecusa?': '+escR(t.motivoRecusa):'')+(t.situacao==='pedido'?' <a href="#" onclick="fgrCancelar(\''+t.id+'\');return false" style="color:var(--muted)">cancelar</a>':'')+'</div>').join('');
+  const minhas=(F.proximas[eu]||[]).filter(x=>x.tipo==='folga');
+  h+='<div style="font-size:0.74rem;color:var(--muted);margin-top:8px">As suas folgas não mudam pela escala. Para trocar, peça à RH:</div>'
+    +'<button onclick="FGR_FORM=!FGR_FORM;fgrRender()" style="'+bt+';background:transparent;border:1px solid var(--gold);color:var(--gold);margin-top:6px;width:100%">🔄 Pedir troca de folga</button>';
+  if(FGR_FORM) h+='<div id="fgrForm" style="margin-top:8px;border:1px solid var(--gold);border-radius:10px;padding:10px">'
+    +(minhas.length?'<select id="fgrDe" style="'+sel+'"><option value="">Qual folga você quer trocar?</option>'+minhas.map(x=>'<option value="'+x.dia+'">'+escR(x.br)+'</option>').join('')+'</select>'
+      +'<div style="font-size:0.78rem;color:var(--muted);margin-top:8px">Novo dia da folga</div><input id="fgrPara" type="date" min="'+F.hoje+'" style="'+sel+'">'
+      +'<input id="fgrMotivo" placeholder="Motivo (ex.: consulta médica marcada)" style="'+sel+'">'
+      +'<div id="fgrMsg" style="font-size:0.8rem;min-height:14px;margin-top:6px"></div><button onclick="fgrPedir()" style="'+bt+';background:var(--gold);color:#000;width:100%;margin-top:4px;padding:11px">Enviar pedido à RH</button>'
+      :'<div style="font-size:0.8rem;color:var(--muted)">Você não tem folga lançada nos próximos 45 dias para trocar.</div>')+'</div>';
+  box.innerHTML=h+'</div>';
+}
+async function fgrPedir(){
+  const m=document.getElementById('fgrMsg'), g=id=>(document.getElementById(id)||{}).value||'';
+  const o={action:'equipeFolgaTroca',de:g('fgrDe'),para:g('fgrPara'),motivo:g('fgrMotivo').trim(),papel:fgrPapel()};
+  if(!o.de){ m.innerHTML='<span style="color:#ff6b6b">Escolha a folga que quer trocar.</span>'; return; }
+  if(!o.para){ m.innerHTML='<span style="color:#ff6b6b">Escolha o novo dia.</span>'; return; }
+  if(o.motivo.length<10){ m.innerHTML='<span style="color:#ff6b6b">Escreva o motivo (pelo menos 10 letras).</span>'; return; }
+  m.style.color='#888'; m.textContent='Enviando...';
+  let r=null; if(EQ.fgr.exemplo) r={ok:true,teste:true}; else try{ r=await vpPost(o); }catch(e){}
+  if(!(r&&r.ok)){ m.innerHTML='<span style="color:#ff6b6b">Não enviou ('+escR((r&&r.erro)||'sem conexão')+').</span>'; return; }
+  const br=x=>x.slice(8,10)+'/'+x.slice(5,7);
+  (EQ.fgr.trocas=EQ.fgr.trocas||[]).unshift({id:r.teste?'teste'+Date.now():r.id,papel:o.papel,de:o.de,para:o.para,deBR:br(o.de),paraBR:br(o.para),situacao:'pedido',situacaoNome:'Esperando a RH'+(r.teste?' (teste: nada foi enviado)':'')});
+  if(typeof logProva==='function') logProva('FOLGA_TROCA_PEDIDA', o.de+' > '+o.para);
+  FGR_FORM=false; fgrRender();
+  alert('✅ Pedido de troca enviado à RH.'+(r.juntos?'\n\n⚠️ Nesse dia o '+(o.papel==='gerente'?'assistente':'gerente')+' também está de folga: a RH vai conferir.':'')+(r.teste?'\n\n(MODO TESTE: nada foi enviado)':''));
+}
+async function fgrCancelar(id){
+  if(!confirm('Cancelar este pedido de troca?')) return;
+  if(String(id).indexOf('teste')!==0){ let r=null; try{ r=await vpPost({action:'equipeFolgaTrocaCancelar',id}); }catch(e){} if(!(r&&r.ok)){ alert('Não cancelou ('+((r&&r.erro)||'sem conexão')+').'); return; } }
+  EQ.fgr.trocas=(EQ.fgr.trocas||[]).map(t=>t.id===id?Object.assign({},t,{situacao:'cancelada',situacaoNome:'Cancelada'}):t); fgrRender();
 }
 // ── Pedido de vaga (19/11/2026, servidor 2026-11-19-a, recurso vagaPedido): a vaga só nasce do pedido aprovado ──
 let VP_FORM=false;
