@@ -21,7 +21,7 @@ header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-
 .hdr-dir a{color:var(--gold);font-weight:700;text-decoration:none;cursor:pointer}
 main{padding:16px 4vw 60px;max-width:1100px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
-.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
 .muted{color:var(--muted);font-size:.82rem;line-height:1.45}
 label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
 input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:.95rem}
@@ -40,7 +40,7 @@ input{width:100%;background:var(--surface);border:1px solid var(--border);color:
 .tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit}
 .tile .i{font-size:1.3rem}.tile .n{font-size:1.5rem;font-weight:800;margin-top:4px;font-family:'Space Grotesk',Inter,sans-serif}.tile .t{font-size:.78rem;color:var(--muted);font-weight:700}
 .tile.vermelho{border-color:#ff4d4d}.tile.amarelo{border-color:#FFD000}.tile.on{box-shadow:0 0 0 2px var(--gold) inset}
-.sec{display:none}.sec.on{display:block}
+section.sec{display:none}section.sec.on{display:block} /* só as seções; o botão .btn.sec continua aparecendo */
 table{width:100%;border-collapse:collapse;font-size:.86rem}
 th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
 th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
