@@ -4425,8 +4425,60 @@ function limpar(){
 </script>
 <div id="testeFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:2147483000;background:#7a3cff;color:#fff;font:700 13px/1.2 system-ui,sans-serif;align-items:center;justify-content:center;gap:10px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.5)">
   <span>🧪 MODO TESTE — nada é gravado nem conta para a loja</span>
+  <button onclick="tvMenu()" style="background:#FFD000;color:#111;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">👁️ Telas do gerente</button>
   <button onclick="try{sessionStorage.removeItem('dina_teste_loja');sessionStorage.removeItem('dina_teste_admin');}catch(e){} location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:5px 10px;font:700 12px system-ui,sans-serif;cursor:pointer">Sair do teste</button>
 </div>
+<script>
+// ── Modo teste: ver as telas que o teste esconde (18/11/2026, regra 13 — "sentir o que o gerente sente") ──
+// Só mostra a tela com um exemplo, como o gerente vê; nada é gravado (as gravações do teste já são interceptadas).
+const TV_TELAS=[
+  ['aviso','⚠️ Aviso ao abrir: fazer o checklist de abertura'],
+  ['antes','⏰ Abertura antes do horário ("Ainda não é hora")'],
+  ['atraso1','🚨 1º atraso do mês no horário'],
+  ['atraso2','🚨 2º atraso do mês (última chance)'],
+  ['atraso3','🚨 3º atraso (placar bloqueado amanhã)'],
+  ['bloq','🔒 Placar bloqueado (pedir desbloqueio)'],
+  ['geo','📍 Fora da loja (com o 🆘 pedido ao GDI)'],
+  ['apar','📱 Celular aguardando autorização'],
+  ['aparNao','⛔ Celular recusado'],
+  ['pausa','⏸️ Acesso pausado'],
+  ['feriado','🎉 Dia de feriado (3 perguntas)']
+];
+const TV_OVS=['chkAvisoOverlay','chkHorarioAviso','chkBloqPlacar','geoOverlay','aparOverlay','ferOverlay','tvPausa'];
+function tvJanela(){ try{ return chkJanelaTxt(); }catch(e){ return '17h00 às 19h20'; } }
+function tvMenu(){
+  if(!MODO_TESTE) return;
+  let m=document.getElementById('tvMenu');
+  if(!m){ m=document.createElement('div'); m.id='tvMenu'; m.style.cssText='position:fixed;inset:0;z-index:2147483100;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(m); }
+  m.innerHTML='<div style="background:#121722;border:1px solid #7a3cff;border-radius:14px;max-width:420px;width:100%;max-height:90vh;overflow:auto;padding:16px;color:#F2F4F8;font-family:Inter,system-ui,sans-serif">'
+    +'<div style="font-weight:900;font-size:17px;margin-bottom:4px">👁️ Telas do gerente</div><div style="font-size:13px;color:#A3ACBB;margin-bottom:12px">O modo teste não trava você. Toque numa tela para ver exatamente como o gerente vê. Nada é gravado.</div>'
+    +TV_TELAS.map(([k,t])=>'<button onclick="tvVer(\''+k+'\')" style="display:block;width:100%;text-align:left;background:#171D2A;border:1px solid #242B38;border-radius:10px;color:#F2F4F8;font:600 14px Inter,system-ui,sans-serif;padding:12px;margin-bottom:8px;cursor:pointer">'+t+'</button>').join('')
+    +'<button onclick="document.getElementById(\'tvMenu\').style.display=\'none\'" style="width:100%;background:transparent;border:1px solid #444;border-radius:10px;color:#aaa;padding:10px;margin-top:4px;cursor:pointer">Fechar</button></div>';
+  m.style.display='flex';
+}
+function tvFechar(){
+  TV_OVS.forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  try{ clearTimeout(_aparTimer); }catch(e){}
+  const f=document.getElementById('tvVoltar'); if(f) f.style.display='none';
+}
+function tvVer(k){
+  tvFechar(); document.getElementById('tvMenu').style.display='none';
+  const u=unidadeAtual||'Loja', agora=new Date().toTimeString().slice(0,5);
+  if(k==='aviso'){ const h=document.getElementById('chkAvisoHorario'); if(h) h.innerHTML='⏰ Horário do checklist de abertura e do Start Dina: <b>'+tvJanela()+'</b>.'; document.getElementById('chkAvisoOverlay').style.display='flex'; }
+  else if(k==='antes') chkMostrarAviso('⏰ AINDA NÃO É HORA','O checklist de abertura só pode ser feito no horário.<br><br>Horário do checklist: <b>'+tvJanela()+'</b>. Volte no horário certo.','Entendi',null);
+  else if(k.indexOf('atraso')===0){ const n=+k.slice(6); chkMostrarAviso(n>=3?'🚨 PLACAR SERÁ BLOQUEADO':'🚨 FORA DO HORÁRIO', chkTextoAtraso(n,agora,true,''), 'Entendi', null); }
+  else if(k==='bloq'){ document.getElementById('chkBloqTexto').innerHTML='O <b>checklist de abertura</b> do dia <b>ontem</b> foi feito às <b>19h47</b>, fora do horário ('+tvJanela()+').<br><br>Foi o <b>3º atraso do mês</b>. Seu placar só volta a funcionar quando o <b>administrador liberar</b>.'; const bt=document.getElementById('chkBloqBtn'); bt.style.display='block'; bt.disabled=false; document.getElementById('chkBloqStatus').textContent=''; document.getElementById('chkBloqPlacar').style.display='flex'; }
+  else if(k==='geo'){ mostrarGeo('fora',{distancia:850,precisao:20}); document.getElementById('excBox').style.display='block'; document.getElementById('geoOverlay').style.display='flex'; }
+  else if(k==='apar'||k==='aparNao'){ aplicarAparelho(k==='apar'?'pendente':'recusado'); document.getElementById('aparOverlay').style.display='flex'; try{ clearTimeout(_aparTimer); }catch(e){} }
+  else if(k==='pausa'){ let p=document.getElementById('tvPausa'); if(!p){ p=document.createElement('div'); p.id='tvPausa'; p.style.cssText='position:fixed;inset:0;z-index:950;background:#07090E;display:none;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,sans-serif'; document.body.appendChild(p); }
+    p.innerHTML='<div style="max-width:340px;width:100%;text-align:center;color:#F2F4F8"><div style="font-size:20px;font-weight:800;margin-bottom:6px">'+u+'</div><div style="font-size:13px;color:#A3ACBB;margin-bottom:12px">Digite a senha da loja</div><div style="background:#171D2A;border:1px solid #242B38;border-radius:10px;padding:14px;color:#666;margin-bottom:12px;text-align:left">••••••</div><div style="background:#2a1a00;border:1px solid #FFD000;border-radius:10px;padding:12px;color:#ffe9a8;font-weight:700">⏸️ Acesso pausado até '+new Date(Date.now()+7*864e5).toLocaleDateString('pt-BR').slice(0,5)+'. Fale com o GDI.</div><div style="font-size:12px;color:#A3ACBB;margin-top:10px">(É o que o gerente ou o assistente pausado vê ao digitar a senha. Quem já estava dentro volta para esta tela.)</div></div>';
+    p.style.display='flex'; }
+  else if(k==='feriado') ferAbrir('Feriado (exemplo do teste)');
+  let f=document.getElementById('tvVoltar');
+  if(!f){ f=document.createElement('button'); f.id='tvVoltar'; f.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:2147483200;background:#7a3cff;color:#fff;border:0;border-radius:24px;padding:12px 20px;font:800 14px Inter,system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer'; f.onclick=()=>{ tvFechar(); tvMenu(); }; document.body.appendChild(f); }
+  f.textContent='✖ Fechar e voltar ao teste'; f.style.display='block';
+}
+</script>
 <script src="atualizador.js?v=2"></script>
 </body>
 </html>
