@@ -78,6 +78,18 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
 .esp{border:1px dashed var(--gold);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:.88rem;line-height:1.45}
 .cbt:disabled{opacity:.4;cursor:not-allowed}
 .sec-t{font-weight:800;margin:16px 0 4px;font-size:.95rem}
+.fg-tab td{padding:5px 6px}
+.fg-dia{font-size:.82rem;white-space:nowrap}
+.fg-dia.fds{color:var(--gold);font-weight:700}
+.fg-dia.hj{font-weight:800;text-decoration:underline}
+.fgc{width:100%;min-width:84px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 4px;font-weight:800;font-size:.78rem;cursor:pointer}
+.fgc.folga{background:rgba(61,220,151,.16);color:var(--d-t-ok);border-color:rgba(61,220,151,.5)}
+.fgc.ferias{background:rgba(80,160,255,.16);color:var(--d-blue,#5aa0ff);border-color:rgba(80,160,255,.5)}
+.fgc.atestado{background:rgba(255,208,0,.14);color:var(--d-t-info);border-color:rgba(255,208,0,.5)}
+tr.conf td{background:var(--d-red-soft)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font-size:.74rem;font-weight:700;border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;background:var(--surface);color:var(--text)}
+.chip.ok{border-color:rgba(61,220,151,.5);color:var(--d-t-ok)}.chip.falta{border-color:var(--danger);color:var(--d-t-err)}.chip.on{box-shadow:0 0 0 2px var(--gold) inset}
 </style>
 </head>
 <body>
@@ -98,6 +110,7 @@ th{color:var(--muted);font-size:.72rem;text-transform:uppercase}
     <section id="s-ped"></section>
     <section id="s-vag" style="display:none"></section>
     <section id="s-qua" style="display:none"></section>
+    <section id="s-fol" style="display:none"></section>
   </div>
 </main>
 <div id="toast" class="toast" style="display:none"></div>
@@ -113,7 +126,7 @@ function jsonp(params){ return new Promise((res,rej)=>{ const cb='vgCb_'+Date.no
   const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },25000);
   window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
   s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
-let CHAVE=ls('vg_chave'), D=null, ABA='ped', QLOJA='';
+let CHAVE=ls('vg_chave'), D=null, ABA=Q.get('folgas')?'fol':'ped', QLOJA='', FG=null, FGMES='', FGLOJA=Q.get('loja')||'', FGED=null;
 async function entrar(){ const s=document.getElementById('lgSenha').value.trim(); if(!s) return; CHAVE=hash(s); const ok=await carregar(true); if(ok) try{ localStorage.setItem('vg_chave',CHAVE); }catch(e){} }
 function sair(){ try{ localStorage.removeItem('vg_chave'); }catch(e){} CHAVE=''; location.reload(); }
 async function carregar(prim){
@@ -122,15 +135,17 @@ async function carregar(prim){
   D=j; document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
   document.getElementById('quem').innerHTML=esc(j.nome)+' · <a href="#" onclick="sair();return false">sair</a>';
   if(prim&&!QLOJA) QLOJA=j.lojas[0];
+  await fgCarregar();
   render(); return true;
 }
 function minhaVez(p){ return D.papel==='admin'?(p.situacao==='pedido'||p.situacao==='preaprovado'):D.papel==='rosi'?p.situacao==='preaprovado':p.situacao==='pedido'; }
 function render(){
   const vez=D.pedidos.filter(minhaVez), antigas=D.vagas.filter(v=>v.antiga&&!v.revisada);
   const abas=[['ped','📋 Pedidos',vez.length],['vag','📢 Vagas abertas',D.podeRevisar?antigas.length:0]]; if(D.podeQuadro) abas.push(['qua','👥 Quadro das lojas',0]);
+  if(FG) abas.push(['fol','📅 Folgas dos gerentes',FG.pode?FG.trocas.filter(t=>t.situacao==='pedido').length:0]);
   document.getElementById('abas').innerHTML=abas.map(([k,t,n])=>'<button class="aba'+(ABA===k?' on':'')+'" onclick="ABA=\''+k+'\';render()">'+t+(n?'<span class="n">'+n+'</span>':'')+'</button>').join('');
-  ['ped','vag','qua'].forEach(k=>document.getElementById('s-'+k).style.display=ABA===k?'':'none');
-  renderPedidos(vez); renderVagas(antigas); if(D.podeQuadro) renderQuadro();
+  ['ped','vag','qua','fol'].forEach(k=>document.getElementById('s-'+k).style.display=ABA===k?'':'none');
+  renderPedidos(vez); renderVagas(antigas); if(D.podeQuadro) renderQuadro(); if(FG) renderFolgas();
 }
 function cardPedido(p,decide){
   const destaque=Q.get('pedido')===p.id;
@@ -188,6 +203,55 @@ async function salvarQuadro(){
   let r=null; try{ r=await post(o); }catch(e){}
   if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
   toast(r.mudou?'✅ Quadro salvo ('+r.mudou+' mudança'+(r.mudou>1?'s':'')+').':'Nada mudou.'); carregar(false);
+}
+
+// ── 📅 Folgas dos gerentes e assistentes (19/11/2026, servidor 2026-11-19-c, recurso folgasRh) ──
+// A RH (e a Rosi/Admin) lança o mês de cada loja; o GDI só vê. Mês lançado = o gerente não mexe mais nessas folgas na escala.
+const FG_SEQ=['','folga','ferias','atestado'], FG_TXT={'':'trabalha',folga:'FOLGA',ferias:'FÉRIAS',atestado:'ATESTADO'};
+const SEM=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], MESN=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const mesNome=m=>MESN[Number(m.slice(5,7))-1]+'/'+m.slice(0,4);
+async function fgCarregar(mes){
+  try{ const j=await jsonp({action:'equipeFolgasPainel',chave:CHAVE,mes:mes||FGMES||''}); if(j&&j.ok){ FG=j; FGMES=j.mes; if(!FGLOJA||!j.lojas.some(l=>l.unidade===FGLOJA)) FGLOJA=(j.lojas.find(l=>!l.lancado)||j.lojas[0]).unidade; fgEdIni(); } else FG=null; }catch(e){ FG=null; }
+}
+function fgEdIni(){ const L=FG.lojas.find(l=>l.unidade===FGLOJA); FGED={gerente:Object.assign({},L.gerente),assistente:Object.assign({},L.assistente),sujo:false}; }
+function fgDias(){ const out=[]; for(let i=1;i<=FG.dias;i++){ const iso=FGMES+'-'+String(i).padStart(2,'0'), d=new Date(iso+'T12:00:00'); out.push({iso,br:String(i).padStart(2,'0')+'/'+FGMES.slice(5,7),sem:SEM[d.getDay()],fds:d.getDay()===0||d.getDay()>=5}); } return out; }
+function fgToca(papel,iso){ if(!FG.pode) return; const v=FGED[papel][iso]||'', n=FG_SEQ[(FG_SEQ.indexOf(v)+1)%FG_SEQ.length]; if(n) FGED[papel][iso]=n; else delete FGED[papel][iso]; FGED.sujo=true; renderFolgas(); }
+function renderFolgas(){
+  const L=FG.lojas.find(l=>l.unidade===FGLOJA), el=document.getElementById('s-fol'), pend=FG.trocas.filter(t=>t.situacao==='pedido');
+  let h='';
+  if(pend.length||FG.trocas.length) h+='<div class="card"><div class="tit">🔄 Pedidos de troca de folga'+(pend.length?' ('+pend.length+' esperando)':'')+'</div>'
+    +FG.trocas.map(t=>'<div class="item'+(t.situacao==='pedido'?' amar':t.situacao==='recusada'?' urg':t.situacao==='aprovada'?' ok':'')+'"><div class="it-top"><span>'+esc(t.unidade)+' — '+(t.papel==='assistente'?'assistente':'gerente')+'</span><span class="tag '+(t.situacao==='pedido'?'t-am':t.situacao==='aprovada'?'t-ok':'t-red')+'">'+esc(t.situacaoNome)+'</span></div>'
+      +'<div class="linha">Trocar a folga de <b>'+esc(t.deBR)+'</b> para <b>'+esc(t.paraBR)+'</b> · '+esc(t.motivo)+'</div><div class="linha muted">Pedido em '+esc(t.pedidoEm)+(t.decPor?' · '+esc(t.decPor)+' '+esc(t.decEm):'')+(t.motivoRecusa?' · motivo: '+esc(t.motivoRecusa):'')+'</div>'
+      +(t.situacao==='pedido'&&FG.pode?'<textarea id="fr_'+t.id+'" placeholder="Motivo (obrigatório só para recusar)" style="margin-top:6px;min-height:46px"></textarea><div style="display:flex;gap:8px"><button class="btn ok peq" onclick="fgDecidir(\''+t.id+'\',\'aprovar\')">✅ Aprovar troca</button><button class="btn peq" onclick="fgDecidir(\''+t.id+'\',\'recusar\')">❌ Recusar</button></div>':'')+'</div>').join('')+'</div>';
+  h+='<div class="card"><div class="tit">📅 Folgas dos gerentes e assistentes</div><div class="muted">'+(FG.pode?'Toque no dia para trocar: trabalha → folga → férias → atestado. Lance o mês seguinte de todas as lojas até o dia '+FG.prazoDia+'. Depois de lançado, o gerente não muda essas folgas na escala; se precisar trocar, ele pede pelo placar.':'Só a RH e a Rosi lançam. Aqui você vê o que foi lançado.')+'</div>'
+    +'<div class="grid2"><div><label>Mês</label><select onchange="fgTrocarMes(this.value)">'+FG.meses.map(m=>'<option value="'+m+'"'+(m===FGMES?' selected':'')+'>'+mesNome(m)+'</option>').join('')+'</select></div><div><label>Loja</label><select onchange="fgTrocarLoja(this.value)">'+FG.lojas.map(l=>'<option value="'+esc(l.unidade)+'"'+(l.unidade===FGLOJA?' selected':'')+'>'+(l.lancado?'✅ ':'⏳ ')+esc(l.unidade)+'</option>').join('')+'</select></div></div>'
+    +'<div class="chips">'+FG.lojas.map(l=>'<span class="chip '+(l.lancado?'ok':'falta')+(l.unidade===FGLOJA?' on':'')+'" onclick="fgTrocarLoja(\''+esc(l.unidade)+'\')">'+(l.lancado?'✅':'⏳')+' '+esc(l.unidade)+'</span>').join('')+'</div>'
+    +(L.lancado?'<div class="linha muted">Lançado por '+esc(L.por)+' em '+esc(L.em)+'</div>':'<div class="esp">⏳ <b>'+esc(FGLOJA)+'</b> ainda sem as folgas de '+mesNome(FGMES)+'. Enquanto isso, vale a escala que o gerente monta.</div>');
+  const n={g:0,a:0}, dias=fgDias();
+  h+='<div style="overflow-x:auto"><table class="fg-tab" style="margin-top:10px"><tr><th>Dia</th><th>Gerente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.gerente||'—')+'</span></th><th>Assistente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.assistente||'—')+'</span></th></tr>'
+    +dias.map(x=>{ const g=FGED.gerente[x.iso]||'', a=FGED.assistente[x.iso]||''; if(g) n.g++; if(a) n.a++;
+      return '<tr class="'+(g&&a?'conf':'')+'"><td class="fg-dia'+(x.fds?' fds':'')+(x.iso===FG.hoje?' hj':'')+'">'+x.sem+' '+x.br+'</td><td><button class="fgc '+g+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'gerente\',\''+x.iso+'\')">'+FG_TXT[g]+'</button></td><td><button class="fgc '+a+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'assistente\',\''+x.iso+'\')">'+FG_TXT[a]+'</button></td></tr>'; }).join('')
+    +'<tr><td><b>Fora</b></td><td><b>'+n.g+' dia(s)</b></td><td><b>'+n.a+' dia(s)</b></td></tr></table></div>'
+    +(FG.pode?'<button class="btn ok" style="width:100%" onclick="fgSalvar(false)">💾 Salvar folgas de '+esc(FGLOJA)+' — '+mesNome(FGMES)+(FGED.sujo?' (não salvo)':'')+'</button>':'')+'</div>';
+  if(FG.pode&&FG.faltaProximo.length) h+='<div class="card"><div class="tit">⏳ Ainda sem o mês de '+mesNome(FG.proximo)+' ('+FG.faltaProximo.length+')</div><div class="muted">Prazo: dia '+FG.prazoDia+'. Depois disso o robô cobra todo dia.</div><div class="chips">'+FG.faltaProximo.map(u=>'<span class="chip falta" onclick="fgIr(\''+FG.proximo+'\',\''+esc(u)+'\')">'+esc(u)+'</span>').join('')+'</div></div>';
+  el.innerHTML=h;
+}
+async function fgTrocarMes(m){ if(FGED&&FGED.sujo&&!confirm('As mudanças de '+FGLOJA+' não foram salvas. Trocar mesmo assim?')) return renderFolgas(); await fgCarregar(m); render(); }
+function fgTrocarLoja(u){ if(FGED&&FGED.sujo&&!confirm('As mudanças de '+FGLOJA+' não foram salvas. Trocar mesmo assim?')) return renderFolgas(); FGLOJA=u; fgEdIni(); renderFolgas(); }
+async function fgIr(m,u){ FGLOJA=u; await fgCarregar(m); render(); window.scrollTo(0,0); }
+async function fgSalvar(confirmado){
+  let r=null; try{ r=await post({action:'equipeFolgasSalvar',unidade:FGLOJA,mes:FGMES,gerente:FGED.gerente,assistente:FGED.assistente,confirmado}); }catch(e){}
+  if(r&&r.conflito){ if(confirm('⚠️ '+r.erro+'\n\nSalvar mesmo assim?')) return fgSalvar(true); return; }
+  if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
+  toast('✅ Folgas de '+FGLOJA+' salvas ('+r.gerente+' do gerente, '+r.assistente+' do assistente).'); await fgCarregar(FGMES); render();
+}
+async function fgDecidir(id,decisao){
+  const m=(document.getElementById('fr_'+id)||{}).value||'';
+  if(decisao==='recusar'&&m.trim().length<5) return toast('Escreva o motivo da recusa.');
+  if(!confirm((decisao==='aprovar'?'Aprovar':'Recusar')+' esta troca de folga?')) return;
+  let r=null; try{ r=await post({action:'equipeFolgaTrocaDecidir',id,decisao,motivo:m}); }catch(e){}
+  if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
+  toast(r.situacao==='aprovada'?'✅ Troca aprovada. As folgas já mudaram.':'❌ Troca recusada. O gerente será avisado.'); await fgCarregar(FGMES); render();
 }
 (function(){ if(CHAVE) carregar(true); else document.getElementById('login').style.display='block'; })();
 </script>
