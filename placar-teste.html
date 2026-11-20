@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#07090E">
 <link rel="stylesheet" href="dina-tema.css?v=2">
 <script src="dina-tema.js?v=1"></script>
+<script src="qrcode.js?v=1"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -2698,6 +2699,7 @@ async function carregarItensChecklist(){
     }
     chkItensData = itens;
     renderItensChecklist();
+    chkDelLigado().then(on=>{ if(on&&turno===chkTurnoAtual) chkDelCarregar(); });
     carregarChkAbertos().then(()=>{ if(turno===chkTurnoAtual) renderItensChecklist(); });
   }catch(e){
     body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens. Verifique a internet e abra de novo.</div>';
@@ -2711,8 +2713,11 @@ function renderItensChecklist(){
   const abertosAqui = chkItensData.filter(it=>chkAbertos[String(it.id)]);
   const topo=document.getElementById('chkAbertosModal');
   if(topo) topo.innerHTML = abertosAqui.length ? `<div class="chk-reinc forte" style="margin-bottom:8px">🔁 <b>${abertosAqui.length} item(ns) deste checklist continuam com problema de dias anteriores.</b> Eles estão marcados abaixo. Resolva hoje.</div>` : '';
+  CHK_SECS=[];
   chkItensData.forEach(function(it){
-    if(it.secao !== secaoAtual){ secaoAtual = it.secao; html+=`<div class="chk-secao-title">${secaoAtual}</div>`; }
+    if(it.secao !== secaoAtual){ secaoAtual = it.secao; CHK_SECS.push(secaoAtual); html+=`<div class="chk-secao-title">${secaoAtual}</div>`+chkDelBarra(CHK_SECS.length-1); }
+    const pend=chkDelPendente(it.secao);
+    if(pend){ html+=chkDelItemHtml(it,pend); return; }
     const id=String(it.id), resp = chkRespostas[id] || '';
     const falta = (chkTentouSalvar && (!resp || (resp==='nao_conforme' && (chkObs[id]||'').trim().length<CHK_MIN_DESC))) ? ' falta' : '';
     const ab = chkAbertos[id];
@@ -2736,6 +2741,109 @@ function renderItensChecklist(){
   body.innerHTML=html;
   if(pos!=null){ const ov=document.querySelector('.chk-modal-overlay'); if(ov) ov.scrollTop=pos; }
   atualizarBotaoSalvarChk();
+}
+
+// ── Checklist dividido com a equipe (20/11/2026, servidor 2026-11-20-a, recurso chkDividido; Robson 19/11) ──
+// O gerente toca "👥 Passar para alguém" numa seção, escolhe quem está na escala de hoje e mostra o QR Code.
+// A pessoa abre equipe-checklist.html no celular dela (sem senha, só aquela seção, GPS na loja) e envia.
+// Volta aqui "feito por X às HH:MM": o gerente confirma com um toque e as respostas entram no checklist dele.
+let CHK_DEL={}, CHK_DEL_ON=false, CHK_SECS=[], _chkDelTimer=null; const chkFotoUrl={};
+const chkDelK=(t,s)=>t+'|'+s;
+async function chkDelLigado(){ try{ const rc=await chkRecursos(); CHK_DEL_ON=rc.includes('chkDividido'); }catch(e){ CHK_DEL_ON=false; } return CHK_DEL_ON; }
+async function chkDelCarregar(){
+  if(!CHK_DEL_ON) return;
+  if(!MODO_TESTE){ try{ const r=await chkJsonp({action:'chkDelLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok){ const n={}; (r.lista||[]).forEach(x=>{ n[chkDelK(x.turno,x.secao)]=x; }); CHK_DEL=n; } }catch(e){} }
+  chkDelAplicar();
+}
+function chkDelCopiar(x,sobre){ Object.keys(x.respostas||{}).forEach(id=>{ const v=x.respostas[id]; if(!sobre&&chkRespostas[id]) return; chkRespostas[id]=v.status;
+  if(v.status==='nao_conforme'){ chkObs[id]=v.obs||''; chkResolvido[id]=!!v.resolvido; if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; } }); }
+function chkDelAplicar(){
+  Object.values(CHK_DEL).forEach(x=>{ if(x.situacao==='confirmada'&&x.turno===chkTurnoAtual) chkDelCopiar(x,false); });
+  if(chkItensData.length) renderItensChecklist();
+  clearTimeout(_chkDelTimer);
+  if(!MODO_TESTE&&Object.values(CHK_DEL).some(x=>x.situacao==='aberta'||x.situacao==='enviada')) _chkDelTimer=setTimeout(chkDelCarregar,15000);
+}
+function chkDelPendente(secao){ const x=CHK_DEL[chkDelK(chkTurnoAtual,secao)]; return x&&(x.situacao==='aberta'||x.situacao==='enviada')?x:null; }
+function chkDelEsperando(){ const sec=[...new Set(chkItensData.map(it=>it.secao))]; return sec.map(s=>chkDelPendente(s)).filter(Boolean).map(x=>x.secao+' ('+x.pessoa.split(' ')[0]+(x.situacao==='enviada'?' — confirmar':'')+')'); }
+function chkDelBarra(i){
+  if(!CHK_DEL_ON) return '';
+  const secao=CHK_SECS[i], x=CHK_DEL[chkDelK(chkTurnoAtual,secao)], b='style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin:4px 6px 0 0"';
+  if(!x||x.situacao==='cancelada') return `<div style="margin:-2px 0 6px"><button type="button" ${b} onclick="chkDelPassar(${i})">👥 Passar para alguém da equipe</button></div>`;
+  const nome=escChk(x.pessoa);
+  if(x.situacao==='aberta') return `<div class="chk-del" style="background:#1a2433;border:1px solid #3aa0ff;border-radius:10px;padding:9px;margin:4px 0 8px;font-size:13px">⏳ <b>Com ${nome}</b> desde ${escChk(x.hora||'')} — esperando ela(e) enviar.<br>
+    <button type="button" ${b} onclick="chkDelQR(${i})">📱 Mostrar o QR Code</button><button type="button" ${b} onclick="chkDelCancelar(${i})">✖ Cancelar (faço eu)</button>${MODO_TESTE?`<button type="button" ${b} onclick="chkDelSimular(${i})">🧪 Simular que enviou</button>`:''}</div>`;
+  if(x.situacao==='enviada') return `<div class="chk-del" style="background:#132a17;border:1px solid #2ecc71;border-radius:10px;padding:9px;margin:4px 0 8px;font-size:13px">📩 <b>${nome} enviou às ${escChk(x.enviadoHora||'')}</b>. Confira abaixo e confirme.<br>
+    <button type="button" ${b.replace('background:var(--surface)','background:#2ecc71;color:#06110b;font-weight:800')} onclick="chkDelConfirmar(${i})">✅ Confirmar o que ${escChk(x.pessoa.split(' ')[0])} fez</button><button type="button" ${b} onclick="chkDelCancelar(${i})">✖ Não aceitar (faço eu)</button></div>`;
+  return `<div style="font-size:12px;color:#2ecc71;margin:-2px 0 6px">✅ Feito por ${nome} às ${escChk(x.enviadoHora||'')} · confirmado${x.confirmadoHora?' às '+escChk(x.confirmadoHora):''}</div>`;
+}
+function chkDelItemHtml(it,x){
+  const v=(x.respostas||{})[String(it.id)];
+  let r='<span style="font-size:12px;color:var(--muted)">⏳ aguardando</span>';
+  if(x.situacao==='enviada'&&v) r=v.status==='conforme'?'<span style="color:#2ecc71;font-weight:800">✓</span>':'<span style="color:#ff4d4d;font-weight:800">✗</span>';
+  return `<div class="chk-item-row" style="opacity:.92"><span class="chk-item-txt">${it.item}</span><div class="chk-item-btns">${r}</div>`+
+    (x.situacao==='enviada'&&v&&v.status==='nao_conforme'?`<div class="chk-det" style="font-size:13px">📝 ${escChk(v.obs||'')}${v.resolvido?' <b>(já resolvido)</b>':''}${v.fotoUrl?` · <a href="${escChk(v.fotoUrl)}" target="_blank" style="color:#3aa0ff">ver foto</a>`:''}</div>`:'')+'</div>';
+}
+function chkDelModal(html){
+  let m=document.getElementById('chkDelModal');
+  if(!m){ m=document.createElement('div'); m.id='chkDelModal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(m); }
+  m.innerHTML='<div style="background:var(--card,#11151d);border:1px solid var(--border);border-radius:16px;padding:18px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;color:var(--text)">'+html+'</div>';
+  m.style.display='flex';
+}
+function chkDelFechar(){ const m=document.getElementById('chkDelModal'); if(m) m.style.display='none'; }
+async function chkDelPassar(i){
+  const secao=CHK_SECS[i];
+  chkDelModal('<div style="font-weight:900;font-size:16px">👥 Passar “'+escChk(secao)+'”</div><div style="font-size:13px;color:var(--muted);margin:6px 0 10px">Quem vai fazer esta parte? A pessoa abre no celular dela pelo QR Code, faz dentro da loja e devolve para você confirmar.</div><div id="chkDelLista" style="font-size:13px;color:var(--muted)">Carregando a equipe de hoje…</div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Não está na lista?</div><div style="display:flex;gap:8px;margin-top:4px"><input id="chkDelOutro" placeholder="Nome da pessoa" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)"><button type="button" onclick="chkDelEscolher('+i+',document.getElementById(\'chkDelOutro\').value)" style="padding:10px 14px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">OK</button></div>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)">Voltar</button>');
+  let r=null; try{ r=await chkJsonp({action:'chkDelPessoas',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){}
+  const el=document.getElementById('chkDelLista'); if(!el) return;
+  const ps=(r&&r.ok&&r.pessoas)||[]; window._chkDelPs=ps;
+  el.innerHTML=ps.length?ps.map((p,k)=>'<button type="button" onclick="chkDelEscolher('+i+',window._chkDelPs['+k+'].nome)" style="display:flex;justify-content:space-between;width:100%;text-align:left;padding:11px;margin-top:6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px"><b>'+escChk(p.nome)+'</b><span style="color:var(--muted);font-size:12px">'+escChk(p.setor||'')+(p.escalado?'':' · sem escala')+'</span></button>').join('')
+    :'Não encontrei a escala de hoje. Escreva o nome abaixo.';
+}
+async function chkDelEscolher(i,nome){
+  nome=String(nome||'').trim(); if(nome.length<2){ alert('Escolha ou escreva o nome de quem vai fazer.'); return; }
+  const secao=CHK_SECS[i], turno=chkTurnoAtual;
+  let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCriar',unidade:unidadeAtual,senha:pvSenha(),slug:slugLoja(unidadeAtual),turno,secao,pessoa:nome})}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
+  if(!(r&&r.ok)){ alert('Não consegui passar esta parte: '+((r&&r.erro)||'sem conexão')); return; }
+  const agora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  const base=location.href.replace(/[^/]*$/,'');
+  CHK_DEL[chkDelK(turno,secao)]=r.teste
+    ? {id:'teste'+Date.now(),turno,secao,pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:base+'equipe-checklist.html?teste=1&'+new URLSearchParams({loja:unidadeAtual,slug:slugLoja(unidadeAtual),turno,secao,pessoa:nome}).toString()}
+    : {id:r.id,turno,secao,pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:r.link};
+  if(typeof logProva==='function') logProva('CHECKLIST_PARTE_PASSADA', turno+' '+secao+' → '+nome);
+  renderItensChecklist(); chkDelQR(i); chkDelAplicar();
+}
+function chkDelQR(i){
+  const x=CHK_DEL[chkDelK(chkTurnoAtual,CHK_SECS[i])]; if(!x) return;
+  let svg=''; try{ const q=qrcode(0,'M'); q.addData(x.link); q.make(); svg=q.createSvgTag(6,2); }catch(e){ svg='<div style="color:#ff4d4d">Não consegui desenhar o QR. Mande o link pelo WhatsApp.</div>'; }
+  const zap='https://wa.me/?text='+encodeURIComponent('Checklist da Dina — '+x.secao+'. Abra este link no seu celular, dentro da loja, e faça a sua parte: '+x.link);
+  chkDelModal('<div style="font-weight:900;font-size:16px;text-align:center">📱 '+escChk(x.pessoa)+', aponte a câmera</div><div style="font-size:13px;color:var(--muted);text-align:center;margin:4px 0 10px">Parte: <b>'+escChk(x.secao)+'</b> · vale só hoje e só dentro da loja'+(MODO_TESTE?'<br>🧪 No teste o QR abre a tela como a pessoa vê, sem gravar.':'')+'</div>'+
+    '<div style="background:#fff;border-radius:12px;padding:10px;display:flex;justify-content:center">'+svg+'</div>'+
+    '<a href="'+zap+'" target="_blank" style="display:block;text-align:center;margin-top:12px;padding:11px;border-radius:10px;background:#25D366;color:#06110b;font-weight:800;text-decoration:none">📲 Mandar o link pelo WhatsApp</a>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">Pronto — continuar o checklist</button>');
+}
+async function chkDelConfirmar(i){
+  const x=CHK_DEL[chkDelK(chkTurnoAtual,CHK_SECS[i])]; if(!x) return;
+  if(!MODO_TESTE){ let r=null; try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelConfirmar',unidade:unidadeAtual,senha:pvSenha(),id:x.id})}); r=JSON.parse(await y.text()); }catch(e){}
+    if(!(r&&r.ok)){ alert('Não confirmou: '+((r&&r.erro)||'sem conexão')); return; } }
+  x.situacao='confirmada'; x.confirmadoHora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  chkDelCopiar(x,true); chkGuardarRascunho();
+  if(typeof logProva==='function') logProva('CHECKLIST_PARTE_CONFIRMADA', x.turno+' '+x.secao+' ('+x.pessoa+')');
+  renderItensChecklist();
+}
+async function chkDelCancelar(i){
+  const k=chkDelK(chkTurnoAtual,CHK_SECS[i]), x=CHK_DEL[k]; if(!x) return;
+  if(!confirm('Cancelar esta parte com '+x.pessoa+'? Você mesmo vai fazer os itens.')) return;
+  if(!MODO_TESTE){ try{ await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCancelar',unidade:unidadeAtual,senha:pvSenha(),id:x.id})}); }catch(e){} }
+  delete CHK_DEL[k]; renderItensChecklist();
+}
+function chkDelSimular(i){ // só no modo teste: mostra ao Robson o que acontece quando a pessoa envia
+  const secao=CHK_SECS[i], x=CHK_DEL[chkDelK(chkTurnoAtual,secao)]; if(!x) return;
+  const its=chkItensData.filter(it=>it.secao===secao); x.respostas={};
+  its.forEach((it,k)=>{ x.respostas[String(it.id)]=k===its.length-1&&its.length>1?{status:'nao_conforme',obs:'(teste) exemplo de problema que a pessoa encontrou',resolvido:false,fotoUrl:''}:{status:'conforme'}; });
+  x.situacao='enviada'; x.enviadoHora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  renderItensChecklist();
 }
 
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
@@ -2815,6 +2923,8 @@ function atualizarBotaoSalvarChk(){
   const total=chkItensData.length;
   const feitos=chkItensData.filter(it=>!!chkRespostas[String(it.id)]).length;
   const semDesc=chkItensData.filter(it=>chkRespostas[String(it.id)]==='nao_conforme' && (chkObs[String(it.id)]||'').trim().length<CHK_MIN_DESC).length;
+  const espera=chkDelEsperando();
+  if(espera.length){ btn.disabled=true; btn.textContent='Aguardando a equipe: '+espera.join(', '); return; }
   const completo= total>0 && feitos===total && !semDesc;
   btn.disabled=!completo;
   btn.textContent= completo ? 'Salvar Checklist' : (!total ? 'Aguardando itens do checklist' : feitos<total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Descreva o problema dos itens com ✗ ('+semDesc+')');
@@ -2864,7 +2974,7 @@ async function _salvarChecklist(){
   try{
     if(await chkServidorV2()){
       const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
-        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null }; });
+        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null, fotoUrl: nok&&!chkFotos[id]&&chkFotoUrl[id]?chkFotoUrl[id]:undefined }; });
       const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens:itens})});
       try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
