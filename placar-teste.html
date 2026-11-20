@@ -4233,15 +4233,31 @@ function eqRender(){
     const g=s.registro||{}, cab=s.grupo&&s.grupo!==_grp?'<div style="margin-top:12px;font-weight:800;font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold,#FFD700)">'+escR(s.grupo)+'</div>':''; _grp=s.grupo||_grp;
     return cab+'<div class="eq-setor" data-s="'+s.setor+'" style="border:1px solid var(--border);border-radius:8px;padding:9px;margin-top:8px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b>'+escR(s.nome)+'</b><span style="font-size:0.8rem;color:var(--muted)">ideal '+s.ideal+'</span>'+
-      '<label style="font-size:0.82rem;display:flex;align-items:center;gap:6px">trabalhando hoje <input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_pres" value="'+(s.registro?g.presentes:'')+'" style="'+inp+'" oninput="eqAtualizar()"></label></div>'+
+      '<label style="font-size:0.82rem;display:flex;align-items:center;gap:6px">trabalhando hoje <input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_pres" value="'+(s.registro?g.presentes:'')+'" style="'+inp+'" oninput="eqAtualizar();eqPular(this,event)"></label></div>'+
       '<div id="eq_'+s.setor+'_mot" style="display:none;margin-top:8px"><div id="eq_'+s.setor+'_aviso" style="font-size:0.8rem;margin-bottom:6px"></div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar()"></label>').join('')+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar();eqPular(this,event)"></label>').join('')+'</div>'+
       '<input id="eq_'+s.setor+'_obs" placeholder="Observação (opcional)" value="'+escR(g.obs||'')+'" style="margin-top:8px;width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px;font-size:0.85rem"></div></div>';
   }).join('');
   document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
   vpRender(); fgrRender();
   eqAtualizar();
+}
+
+// Equipe do dia: digitou o número, o campo pula sozinho (Robson 19/11/2026). Função completa → próxima função;
+// abaixo do ideal → folga/falta/vaga daquela função, até fechar o ideal. Apagar não pula.
+function eqPular(el,ev){
+  if(ev&&ev.inputType&&ev.inputType.indexOf('insert')!==0) return;
+  const v=String(el.value||''); if(!/^\d+$/.test(v)||!EQ||!EQ.setores) return;
+  const m=el.id.match(/^eq_(.+)_([a-z]+)$/); if(!m) return; const ss=EQ.setores, i=ss.findIndex(x=>x.setor===m[1]); if(i<0) return; const S=ss[i];
+  if(m[2]==='pres'&&v.length<String(S.ideal||1).length) return; // ideal de 10 ou mais: espera os 2 números
+  const num=id=>{ const e=document.getElementById(id); return e?Math.max(0,parseInt(e.value,10)||0):0; };
+  const conta=num('eq_'+S.setor+'_pres')+EQ_MOT.reduce((a,[k])=>a+num('eq_'+S.setor+'_'+k),0);
+  let alvo=null;
+  if(conta<S.ideal){ const ks=EQ_MOT.map(([k])=>k), j=m[2]==='pres'?0:ks.indexOf(m[2])+1; if(j<ks.length) alvo=document.getElementById('eq_'+S.setor+'_'+ks[j]); }
+  if(!alvo&&ss[i+1]) alvo=document.getElementById('eq_'+ss[i+1].setor+'_pres');
+  if(!alvo){ const b=document.getElementById('eqSalvarBtn'); try{ el.blur(); if(b) b.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; }
+  setTimeout(()=>{ try{ alvo.focus(); alvo.select&&alvo.select(); alvo.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} },60);
 }
 
 // ── Folgas do gerente e do assistente lançadas pela RH (19/11/2026, servidor 2026-11-19-c, recurso folgasRh) ──
