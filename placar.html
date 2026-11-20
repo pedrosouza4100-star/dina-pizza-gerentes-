@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#07090E">
 <link rel="stylesheet" href="dina-tema.css?v=2">
 <script src="dina-tema.js?v=1"></script>
+<script src="qrcode.js?v=1"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@700&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -740,6 +741,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="card card-full" id="cardHF" style="display:none">
         <div class="card-label">🥬 Lista de compras — hortifrúti</div>
         <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
+        <div id="hfPendBox" style="display:none"></div>
         <div id="hfCompraBox" style="display:none"></div>
         <div id="hfAvisoForn"></div>
         <div class="hf-grid" id="hfItens"></div>
@@ -2121,16 +2123,20 @@ function geoLer(fresca){
     navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}), e=>res({erro:e.code===1?'negado':'falhou'}), {enableHighAccuracy:true,timeout:20000,maximumAge:fresca?0:60000});
   });
 }
-async function geoPerguntar(pos){
-  return await chkJsonp({action:'geoConferir',unidade:unidadeAtual,lat:pos.lat,lng:pos.lng,acc:pos.acc,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',aparelho:aparelhoCodigo()},15000);
+// etapa (19/11/2026): diz ao servidor em que momento a leitura foi feita, para o relatório não contar leitura solta de GPS como tentativa
+// abrir = ao abrir o placar · previa = 1ª leitura enquanto preenche · confirma = 2ª leitura (30 s depois) · salvar_previa/salvar = ao salvar algo · travada = com a tela 📍 já na frente
+async function geoPerguntar(pos, etapa){
+  return await chkJsonp({action:'geoConferir',unidade:unidadeAtual,lat:pos.lat,lng:pos.lng,acc:pos.acc,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',aparelho:aparelhoCodigo(),etapa:etapa||''},15000);
 }
-function conferirLocal(agora, envio){
+function conferirLocal(agora, envio, origem){
   if(_geoConferindo) return _geoConferindo;
   const bt=document.getElementById('geoBtn'); if(bt){ bt.disabled=true; bt.textContent='Conferindo...'; }
   _geoConferindo=(async()=>{
     try{
       if(!unidadeAtual || !(await chkRecursos()).includes('geoLoja')) return true;
       if(excValendo()){ document.getElementById('geoOverlay').style.display='none'; return true; } // autorizado pelo GDI a ficar fora da loja
+      // 19/11/2026: placar do dia já enviado → só confere o GPS se for salvar de novo (Araucária 18/11: o gerente foi para casa com o app aberto e contou como tentativa fora)
+      try{ if((!envio||origem==='abrir') && localStorage.getItem(chaveHoje('enviado_em'))){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){}
       // loja sem localização cadastrada no Admin: não confere (nem pede o GPS)
       try{ const c=await chkJsonp({action:'geoConferir',unidade:unidadeAtual},12000); if(c&&c.ok&&c.configurado===false){ document.getElementById('geoOverlay').style.display='none'; return true; } }catch(e){ return true; }
       const travada=document.getElementById('geoOverlay').style.display==='flex'||getComputedStyle(document.getElementById('geoOverlay')).display!=='none';
@@ -2140,7 +2146,7 @@ function conferirLocal(agora, envio){
       // precisão ruim: tenta de novo até 2 vezes (posição nova)
       for(let k=0;k<2 && pos.acc>GEO_PRECISAO_MAX;k++){ await new Promise(r=>setTimeout(r,4000)); const p2=await geoLer(true); if(!p2.erro && p2.acc<pos.acc) pos=p2; }
       let r=null;
-      try{ r=await geoPerguntar(pos); }
+      try{ r=await geoPerguntar(pos, travada?'travada':brando?'previa':origem==='abrir'?'abrir':'salvar_previa'); }
       catch(e){ return true; } // servidor sem resposta: não trava o gerente por isso
       if(!r||!r.ok||r.dentro){ document.getElementById('geoOverlay').style.display='none'; return true; }
       if(brando && pos.acc>GEO_PRECISAO_MAX){ logProva('GPS_IMPRECISO','fora '+(r.distancia||'?')+' m com precisão '+Math.round(pos.acc)+' m: não travou'); return true; }
@@ -2150,7 +2156,7 @@ function conferirLocal(agora, envio){
         try{ await new Promise(res=>setTimeout(res,GEO_CONFIRMA_MS)); } finally {}
         const p2=await geoLer(true); window._geoSuspeito=false;
         if(p2.erro) return true;
-        let r2=null; try{ r2=await geoPerguntar(p2); }catch(e){ return true; }
+        let r2=null; try{ r2=await geoPerguntar(p2,'confirma'); }catch(e){ return true; }
         if(!r2||!r2.ok||r2.dentro){ document.getElementById('geoOverlay').style.display='none'; return true; }
         if(p2.acc>GEO_PRECISAO_MAX){ logProva('GPS_IMPRECISO','2ª leitura fora '+(r2.distancia||'?')+' m com precisão '+Math.round(p2.acc)+' m: não travou'); return true; }
         r=r2;
@@ -2160,7 +2166,7 @@ function conferirLocal(agora, envio){
         for(let k=0;k<2;k++){
           await new Promise(res=>setTimeout(res,6000));
           const p3=await geoLer(true); if(p3.erro) continue;
-          let r3=null; try{ r3=await geoPerguntar(p3); }catch(e){ return true; }
+          let r3=null; try{ r3=await geoPerguntar(p3,origem==='abrir'?'abrir':'salvar'); }catch(e){ return true; }
           if(!r3||!r3.ok||r3.dentro){ logProva('GPS_CONFIRMOU_DENTRO',(k+2)+'ª leitura dentro da loja'); document.getElementById('geoOverlay').style.display='none'; return true; }
           r=r3;
         }
@@ -2175,8 +2181,8 @@ function conferirLocal(agora, envio){
 // Confere ao abrir, a cada 3 min com o placar aberto e SEMPRE que o gerente volta para o placar (trocou de app,
 // apagou a tela, saiu da loja e abriu de novo): fora da loja, a tela 📍 trava tudo e nada mais é salvo.
 let _geoUltima=0;
-function conferirLocalMarcado(agora, envio){ _geoUltima=Date.now(); return conferirLocal(agora, envio); }
-function iniciarGeo(){ clearInterval(_geoTimer); excAtualizar().finally(()=>conferirLocalMarcado(false,true)); /* ao abrir: confere como antes (trava na hora) */ _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
+function conferirLocalMarcado(agora, envio, origem){ _geoUltima=Date.now(); return conferirLocal(agora, envio, origem); }
+function iniciarGeo(){ clearInterval(_geoTimer); excAtualizar().finally(()=>conferirLocalMarcado(false,true,'abrir')); /* ao abrir: confere como antes (trava na hora) */ _geoTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') conferirLocalMarcado(); }, 3*60000); }
 
 // ── Autorização do GDI para continuar fora da loja (imprevisto) ──
 let EXC={aprovada:null,pendente:null,recusada:null}, _excPoll=null, _excFim=null;
@@ -2653,6 +2659,7 @@ async function carregarItensChecklist(){
     }
     chkItensData = itens;
     renderItensChecklist();
+    chkDelLigado().then(on=>{ if(on&&turno===chkTurnoAtual) chkDelCarregar(); });
     carregarChkAbertos().then(()=>{ if(turno===chkTurnoAtual) renderItensChecklist(); });
   }catch(e){
     body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens. Verifique a internet e abra de novo.</div>';
@@ -2666,8 +2673,11 @@ function renderItensChecklist(){
   const abertosAqui = chkItensData.filter(it=>chkAbertos[String(it.id)]);
   const topo=document.getElementById('chkAbertosModal');
   if(topo) topo.innerHTML = abertosAqui.length ? `<div class="chk-reinc forte" style="margin-bottom:8px">🔁 <b>${abertosAqui.length} item(ns) deste checklist continuam com problema de dias anteriores.</b> Eles estão marcados abaixo. Resolva hoje.</div>` : '';
+  CHK_SECS=[];
   chkItensData.forEach(function(it){
-    if(it.secao !== secaoAtual){ secaoAtual = it.secao; html+=`<div class="chk-secao-title">${secaoAtual}</div>`; }
+    if(it.secao !== secaoAtual){ secaoAtual = it.secao; CHK_SECS.push(secaoAtual); html+=`<div class="chk-secao-title">${secaoAtual}</div>`+chkDelBarra(CHK_SECS.length-1); }
+    const pend=chkDelPendente(it.secao);
+    if(pend){ html+=chkDelItemHtml(it,pend); return; }
     const id=String(it.id), resp = chkRespostas[id] || '';
     const falta = (chkTentouSalvar && (!resp || (resp==='nao_conforme' && (chkObs[id]||'').trim().length<CHK_MIN_DESC))) ? ' falta' : '';
     const ab = chkAbertos[id];
@@ -2691,6 +2701,109 @@ function renderItensChecklist(){
   body.innerHTML=html;
   if(pos!=null){ const ov=document.querySelector('.chk-modal-overlay'); if(ov) ov.scrollTop=pos; }
   atualizarBotaoSalvarChk();
+}
+
+// ── Checklist dividido com a equipe (20/11/2026, servidor 2026-11-20-a, recurso chkDividido; Robson 19/11) ──
+// O gerente toca "👥 Passar para alguém" numa seção, escolhe quem está na escala de hoje e mostra o QR Code.
+// A pessoa abre equipe-checklist.html no celular dela (sem senha, só aquela seção, GPS na loja) e envia.
+// Volta aqui "feito por X às HH:MM": o gerente confirma com um toque e as respostas entram no checklist dele.
+let CHK_DEL={}, CHK_DEL_ON=false, CHK_SECS=[], _chkDelTimer=null; const chkFotoUrl={};
+const chkDelK=(t,s)=>t+'|'+s;
+async function chkDelLigado(){ try{ const rc=await chkRecursos(); CHK_DEL_ON=rc.includes('chkDividido'); }catch(e){ CHK_DEL_ON=false; } return CHK_DEL_ON; }
+async function chkDelCarregar(){
+  if(!CHK_DEL_ON) return;
+  if(!MODO_TESTE){ try{ const r=await chkJsonp({action:'chkDelLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok){ const n={}; (r.lista||[]).forEach(x=>{ n[chkDelK(x.turno,x.secao)]=x; }); CHK_DEL=n; } }catch(e){} }
+  chkDelAplicar();
+}
+function chkDelCopiar(x,sobre){ Object.keys(x.respostas||{}).forEach(id=>{ const v=x.respostas[id]; if(!sobre&&chkRespostas[id]) return; chkRespostas[id]=v.status;
+  if(v.status==='nao_conforme'){ chkObs[id]=v.obs||''; chkResolvido[id]=!!v.resolvido; if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; } }); }
+function chkDelAplicar(){
+  Object.values(CHK_DEL).forEach(x=>{ if(x.situacao==='confirmada'&&x.turno===chkTurnoAtual) chkDelCopiar(x,false); });
+  if(chkItensData.length) renderItensChecklist();
+  clearTimeout(_chkDelTimer);
+  if(!MODO_TESTE&&Object.values(CHK_DEL).some(x=>x.situacao==='aberta'||x.situacao==='enviada')) _chkDelTimer=setTimeout(chkDelCarregar,15000);
+}
+function chkDelPendente(secao){ const x=CHK_DEL[chkDelK(chkTurnoAtual,secao)]; return x&&(x.situacao==='aberta'||x.situacao==='enviada')?x:null; }
+function chkDelEsperando(){ const sec=[...new Set(chkItensData.map(it=>it.secao))]; return sec.map(s=>chkDelPendente(s)).filter(Boolean).map(x=>x.secao+' ('+x.pessoa.split(' ')[0]+(x.situacao==='enviada'?' — confirmar':'')+')'); }
+function chkDelBarra(i){
+  if(!CHK_DEL_ON) return '';
+  const secao=CHK_SECS[i], x=CHK_DEL[chkDelK(chkTurnoAtual,secao)], b='style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin:4px 6px 0 0"';
+  if(!x||x.situacao==='cancelada') return `<div style="margin:-2px 0 6px"><button type="button" ${b} onclick="chkDelPassar(${i})">👥 Passar para alguém da equipe</button></div>`;
+  const nome=escChk(x.pessoa);
+  if(x.situacao==='aberta') return `<div class="chk-del" style="background:#1a2433;border:1px solid #3aa0ff;border-radius:10px;padding:9px;margin:4px 0 8px;font-size:13px">⏳ <b>Com ${nome}</b> desde ${escChk(x.hora||'')} — esperando ela(e) enviar.<br>
+    <button type="button" ${b} onclick="chkDelQR(${i})">📱 Mostrar o QR Code</button><button type="button" ${b} onclick="chkDelCancelar(${i})">✖ Cancelar (faço eu)</button>${MODO_TESTE?`<button type="button" ${b} onclick="chkDelSimular(${i})">🧪 Simular que enviou</button>`:''}</div>`;
+  if(x.situacao==='enviada') return `<div class="chk-del" style="background:#132a17;border:1px solid #2ecc71;border-radius:10px;padding:9px;margin:4px 0 8px;font-size:13px">📩 <b>${nome} enviou às ${escChk(x.enviadoHora||'')}</b>. Confira abaixo e confirme.<br>
+    <button type="button" ${b.replace('background:var(--surface)','background:#2ecc71;color:#06110b;font-weight:800')} onclick="chkDelConfirmar(${i})">✅ Confirmar o que ${escChk(x.pessoa.split(' ')[0])} fez</button><button type="button" ${b} onclick="chkDelCancelar(${i})">✖ Não aceitar (faço eu)</button></div>`;
+  return `<div style="font-size:12px;color:#2ecc71;margin:-2px 0 6px">✅ Feito por ${nome} às ${escChk(x.enviadoHora||'')} · confirmado${x.confirmadoHora?' às '+escChk(x.confirmadoHora):''}</div>`;
+}
+function chkDelItemHtml(it,x){
+  const v=(x.respostas||{})[String(it.id)];
+  let r='<span style="font-size:12px;color:var(--muted)">⏳ aguardando</span>';
+  if(x.situacao==='enviada'&&v) r=v.status==='conforme'?'<span style="color:#2ecc71;font-weight:800">✓</span>':'<span style="color:#ff4d4d;font-weight:800">✗</span>';
+  return `<div class="chk-item-row" style="opacity:.92"><span class="chk-item-txt">${it.item}</span><div class="chk-item-btns">${r}</div>`+
+    (x.situacao==='enviada'&&v&&v.status==='nao_conforme'?`<div class="chk-det" style="font-size:13px">📝 ${escChk(v.obs||'')}${v.resolvido?' <b>(já resolvido)</b>':''}${v.fotoUrl?` · <a href="${escChk(v.fotoUrl)}" target="_blank" style="color:#3aa0ff">ver foto</a>`:''}</div>`:'')+'</div>';
+}
+function chkDelModal(html){
+  let m=document.getElementById('chkDelModal');
+  if(!m){ m=document.createElement('div'); m.id='chkDelModal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(m); }
+  m.innerHTML='<div style="background:var(--card,#11151d);border:1px solid var(--border);border-radius:16px;padding:18px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;color:var(--text)">'+html+'</div>';
+  m.style.display='flex';
+}
+function chkDelFechar(){ const m=document.getElementById('chkDelModal'); if(m) m.style.display='none'; }
+async function chkDelPassar(i){
+  const secao=CHK_SECS[i];
+  chkDelModal('<div style="font-weight:900;font-size:16px">👥 Passar “'+escChk(secao)+'”</div><div style="font-size:13px;color:var(--muted);margin:6px 0 10px">Quem vai fazer esta parte? A pessoa abre no celular dela pelo QR Code, faz dentro da loja e devolve para você confirmar.</div><div id="chkDelLista" style="font-size:13px;color:var(--muted)">Carregando a equipe de hoje…</div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Não está na lista?</div><div style="display:flex;gap:8px;margin-top:4px"><input id="chkDelOutro" placeholder="Nome da pessoa" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)"><button type="button" onclick="chkDelEscolher('+i+',document.getElementById(\'chkDelOutro\').value)" style="padding:10px 14px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">OK</button></div>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)">Voltar</button>');
+  let r=null; try{ r=await chkJsonp({action:'chkDelPessoas',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){}
+  const el=document.getElementById('chkDelLista'); if(!el) return;
+  const ps=(r&&r.ok&&r.pessoas)||[]; window._chkDelPs=ps;
+  el.innerHTML=ps.length?ps.map((p,k)=>'<button type="button" onclick="chkDelEscolher('+i+',window._chkDelPs['+k+'].nome)" style="display:flex;justify-content:space-between;width:100%;text-align:left;padding:11px;margin-top:6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px"><b>'+escChk(p.nome)+'</b><span style="color:var(--muted);font-size:12px">'+escChk(p.setor||'')+(p.escalado?'':' · sem escala')+'</span></button>').join('')
+    :'Não encontrei a escala de hoje. Escreva o nome abaixo.';
+}
+async function chkDelEscolher(i,nome){
+  nome=String(nome||'').trim(); if(nome.length<2){ alert('Escolha ou escreva o nome de quem vai fazer.'); return; }
+  const secao=CHK_SECS[i], turno=chkTurnoAtual;
+  let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCriar',unidade:unidadeAtual,senha:pvSenha(),slug:slugLoja(unidadeAtual),turno,secao,pessoa:nome})}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
+  if(!(r&&r.ok)){ alert('Não consegui passar esta parte: '+((r&&r.erro)||'sem conexão')); return; }
+  const agora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  const base=location.href.replace(/[^/]*$/,'');
+  CHK_DEL[chkDelK(turno,secao)]=r.teste
+    ? {id:'teste'+Date.now(),turno,secao,pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:base+'equipe-checklist.html?teste=1&'+new URLSearchParams({loja:unidadeAtual,slug:slugLoja(unidadeAtual),turno,secao,pessoa:nome}).toString()}
+    : {id:r.id,turno,secao,pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:r.link};
+  if(typeof logProva==='function') logProva('CHECKLIST_PARTE_PASSADA', turno+' '+secao+' → '+nome);
+  renderItensChecklist(); chkDelQR(i); chkDelAplicar();
+}
+function chkDelQR(i){
+  const x=CHK_DEL[chkDelK(chkTurnoAtual,CHK_SECS[i])]; if(!x) return;
+  let svg=''; try{ const q=qrcode(0,'M'); q.addData(x.link); q.make(); svg=q.createSvgTag(6,2); }catch(e){ svg='<div style="color:#ff4d4d">Não consegui desenhar o QR. Mande o link pelo WhatsApp.</div>'; }
+  const zap='https://wa.me/?text='+encodeURIComponent('Checklist da Dina — '+x.secao+'. Abra este link no seu celular, dentro da loja, e faça a sua parte: '+x.link);
+  chkDelModal('<div style="font-weight:900;font-size:16px;text-align:center">📱 '+escChk(x.pessoa)+', aponte a câmera</div><div style="font-size:13px;color:var(--muted);text-align:center;margin:4px 0 10px">Parte: <b>'+escChk(x.secao)+'</b> · vale só hoje e só dentro da loja'+(MODO_TESTE?'<br>🧪 No teste o QR abre a tela como a pessoa vê, sem gravar.':'')+'</div>'+
+    '<div style="background:#fff;border-radius:12px;padding:10px;display:flex;justify-content:center">'+svg+'</div>'+
+    '<a href="'+zap+'" target="_blank" style="display:block;text-align:center;margin-top:12px;padding:11px;border-radius:10px;background:#25D366;color:#06110b;font-weight:800;text-decoration:none">📲 Mandar o link pelo WhatsApp</a>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">Pronto — continuar o checklist</button>');
+}
+async function chkDelConfirmar(i){
+  const x=CHK_DEL[chkDelK(chkTurnoAtual,CHK_SECS[i])]; if(!x) return;
+  if(!MODO_TESTE){ let r=null; try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelConfirmar',unidade:unidadeAtual,senha:pvSenha(),id:x.id})}); r=JSON.parse(await y.text()); }catch(e){}
+    if(!(r&&r.ok)){ alert('Não confirmou: '+((r&&r.erro)||'sem conexão')); return; } }
+  x.situacao='confirmada'; x.confirmadoHora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  chkDelCopiar(x,true); chkGuardarRascunho();
+  if(typeof logProva==='function') logProva('CHECKLIST_PARTE_CONFIRMADA', x.turno+' '+x.secao+' ('+x.pessoa+')');
+  renderItensChecklist();
+}
+async function chkDelCancelar(i){
+  const k=chkDelK(chkTurnoAtual,CHK_SECS[i]), x=CHK_DEL[k]; if(!x) return;
+  if(!confirm('Cancelar esta parte com '+x.pessoa+'? Você mesmo vai fazer os itens.')) return;
+  if(!MODO_TESTE){ try{ await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCancelar',unidade:unidadeAtual,senha:pvSenha(),id:x.id})}); }catch(e){} }
+  delete CHK_DEL[k]; renderItensChecklist();
+}
+function chkDelSimular(i){ // só no modo teste: mostra ao Robson o que acontece quando a pessoa envia
+  const secao=CHK_SECS[i], x=CHK_DEL[chkDelK(chkTurnoAtual,secao)]; if(!x) return;
+  const its=chkItensData.filter(it=>it.secao===secao); x.respostas={};
+  its.forEach((it,k)=>{ x.respostas[String(it.id)]=k===its.length-1&&its.length>1?{status:'nao_conforme',obs:'(teste) exemplo de problema que a pessoa encontrou',resolvido:false,fotoUrl:''}:{status:'conforme'}; });
+  x.situacao='enviada'; x.enviadoHora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  renderItensChecklist();
 }
 
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
@@ -2770,6 +2883,8 @@ function atualizarBotaoSalvarChk(){
   const total=chkItensData.length;
   const feitos=chkItensData.filter(it=>!!chkRespostas[String(it.id)]).length;
   const semDesc=chkItensData.filter(it=>chkRespostas[String(it.id)]==='nao_conforme' && (chkObs[String(it.id)]||'').trim().length<CHK_MIN_DESC).length;
+  const espera=chkDelEsperando();
+  if(espera.length){ btn.disabled=true; btn.textContent='Aguardando a equipe: '+espera.join(', '); return; }
   const completo= total>0 && feitos===total && !semDesc;
   btn.disabled=!completo;
   btn.textContent= completo ? 'Salvar Checklist' : (!total ? 'Aguardando itens do checklist' : feitos<total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Descreva o problema dos itens com ✗ ('+semDesc+')');
@@ -2819,7 +2934,7 @@ async function _salvarChecklist(){
   try{
     if(await chkServidorV2()){
       const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
-        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null }; });
+        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null, fotoUrl: nok&&!chkFotos[id]&&chkFotoUrl[id]?chkFotoUrl[id]:undefined }; });
       const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens:itens})});
       try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
@@ -3309,7 +3424,8 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(bebLista().map(b=>b[1]).some(id=>!filled(id))) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
-  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
   if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
@@ -3647,7 +3763,7 @@ async function hfPreparar(){
   document.getElementById('hfNada').checked=!!(r.listaHoje&&r.listaHoje.nadaFalta);
   document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
   document.getElementById('hfMsg').innerHTML=r.listaHoje?'<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva às '+escR(r.listaHoje.hora)+'. Mudou algo? Marque e salve de novo.</span>':'';
-  hfRenderForn(); hfRenderCompra();
+  HFC_DIA_PEND=''; HFC_MANUAL=false; hfRenderForn(); hfRenderCompra(); hfPendRender();
   verificarBotaoRegistrar();
 }
 // Lista com quantidades (13/11/2026, servidor 2026-11-13-d, recurso hortifrutiQtd): cada item com a unidade da loja (Isaac em caixas)
@@ -3804,8 +3920,19 @@ async function hfFornSalvar(pref){
 }
 let HFC_FOTO=null;
 function hfRenderCompra(){
+  hfRenderCompraBase();
+  // 19/11/2026 (recurso hfPendente): saída para quando a compra não salva (Fazenda 18/11 parou 01:36 sem enviar)
+  const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
+  if(!c||c.feita||c.pendente) return;
+  const rc=_chkRecursos||[];
+  if(HFC_MANUAL){ box.insertAdjacentHTML('afterbegin','<div class="hf-aviso" style="border-color:var(--gold);margin-bottom:6px">✍️ <b>Registrando digitando</b>: diga o que chegou e a quantidade de cada item e o <b>total da nota</b>. Preço por item só se tiver; foto só se conseguir. O Sidinei confere. <a href="#" onclick="HFC_MANUAL=false;hfRenderCompra();return false" style="color:var(--gold)">voltar para a foto</a></div>'); return; }
+  // 19/11/2026 (pedido do Robson): a foto ou a leitura da nota não funcionou → digita na hora (nada fica para o dia seguinte)
+  if(rc.includes('hfManual')) box.insertAdjacentHTML('beforeend','<div style="margin-top:10px"><a href="#" onclick="hfcManual();return false" style="color:var(--gold);font-size:.85rem;font-weight:700">✍️ A foto ou a leitura da nota não funcionou? Registrar digitando</a></div>');
+}
+function hfRenderCompraBase(){
   const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
   if(!c){ box.style.display='none'; return; }
+  if(c.pendente&&!HFC_DIA_PEND){ box.style.display='block'; box.innerHTML='<div class="hf-aviso">⏳ <b>Compra de hoje não registrada</b> ('+escR(c.pendente.hora)+'): '+escR(c.pendente.motivo)+'<br>O Sidinei foi avisado. <b>Amanhã</b> o placar pede para registrar esta compra: guarde a nota.</div>'; return; }
   box.style.display='block';
   if(c.feita&&hfcMulti()){ hfRenderNotas(box,c); return; }
   if(c.feita){ box.innerHTML=hfAlertasHtml(c.alertas)+'<div class="hf-aviso" style="border-color:var(--d-green,#22c55e);background:rgba(34,197,94,.1)">✓ Compra de hoje registrada às '+escR(c.hora)+(c.total?' (nota de R$ '+escR(hfR(c.total))+')':'')+' e enviada ao Sidinei. <a href="#" onclick="HF.compra.feita=false;hfRenderCompra();verificarBotaoRegistrar();return false" style="color:var(--gold)">corrigir</a></div>'; return; }
@@ -3836,6 +3963,42 @@ function hfRenderNotas(box,c){
     +((c.falta||[]).length?'<div class="hf-aviso" style="margin-top:6px">⏳ <b>Ainda não comprou:</b> '+escR(c.falta.join(', '))+'</div>':'')
     +(ns.length<max?'<button type="button" class="hf-mg" style="margin-top:6px" onclick="hfcNovaNota('+(ns.length+1)+')">➕ Comprei em outro lugar (nota '+(ns.length+1)+' de '+max+')</button>':'<div class="muted" style="font-size:.8rem;margin-top:6px">Limite de '+max+' notas por dia.</div>');
 }
+// Compra pendente (19/11/2026): hoje não deu → amanhã registra a compra de ontem (diaPend) ou fecha sem registro
+let HFC_DIA_PEND='', HFC_MANUAL=false;
+function hfcManual(){ HFC_MANUAL=true; if(typeof logProva==='function') logProva('HF_COMPRA_DIGITADA','a foto/leitura da nota não funcionou'); hfRenderCompra(); document.getElementById('hfCompraBox').scrollIntoView({behavior:'smooth',block:'start'}); }
+async function hfPendMarcar(){
+  const m=document.getElementById('hfPendMotivo').value.trim(), msg=document.getElementById('hfPendMsg');
+  if(m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraPendente',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m})})).json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    HF.compra.pendente={motivo:m+(r.teste?' (teste: nada foi enviado)':''),hora:new Date().toTimeString().slice(0,5)}; logProva('HF_COMPRA_PENDENTE',m);
+    hfRenderCompra(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+function hfPendRender(){
+  const box=document.getElementById('hfPendBox'), a=HF&&HF.compraAtrasada; if(!box) return;
+  if(!a||!(_chkRecursos||[]).includes('hfPendente')){ box.style.display='none'; return; }
+  box.style.display='block';
+  if(HFC_DIA_PEND){ box.innerHTML='<div class="hf-aviso" style="border-color:var(--gold)">📝 Registrando a <b>compra de '+escR(a.diaBr)+'</b> (foto da nota e quantidades, como sempre). <a href="#" onclick="hfPendVoltar();return false" style="color:var(--gold)">voltar</a></div>'; return; }
+  box.innerHTML='<div class="hf-aviso" style="border-color:var(--danger)">🧾 <b>A compra de '+escR(a.diaBr)+' não foi registrada</b>'+(a.motivo?' ('+escR(a.motivo)+')':'')+'. Registre agora com a nota:'
+    +'<button type="button" class="alp-btn" style="margin-top:8px" onclick="hfPendRegistrar()">📝 Registrar a compra de '+escR(a.diaBr)+'</button>'
+    +'<a href="#" onclick="document.getElementById(\'hfPendSem\').style.display=\'block\';return false" style="display:block;margin-top:8px;color:var(--muted);font-size:.82rem">Não tenho mais a nota</a>'
+    +'<div id="hfPendSem" style="display:none;margin-top:6px"><textarea class="hf-txt" id="hfPendSemMotivo" maxlength="300" placeholder="O que aconteceu com a nota? (vai para o Sidinei e o GDI)" style="min-height:54px"></textarea><button type="button" class="hf-mg" onclick="hfPendSemNota()">Fechar sem registrar</button><div id="hfPendSemMsg" class="alp-info"></div></div></div>';
+}
+function hfPendRegistrar(){ const a=HF.compraAtrasada; if(!a||!a.compra) return; HF._compraHoje=HF.compra; HF.compra=a.compra; HFC_DIA_PEND=a.dia; HFC_NOTA_N=1; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); document.getElementById('hfCompraBox').scrollIntoView({behavior:'smooth',block:'start'}); }
+function hfPendVoltar(){ HF.compra=HF._compraHoje||null; HFC_DIA_PEND=''; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); }
+async function hfPendSemNota(){
+  const m=document.getElementById('hfPendSemMotivo').value.trim(), msg=document.getElementById('hfPendSemMsg');
+  if(m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraPendente',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m,diaPend:HF.compraAtrasada.dia})})).json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    logProva('HF_COMPRA_SEM_REGISTRO',HF.compraAtrasada.diaBr+' · '+m); HF.compraAtrasada=null; hfPendRender(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
+// depois de registrar a compra pendente: volta para a de hoje
+async function hfPendDepoisDeSalvar(){ HF.compraAtrasada=null; HFC_DIA_PEND=''; HF.compra=HF._compraHoje||null; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; hfRenderCompra(); hfPendRender(); verificarBotaoRegistrar(); alert('✅ Compra pendente registrada e enviada ao Sidinei.'); }
 function hfcNovaNota(n){ HFC_NOTA_N=n; HFC_NOTA=null; HFC_FOTO=null; HFC_LIDO=null; HF.compra.feita=false; hfRenderCompra(); verificarBotaoRegistrar(); }
 function hfRenderCompraQtd(box,c,forn){
   const multi=hfcMulti(); if(multi&&!c.notas.length) HFC_NOTA_N=1;
@@ -3866,6 +4029,7 @@ function hfcConta(){
   let soma=0; hfcLer().forEach(x=>{ const nao=x.chegou==='nao'; x.el.querySelector('[data-k="qtd"]').disabled=nao; x.el.querySelector('[data-k="preco"]').disabled=nao;
     const t=(!nao&&x.qtd>0&&x.preco>0)?x.qtd*x.preco:0; soma+=t; x.el.querySelector('[data-k="tot"]').textContent=t?'= R$ '+hfR(t):''; });
   const el=document.getElementById('hfcSoma'); if(!el) return; const tn=hfNumL((document.getElementById('hfcTotal')||{}).value);
+  if(HFC_MANUAL){ el.innerHTML='✍️ Digitando: a soma dos itens não precisa bater com a nota.'; return; }
   el.innerHTML='Soma dos itens: <b>R$ '+hfR(soma)+'</b>'+(tn>0?(Math.abs(tn-soma)>Math.max(1,tn*0.02)?' — <span style="color:var(--danger)">não bate com a nota</span>':' — <span style="color:var(--d-t-ok,#22c55e)">confere ✓</span>'):'');
 }
 function hfcFoto(){ const ler=HF&&HF.compra&&HF.compra.unidades&&(_chkRecursos||[]).includes('hfLerNota'); chkAbrirCamera('hfcompra', f=>{ HFC_FOTO=f; document.getElementById('hfcFotoBtn').textContent='✓ Foto '+(ler?'das mercadorias ':'')+'tirada — tirar outra'; }, {msg:ler?'🥬 Fotografe as <b>mercadorias</b> que chegaram (para o Sidinei ver a qualidade).':'🧾 Fotografe a <b>compra feita</b> (as mercadorias e o cupom).'}); }
@@ -3894,14 +4058,15 @@ async function hfcSalvar(){
   if(HF&&HF.compra&&HF.compra.unidades) return hfcSalvarQtd();
   const comprados=[...document.querySelectorAll('#hfCompraBox input[data-hfc]')].filter(e=>e.checked).map(e=>e.dataset.hfc), onde=document.getElementById('hfcOnde').value, obs=document.getElementById('hfcObs').value.trim(), msg=document.getElementById('hfcMsg');
   if(comprados.length&&!onde){ msg.innerHTML='<span style="color:var(--danger)">Informe onde comprou.</span>'; return; }
-  if(comprados.length&&!HFC_FOTO){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da compra.</span>'; return; }
+  if(comprados.length&&!HFC_FOTO&&!HFC_MANUAL){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da compra.</span>'; return; }
   if(comprados.length<HF.compra.itens.length&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">Não comprou tudo? Explique na observação (mínimo 10 letras).</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',diaPend:HFC_DIA_PEND||undefined,manual:HFC_MANUAL||undefined,unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',comprados,onde,obs,foto:HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
-    HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
+    if(HFC_DIA_PEND){ logProva('HF_COMPRA_PENDENTE_REGISTRADA',HFC_DIA_PEND); return hfPendDepoisDeSalvar(); }
+    HFC_MANUAL=false; HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); logProva('HF_COMPRA',comprados.join(', ')+' · '+onde);
     hfRenderCompra(); verificarBotaoRegistrar();
   }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
 }
@@ -3909,21 +4074,22 @@ async function hfcSalvarQtd(){
   const l=hfcLer(), msg=document.getElementById('hfcMsg'), onde=document.getElementById('hfcOnde').value, obs=document.getElementById('hfcObs').value.trim(), tn=hfNumL(document.getElementById('hfcTotal').value);
   const semEsc=l.filter(x=>!x.chegou).map(x=>x.nome); if(semEsc.length){ msg.innerHTML='<span style="color:var(--danger)">Diga o que aconteceu com: '+escR(semEsc.join(', '))+'.</span>'; return; }
   const comp=l.filter(x=>x.chegou!=='nao');
-  const faltaN=comp.filter(x=>!(x.qtd>0)||!(x.preco>0)).map(x=>x.nome); if(faltaN.length){ msg.innerHTML='<span style="color:var(--danger)">Informe quantidade e preço de: '+escR(faltaN.join(', '))+'.</span>'; return; }
+  const faltaN=comp.filter(x=>!(x.qtd>0)||(!(x.preco>0)&&!HFC_MANUAL)).map(x=>x.nome); if(faltaN.length){ msg.innerHTML='<span style="color:var(--danger)">Informe '+(HFC_MANUAL?'a quantidade':'quantidade e preço')+' de: '+escR(faltaN.join(', '))+'.</span>'; return; }
   if(comp.length&&!(tn>0)){ msg.innerHTML='<span style="color:var(--danger)">Informe o total da nota.</span>'; return; }
   if(comp.length&&!onde){ msg.innerHTML='<span style="color:var(--danger)">Informe onde comprou.</span>'; return; }
   const lerOn=(_chkRecursos||[]).includes('hfLerNota');
-  if(lerOn&&comp.length&&!HFC_NOTA){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da nota (passo 1).</span>'; return; }
-  if(comp.length&&!HFC_FOTO&&!(lerOn&&hfcMulti()&&HFC_NOTA_N>1)){ msg.innerHTML='<span style="color:var(--danger)">'+(lerOn?'Tire a foto das mercadorias (passo 3).':'Tire a foto da compra e da nota.')+'</span>'; return; }
+  if(lerOn&&comp.length&&!HFC_NOTA&&!HFC_MANUAL){ msg.innerHTML='<span style="color:var(--danger)">Tire a foto da nota (passo 1).</span>'; return; }
+  if(comp.length&&!HFC_FOTO&&!HFC_MANUAL&&!(lerOn&&hfcMulti()&&HFC_NOTA_N>1)){ msg.innerHTML='<span style="color:var(--danger)">'+(lerOn?'Tire a foto das mercadorias (passo 3).':'Tire a foto da compra e da nota.')+'</span>'; return; }
   if(l.some(x=>x.chegou!=='igual')&&obs.length<10){ msg.innerHTML='<span style="color:var(--danger)">'+(hfcMulti()&&l.some(x=>x.chegou==='nao')?'Algum item não está nesta nota? Escreva na observação se vai comprar em outro lugar ou por que não comprou (mínimo 10 letras).':'Algo não veio, veio a menos ou ruim? Explique na observação (mínimo 10 letras).')+'</span>'; return; }
   if(hfcMulti()&&!comp.length){ msg.innerHTML='<span style="color:var(--danger)">Esta nota não tem nenhum item. Marque o que veio nela.</span>'; return; }
   msg.textContent='Enviando…';
   try{
-    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,un:x.un,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
+    const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraSalvar',diaPend:HFC_DIA_PEND||undefined,manual:HFC_MANUAL||undefined,unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',detalhe:l.map(x=>{ const v=HFC_LIDO&&HFC_LIDO.itens[x.nome]; return {nome:x.nome,chegou:x.chegou,qtd:x.qtd,preco:x.preco,un:x.un,lidoQtd:v?v.qtd:null,lidoPreco:v?v.preco:null}; }),totalNota:tn,totalLido:HFC_LIDO&&HFC_LIDO.total||null,onde,obs,nota:hfcMulti()?HFC_NOTA_N:undefined,
       foto:lerOn?(HFC_NOTA?{base64:HFC_NOTA}:null):(HFC_FOTO?{base64:HFC_FOTO}:null),fotoMerc:lerOn&&HFC_FOTO?{base64:HFC_FOTO}:null})});
     const r=await resp.json();
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
-    HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); HF.compra.alertas=r.alertas||[]; HF.compra.total=r.total;
+    if(HFC_DIA_PEND){ logProva('HF_COMPRA_PENDENTE_REGISTRADA',HFC_DIA_PEND); return hfPendDepoisDeSalvar(); }
+    HFC_MANUAL=false; HF.compra.feita=true; HF.compra.hora=r.hora||new Date().toTimeString().slice(0,5); HF.compra.alertas=r.alertas||[]; HF.compra.total=r.total;
     if(Array.isArray(r.notas)){ HF.compra.notas=r.notas; HF.compra.falta=r.falta||[]; HF.compra.jaComprado=r.jaComprado||{}; }
     logProva('HF_COMPRA',comp.map(x=>x.nome+' '+x.qtd+'×'+x.preco).join(', ')+' · nota '+tn+' · '+onde+((r.alertas||[]).length?' · ACIMA DA MÉDIA: '+r.alertas.map(a=>a.nome+' '+a.pct+'%').join(', '):''));
     hfRenderCompra(); verificarBotaoRegistrar();
@@ -4126,15 +4292,31 @@ function eqRender(){
     const g=s.registro||{}, cab=s.grupo&&s.grupo!==_grp?'<div style="margin-top:12px;font-weight:800;font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold,#FFD700)">'+escR(s.grupo)+'</div>':''; _grp=s.grupo||_grp;
     return cab+'<div class="eq-setor" data-s="'+s.setor+'" style="border:1px solid var(--border);border-radius:8px;padding:9px;margin-top:8px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b>'+escR(s.nome)+'</b><span style="font-size:0.8rem;color:var(--muted)">ideal '+s.ideal+'</span>'+
-      '<label style="font-size:0.82rem;display:flex;align-items:center;gap:6px">trabalhando hoje <input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_pres" value="'+(s.registro?g.presentes:'')+'" style="'+inp+'" oninput="eqAtualizar()"></label></div>'+
+      '<label style="font-size:0.82rem;display:flex;align-items:center;gap:6px">trabalhando hoje <input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_pres" value="'+(s.registro?g.presentes:'')+'" style="'+inp+'" oninput="eqAtualizar();eqPular(this,event)"></label></div>'+
       '<div id="eq_'+s.setor+'_mot" style="display:none;margin-top:8px"><div id="eq_'+s.setor+'_aviso" style="font-size:0.8rem;margin-bottom:6px"></div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar()"></label>').join('')+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+EQ_MOT.map(([k,n])=>'<label style="font-size:0.78rem;display:flex;flex-direction:column;align-items:center;gap:3px">'+n+'<input type="number" inputmode="numeric" min="0" id="eq_'+s.setor+'_'+k+'" value="'+(g[k]||'')+'" style="'+inp+'" oninput="eqAtualizar();eqPular(this,event)"></label>').join('')+'</div>'+
       '<input id="eq_'+s.setor+'_obs" placeholder="Observação (opcional)" value="'+escR(g.obs||'')+'" style="margin-top:8px;width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px;font-size:0.85rem"></div></div>';
   }).join('');
   document.getElementById('eqVagas').innerHTML=(r.vagas||[]).length?'<div style="margin-top:8px;font-size:0.8rem;color:#ffb3b3">📢 Vagas abertas com a RH: '+r.vagas.map(v=>escR(v.cargo||v.setorNome)+' ('+v.qtd+') desde '+escR(v.dia.slice(0,5))+', prazo '+escR(v.prazo.slice(0,5))).join(' · ')+'</div>':'';
   document.getElementById('eqSalvarBtn').style.display=r.setores.length?'block':'none';
   vpRender(); fgrRender();
   eqAtualizar();
+}
+
+// Equipe do dia: digitou o número, o campo pula sozinho (Robson 19/11/2026). Função completa → próxima função;
+// abaixo do ideal → folga/falta/vaga daquela função, até fechar o ideal. Apagar não pula.
+function eqPular(el,ev){
+  if(ev&&ev.inputType&&ev.inputType.indexOf('insert')!==0) return;
+  const v=String(el.value||''); if(!/^\d+$/.test(v)||!EQ||!EQ.setores) return;
+  const m=el.id.match(/^eq_(.+)_([a-z]+)$/); if(!m) return; const ss=EQ.setores, i=ss.findIndex(x=>x.setor===m[1]); if(i<0) return; const S=ss[i];
+  if(m[2]==='pres'&&v.length<String(S.ideal||1).length) return; // ideal de 10 ou mais: espera os 2 números
+  const num=id=>{ const e=document.getElementById(id); return e?Math.max(0,parseInt(e.value,10)||0):0; };
+  const conta=num('eq_'+S.setor+'_pres')+EQ_MOT.reduce((a,[k])=>a+num('eq_'+S.setor+'_'+k),0);
+  let alvo=null;
+  if(conta<S.ideal){ const ks=EQ_MOT.map(([k])=>k), j=m[2]==='pres'?0:ks.indexOf(m[2])+1; if(j<ks.length) alvo=document.getElementById('eq_'+S.setor+'_'+ks[j]); }
+  if(!alvo&&ss[i+1]) alvo=document.getElementById('eq_'+ss[i+1].setor+'_pres');
+  if(!alvo){ const b=document.getElementById('eqSalvarBtn'); try{ el.blur(); if(b) b.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; }
+  setTimeout(()=>{ try{ alvo.focus(); alvo.select&&alvo.select(); alvo.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} },60);
 }
 
 // ── Folgas do gerente e do assistente lançadas pela RH (19/11/2026, servidor 2026-11-19-c, recurso folgasRh) ──
