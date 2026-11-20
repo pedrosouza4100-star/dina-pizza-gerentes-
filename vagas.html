@@ -227,11 +227,15 @@ function renderFolgas(){
     +'<div class="grid2"><div><label>Mês</label><select onchange="fgTrocarMes(this.value)">'+FG.meses.map(m=>'<option value="'+m+'"'+(m===FGMES?' selected':'')+'>'+mesNome(m)+'</option>').join('')+'</select></div><div><label>Loja</label><select onchange="fgTrocarLoja(this.value)">'+FG.lojas.map(l=>'<option value="'+esc(l.unidade)+'"'+(l.unidade===FGLOJA?' selected':'')+'>'+(l.lancado?'✅ ':'⏳ ')+esc(l.unidade)+'</option>').join('')+'</select></div></div>'
     +'<div class="chips">'+FG.lojas.map(l=>'<span class="chip '+(l.lancado?'ok':'falta')+(l.unidade===FGLOJA?' on':'')+'" onclick="fgTrocarLoja(\''+esc(l.unidade)+'\')">'+(l.lancado?'✅':'⏳')+' '+esc(l.unidade)+'</span>').join('')+'</div>'
     +(L.lancado?'<div class="linha muted">Lançado por '+esc(L.por)+' em '+esc(L.em)+'</div>':'<div class="esp">⏳ <b>'+esc(FGLOJA)+'</b> ainda sem as folgas de '+mesNome(FGMES)+'. Enquanto isso, vale a escala que o gerente monta.</div>');
-  const n={g:0,a:0}, dias=fgDias();
-  h+='<div style="overflow-x:auto"><table class="fg-tab" style="margin-top:10px"><tr><th>Dia</th><th>Gerente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.gerente||'—')+'</span></th><th>Assistente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.assistente||'—')+'</span></th></tr>'
-    +dias.map(x=>{ const g=FGED.gerente[x.iso]||'', a=FGED.assistente[x.iso]||''; if(g) n.g++; if(a) n.a++;
-      return '<tr class="'+(g&&a?'conf':'')+'"><td class="fg-dia'+(x.fds?' fds':'')+(x.iso===FG.hoje?' hj':'')+'">'+x.sem+' '+x.br+'</td><td><button class="fgc '+g+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'gerente\',\''+x.iso+'\')">'+FG_TXT[g]+'</button></td><td><button class="fgc '+a+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'assistente\',\''+x.iso+'\')">'+FG_TXT[a]+'</button></td></tr>'; }).join('')
-    +'<tr><td><b>Fora</b></td><td><b>'+n.g+' dia(s)</b></td><td><b>'+n.a+' dia(s)</b></td></tr></table></div>'
+  const n={g:0,a:0}, dias=fgDias(), GM=(L.gemeas||[])[0]||null, nA=(L.nomes.assistente||'A assistente').split(' ')[0];
+  // mesma assistente em duas lojas (servidor 2026-11-19-h): aviso + coluna com o gerente da outra loja
+  if(GM) h+='<div class="esp" style="margin-top:8px">👥 <b>'+esc(nA)+'</b> é assistente da <b>'+esc(FGLOJA)+'</b> e da <b>'+esc(GM.unidade)+'</b> (mesmo celular): as folgas dela valem para as duas lojas. O que você lançar aqui vai junto para a '+esc(GM.unidade)+'.'+(L.assistenteDe?'<br>Já veio preenchido com o que foi lançado na '+esc(L.assistenteDe)+'.':'')+'</div>';
+  h+='<div style="overflow-x:auto"><table class="fg-tab" style="margin-top:10px"><tr><th>Dia</th><th>Gerente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.gerente||'—')+'</span></th><th>Assistente<br><span style="text-transform:none;font-weight:600">'+esc(L.nomes.assistente||'—')+'</span></th>'+(GM?'<th style="opacity:.75">Gerente '+esc(GM.unidade)+'<br><span style="text-transform:none;font-weight:600">'+esc(GM.gerenteNome||'—')+'</span></th>':'')+'</tr>'
+    +dias.map(x=>{ const g=FGED.gerente[x.iso]||'', a=FGED.assistente[x.iso]||'', o=GM?(GM.gerente[x.iso]||''):''; if(g) n.g++; if(a) n.a++;
+      const ruim=(g&&a)||(o&&a)||(o&&g);
+      return '<tr class="'+(ruim?'conf':'')+'"><td class="fg-dia'+(x.fds?' fds':'')+(x.iso===FG.hoje?' hj':'')+'">'+x.sem+' '+x.br+'</td><td><button class="fgc '+g+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'gerente\',\''+x.iso+'\')">'+FG_TXT[g]+'</button></td><td><button class="fgc '+a+'" '+(FG.pode?'':'disabled')+' onclick="fgToca(\'assistente\',\''+x.iso+'\')">'+FG_TXT[a]+'</button></td>'
+        +(GM?'<td style="text-align:center;font-size:12px;opacity:.8">'+(GM.lancado?(o?'<b>'+FG_TXT[o]+'</b>'+(a?'<br>⚠️ loja sem ninguém':g?'<br>⚠️ '+esc(nA)+' nas duas':''):'trabalha'):'—')+'</td>':'')+'</tr>'; }).join('')
+    +'<tr><td><b>Fora</b></td><td><b>'+n.g+' dia(s)</b></td><td><b>'+n.a+' dia(s)</b></td>'+(GM?'<td style="font-size:12px;text-align:center">'+(GM.lancado?'':'ainda não lançado')+'</td>':'')+'</tr></table></div>'
     +(FG.pode?'<button class="btn ok" style="width:100%" onclick="fgSalvar(false)">💾 Salvar folgas de '+esc(FGLOJA)+' — '+mesNome(FGMES)+(FGED.sujo?' (não salvo)':'')+'</button>':'')+'</div>';
   if(FG.pode&&FG.faltaProximo.length) h+='<div class="card"><div class="tit">⏳ Ainda sem o mês de '+mesNome(FG.proximo)+' ('+FG.faltaProximo.length+')</div><div class="muted">Prazo: dia '+FG.prazoDia+'. Depois disso o robô cobra todo dia.</div><div class="chips">'+FG.faltaProximo.map(u=>'<span class="chip falta" onclick="fgIr(\''+FG.proximo+'\',\''+esc(u)+'\')">'+esc(u)+'</span>').join('')+'</div></div>';
   el.innerHTML=h;
@@ -243,7 +247,7 @@ async function fgSalvar(confirmado){
   let r=null; try{ r=await post({action:'equipeFolgasSalvar',unidade:FGLOJA,mes:FGMES,gerente:FGED.gerente,assistente:FGED.assistente,confirmado}); }catch(e){}
   if(r&&r.conflito){ if(confirm('⚠️ '+r.erro+'\n\nSalvar mesmo assim?')) return fgSalvar(true); return; }
   if(!(r&&r.ok)) return toast('⚠️ '+((r&&r.erro)||'Sem conexão.'));
-  toast('✅ Folgas de '+FGLOJA+' salvas ('+r.gerente+' do gerente, '+r.assistente+' do assistente).'); await fgCarregar(FGMES); render();
+  toast('✅ Folgas de '+FGLOJA+' salvas ('+r.gerente+' do gerente, '+r.assistente+' do assistente).'+(r.espelho&&r.espelho.length?' As da assistente também na '+r.espelho.join(', ')+'.':'')); await fgCarregar(FGMES); render();
 }
 async function fgDecidir(id,decisao){
   const m=(document.getElementById('fr_'+id)||{}).value||'';

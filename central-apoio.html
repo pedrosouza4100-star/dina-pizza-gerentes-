@@ -21,7 +21,7 @@ header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-
 .hdr-dir a{color:var(--gold);font-weight:700;text-decoration:none;cursor:pointer}
 main{padding:16px 4vw 60px;max-width:1100px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
-.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
 .muted{color:var(--muted);font-size:.82rem;line-height:1.45}
 label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
 input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:.95rem}
@@ -40,7 +40,7 @@ input{width:100%;background:var(--surface);border:1px solid var(--border);color:
 .tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit}
 .tile .i{font-size:1.3rem}.tile .n{font-size:1.5rem;font-weight:800;margin-top:4px;font-family:'Space Grotesk',Inter,sans-serif}.tile .t{font-size:.78rem;color:var(--muted);font-weight:700}
 .tile.vermelho{border-color:#ff4d4d}.tile.amarelo{border-color:#FFD000}.tile.on{box-shadow:0 0 0 2px var(--gold) inset}
-.sec{display:none}.sec.on{display:block}
+section.sec{display:none}section.sec.on{display:block} /* só as seções; o botão .btn.sec continua aparecendo */
 table{width:100%;border-collapse:collapse;font-size:.86rem}
 th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
 th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
@@ -86,6 +86,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
     <section class="sec card" id="s-qualidade"></section>
     <section class="sec card" id="s-hortifruti"></section>
     <section class="sec card" id="s-estoque"></section>
+    <section class="sec card" id="s-recebimento"></section>
     <div class="card" id="cEncaixe"><div class="tit">🔌 Liga quando o Alpha entregar</div><div class="muted">Já está desenhado e com o lugar pronto no painel. Depende do Jean (JTclan) liberar estes dados:</div><div id="encaixes"></div></div>
   </div>
 </main>
@@ -97,7 +98,7 @@ const Q=new URLSearchParams(location.search);
 let CHAVE='', D=null, SEC='';
 const ROT={admin:'Admin',gestao:'Gestão',sidinei:'Sidinei',compras:'Compras e estoque',notas:'Notas',nutri:'Nutricionista'};
 const CHAVE_DE={estoque:'estoqueCentral'}; // quadro → campo do servidor
-const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMC do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central']];
+const AREAS=[['manutencao','🔧','Manutenção'],['notas','🧾','Preços das notas'],['cmv','📊','CMC do mês'],['cancelamentos','❌','Cancelamentos'],['qualidade','✅','Qualidade'],['hortifruti','🥬','Hortifrúti'],['estoque','📦','Estoque central'],['recebimento','🚚','Recebimento']];
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6000); }
@@ -140,14 +141,14 @@ function render(){
   const viaPortal=CHAVE&&CHAVE===ls('portal_token');
   document.getElementById('quem').innerHTML=esc(ROT[D.papel]||D.papel)+' · <a onclick="sair()">'+(viaPortal?'‹ Portal':'Sair')+'</a>';
   document.getElementById('cEncaixe').style.display=(D.encaixes||[]).length?'block':'none';
-  document.getElementById('atual').textContent='atualizado '+D.agora;
+  document.getElementById('atual').textContent='atualizado '+D.agora+' · servidor '+(D.versao||'?');
   const h=D.hoje||[], el=document.getElementById('hoje');
   const MAXH=6, mostra=render._todos?h:h.slice(0,MAXH);
   el.innerHTML=h.length?mostra.map(x=>'<div class="al '+x.nivel+'" onclick="ir(\''+x.area+'\')"><span>'+(x.nivel==='vermelho'?'🔴':'🟡')+'</span><span>'+(x.unidade?'<span class="lj">'+esc(x.unidade)+'</span> · ':'')+esc(x.txt)+'</span><span class="ar">'+esc((AREAS.find(a=>a[0]===x.area)||['','',''])[2])+' ›</span></div>').join('')
     +(h.length>MAXH?'<button class="btn sec peq" style="margin-top:4px" onclick="render._todos=!render._todos;render()">'+(render._todos?'Mostrar menos':'Ver todos ('+h.length+')')+'</button>':'')
     :'<div class="tudo-ok">✅ Nada urgente agora. Bom trabalho!</div>';
   renderTiles();
-  rMan(); rNotas(); rCmv(); rCanc(); rQual(); rHf(); rEst();
+  rMan(); rNotas(); rCmv(); rCanc(); rQual(); rHf(); rEst(); rRcb();
   document.getElementById('encaixes').innerHTML=(D.encaixes||[]).map(e=>'<div class="encx">🔌 '+esc(e.txt)+'</div>').join('');
   document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on',s.id==='s-'+SEC));
 }
@@ -155,9 +156,10 @@ function contaArea(a){ const h=(D.hoje||[]).filter(x=>x.area===a); return { n:h.
 function renderTiles(){
   const num={ manutencao:(D.manutencao||{}).total, notas:((D.notas||{}).alertas||[]).length, cmv:D.cmv&&D.cmv.rede?pc(D.cmv.rede.pct):'—',
     cancelamentos:D.cancelamentos&&D.cancelamentos.rede?pc(D.cancelamentos.rede.pct):'—', qualidade:(D.qualidade||{}).media==null?'—':D.qualidade.media,
-    hortifruti:((D.hortifruti||{}).foraPendentes||[]).length, estoque:(((D.estoqueCentral||{}).entradas)||[]).length };
-  const sub={ manutencao:'abertas', notas:'alertas de preço', cmv:'da rede no mês', cancelamentos:'cancelado (7 dias)', qualidade:'nota média', hortifruti:'mercado grande a decidir', estoque:'entradas recentes' };
-  document.getElementById('tiles').innerHTML=AREAS.filter(a=>D[CHAVE_DE[a[0]]||a[0]]!==undefined).map(a=>{ const c=contaArea(a[0]); return '<button class="tile '+(c.v?'vermelho':c.n?'amarelo':'')+(SEC===a[0]?' on':'')+'" onclick="ir(\''+a[0]+'\')"><div class="i">'+a[1]+'</div><div class="t">'+a[2]+'</div><div class="n">'+esc(num[a[0]]==null?'—':num[a[0]])+'</div><div class="t">'+sub[a[0]]+(c.n?' · '+c.n+' alerta(s)':'')+'</div></button>'; }).join('');
+    hortifruti:((D.hortifruti||{}).foraPendentes||[]).length, estoque:(((D.estoqueCentral||{}).entradas)||[]).length,
+    recebimento:D.recebimento&&D.recebimento.numeros?rcbAbertos(D.recebimento.numeros):'—' };
+  const sub={ manutencao:'abertas', notas:'alertas de preço', cmv:'da rede no mês', cancelamentos:'cancelado (7 dias)', qualidade:'nota média', hortifruti:'mercado grande a decidir', estoque:'entradas recentes', recebimento:'para resolver' };
+  document.getElementById('tiles').innerHTML=AREAS.filter(a=>D[CHAVE_DE[a[0]]||a[0]]!=null).map(a=>{ const c=contaArea(a[0]); return '<button class="tile '+(c.v?'vermelho':c.n?'amarelo':'')+(SEC===a[0]?' on':'')+'" onclick="ir(\''+a[0]+'\')"><div class="i">'+a[1]+'</div><div class="t">'+a[2]+'</div><div class="n">'+esc(num[a[0]]==null?'—':num[a[0]])+'</div><div class="t">'+sub[a[0]]+(c.n?' · '+c.n+' alerta(s)':'')+'</div></button>'; }).join('');
 }
 function sinalTxt(s){ return s==='vermelho'?'🔴':s==='amarelo'?'🟡':s==='verde'?'🟢':'—'; }
 
@@ -225,6 +227,22 @@ function rHf(){ const f=D.hortifruti||{}, el=document.getElementById('s-hortifru
 function rEst(){ const e=D.estoqueCentral||{}, el=document.getElementById('s-estoque');
   el.innerHTML='<div class="tit"><span>📦 Estoque central (Lia)</span><a class="btn sec peq" href="manutencao" target="_blank" style="text-decoration:none">Abrir ›</a></div>'+(e.erro?erroDe(e):((e.entradas||[]).length?'<div class="tw"><table><tr><th>Quando</th><th>Produto</th><th class="num">Qtd</th><th>Quem</th></tr>'+e.entradas.map(x=>'<tr><td>'+esc(x.quando)+'</td><td>'+esc(x.produto)+'</td><td class="num">'+esc(x.qtd)+' '+esc(x.unid)+'</td><td>'+esc(x.quem)+'</td></tr>').join('')+'</table></div>':'<div class="muted">Nenhuma entrada recente.</div>'))+
     '<div class="encx">🔌 Saldo do estoque e transferências da central entram quando o Alpha entregar (ver abaixo).</div>';
+}
+
+// 📦 Recebimento (19/11/2026): lê o rcbResumoCentral() do Recebimento.gs (outro chat). Nota de cada local: 🟢 90+, 🟡 70–89, 🔴 abaixo de 70.
+function rcbAbertos(n){ return (n.divergencias||0)+(n.semNotaPedidos||0)+(n.confirmar||0)+(n.notasAtrasadas||0); }
+function rRcb(){ const r=D.recebimento, el=document.getElementById('s-recebimento'); if(!el) return;
+  if(r===undefined){ el.innerHTML=''; return; }
+  const lk=esc((r&&r.link)||'https://gerentes.dinapizza.com.br/recebimento');
+  let h='<div class="tit"><span>🚚 Recebimento de mercadorias</span><a class="btn sec peq" href="'+lk+'" target="_blank" style="text-decoration:none">Abrir o Recebimento ›</a></div>';
+  if(!r||r.erro||!r.numeros){ el.innerHTML=h+(r&&r.erro?erroDe(r):'<div class="encx">O Recebimento ainda não está publicado no servidor.</div>'); return; }
+  const n=r.numeros, cx=(v,t,c)=>'<div class="tile" style="cursor:default'+(c&&v?';border-color:'+c:'')+'"><div class="n">'+(v||0)+'</div><div class="t">'+t+'</div></div>';
+  h+='<div class="tiles" style="margin-top:6px">'+cx(n.semNotaPedidos,'pedem para receber sem nota','#ff4d4d')+cx(n.confirmar,'recebidos sob responsabilidade para confirmar','#FFD000')+cx(n.notasAtrasadas,'notas atrasadas','#FFD000')+cx(n.divergencias,'divergências abertas','#FFD000')+cx(n.notasQueVaoChegar,'notas que vão chegar')+cx(n.semRecebimentoAlpha,'notas no Alpha sem recebimento')+cx(n.recebimentosHoje,'recebimentos hoje')+'</div>';
+  const nm=(r.notasMes||[]).slice().sort((a,b)=>a.nota-b.nota), cor=v=>v>=90?'s-verde':v>=70?'s-amarelo':'s-vermelho', bol=v=>v>=90?'🟢':v>=70?'🟡':'🔴';
+  h+='<div style="margin-top:4px;font-weight:800">📊 Nota do recebimento no mês (pior primeiro)</div>';
+  h+=nm.length?'<div class="tw"><table><tr><th>Local</th><th class="num">Nota</th><th class="num">Recebimentos</th><th class="num">Sem recebimento</th><th class="num">Ocorrências</th></tr>'+nm.map(x=>'<tr><td>'+esc(x.local)+'</td><td class="num '+cor(x.nota)+'">'+bol(x.nota)+' '+x.nota+'</td><td class="num">'+(x.recebimentos||0)+'</td><td class="num">'+(x.semRecebimento||0)+'</td><td class="num">'+(x.ocorrencias||0)+'</td></tr>').join('')+'</table></div>':'<div class="muted">Nenhum recebimento no mês ainda.</div>';
+  h+=como('Vem do Recebimento de mercadorias (conferência na porta: nota, temperatura, validade, peso). Nota de cada local: 🟢 90 ou mais, 🟡 70 a 89, 🔴 abaixo de 70 (mesma régua da nota da nutricionista). Os itens que precisam de você aparecem no topo; o botão abre o Recebimento para resolver.');
+  el.innerHTML=h;
 }
 
 (function(){

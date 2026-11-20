@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Recebimento de mercadorias — Fase 1 (19/11/2026, servidor Recebimento.gs 2026-11-19-a, rotas rcb, recurso recebimento).
+     Loja: aberta pelo botão 📦 do placar (?daloja=1), usa o login do placar do mesmo celular (modo teste: ?teste=1, não grava).
+     Centrais e equipe: sessão do Portal (portal_token) ou senha (Lia = estoque, Sidinei = manutenção, Fábio = agenda da nutricionista, Admin, gestão);
+     pessoas autorizadas pela Lia/Sidinei (estoque central) ou pelo Fábio (cozinha central) entram com nome + PIN. -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Recebimento — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--yellow:var(--d-yellow);--danger:var(--d-danger);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a,.lnk{color:var(--gold);font-weight:700;text-decoration:none;cursor:pointer;background:none;border:none;font-size:.78rem}
+main{padding:16px 4vw 80px;max-width:1100px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px}
+.muted{color:var(--muted);font-size:.82rem;line-height:1.45}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:1rem;font-family:inherit}
+textarea{min-height:64px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.btn{border:none;border-radius:12px;padding:13px 18px;font-weight:800;font-size:.98rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.ok{background:var(--green);color:var(--d-on-cor,#06110b)}
+.btn.peq{padding:7px 12px;font-size:.8rem;margin-top:6px}
+.btn.lg{width:100%;font-size:1.08rem;padding:16px}
+.btn:disabled{opacity:.55;cursor:default}
+.sn{display:flex;gap:8px;margin-top:6px}
+.sn button{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:11px;font-weight:800;cursor:pointer;font-size:.95rem}
+.sn button.on.s{background:rgba(61,220,151,.16);border-color:var(--green);color:var(--d-t-ok)}
+.sn button.on.n{background:var(--d-red-soft);border-color:var(--danger);color:var(--d-t-err)}
+.pq{margin-top:12px;font-weight:700;font-size:.92rem;line-height:1.35}
+.pq small{display:block;color:var(--muted);font-weight:600;font-size:.76rem;margin-top:2px}
+.item{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface)}
+.item.red{border-color:var(--danger);background:var(--d-red-soft)}
+.item.ok{border-color:rgba(61,220,151,.45)}
+.item.am{border-color:var(--yellow)}
+.it-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+.tag{font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.t-red{background:var(--d-red-soft);color:var(--d-t-err);border:1px solid var(--danger)}
+.t-ok{background:rgba(61,220,151,.12);color:var(--d-t-ok);border:1px solid rgba(61,220,151,.4)}
+.t-am{background:rgba(255,208,0,.12);color:var(--d-t-info);border:1px solid rgba(255,208,0,.45)}
+.aviso{border-radius:12px;padding:12px 14px;margin-top:10px;font-size:.9rem;line-height:1.45;font-weight:600}
+.av-red{background:var(--d-red-soft);border:2px solid var(--danger);color:var(--d-t-err)}
+.av-ok{background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.45);color:var(--d-t-ok)}
+.av-am{background:rgba(255,208,0,.08);border:1px solid rgba(255,208,0,.5);color:var(--d-t-info)}
+.chk{display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-weight:700;font-size:.92rem;line-height:1.35;text-transform:none;letter-spacing:0;color:var(--text)}
+.chk input{width:22px;height:22px;flex:none;margin-top:1px}
+.grp{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:8px;cursor:pointer;background:var(--surface)}
+.grp input{width:22px;height:22px;flex:none}
+.grp b{display:block}.grp small{color:var(--muted);font-size:.78rem}
+.grp.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.passos{display:flex;gap:4px;margin:0 0 12px}
+.passos span{flex:1;height:5px;border-radius:4px;background:var(--border)}
+.passos span.on{background:var(--gold)}
+.nav{display:flex;gap:10px}.nav .btn{flex:1}
+.nota-g{font-size:2.6rem;font-weight:900;line-height:1}
+.n-ok{color:var(--d-t-ok)}.n-am{color:var(--d-t-info)}.n-red{color:var(--d-t-err)}
+.abas{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.aba{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;padding:9px 13px;font-weight:800;cursor:pointer;font-size:.86rem}
+.aba.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.aba .n{background:var(--d-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;margin-left:5px}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
+.tbl{overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.92rem;font-weight:700;z-index:3000;display:none;max-width:92vw;text-align:center}
+#login{max-width:420px;margin:40px auto}
+.treino{border-left:4px solid var(--gold);padding:12px 14px;background:var(--surface);border-radius:10px;margin-top:10px}
+.treino b{display:block;margin-bottom:4px}
+.foto-min{max-width:160px;border-radius:8px;display:block;margin:6px 0}
+.linha{font-size:.88rem;margin-top:6px;line-height:1.45}
+.cnpj{font-family:ui-monospace,Menlo,monospace;font-weight:800;font-size:1.05rem;letter-spacing:.02em}
+#faixaTeste{background:#7b3fe4;color:#fff;text-align:center;font-weight:800;padding:8px;font-size:.85rem;position:sticky;top:0;z-index:60;display:none}
+@media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}main{padding:12px 3vw 80px}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="faixaTeste">🧪 MODO TESTE — você vê tudo como o gerente, mas nada é gravado</div>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Recebimento de mercadorias</b><small id="subt">Conferência na porta</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button class="lnk" id="btnSair" style="display:none" onclick="sair()">Sair</button><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main>
+  <div id="login" class="card" style="display:none">
+    <div class="tit">📦 Recebimento de mercadorias</div>
+    <div class="muted">Gerente e assistente: abram pelo botão <b>📦 Recebimento</b> no topo do placar.</div>
+    <div class="abas" style="margin-top:14px"><button class="aba on" id="lgA1" onclick="lgAba(1)">Tenho senha</button><button class="aba" id="lgA2" onclick="lgAba(2)">Fui autorizado (PIN)</button></div>
+    <div id="lg1"><div class="muted">Lia (senha do estoque), Sidinei (senha da manutenção), Fábio (senha da agenda), gestão ou Admin. Quem já entrou no <a href="portal.html" style="color:var(--gold)">Portal Dina</a> entra direto.</div>
+      <label>Senha</label><input id="lgSenha" type="password" onkeydown="if(event.key==='Enter')entrarSenha()"><button class="btn lg" onclick="entrarSenha()">Entrar</button></div>
+    <div id="lg2" style="display:none"><div class="muted">Para quem a Lia, o Sidinei ou o Fábio autorizou a receber na central.</div>
+      <label>Local</label><select id="lgLocal" onchange="lgNomes()"><option>Estoque central</option><option>Cozinha central</option></select>
+      <label>Seu nome</label><select id="lgNome"><option value="">— carregando —</option></select>
+      <label>PIN</label><input id="lgPin" type="password" inputmode="numeric" maxlength="6" onkeydown="if(event.key==='Enter')entrarPin()"><button class="btn lg" onclick="entrarPin()">Entrar</button></div>
+    <div id="lgMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+  <div id="carregando" class="card muted">Carregando…</div>
+  <div id="abasEq" class="abas" style="display:none"></div>
+  <div id="tela"></div>
+</main>
+<div id="camModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:10px">
+  <video id="camVideo" playsinline autoplay muted style="max-width:100%;max-height:68vh;border-radius:12px;background:#000"></video>
+  <div id="camMsg" style="color:#fff;text-align:center;font-size:.9rem;max-width:420px"></div>
+  <div style="display:flex;gap:10px"><button class="btn" id="camBater" onclick="camBater()">📸 Bater foto</button><button class="btn sec" onclick="camFechar()">Cancelar</button></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+// Recebimento (19/11/2026). GET rcbLoja, rcbPainel, rcbPessoasLocais · POST rcbLerNota, rcbSalvar, rcbCalibrar, rcbHabilitar, rcbPessoaEntrar, rcbPessoaSalvar, rcbPendResolver, rcbAlphaAtualizar, rcbCnpjSalvar.
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search);
+let AUTH=null, TESTE=false, LD=null, PD=null, ABA='receber', LOCAL='', W=null, TESTE_CALIB=false, TESTE_HAB=false;
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6500); }
+function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k)||''; if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return ''; } }
+function $(id){ return document.getElementById(id); }
+async function post(o){ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({},AUTH,o))}); return r.json(); }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='rcbCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },30000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign({},params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+function get(o){ return jsonp(Object.assign({},AUTH,o)); }
+function hojeIso(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'}); }
+function br(iso){ const p=String(iso||'').split('-'); return p.length===3?p[2]+'/'+p[1]:iso; }
+function num(v){ if(v===''||v==null) return null; const n=Number(String(v).replace(',','.')); return isFinite(n)?n:null; }
+function corNota(n){ return n>=90?'n-ok':n>=70?'n-am':'n-red'; }
+const DEC={aceito:['✅ Aceito','t-ok'],ressalva:['⚠️ Com ressalva','t-am'],recusado:['🚫 Recusado','t-red']};
+
+// ---------- câmera (só a câmera, nunca a galeria; carimbo com data, hora e local) ----------
+const FOTOS={}; let _camAlvo='', _camStream=null, _camDepois=null;
+function camBotao(id,rot){ const f=FOTOS[id]; return '<div id="cb_'+id+'">'+(f?'<img class="foto-min" src="'+f+'"><button type="button" class="btn sec peq" onclick="camAbrir(\''+id+'\')">📷 Tirar de novo</button>':'<button type="button" class="btn sec" style="width:100%;margin-top:6px" onclick="camAbrir(\''+id+'\')">📷 '+esc(rot||'Tirar foto agora')+'</button>')+'</div>'; }
+function camAtualizar(id){ const el=$('cb_'+id); if(el) el.outerHTML=camBotao(id,el.dataset&&el.dataset.rot); }
+async function camAbrir(id,depois){
+  _camAlvo=id; _camDepois=depois||null; const m=$('camModal'), msg=$('camMsg'), bt=$('camBater');
+  m.style.display='flex'; bt.disabled=true; msg.textContent='Abrindo a câmera…';
+  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ msg.innerHTML='Não consegui abrir a câmera neste aparelho. Abra pelo endereço <b>https://gerentes.dinapizza.com.br/recebimento</b> no Chrome ou no Safari.'; return; }
+  try{ const nota=/^nota/.test(id); _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:nota?1920:1280},height:{ideal:nota?1440:960}},audio:false});
+    const v=$('camVideo'); v.srcObject=_camStream; await v.play().catch(()=>{}); msg.textContent=nota?'Nota inteira, esticada e de perto. Toque em “Bater foto”.':/^termo|^calib/.test(id)?'Mostre o visor do termômetro junto do produto.':'Mostre o problema e toque em “Bater foto”.'; bt.disabled=false;
+  }catch(e){ msg.innerHTML='A câmera foi bloqueada. '+(/iPhone|iPad|iPod/.test(navigator.userAgent)?'No iPhone: toque no ícone à esquerda do endereço › <b>Ajustes do Site</b> › <b>Câmera</b> › <b>Permitir</b>.':'Toque no cadeado ao lado do endereço e permita a <b>Câmera</b>.'); }
+}
+function camFechar(){ if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; } const v=$('camVideo'); if(v) v.srcObject=null; $('camModal').style.display='none'; }
+function camBater(){
+  const v=$('camVideo'); if(!v||!v.videoWidth||!_camAlvo) return;
+  const nota=/^nota/.test(_camAlvo), k=Math.min(1,(nota?2200:1280)/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement('canvas'); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+  const x=c.getContext('2d'); x.drawImage(v,0,0,c.width,c.height);
+  const carimbo=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · '+(LOCAL||'')+' · Recebimento';
+  const fs=Math.max(16,Math.round(c.width/40)); x.font='bold '+fs+'px sans-serif'; x.fillStyle='rgba(0,0,0,.55)'; x.fillRect(0,c.height-fs-16,c.width,fs+16); x.fillStyle='#FFD000'; x.fillText(carimbo,10,c.height-8);
+  FOTOS[_camAlvo]=c.toDataURL('image/jpeg',nota?.85:.72); const id=_camAlvo, dep=_camDepois; camFechar(); if(dep) dep(id); else camAtualizar(id);
+}
+function foto(id){ const f=FOTOS[id]; return f?{base64:f}:null; }
+
+// ---------- entrar ----------
+function lgAba(n){ $('lgA1').classList.toggle('on',n===1); $('lgA2').classList.toggle('on',n===2); $('lg1').style.display=n===1?'':'none'; $('lg2').style.display=n===2?'':'none'; if(n===2) lgNomes(); }
+async function lgNomes(){ const s=$('lgNome'); s.innerHTML='<option value="">— carregando —</option>'; try{ const r=await jsonp({action:'rcbPessoasLocais'}); const ns=(r.locais||{})[$('lgLocal').value]||[]; s.innerHTML=ns.length?'<option value="">— escolha —</option>'+ns.map(n=>'<option>'+esc(n)+'</option>').join(''):'<option value="">Ninguém autorizado aqui ainda</option>'; }catch(e){ s.innerHTML='<option value="">Sem conexão</option>'; } }
+async function entrarSenha(){ const v=$('lgSenha').value.trim(); if(!v) return; AUTH={chave:hash(v)}; const ok=await iniciar(); if(ok) ls('rcb_chave',AUTH.chave); else { AUTH=null; $('lgMsg').textContent='Senha não confere.'; } }
+async function entrarPin(){ const nome=$('lgNome').value, pin=$('lgPin').value.trim(); if(!nome||!pin) return $('lgMsg').textContent='Escolha o nome e digite o PIN.';
+  try{ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'rcbPessoaEntrar',local:$('lgLocal').value,nome,pin:hash(pin)})}).then(x=>x.json());
+    if(!r.ok) return $('lgMsg').textContent=r.erro||'Não confere.'; AUTH={pessoa:r.pessoa,pin:hash(pin)}; ls('rcb_pessoa',JSON.stringify(AUTH)); iniciar(); }catch(e){ $('lgMsg').textContent='Sem conexão.'; } }
+function sair(){ ls('rcb_chave',null); ls('rcb_pessoa',null); location.href='recebimento.html'; }
+
+async function iniciar(){
+  $('login').style.display='none'; $('carregando').style.display='block';
+  let r; try{ r=await get({action:'rcbLoja'}); }catch(e){ $('carregando').textContent='Sem conexão com o servidor. Tente de novo.'; return false; }
+  if(!r||!r.ok){ $('carregando').style.display='none'; $('login').style.display='block'; if(r&&r.erro&&r.erro!=='senha') $('lgMsg').textContent=r.erro; return false; }
+  $('carregando').style.display='none'; $('btnSair').style.display=AUTH.unidade?'none':'';
+  $('quem').textContent=r.nome||'';
+  if(AUTH.chave){ try{ PD=await get({action:'rcbPainel'}); if(!PD.ok) PD=null; }catch(e){ PD=null; } }
+  if(r.escolher||!r.local){ LD=null; LOCAL=''; } else { LD=r; LOCAL=r.local; }
+  if(PD){ if(!LOCAL&&PD.locais.length===1){ LOCAL=PD.locais[0]; await carregarLoja(); } ABA=Q.get('aut')?'aut':(LD?'receber':'pend'); desenharAbas(); }
+  render(); return true;
+}
+async function carregarLoja(){ try{ const r=await get({action:'rcbLoja',local:LOCAL}); if(r.ok&&r.local){ LD=r; LOCAL=r.local; } }catch(e){ toast('⚠️ Sem conexão.'); } }
+
+// ---------- abas da equipe ----------
+function desenharAbas(){
+  const el=$('abasEq'); if(!PD){ el.style.display='none'; return; }
+  const temLocal=(PD.locais||[]).length>0, ab=[];
+  if(temLocal) ab.push(['receber','📦 Receber']);
+  ab.push(['aut','✋ Sem nota',(PD.autorizacoes||[]).filter(a=>a.situacao==='pedida').length+PD.pendencias.filter(p=>p.tipo==='confirmar_resp').length]);
+  ab.push(['pend','⚠️ Pendências',PD.pendencias.length]); ab.push(['sem','🧾 Notas sem recebimento',PD.semRecebimento.length]); ab.push(['notas','🏆 Nota dos locais']);
+  ab.push(['rec','📋 Recebimentos']); ab.push(['forn','🚚 Fornecedores']); ab.push(['termo','🌡️ Termômetros',PD.calibracao.filter(c=>c.descalibrado).length]);
+  if((PD.gerencia||[]).length) ab.push(['pes','👥 Pessoas autorizadas']); if(PD.cnpjs) ab.push(['cnpj','⚙️ CNPJ']);
+  el.innerHTML=ab.map(a=>'<button class="aba'+(ABA===a[0]?' on':'')+'" onclick="irAba(\''+a[0]+'\')">'+a[1]+(a[2]?'<span class="n">'+a[2]+'</span>':'')+'</button>').join(''); el.style.display='flex';
+}
+async function irAba(a){ ABA=a; W=null; desenharAbas(); if(a==='receber'&&!LD){ LOCAL=PD.locais[0]; await carregarLoja(); } render(); window.scrollTo(0,0); }
+async function recarregar(){ try{ if(LOCAL) await carregarLoja(); if(AUTH.chave){ const p=await get({action:'rcbPainel'}); if(p.ok) PD=p; } }catch(e){} desenharAbas(); render(); }
+let _rendendo=false;
+function rr(){ setTimeout(()=>render(),0); }
+function render(semGuardar){
+  if(_rendendo) return; _rendendo=true; try{ render2(semGuardar); } finally { _rendendo=false; }
+}
+function render2(semGuardar){
+  const t=$('tela');
+  if(W) return renderWizard(semGuardar);
+  if(!PD||ABA==='receber') return t.innerHTML=telaLocal();
+  t.innerHTML={aut:telaAut,pend:telaPend,sem:telaSem,notas:telaNotas,rec:telaRec,forn:telaForn,termo:telaTermo,pes:telaPes,cnpj:telaCnpj}[ABA]();
+}
+
+// ---------- tela do local (quem recebe) ----------
+function telaLocal(){
+  if(!LD) return '<div class="card muted">Escolha o local.</div>';
+  const n=LD.nota, c=LD.calib, sel=(PD&&PD.locais.length>1)?'<label>Local</label><select onchange="trocarLocal(this.value)">'+PD.locais.map(l=>'<option'+(l===LOCAL?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select>':'';
+  let h='<div class="card">'+sel+'<div class="it-top" style="align-items:center"><div><div class="muted">'+esc(LOCAL)+' · CNPJ '+(LD.cnpj?'<span class="cnpj">'+esc(LD.cnpj)+'</span>':'<b>não encontrado no Alpha</b>')+'</div><div class="tit" style="margin:6px 0 0">Nota do recebimento — este mês</div></div><div class="nota-g '+corNota(n.nota)+'">'+n.nota+'</div></div>'
+    +'<div class="muted" style="margin-top:6px">'+n.recebimentos+' recebimento(s) no mês · '+n.recusas+' recusa(s). Perde '+(LD.nota.motivos[0]?LD.nota.motivos[0].pontos:10)+' pontos cada nota lançada no Alpha para '+(LD.central?'este local':'a loja')+' sem o recebimento registrado aqui (conta desde '+esc(n.inicio)+').</div>'
+    +(n.motivos.length?n.motivos.map(m=>'<div class="aviso av-red">−'+m.pontos+' · '+esc(m.txt)+'</div>').join(''):'')+'</div>';
+  if((LD.previstos||[]).length) h+='<div class="card"><div class="tit">📋 Pedidos que estão vindo</div>'+LD.previstos.map(p=>'<div class="item"><b>'+esc(p.fornecedor)+'</b> · '+esc(p.dia||'')+(p.valor?' · R$ '+Number(p.valor).toFixed(2).replace('.',','):'')+'<div class="linha muted">'+esc((p.itens||[]).join(', '))+'</div></div>').join('')+'</div>';
+  const calOk=c.feita||TESTE_CALIB;
+  h+='<div class="card"><div class="tit">🌡️ Termômetro desta semana</div>'+(calOk?'<div class="aviso av-ok">✅ Calibrado'+(c.ultima?' em '+esc(c.ultima.dia)+' ('+String(c.ultima.temp).replace('.',',')+' °C, '+esc(c.ultima.quem)+')':'')+'. Vale até domingo.</div>'
+    :(c.descalibrado?'<div class="aviso av-red">⚠️ A última conferência deu '+String(c.ultima.temp).replace('.',',')+' °C: termômetro descalibrado. Ajuste ou troque e confira de novo.</div>':'<div class="aviso av-am">Ainda não foi conferido nesta semana. É obrigatório antes de receber refrigerados ou congelados.</div>')+formCalib())+'</div>';
+  h+='<button class="btn lg" onclick="novoRecebimento()">📦 Novo recebimento</button>';
+  const notasP=LD.pendencias.filter(p=>p.tipo==='nota_pendente'), divP=LD.pendencias.filter(p=>p.tipo!=='nota_pendente');
+  if(notasP.length) h+='<div class="card" style="margin-top:14px"><div class="tit">📄 Notas que vão chegar ('+notasP.length+')</div><div class="muted">Mercadoria recebida sem nota. Quando a nota chegar, fotografe e anexe aqui.</div>'+notasP.map(p=>'<div class="item am"><div class="it-top"><span>🚚 '+esc(p.fornecedor)+'</span><span class="tag t-am">'+esc(p.obs)+'</span></div><div class="linha muted">Recebido em '+esc(p.quando)+'</div>'
+    +camBotao('anx_'+p.id,'Fotografar a nota que chegou')+'<label>Número da nota</label><input id="anxNum_'+p.id+'" inputmode="numeric"><button class="btn ok peq" onclick="anexarNota(\''+p.id+'\')">📎 Anexar a nota</button></div>').join('')+'</div>';
+  if(divP.length) h+='<div class="card" style="margin-top:14px"><div class="tit">⚠️ Divergências em aberto</div><div class="muted">'+(LD.central?'A Lia e o Sidinei resolvem com o fornecedor.':'A Lia resolve com o fornecedor; o que veio da cozinha central fica com o Fábio e a Lia.')+'</div>'+divP.map(itemPend).join('')+'</div>';
+  if(LD.resolvidas.length) h+='<div class="card"><div class="tit">✔️ Resolvidas</div>'+LD.resolvidas.map(itemPend).join('')+'</div>';
+  h+='<div class="card"><div class="tit">🕓 Últimos recebimentos</div>'+(LD.recentes.length?LD.recentes.map(itemRec).join(''):'<div class="muted">Nenhum ainda.</div>')+'</div>';
+  return h;
+}
+async function anexarNota(id){ const n=($('anxNum_'+id)||{}).value||''; if(!FOTOS['anx_'+id]&&!TESTE) return toast('Fotografe a nota.'); if(!n.replace(/\D/g,'')) return toast('Digite o número da nota.');
+  let cs='';
+  try{ if(FOTOS['anx_'+id]){ const l=await post({action:'rcbLerNota',local:LOCAL,foto:foto('anx_'+id)}); if(l.ok){ cs=l.cnpjSit; if(l.cnpjSit==='outro') return toast('🚫 Esta nota é de OUTRO CNPJ ('+l.achado+'). Peça a nota certa ao fornecedor.'); } } }catch(e){}
+  try{ const r=await post({action:'rcbAnexarNota',id,numero:n,foto:foto('anx_'+id),cnpjSit:cs}); toast(r.ok?r.msg:'⚠️ '+(r.erro||'Não salvou.')); if(r.ok){ delete FOTOS['anx_'+id]; recarregar(); } }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function trocarLocal(l){ LOCAL=l; LD=null; $('tela').innerHTML='<div class="card muted">Carregando…</div>'; await carregarLoja(); render(); }
+function formCalib(){
+  return '<div class="muted" style="margin-top:10px"><b>Como fazer:</b> encha um copo com bastante gelo e um pouco de água, mexa e espere 2 minutos. Mergulhe a ponta do termômetro no meio do copo (sem encostar no fundo) e espere estabilizar. Tem que marcar 0 °C (aceita de -1 a 1).</div>'
+    +'<label>Quanto marcou (°C)</label><input id="calTemp" inputmode="decimal" placeholder="Ex.: 0,3">'+camBotao('calib','Foto do termômetro no copo')+'<button class="btn ok" onclick="calibrar()">Salvar a conferência</button>';
+}
+async function calibrar(){
+  const t=$('calTemp').value; if(num(t)===null) return toast('Digite quanto o termômetro marcou.'); if(!TESTE&&!FOTOS.calib) return toast('Tire a foto do termômetro no copo com gelo.');
+  try{ const r=await post({action:'rcbCalibrar',local:LOCAL,temp:t,foto:foto('calib')}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não salvou.')); toast(r.msg); delete FOTOS.calib; if(r.teste&&r.calibrado) TESTE_CALIB=true; await recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); }
+}
+function itemPend(p){
+  const pode=PD&&(PD.resolve||[]).includes(p.origem)&&p.situacao==='aberta';
+  return '<div class="item '+(p.situacao==='aberta'?(p.acao==='recusado'?'red':'am'):'ok')+'"><div class="it-top"><span>'+esc(p.tipoTxt)+': '+esc(p.produto)+(p.qtd?' ('+esc(p.qtd)+')':'')+'</span><span class="tag '+(p.acao==='recusado'?'t-red':'t-am')+'">'+(p.tipo==='confirmar_resp'?'Aguarda confirmação':p.tipo==='nota_pendente'?'Nota pendente':p.acao==='recusado'?'Recusado':'Aceito com ressalva')+'</span></div>'
+    +'<div class="linha">'+esc(p.local)+' · '+(p.origem==='central'?'🏭 Cozinha central':'🚚 '+esc(p.fornecedor))+(p.notaNum?' · nota '+esc(p.notaNum):'')+' · '+esc(p.quando)+'</div>'
+    +(p.obs?'<div class="linha muted">💬 '+esc(p.obs)+'</div>':'')+(p.foto?'<div class="linha"><a href="'+esc(p.foto)+'" target="_blank" style="color:var(--gold)">📷 Ver foto</a></div>':'')
+    +(p.situacao==='resolvida'?'<div class="aviso av-ok">✔️ '+esc(p.resolucaoTxt)+' — '+esc(p.obsResolucao)+' ('+esc(p.resolvidoPor)+', '+esc(p.resolvidoEm)+')</div>':'')
+    +(pode?(()=>{ const ops=(PD.resolPorTipo&&PD.resolPorTipo[p.tipo])||PD.resolGeral||Object.keys(PD.resolTipos); const conf=p.tipo==='confirmar_resp';
+      return '<div class="grid2"><div><label>'+(conf?'Seguiu as regras?':'Como foi resolvido')+'</label><select id="rs_'+p.id+'"><option value="">— escolha —</option>'+ops.map(k=>'<option value="'+k+'">'+esc(PD.resolTipos[k])+'</option>').join('')+'</select></div><div><label>'+(conf?'Se não aprovar: qual regra não seguiu':'O que foi feito')+'</label><input id="ro_'+p.id+'" maxlength="300"></div></div><button class="btn ok peq" onclick="resolver(\''+p.id+'\')">✔️ Salvar</button>'
+        +(p.tipo==='nota_pendente'?' <button class="btn sec peq" onclick="cobrarNota(\''+p.id+'\')">🔁 Continuar cobrando (+2 dias úteis)</button>':''); })():'')+'</div>';
+}
+async function cobrarNota(id){ try{ const r=await post({action:'rcbPendCobrar',id}); toast(r.ok?'🔁 Novo prazo: '+r.prazo+'. O aviso volta se não chegar.':'⚠️ '+(r.erro||'')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function resolver(id){ const rs=$('rs_'+id).value, o=$('ro_'+id).value; if(!rs) return toast('Escolha como foi resolvido.');
+  try{ const r=await post({action:'rcbPendResolver',id,resolucao:rs,obs:o}); toast(r.ok?'✔️ Resolvida.':'⚠️ '+(r.erro||'Não salvou.')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+function itemRec(x){
+  const d=DEC[x.decisao]||[x.decisao,'t-am'], gs=(x.grupos||[]);
+  return '<details class="item"><summary style="cursor:pointer;list-style:none"><div class="it-top"><span>'+(x.origem==='central'?'🏭 Cozinha central':'🚚 '+esc(x.fornecedor))+(x.notaNum?' · nota '+esc(x.notaNum):'')+'</span><span class="tag '+d[1]+'">'+d[0]+'</span></div>'
+    +'<div class="linha muted">'+esc(x.local)+' · '+esc(x.dia)+' '+esc(x.hora)+' · '+esc(x.quem)+(x.divergencias?' · '+x.divergencias+' divergência(s)':'')+'</div></summary>'
+    +'<div class="linha">'+gs.map(g=>'• <b>'+esc(g.nome)+'</b>'+(g.temp!==null&&g.temp!==undefined?' — '+String(g.temp).replace('.',',')+' °C'+(g.temp>g.max?' <span class="tag t-red">acima de '+g.max+' °C</span>':''):'')+(g.validade?' · val. '+br(g.validade):'')+(g.lote?' · lote '+esc(g.lote):'')+(g.fotoTermo?' · <a href="'+esc(g.fotoTermo)+'" target="_blank" style="color:var(--gold)">📷</a>':'')).join('<br>')+'</div>'
+    +'<div class="linha muted">Veículo: baú limpo '+sn(x.veiculo.bau)+' · refrigerado '+sn(x.veiculo.refrigerado)+' · uniforme '+sn(x.veiculo.uniforme)+' · limpeza separada '+sn(x.veiculo.separado)+' · entregador '+esc(x.entregador)+'</div>'
+    +'<div class="linha muted">Documento: '+({sem_documento_resp:'🌙 sem documento, sob responsabilidade de quem recebeu',ok:'✅ nota, CNPJ conferido pelo sistema',confirmado:'☑️ nota, CNPJ confirmado por quem recebeu',outro:'🚫 nota de outro CNPJ',nao_se_aplica:'transferência',nota_depois:'⏳ sem nota — vem depois',sem_documento:'✋ sem documento (autorizado)',cupom:'🧾 cupom fiscal'}[x.cnpjSit]||esc(x.cnpjSit))+(x.minConf?' · conferência em '+x.minConf+' min':'')+(x.valor?' · R$ '+Number(x.valor).toFixed(2).replace('.',','):'')+'</div>'
+    +(x.obs?'<div class="linha">💬 '+esc(x.obs)+'</div>':'')+(x.fotoNota?'<div class="linha"><a href="'+esc(x.fotoNota)+'" target="_blank" style="color:var(--gold)">📄 Ver a nota</a></div>':'')+'</details>';
+}
+function sn(v){ return v==='sim'?'✅':v==='nao'?'❌':'—'; }
+
+// ---------- treinamento ----------
+function telaTreino(){
+  return '<div class="card"><div class="tit">🎓 Antes do primeiro recebimento — leia com atenção</div><div class="muted">São 6 pontos que a vigilância sanitária cobra e que evitam prejuízo. Leva 2 minutos.</div>'
+    +LD.treino.map((t,i)=>'<div class="treino"><b>'+(i+1)+'. '+esc(t.t)+'</b>'+esc(t.x)+'</div>').join('')
+    +'<label class="chk"><input type="checkbox" id="trOk"> Li e entendi. Sei que o recebimento é conferido pelo sistema (CNPJ, notas do Alpha, fotos) e pela gestão.</label>'
+    +'<button class="btn lg" onclick="habilitar()">Começar</button><button class="btn sec" style="width:100%" onclick="W=null;render()">Voltar</button></div>';
+}
+async function habilitar(){ if(!$('trOk').checked) return toast('Marque que leu e entendeu.');
+  try{ const r=await post({action:'rcbHabilitar',local:LOCAL}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não salvou.')); if(r.teste) TESTE_HAB=true; else LD.habilitado=true; W.passo=1; render(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+
+// ---------- novo recebimento (passo a passo) ----------
+const PASSOS=['origem','nota','grupos','veiculo','conferir','diverg','fim'];
+function novoRecebimento(){
+  W={passo:(LD.habilitado||TESTE_HAB)?1:0, inicioMs:Date.now(), origem:LD.central?'fornecedor':'', nota:{}, grupos:{}, veiculo:{}, divs:[], decisao:'', justificativa:'', guardado:false, entregador:'', obs:'', erros:[]};
+  Object.keys(FOTOS).forEach(k=>{ if(k!=='calib') delete FOTOS[k]; });
+  if(W.passo===1&&LD.central) W.passo=2;
+  render(); window.scrollTo(0,0);
+}
+function passoAtual(){ return W.passo===0?'treino':PASSOS[W.passo-1]; }
+function renderWizard(semGuardar){
+  if(!semGuardar) guardarCampos();
+  const p=passoAtual(), t=$('tela');
+  if(p==='treino') return t.innerHTML=telaTreino();
+  const n=PASSOS.length, barra='<div class="passos">'+PASSOS.map((x,i)=>'<span class="'+(i<W.passo?'on':'')+'"></span>').join('')+'</div>';
+  t.innerHTML='<div class="card">'+barra+({origem:pOrigem,nota:pNota,grupos:pGrupos,veiculo:pVeiculo,conferir:pConferir,diverg:pDiverg,fim:pFim}[p]())+'</div>';
+}
+function snBtn(chave,val,rotS,rotN,simRuim){ const v=val, cs=simRuim?'n':'s', cn=simRuim?'s':'n'; return '<div class="sn"><button type="button" class="'+(v==='sim'?'on '+cs:'')+'" onclick="setSN(\''+chave+'\',\'sim\')">'+(rotS||'Sim')+'</button><button type="button" class="'+(v==='nao'?'on '+cn:'')+'" onclick="setSN(\''+chave+'\',\'nao\')">'+(rotN||'Não')+'</button></div>'; }
+function setSN(chave,v){ const p=chave.split('.'); let o=W; for(let i=0;i<p.length-1;i++) o=o[p[i]]=o[p[i]]||{}; o[p[p.length-1]]=v; render(); }
+function nav(podeVoltar,proxRot,proxFn){ return '<div class="nav">'+(podeVoltar?'<button class="btn sec" onclick="voltar()">‹ Voltar</button>':'<button class="btn sec" onclick="cancelarW()">Cancelar</button>')+'<button class="btn" onclick="'+(proxFn||'avancar()')+'">'+(proxRot||'Próximo ›')+'</button></div>'; }
+function cancelarW(){ if(confirm('Cancelar este recebimento? O que você preencheu se perde.')){ pararAut(); W=null; render(); } }
+function voltar(){ guardarCampos(); W.passo--; if(passoAtual()==='nota'&&W.origem==='central') W.passo--; if(passoAtual()==='origem'&&LD.central){ W=null; } render(); window.scrollTo(0,0); }
+function avancar(){ guardarCampos(); const e=validarPasso(); if(e) return toast(e); W.passo++; if(passoAtual()==='nota'&&W.origem==='central') W.passo++; render(); window.scrollTo(0,0); }
+function guardarCampos(){
+  if(!W) return; const v=id=>{ const e=$(id); return e?e.value:undefined; };
+  if($('nfForn')){ W.nota.fornecedor=v('nfForn'); W.nota.numero=v('nfNum'); W.nota.valor=v('nfValor'); }
+  if($('nfConf')) W.nota.cnpjConfirmado=$('nfConf').checked; if($('nfMotivo')) W.nota.motivo=$('nfMotivo').value; if($('nfTermo')) W.nota.termo=$('nfTermo').checked;
+  if($('veEnt')){ W.entregador=v('veEnt'); W.veiculo.obs=v('veObs'); }
+  Object.keys(W.grupos).forEach(g=>{ const G=W.grupos[g]; ['temp','validade','lote'].forEach(k=>{ const x=v('g_'+g+'_'+k); if(x!==undefined) G[k]=x; });
+    (G.itensPeso||[]).forEach((it,i)=>{ ['nome','pesoNota','pesoBalanca'].forEach(k=>{ const x=v('gp_'+g+'_'+i+'_'+k); if(x!==undefined) it[k]=x; }); }); });
+  W.divs.forEach((d,i)=>{ ['tipo','grupo','produto','qtd','obs'].forEach(k=>{ const x=v('dv_'+i+'_'+k); if(x!==undefined) d[k]=x; }); });
+  if($('fJust')) W.justificativa=v('fJust'); if($('fObs')) W.obs=v('fObs'); if($('fGuard')) W.guardado=$('fGuard').checked;
+}
+const GR=id=>(LD.grupos||[]).find(g=>g.id===id)||{};
+function temTemp(){ return Object.keys(W.grupos).some(g=>GR(g).temp); }
+function validarPasso(){
+  const p=passoAtual();
+  if(p==='origem'&&!W.origem) return 'Escolha de onde veio a mercadoria.';
+  if(p==='nota'&&(W.nota.tipo||'nf')!=='nf'){ if(W.decisao==='recusado') return ''; const t=W.nota.tipo; if((W.nota.fornecedor||'').trim().length<3) return 'Escreva o nome do fornecedor.';
+    if(t==='cupom'&&!FOTOS.nota&&!TESTE) return 'Tire a foto do cupom.'; if(t==='depois'&&!FOTOS.nota&&!TESTE) return 'Tire a foto do romaneio ou do pedido.';
+    if(t==='sem'&&W.nota.resp){ if((W.nota.motivo||'').trim().length<10) return 'Escreva o que chegou e por que veio sem documento.'; if(!W.nota.termo) return 'Leia e marque o termo de responsabilidade.'; return ''; }
+    if(t==='sem'){ const a=W.nota.aut||{}; if(!W.nota.autId) return 'Peça a autorização da Lia ou do Sidinei.'; if(a.situacao==='pedida') return 'Esperando a Lia ou o Sidinei autorizar.'; if(a.situacao==='recusada') return 'Não autorizado: recuse a entrega.'; } return ''; }
+  if(p==='nota'){ if(W.decisao==='recusado') return ''; if(!FOTOS.nota&&!TESTE) return 'Tire a foto da nota.'; if((W.nota.fornecedor||'').trim().length<3) return 'Escreva o nome do fornecedor.'; if(!(W.nota.numero||'').replace(/\D/g,'')&&!W.nota.chave) return 'Digite o número da nota.';
+    if(W.nota.duplicada) return 'Esta nota já foi recebida. Se for outra entrega, confira o número.';
+    if(W.nota.cnpjSit==='outro') return 'A nota é de outro CNPJ: use o botão vermelho para recusar.'; if(W.nota.cnpjSit!=='ok'&&!W.nota.cnpjConfirmado) return 'Confira o CNPJ do destinatário na nota e marque a confirmação.'; }
+  if(p==='grupos'&&!Object.keys(W.grupos).length) return 'Marque o que chegou.';
+  if(p==='veiculo'){ if((W.entregador||'').trim().length<2) return 'Escreva o nome do entregador.'; for(const k of ['bau','uniforme','separado']) if(!W.veiculo[k]) return 'Responda todas as perguntas.'; if(temTemp()&&!W.veiculo.refrigerado) return 'Responda se o veículo era refrigerado.'; }
+  if(p==='conferir'){ if(temTemp()&&!(LD.calib.feita||TESTE_CALIB)) return 'Calibre o termômetro desta semana primeiro (aqui em cima).';
+    for(const g of Object.keys(W.grupos)){ const c=GR(g), G=W.grupos[g], nm=c.nome;
+      if(c.temp){ if(num(G.temp)===null) return nm+': digite a temperatura.'; if(!FOTOS['termo_'+g]&&!TESTE) return nm+': tire a foto do termômetro.'; if(c.sif&&!G.sif) return nm+': responda sobre o carimbo SIF/SIE/SIM.'; if(c.desc&&!G.descongelado) return nm+': responda sobre o descongelamento.'; }
+      if(c.validade&&!G.validade) return nm+': informe a menor validade.'; if(c.lote&&(G.lote||'').trim().length<2) return nm+': anote o lote.';
+      if(!G.embalagem) return nm+': responda sobre as embalagens.'; if(c.qtd&&!G.qtdOk) return nm+': responda se a quantidade confere.'; if(c.praga&&!G.praga) return nm+': responda sobre sinais de praga.'; if(c.frescor&&!G.frescor) return nm+': responda se está fresco.'; }
+    sugerirDivergencias(); }
+  if(p==='diverg'){ for(let i=0;i<W.divs.length;i++){ const d=W.divs[i]; if(!d.tipo) return 'Divergência '+(i+1)+': escolha o tipo.'; if((d.produto||'').trim().length<2) return 'Divergência '+(i+1)+': escreva o produto.'; if(!d.acao) return 'Divergência '+(i+1)+': recusou ou aceitou?'; if(!FOTOS['div_'+d.k]&&!TESTE) return 'Divergência '+(i+1)+': tire a foto.'; } }
+  return '';
+}
+// passo 1 — origem
+function pOrigem(){
+  return '<div class="tit">De onde veio?</div>'
+    +'<div class="grp'+(W.origem==='fornecedor'?' on':'')+'" onclick="W.origem=\'fornecedor\';render()"><input type="radio" '+(W.origem==='fornecedor'?'checked':'')+'><div><b>🚚 De um fornecedor</b><small>Chegou com nota fiscal.</small></div></div>'
+    +'<div class="grp'+(W.origem==='central'?' on':'')+'" onclick="W.origem=\'central\';render()"><input type="radio" '+(W.origem==='central'?'checked':'')+'><div><b>🏭 Da cozinha central</b><small>Transferência (pedido feito no Alpha). Conferência obrigatória: o que faltar ou vier errado vai para o Fábio e a Lia.</small></div></div>'
+    +nav(false);
+}
+// passo 2 — nota
+const NT={nf:['📄 Nota fiscal','Veio com nota (DANFE).'],cupom:['🧾 Cupom fiscal','Compra em mercado ou atacado (cupom / NFC-e).'],depois:['⏳ Sem nota — vem depois','O fornecedor manda a nota depois (e-mail, WhatsApp). Fotografe o romaneio ou o pedido.'],sem:['✋ Sem documento nenhum','Ceasa, produtor, pequeno fornecedor. Só recebe com autorização da Lia ou do Sidinei (à noite: sob sua responsabilidade).']};
+function tipoNota(t){ guardarCampos(); W.nota.tipo=t; if(t!=='nf'){ W.nota.cnpjSit=''; } pararAut(); render(); }
+function pNota(){
+  const N=W.nota, t=N.tipo||'nf';
+  let h='<div class="tit">📄 Documento da entrega</div>'+Object.keys(NT).map(k=>'<div class="grp'+(t===k?' on':'')+'" onclick="tipoNota(\''+k+'\')"><input type="radio" '+(t===k?'checked':'')+'><div><b>'+NT[k][0]+'</b><small>'+NT[k][1]+'</small></div></div>').join('');
+  if(t==='cupom') return h+'<label>Foto do cupom</label>'+camBotao('nota','Fotografar o cupom')+'<label>Fornecedor / mercado</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'"><div class="grid2"><div><label>Número (se tiver)</label><input id="nfNum" inputmode="numeric" value="'+esc(N.numero||'')+'"></div><div><label>Valor total (R$)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'"></div></div>'+nav(!LD.central);
+  if(t==='depois') return h+'<div class="aviso av-am">Recebe normalmente. Quando a nota chegar (prazo de '+LD.notaPrazo+' dias úteis), anexe em <b>“Notas que vão chegar”</b>, na tela inicial do recebimento. A Lia é avisada.</div><label>Foto do romaneio, do pedido ou do que veio junto</label>'+camBotao('nota','Fotografar o romaneio / pedido')+'<label>Fornecedor</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'"><label>Valor (R$, se souber)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'">'+nav(!LD.central);
+  if(t==='sem') return h+pSemDoc()+nav(!LD.central);
+  h+='<div class="muted" style="margin-top:10px">Fotografe a nota inteira, esticada. O sistema lê a chave, o fornecedor e confere se o destinatário é o nosso CNPJ.</div>'
+    +'<div id="cb_nota">'+(FOTOS.nota?'<img class="foto-min" src="'+FOTOS.nota+'"><button type="button" class="btn sec peq" onclick="camAbrir(\'nota\',lerNota)">📷 Tirar de novo</button>':'<button type="button" class="btn sec lg" onclick="camAbrir(\'nota\',lerNota)">📷 Fotografar a nota</button>')+'</div>';
+  if(N.lendo) h+='<div class="aviso av-am">Lendo a nota…</div>';
+  if(N.msg) h+='<div class="aviso av-am">'+esc(N.msg)+'</div>';
+  if(N.duplicada) h+='<div class="aviso av-red">🚫 Esta nota JÁ FOI RECEBIDA em '+esc(N.duplicada)+'. Não receba de novo.</div>';
+  if(N.cnpjSit==='outro') h+='<div class="aviso av-red" style="font-size:1rem">🚫 <b>NÃO RECEBA.</b> A nota é para o CNPJ <span class="cnpj">'+esc(N.achado)+'</span> — o nosso é <span class="cnpj">'+esc(LD.cnpj)+'</span>. Pode ser mercadoria de outro cliente.<br><button class="btn" style="width:100%" onclick="recusarTudo(\'Nota de outro CNPJ ('+esc(N.achado)+')\')">🚫 Recusar a entrega</button></div>';
+  else if(N.cnpjSit==='ok') h+='<div class="aviso av-ok">✅ Destinatário conferido: CNPJ <span class="cnpj">'+esc(LD.cnpj)+'</span>.</div>';
+  else if(FOTOS.nota||TESTE) h+='<div class="aviso av-am">Confira com os olhos: o <b>destinatário</b> da nota tem que ser o CNPJ <span class="cnpj">'+esc(LD.cnpj||'(peça ao Admin)')+'</span>.<label class="chk" style="color:var(--text)"><input type="checkbox" id="nfConf" '+(N.cnpjConfirmado?'checked':'')+'> Conferi: o destinatário é o nosso CNPJ.</label></div>';
+  h+='<label>Fornecedor</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'">'
+    +'<div class="grid2"><div><label>Número da nota</label><input id="nfNum" inputmode="numeric" value="'+esc(N.numero||'')+'"></div><div><label>Valor total (R$)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'"></div></div>'
+    +(N.chave?'<div class="muted" style="margin-top:6px;word-break:break-all">Chave: '+esc(N.chave)+'</div>':'')
+    +'<div class="muted" style="margin-top:10px">Preço: quando o pedido aprovado pela Lia e pelo Sidinei estiver no sistema, ele aparece aqui para comparar.</div>'
+    +nav(!LD.central);
+  return h;
+}
+function pSemDoc(){
+  const N=W.nota, a=N.aut||{}, H=LD.autHorario||{agora:true,txt:'segunda a sábado, das 7h às 17h',esperaMin:15}, noite=!H.agora||N.simNoite;
+  let h='<label>Fornecedor</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'"'+(N.autId&&!N.resp?' disabled':'')+'><label>Valor (R$)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'"'+(N.autId&&!N.resp?' disabled':'')+'>';
+  const termo=()=>'<label>O que chegou e por que veio sem documento</label><textarea id="nfMotivo" maxlength="300">'+esc(N.motivo||'')+'</textarea>'+camBotao('nota','Foto do recibo ou da mercadoria (se tiver)')
+    +'<div class="aviso av-red" style="font-weight:600">📝 <b>Termo de responsabilidade</b><br>'+esc(LD.termo||'')+'<label class="chk"><input type="checkbox" id="nfTermo" '+(N.termo?'checked':'')+'> Li e assumo a responsabilidade.</label></div>';
+  if(N.resp) return h+'<div class="aviso av-am">🌙 Você vai receber <b>sob sua responsabilidade</b>. Siga todas as regras da conferência. A Lia ou o Sidinei confirmam no próximo dia útil até 12h.</div>'+termo();
+  if(!N.autId&&noite) return h+'<div class="aviso av-am">🌙 Fora do horário da Lia e do Sidinei ('+esc(H.txt)+'). Você pode receber <b>sob sua responsabilidade</b>: eles conferem no próximo dia útil.</div><button class="btn lg" onclick="guardarCampos();W.nota.resp=true;render()">Receber sob minha responsabilidade</button>';
+  if(!N.autId) return h+'<label>O que chegou e por que veio sem documento</label><textarea id="nfMotivo" maxlength="300">'+esc(N.motivo||'')+'</textarea>'+camBotao('nota','Foto do recibo ou da mercadoria (se tiver)')+'<button class="btn lg" onclick="pedirAut()">✋ Pedir autorização à Lia / Sidinei</button>'
+    +(TESTE?'<button class="btn sec peq" onclick="guardarCampos();W.nota.simNoite=true;render()">🧪 Teste: ver como fica à noite</button>':'');
+  if(a.situacao==='aprovada') return h+'<div class="aviso av-ok">✅ Autorizado por '+esc(a.decididoPor||'')+'. Pode seguir com a conferência.</div>'+(TESTE?'<button class="btn sec peq" onclick="W.nota.aut={situacao:\'pedida\',podeResp:true};pararAut();render()">🧪 Teste: ver como fica se ninguém responder em 15 min</button>':'');
+  if(a.situacao==='recusada') return h+'<div class="aviso av-red">🚫 NÃO autorizado'+(a.motivoDecisao?': '+esc(a.motivoDecisao):'')+'.<br><button class="btn" style="width:100%" onclick="recusarTudo(\'Sem documento e não autorizado\')">🚫 Recusar a entrega</button></div>';
+  return h+'<div class="aviso av-am">⏳ Pedido enviado. A Lia e o Sidinei receberam no WhatsApp. Fique nesta tela: assim que um deles responder, aparece aqui.'+(a.podeResp?'':(a.faltaMin?'<br>Se ninguém responder em '+a.faltaMin+' min, você poderá receber sob sua responsabilidade.':''))+'</div>'
+    +(a.podeResp?'<button class="btn lg" onclick="guardarCampos();W.nota.resp=true;pararAut();render()">⏰ Ninguém respondeu em '+(H.esperaMin||15)+' min — receber sob minha responsabilidade</button>':'')+'<button class="btn sec peq" onclick="consultarAut()">🔄 Ver se já responderam</button>';
+}
+let _autTimer=null;
+function pararAut(){ if(_autTimer){ clearInterval(_autTimer); _autTimer=null; } }
+async function pedirAut(){ guardarCampos(); const m=($('nfMotivo')||{}).value||''; W.nota.motivo=m;
+  try{ const r=await post({action:'rcbAutPedir',local:LOCAL,fornecedor:W.nota.fornecedor,valor:W.nota.valor,motivo:m,foto:foto('nota')}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não enviou.'));
+    W.nota.autId=r.id; W.nota.aut={situacao:'pedida'}; toast(r.msg); render(true); pararAut(); _autTimer=setInterval(consultarAut,15000); consultarAut(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function consultarAut(){ if(!W||!W.nota.autId){ pararAut(); return; }
+  try{ const r=await get({action:'rcbAutSituacao',id:W.nota.autId}); if(r.ok){ const antes=(W.nota.aut||{}).situacao; W.nota.aut=r; if(r.situacao!=='pedida') pararAut(); if((antes!==r.situacao||r.podeResp)&&passoAtual()==='nota'&&!W.nota.resp) render(); if(antes==='pedida'&&r.situacao!=='pedida') try{ navigator.vibrate&&navigator.vibrate([300,150,300]); }catch(e){} } }catch(e){} }
+async function lerNota(){
+  W.nota.lendo=true; W.nota.msg=''; render();
+  try{ const r=await post({action:'rcbLerNota',local:LOCAL,foto:foto('nota')}); guardarCampos(); W.nota.lendo=false;
+    if(!r.ok){ W.nota.msg=r.erro||'Não consegui ler. Preencha à mão.'; W.nota.cnpjSit='nao_lido'; }
+    else { Object.assign(W.nota,{chave:r.chave,cnpjEmit:r.cnpjEmit,cnpjSit:r.cnpjSit,achado:r.achado,duplicada:r.duplicada}); if(r.fornecedor&&!W.nota.fornecedor) W.nota.fornecedor=r.fornecedor; if(r.numero) W.nota.numero=r.numero; if(r.valor&&!W.nota.valor) W.nota.valor=String(r.valor).replace('.',','); if(!r.chave) W.nota.msg='Não achei a chave. Confira o número da nota.'; }
+  }catch(e){ guardarCampos(); W.nota.lendo=false; W.nota.msg='Sem conexão para ler a nota. Preencha à mão.'; W.nota.cnpjSit='nao_lido'; }
+  render(true);
+}
+function irFim(){ guardarCampos(); const e=validarPasso(); if(e) return toast(e); W.passo=PASSOS.indexOf('fim')+1; render(); window.scrollTo(0,0); }
+function recusarTudo(motivo){ guardarCampos(); W.decisao='recusado'; W.justificativa=motivo||''; W.passo=PASSOS.indexOf('veiculo')+1; render(); window.scrollTo(0,0); toast('Preencha o entregador e confirme a recusa.'); }
+// passo 3 — o que chegou
+function pGrupos(){
+  if(W.decisao==='recusado') return '<div class="aviso av-red">Entrega sendo recusada.</div>'+nav(true);
+  return '<div class="tit">📦 O que chegou?</div><div class="muted">Marque todos os tipos de produto desta entrega.</div>'
+    +LD.grupos.map(g=>{ const on=!!W.grupos[g.id]; return '<div class="grp'+(on?' on':'')+'" onclick="togGrupo(\''+g.id+'\')"><input type="checkbox" '+(on?'checked':'')+'><div><b>'+esc(g.nome)+(g.temp?' <span class="tag t-am">até '+g.max+' °C</span>':'')+'</b><small>'+esc(g.ex)+'</small></div></div>'; }).join('')
+    +nav(true);
+}
+function togGrupo(id){ guardarCampos(); if(W.grupos[id]) delete W.grupos[id]; else W.grupos[id]={itensPeso:GR(id).peso?[{nome:'',pesoNota:'',pesoBalanca:''}]:undefined}; render(); }
+// passo 4 — veículo
+function pVeiculo(){
+  const V=W.veiculo;
+  return '<div class="tit">🚚 Veículo e entregador</div>'+(W.decisao==='recusado'?'<div class="aviso av-red">Recusando a entrega: '+esc(W.justificativa)+'</div>':'')
+    +'<label>Nome do entregador</label><input id="veEnt" maxlength="40" value="'+esc(W.entregador)+'">'
+    +'<div class="pq">Baú / caçamba limpo e sem cheiro ruim?</div>'+snBtn('veiculo.bau',V.bau)
+    +(temTemp()?'<div class="pq">Veículo refrigerado (baú frio)?<small>Obrigatório para refrigerados e congelados.</small></div>'+snBtn('veiculo.refrigerado',V.refrigerado):'')
+    +'<div class="pq">Entregador uniformizado e limpo?</div>'+snBtn('veiculo.uniforme',V.uniforme)
+    +'<div class="pq">Produto de limpeza separado dos alimentos?</div>'+snBtn('veiculo.separado',V.separado)
+    +(['bau','refrigerado','uniforme','separado'].some(k=>V[k]==='nao')?'<label>O que estava errado</label><input id="veObs" maxlength="200" value="'+esc(V.obs||'')+'"><div class="muted">Fica registrado na avaliação do fornecedor.</div>':'')
+    +(W.decisao==='recusado'?nav(true,'Ir para a confirmação ›','irFim()'):nav(true));
+}
+// passo 5 — conferência por grupo
+function pConferir(){
+  let h='<div class="tit">🔎 Conferência</div><div class="muted">Refrigerados e congelados primeiro.</div>';
+  if(temTemp()&&!(LD.calib.feita||TESTE_CALIB)) h+='<div class="item am"><b>🌡️ Calibre o termômetro desta semana antes</b>'+formCalib()+'</div>';
+  const hoje=hojeIso();
+  Object.keys(W.grupos).sort((a,b)=>(GR(b).temp?1:0)-(GR(a).temp?1:0)).forEach(g=>{
+    const c=GR(g), G=W.grupos[g], t=num(G.temp), fora=c.temp&&t!==null&&t>c.max, venc=G.validade&&G.validade<hoje;
+    h+='<div class="item'+(fora||venc?' red':'')+'"><div class="it-top"><span>'+esc(c.nome)+'</span>'+(c.temp?'<span class="tag t-am">até '+c.max+' °C'+(c.ideal?' (ideal '+c.ideal+')':'')+'</span>':'')+'</div>';
+    if(c.temp){ h+='<label>Temperatura no produto (°C)</label><input id="g_'+g+'_temp" inputmode="decimal" value="'+esc(G.temp||'')+'" onchange="rr()">'+camBotao('termo_'+g,'Foto do termômetro no produto');
+      if(fora) h+='<div class="aviso av-red">Acima de '+c.max+' °C. O certo é RECUSAR (próximo passo). Se aceitar, vai precisar explicar o motivo.</div>';
+      if(c.desc) h+='<div class="pq">Sinal de descongelamento? <small>Gelo grosso dentro da embalagem, caixa molhada, produto mole ou grudado.</small></div>'+snBtn('grupos.'+g+'.descongelado',G.descongelado,'Sim, tem','Não',true);
+      if(c.sif) h+='<div class="pq">Tem o carimbo de inspeção (SIF, SIE ou SIM)?<small>Sem carimbo: recuse.</small></div>'+snBtn('grupos.'+g+'.sif',G.sif); }
+    if(c.validade) h+='<div class="grid2"><div><label>Menor validade que você viu</label><input id="g_'+g+'_validade" type="date" value="'+esc(G.validade||'')+'" onchange="rr()"></div>'+(c.lote?'<div><label>Lote (da etiqueta)</label><input id="g_'+g+'_lote" maxlength="40" value="'+esc(G.lote||'')+'"></div>':'<div></div>')+'</div>';
+    else if(c.lote) h+='<label>Lote</label><input id="g_'+g+'_lote" maxlength="40" value="'+esc(G.lote||'')+'">';
+    if(venc) h+='<div class="aviso av-red">VENCIDO: tem que recusar.</div>';
+    h+='<div class="pq">Embalagens íntegras?<small>Sem estufar, furar, amassar, enferrujar ou vazar.</small></div>'+snBtn('grupos.'+g+'.embalagem',G.embalagem);
+    if(c.qtd) h+='<div class="pq">A quantidade confere com a nota?<small>Conte caixas e unidades.</small></div>'+snBtn('grupos.'+g+'.qtdOk',G.qtdOk);
+    if(c.praga) h+='<div class="pq">Algum sinal de praga?<small>Fezes, furos roídos, insetos. Se tiver: recuse.</small></div>'+snBtn('grupos.'+g+'.praga',G.praga,'Sim, tem','Não',true);
+    if(c.frescor) h+='<div class="pq">Está fresco?<small>Cor boa, sem cheiro, sem machucado ou mofo.</small></div>'+snBtn('grupos.'+g+'.frescor',G.frescor);
+    if(c.peso){ h+='<label>Pesar na balança (o que vem por quilo)</label>'+(G.itensPeso||[]).map((it,i)=>{ const pn=num(it.pesoNota), pb=num(it.pesoBalanca), dif=pn&&pb!==null?(pb-pn)/pn:null;
+        return '<div class="grid2" style="grid-template-columns:2fr 1fr 1fr;gap:0 8px"><input id="gp_'+g+'_'+i+'_nome" placeholder="Produto" value="'+esc(it.nome)+'"><input id="gp_'+g+'_'+i+'_pesoNota" inputmode="decimal" placeholder="Nota kg" value="'+esc(it.pesoNota)+'" onchange="rr()"><input id="gp_'+g+'_'+i+'_pesoBalanca" inputmode="decimal" placeholder="Balança kg" value="'+esc(it.pesoBalanca)+'" onchange="rr()"></div>'
+          +(dif!==null&&dif<-LD.tolPeso?'<div class="aviso av-red">'+Math.round(-dif*1000)/10+'% a menos que a nota (aceita até '+(LD.tolPeso*100)+'%): vira divergência de peso.</div>':''); }).join('')
+        +'<button class="btn sec peq" onclick="guardarCampos();W.grupos[\''+g+'\'].itensPeso.push({nome:\'\',pesoNota:\'\',pesoBalanca:\'\'});render()">➕ Outro produto</button>'; }
+    h+='</div>';
+  });
+  return h+nav(true);
+}
+let _dvK=0;
+function sugerirDivergencias(){
+  const tem=(g,tipos)=>W.divs.some(d=>d.grupo===g&&tipos.includes(d.tipo)), add=(g,tipo,produto,acao)=>W.divs.push({k:++_dvK,grupo:g,tipo,produto:produto||'',qtd:'',obs:'',acao:acao||'',auto:true});
+  const hoje=hojeIso();
+  Object.keys(W.grupos).forEach(g=>{ const c=GR(g), G=W.grupos[g], t=num(G.temp);
+    if(c.temp&&t!==null&&t>c.max&&!tem(g,['temperatura'])) add(g,'temperatura',c.nome+' a '+String(t).replace('.',',')+' °C','recusado');
+    if(c.desc&&G.descongelado==='sim'&&!tem(g,['temperatura'])) add(g,'temperatura',c.nome+' com sinal de descongelamento','recusado');
+    if(c.sif&&G.sif==='nao'&&!tem(g,['sif'])) add(g,'sif',c.nome+' sem carimbo','recusado');
+    if(G.validade&&G.validade<hoje&&!tem(g,['validade'])) add(g,'validade',c.nome+' vencido','recusado');
+    if(G.embalagem==='nao'&&!tem(g,['avaria'])) add(g,'avaria','');
+    if(c.qtd&&G.qtdOk==='nao'&&!tem(g,['falta','sobra','errado'])) add(g,'falta','');
+    if(c.praga&&G.praga==='sim'&&!tem(g,['praga'])) add(g,'praga','','recusado');
+    if(c.frescor&&G.frescor==='nao'&&!W.divs.some(d=>d.grupo===g)) add(g,'avaria','');
+    (G.itensPeso||[]).forEach(it=>{ const pn=num(it.pesoNota), pb=num(it.pesoBalanca); if(pn&&pb!==null&&pb<pn*(1-LD.tolPeso)&&!tem(g,['peso'])) W.divs.push({k:++_dvK,grupo:g,tipo:'peso',produto:it.nome,qtd:String(Math.round((pn-pb)*1000)/1000).replace('.',',')+' kg',obs:'Nota '+it.pesoNota+' kg, balança '+it.pesoBalanca+' kg',acao:'',auto:true}); });
+  });
+}
+// passo 6 — divergências
+function pDiverg(){
+  let h='<div class="tit">⚠️ Divergências</div><div class="muted">Tudo que não bateu: falta, avaria, temperatura, validade, peso, produto errado. Cada uma com foto. '+(W.divs.some(d=>d.auto)?'O sistema já trouxe o que encontrou na conferência.':'')+'</div>';
+  if(!W.divs.length) h+='<div class="aviso av-ok">Nenhuma divergência. Se estiver tudo certo, siga.</div>';
+  W.divs.forEach((d,i)=>{
+    h+='<div class="item '+(d.acao==='recusado'?'red':'am')+'"><div class="it-top"><span>Divergência '+(i+1)+'</span><button class="lnk" onclick="guardarCampos();W.divs.splice('+i+',1);render()">🗑️ Tirar</button></div>'
+      +'<div class="grid2"><div><label>Tipo</label><select id="dv_'+i+'_tipo"><option value="">— escolha —</option>'+Object.keys(LD.divTipos).map(k=>'<option value="'+k+'"'+(d.tipo===k?' selected':'')+'>'+esc(LD.divTipos[k])+'</option>').join('')+'</select></div>'
+      +'<div><label>Grupo</label><select id="dv_'+i+'_grupo">'+Object.keys(W.grupos).map(g=>'<option value="'+g+'"'+(d.grupo===g?' selected':'')+'>'+esc(GR(g).nome)+'</option>').join('')+'</select></div></div>'
+      +'<div class="grid2"><div><label>Produto</label><input id="dv_'+i+'_produto" maxlength="60" value="'+esc(d.produto)+'"></div><div><label>Quantidade</label><input id="dv_'+i+'_qtd" maxlength="30" placeholder="Ex.: 2 caixas, 1,5 kg" value="'+esc(d.qtd)+'"></div></div>'
+      +'<label>Detalhe</label><input id="dv_'+i+'_obs" maxlength="300" value="'+esc(d.obs)+'">'
+      +'<div class="pq">O que você fez?</div><div class="sn"><button type="button" class="'+(d.acao==='recusado'?'on n':'')+'" onclick="guardarCampos();W.divs['+i+'].acao=\'recusado\';render()">🚫 Recusei (voltou com o entregador)</button><button type="button" class="'+(d.acao==='aceito'?'on s':'')+'" onclick="guardarCampos();W.divs['+i+'].acao=\'aceito\';render()">⚠️ Aceitei com ressalva</button></div>'
+      +camBotao('div_'+d.k,'Foto do problema')+'</div>';
+  });
+  h+='<button class="btn sec" style="width:100%" onclick="guardarCampos();W.divs.push({k:++_dvK,grupo:Object.keys(W.grupos)[0],tipo:\'\',produto:\'\',qtd:\'\',obs:\'\',acao:\'\'});render()">➕ Lançar divergência</button>';
+  return h+nav(true);
+}
+// passo 7 — finalizar
+function precisaJust(){ const hoje=hojeIso(); return Object.keys(W.grupos).some(g=>{ const c=GR(g), G=W.grupos[g], t=num(G.temp);
+  const foraT=c.temp&&t!==null&&t>c.max&&!W.divs.some(d=>d.grupo===g&&d.tipo==='temperatura'&&d.acao==='recusado');
+  let curta=false; if(c.temp&&G.validade&&G.validade>=hoje){ const dd=(new Date(G.validade)-new Date(hoje))/86400000; curta=dd<LD.validadeCurta&&!W.divs.some(d=>d.grupo===g&&d.tipo==='validade'&&d.acao==='recusado'); }
+  return foraT||curta; }); }
+function pFim(){
+  const rec=W.decisao==='recusado', nd=W.divs.length, nRec=W.divs.filter(d=>d.acao==='recusado').length;
+  let h='<div class="tit">✅ Finalizar</div>';
+  h+=rec?'<div class="aviso av-red">🚫 Você vai RECUSAR a entrega inteira.</div>':(nd?'<div class="aviso av-am">'+nd+' divergência(s): '+nRec+' recusada(s), '+(nd-nRec)+' aceita(s) com ressalva. '+(W.origem==='central'?'O Fábio e a Lia':'A Lia e o Sidinei')+' recebem o aviso.</div>':'<div class="aviso av-ok">Tudo conferido, sem divergência.</div>');
+  if(rec) h+='<label>Por que recusou</label><textarea id="fJust" maxlength="400">'+esc(W.justificativa)+'</textarea>';
+  else if(precisaJust()) h+='<div class="aviso av-red">Você aceitou produto fora da regra (temperatura ou validade curta). Explique o motivo — fica registrado e a gestão confere.</div><label>Motivo</label><textarea id="fJust" maxlength="400">'+esc(W.justificativa)+'</textarea>';
+  if(!rec&&temTemp()) h+='<label class="chk"><input type="checkbox" id="fGuard" '+(W.guardado?'checked':'')+'> Refrigerados e congelados já estão guardados na câmara / geladeira / freezer.</label><div class="muted">Faz '+Math.round((Date.now()-W.inicioMs)/60000)+' min que você começou. O certo é guardar em até '+LD.guardarMin+' min.</div>';
+  if(!rec) h+='<div class="muted" style="margin-top:8px">Não esqueça: etiquete e guarde o mais novo atrás (o que vence primeiro sai primeiro — PVPS).</div>';
+  h+='<label>Observação (opcional)</label><input id="fObs" maxlength="400" value="'+esc(W.obs)+'">';
+  if(W.erros.length) h+='<div class="aviso av-red"><b>Falta arrumar:</b><br>'+W.erros.map(e=>'• '+esc(e)).join('<br>')+'</div>';
+  h+='<div class="muted" style="margin-top:10px">Recebido por: <b>'+esc(LD.nome)+'</b> · '+new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+'</div>';
+  return h+nav(true,rec?'🚫 Confirmar a recusa':'✅ Salvar o recebimento','salvar()');
+}
+async function salvar(){
+  guardarCampos(); if(W.salvando) return; W.salvando=true; W.erros=[];
+  const grupos=Object.keys(W.grupos).map(g=>Object.assign({id:g},W.grupos[g],{fotoTermo:foto('termo_'+g)}));
+  const corpo={action:'rcbSalvar',local:LOCAL,origem:W.origem,inicioMs:W.inicioMs,decisao:W.decisao==='recusado'?'recusado':'',justificativa:W.justificativa,guardado:W.guardado,entregador:W.entregador,obs:W.obs,
+    nota:Object.assign({},W.nota,{foto:foto('nota')}),veiculo:W.veiculo,grupos,divergencias:W.divs.map(d=>({tipo:d.tipo,grupo:d.grupo,produto:d.produto,qtd:d.qtd,obs:d.obs,acao:d.acao,foto:foto('div_'+d.k)}))};
+  const bt=document.querySelector('.nav .btn:last-child'); if(bt){ bt.disabled=true; bt.textContent='Salvando…'; }
+  try{ const r=await post(corpo); W.salvando=false;
+    if(!r.ok){ if(r.treino){ W.passo=0; } W.erros=r.erros||[r.erro||'Não salvou.']; render(); window.scrollTo(0,document.body.scrollHeight); return; }
+    pararAut(); W=null; toast(r.msg||'Salvo.'); $('tela').innerHTML='<div class="card"><div class="tit">'+(r.decisao==='recusado'?'🚫 Recusa registrada':r.decisao==='ressalva'?'⚠️ Recebido com ressalva':'✅ Recebimento registrado')+'</div><div class="muted">'+esc(r.msg||'')+'</div>'+(r.fora&&r.fora.length?'<div class="aviso av-am">Fora da regra: '+r.fora.map(esc).join('; ')+'</div>':'')+'<button class="btn lg" onclick="recarregar()">OK</button></div>';
+  }catch(e){ W.salvando=false; W.erros=['Sem conexão. Nada foi perdido: confira a internet e toque em Salvar de novo.']; render(); }
+}
+
+// ---------- painel da equipe ----------
+function telaAut(){
+  const ls=PD.autorizacoes||[], pend=ls.filter(a=>a.situacao==='pedida'), outras=ls.filter(a=>a.situacao!=='pedida');
+  const it=a=>'<div class="item '+(a.situacao==='pedida'?'am':a.situacao==='recusada'?'red':'ok')+'"'+(Q.get('aut')===a.id?' style="box-shadow:0 0 0 3px var(--gold)"':'')+'><div class="it-top"><span>'+esc(a.local)+' · '+esc(a.fornecedor)+(a.valor?' · R$ '+Number(a.valor).toFixed(2).replace('.',','):'')+'</span><span class="tag '+(a.situacao==='pedida'?'t-am':a.situacao==='recusada'?'t-red':'t-ok')+'">'+({pedida:'Esperando',aprovada:'Autorizado',recusada:'Não autorizado',usada:'Recebido',responsabilidade:'Sob responsabilidade'}[a.situacao]||a.situacao)+'</span></div>'
+    +'<div class="linha">💬 '+esc(a.motivo)+'</div><div class="linha muted">Pedido por '+esc(a.quem)+' em '+esc(a.quando)+(a.decididoPor?' · decidido por '+esc(a.decididoPor)+' em '+esc(a.decididoEm)+(a.motivoDecisao?' ('+esc(a.motivoDecisao)+')':''):'')+'</div>'+(a.foto?'<div class="linha"><a href="'+esc(a.foto)+'" target="_blank" style="color:var(--gold)">📷 Ver foto</a></div>':'')
+    +(a.situacao==='pedida'&&PD.autoriza?'<label>Motivo (obrigatório para não autorizar)</label><input id="adm_'+a.id+'" maxlength="200"><div class="nav"><button class="btn sec" onclick="decidirAut(\''+a.id+'\',\'recusada\')">🚫 Não autorizar</button><button class="btn ok" onclick="decidirAut(\''+a.id+'\',\'aprovada\')">✅ Autorizar</button></div>':'')+'</div>';
+  const conf=PD.pendencias.filter(p=>p.tipo==='confirmar_resp');
+  return (conf.length?'<div class="card"><div class="tit">🌙 Recebidos sob responsabilidade — confirmar ('+conf.length+')</div><div class="muted">Fora do horário (ou sem resposta em 15 min) o gerente recebeu assumindo a responsabilidade. Confira as fotos e confirme até 12h do próximo dia útil. Não aprovado = ocorrência: a loja perde 10 pontos e o GDI é avisado.</div>'+conf.map(itemPend).join('')+'</div>':'')+'<div class="card"><div class="tit">✋ Entrada sem documento — pedidos ('+pend.length+')</div><div class="muted">Ceasa, produtor ou pequeno fornecedor sem nota: a loja só recebe com a autorização da Lia OU do Sidinei. Quem responder primeiro decide.</div>'+(pend.length?pend.map(it).join(''):'<div class="aviso av-ok">Nenhum pedido esperando.</div>')+'</div>'
+    +(outras.length?'<div class="card"><div class="tit">🕓 Últimos 15 dias</div>'+outras.map(it).join('')+'</div>':'');
+}
+async function decidirAut(id,dec){ const m=($('adm_'+id)||{}).value||''; try{ const r=await post({action:'rcbAutDecidir',id,decisao:dec,motivo:m}); toast(r.ok?(dec==='aprovada'?'✅ Autorizado. A loja já vê.':'🚫 Não autorizado. A loja já vê.'):'⚠️ '+(r.erro||'')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+function telaPend(){
+  return '<div class="card"><div class="tit">⚠️ Divergências e recusas em aberto ('+PD.pendencias.length+')</div><div class="muted">'+(PD.resolve.includes('fornecedor')?'Resolva com o fornecedor (crédito, reposição, troca) e marque aqui.':'Você vê as da cozinha central.')+'</div>'+(PD.pendencias.length?PD.pendencias.map(itemPend).join(''):'<div class="aviso av-ok">Nada em aberto. 👏</div>')+'</div>'
+    +(PD.resolvidas.length?'<div class="card"><div class="tit">✔️ Resolvidas (30 dias)</div>'+PD.resolvidas.map(itemPend).join('')+'</div>':'');
+}
+function telaSem(){
+  return '<div class="card"><div class="tit">🧾 Notas lançadas no Alpha sem recebimento registrado</div><div class="muted">Conta a partir de '+esc(PD.inicio)+'. Cada nota tira '+PD.pontos.notaSemReceb+' pontos da nota do local no mês. Notas do Alpha atualizadas '+(PD.alphaAtualizado?'em '+esc(PD.alphaAtualizado):'ainda não')+' ('+PD.alphaNotas+' notas dos últimos 20 dias).</div>'
+    +(PD.papel!=='nutri'?'<button class="btn sec peq" onclick="atualizarAlpha(this)">🔄 Atualizar do Alpha agora</button>':'')
+    +(PD.semRecebimento.length?'<div class="tbl"><table><tr><th>Local</th><th>Nota</th><th>Fornecedor</th><th>Emissão</th><th>Valor</th></tr>'+PD.semRecebimento.map(x=>'<tr><td>'+esc(x.locais.join(' / '))+'</td><td>'+esc(x.numero)+'</td><td>'+esc(x.fornecedor)+'</td><td>'+esc(x.dia)+'</td><td>'+(x.valor?'R$ '+Number(x.valor).toFixed(2).replace('.',','):'')+'</td></tr>').join('')+'</table></div>':'<div class="aviso av-ok">Todas as notas lançadas têm recebimento. 👏</div>')+'</div>'
+    +'<div class="card"><div class="tit">🔌 Liga depois</div>'+PD.encaixes.map(e=>'<div class="linha">• <b>'+esc(e.nome)+'</b> <span class="muted">— depende de: '+esc(e.depende)+'</span></div>').join('')+'</div>';
+}
+async function atualizarAlpha(b){ b.disabled=true; b.textContent='Buscando no Alpha…'; try{ const r=await post({action:'rcbAlphaAtualizar'}); toast(r.ok?'✅ '+r.notas+' notas lidas do Alpha.':'⚠️ '+(r.erro||'Alpha fora.')); }catch(e){ toast('⚠️ Sem conexão.'); } recarregar(); }
+function telaNotas(){
+  const ls=PD.notasMes.slice().sort((a,b)=>a.nota-b.nota||b.semRecebimento-a.semRecebimento);
+  return '<div class="card"><div class="tit">🏆 Nota do recebimento — este mês</div><div class="muted">Começa em 100. Perde '+PD.pontos.notaSemReceb+' por nota do Alpha sem recebimento. Sem bloqueio.</div><div class="tbl"><table><tr><th>Local</th><th>Nota</th><th>Recebimentos</th><th>Sem receb.</th><th>Recusas</th><th>Com ressalva</th></tr>'
+    +ls.map(x=>'<tr><td>'+esc(x.local)+'</td><td><b class="'+corNota(x.nota)+'">'+x.nota+'</b></td><td>'+x.recebimentos+'</td><td>'+(x.semRecebimento?'<b class="n-red">'+x.semRecebimento+'</b>':'0')+'</td><td>'+x.recusas+'</td><td>'+x.ressalvas+'</td></tr>').join('')+'</table></div></div>';
+}
+function telaRec(){ return '<div class="card"><div class="tit">📋 Hoje ('+PD.hoje.length+')</div>'+(PD.hoje.length?PD.hoje.map(itemRec).join(''):'<div class="muted">Nenhum recebimento hoje.</div>')+'</div><div class="card"><div class="tit">🕓 Últimos 30 dias</div>'+(PD.recentes.length?PD.recentes.map(itemRec).join(''):'<div class="muted">—</div>')+'</div>'; }
+function telaForn(){
+  return '<div class="card"><div class="tit">🚚 Fornecedores — últimos 30 dias</div><div class="muted">Base da avaliação de fornecedores (entregas com problema, recusas, veículo e temperatura). Usado pelas grandes redes para decidir quem fica como fornecedor principal.</div>'
+    +(PD.fornecedores.length?'<div class="tbl"><table><tr><th>Fornecedor</th><th>Entregas</th><th>Com problema</th><th>Recusas</th><th>Veículo ruim</th><th>Temperatura</th></tr>'+PD.fornecedores.map(f=>'<tr><td>'+esc(f.fornecedor)+'</td><td>'+f.entregas+'</td><td>'+(f.comProblema?'<b class="'+(f.pct>=20?'n-red':'n-am')+'">'+f.comProblema+' ('+f.pct+'%)</b>':'0')+'</td><td>'+f.recusas+'</td><td>'+f.veiculo+'</td><td>'+f.temperatura+'</td></tr>').join('')+'</table></div>':'<div class="muted">Ainda sem recebimentos.</div>')+'</div>';
+}
+function telaTermo(){
+  return '<div class="card"><div class="tit">🌡️ Termômetros — esta semana</div><div class="tbl"><table><tr><th>Local</th><th>Situação</th><th>Última</th></tr>'
+    +PD.calibracao.map(c=>'<tr><td>'+esc(c.local)+'</td><td>'+(c.feita?'<span class="tag t-ok">Calibrado</span>':c.descalibrado?'<span class="tag t-red">Descalibrado</span>':'<span class="tag t-am">Falta conferir</span>')+'</td><td>'+(c.ultima?esc(c.ultima.dia)+' · '+String(c.ultima.temp).replace('.',',')+' °C · '+esc(c.ultima.quem):'—')+'</td></tr>').join('')+'</table></div></div>';
+}
+function telaPes(){
+  return '<div class="card"><div class="tit">👥 Pessoas autorizadas a receber</div><div class="muted">Para a folga ou para quem você confia. Cada pessoa entra em gerentes.dinapizza.com.br/recebimento › “Fui autorizado (PIN)”, com o nome e o PIN que você criar. Quem sair da empresa: desligue aqui.</div>'
+    +(PD.pessoas.length?PD.pessoas.map(p=>'<div class="item'+(p.situacao==='ativa'?' ok':'')+'"><div class="it-top"><span>'+esc(p.nome)+' · '+esc(p.local)+'</span><span class="tag '+(p.situacao==='ativa'?'t-ok':'t-red')+'">'+(p.situacao==='ativa'?'Ativa':'Desligada')+'</span></div><div class="linha muted">Autorizada por '+esc(p.criadoPor)+' em '+esc(p.desde)+'</div>'
+      +'<button class="btn sec peq" onclick="pesSit(\''+p.id+'\',\''+esc(p.local)+'\',\''+(p.situacao==='ativa'?'desligada':'ativa')+'\')">'+(p.situacao==='ativa'?'Desligar':'Reativar')+'</button> <button class="btn sec peq" onclick="pesPin(\''+p.id+'\',\''+esc(p.local)+'\')">Novo PIN</button></div>').join(''):'<div class="muted" style="margin-top:8px">Ninguém autorizado ainda.</div>')
+    +'<div class="item"><b>➕ Autorizar pessoa</b><div class="grid2"><div><label>Local</label><select id="psLocal">'+PD.gerencia.map(l=>'<option>'+esc(l)+'</option>').join('')+'</select></div><div><label>Nome</label><input id="psNome" maxlength="40"></div></div><label>PIN (4 a 6 números)</label><input id="psPin" inputmode="numeric" maxlength="6"><button class="btn ok" onclick="pesNovo()">Autorizar</button></div></div>';
+}
+async function pesNovo(){ const pin=$('psPin').value.trim(); if(!/^\d{4,6}$/.test(pin)) return toast('O PIN precisa ter de 4 a 6 números.');
+  try{ const r=await post({action:'rcbPessoaSalvar',local:$('psLocal').value,nome:$('psNome').value,pin:hash(pin)}); toast(r.ok?'✅ Autorizada. Passe o nome e o PIN para a pessoa.':'⚠️ '+(r.erro||'Não salvou.')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function pesSit(id,local,sit){ try{ const r=await post({action:'rcbPessoaSalvar',id,local,situacao:sit}); toast(r.ok?'Feito.':'⚠️ '+(r.erro||'')); recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+async function pesPin(id,local){ const pin=prompt('Novo PIN (4 a 6 números):'); if(!pin) return; if(!/^\d{4,6}$/.test(pin)) return toast('O PIN precisa ter de 4 a 6 números.'); try{ const r=await post({action:'rcbPessoaSalvar',id,local,pin:hash(pin)}); toast(r.ok?'PIN trocado.':'⚠️ '+(r.erro||'')); }catch(e){ toast('⚠️ Sem conexão.'); } }
+function telaCnpj(){
+  const c=PD.cnpjs;
+  return '<div class="card"><div class="tit">⚙️ CNPJ de cada local</div><div class="muted">Puxado do Alpha'+(c.atualizado?' ('+esc(c.atualizado)+')':'')+'. É o que o recebimento compara com o destinatário da nota. Se algum estiver errado ou vazio, corrija aqui (vazio = volta a usar o do Alpha).</div>'
+    +'<div class="tbl"><table><tr><th>Local</th><th>CNPJ</th><th></th></tr>'+Object.keys(c.locais).map(l=>'<tr><td>'+esc(l)+(c.manual[l]?' <span class="tag t-am">manual</span>':'')+'</td><td><input id="cn_'+esc(l)+'" value="'+esc(c.locais[l])+'" style="min-width:170px"></td><td><button class="btn sec peq" onclick="cnpjSalvar(\''+esc(l)+'\')">Salvar</button></td></tr>').join('')+'</table></div>'
+    +(c.empresas.length?'<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Empresas no Alpha</summary>'+c.empresas.map(e=>'<div class="linha muted">'+esc(e.nome)+' · '+esc(e.cnpj||'sem CNPJ')+'</div>').join('')+'</details>':'')+'</div>';
+}
+async function cnpjSalvar(l){ try{ const r=await post({action:'rcbCnpjSalvar',local:l,cnpj:$('cn_'+l).value}); toast(r.ok?'✅ Salvo.':'⚠️ '+(r.erro||'')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
+
+// ---------- quem é ----------
+(function(){
+  const u=ls('dina_unidade_logada'), h=u?ls('dina_senha_'+u):'';
+  const th=(()=>{ try{ return sessionStorage.getItem('dina_teste_admin')||(window.opener&&window.opener.sessionStorage.getItem('dina_teste_admin'))||''; }catch(e){ return ''; } })();
+  if(Q.get('teste')==='1'&&th&&Q.get('loja')){ TESTE=true; AUTH={unidade:Q.get('loja'),senha:th}; $('faixaTeste').style.display='block'; return iniciar(); } // aberto pelo modo teste do placar: nada é gravado
+  if(Q.get('daloja')&&u&&h&&ls('dina_login_v')==='2'){ AUTH={unidade:u,senha:h}; return iniciar(); } // aberto pelo botão do placar
+  const pt=ls('portal_token'); if(pt&&!Q.get('daloja')){ AUTH={chave:pt}; return iniciar().then(ok=>{ if(!ok){ AUTH=null; abrirLogin(); } }); }
+  const c=ls('rcb_chave'); if(c){ AUTH={chave:c}; return iniciar().then(ok=>{ if(!ok){ ls('rcb_chave',null); AUTH=null; abrirLogin(); } }); }
+  const p=ls('rcb_pessoa'); if(p){ try{ AUTH=JSON.parse(p); return iniciar().then(ok=>{ if(!ok){ ls('rcb_pessoa',null); AUTH=null; abrirLogin(); } }); }catch(e){} }
+  if(u&&h&&ls('dina_login_v')==='2'){ AUTH={unidade:u,senha:h}; return iniciar(); }
+  abrirLogin();
+})();
+function abrirLogin(){ $('carregando').style.display='none'; $('login').style.display='block'; }
+</script>
+</body>
+</html>
