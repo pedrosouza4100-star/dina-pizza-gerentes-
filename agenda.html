@@ -109,6 +109,9 @@ const K='dina_agenda_hash';
 const PER=[['manha','Manhã'],['tarde','Tarde'],['noite','Noite']];
 const NOMES_SIT={feita:['✅ Feita','c-feita'],feita_outro_dia:['🔁 Feita em outro dia','c-outro'],hoje:['⏳ Hoje','c-hoje'],futura:['🗓 Planejada','c-futura'],atrasada:['⚠️ Não feita','c-atr'],nao_cumprida:['❌ Não cumprida','c-atr'],justificada:['📝 Justificada','c-just']};
 let H='', E=null, ABA='atual', EDIT=null, PAINEL=null, TESTE=false;
+// 🏢 Escritório/reunião num período do dia (servidor 2026-11-20-c, recurso agendaPeriodoEscritorio; pedido da RH 20/11)
+let AG_ESC=false; jsonp({action:'authPing'},15000).then(r=>{ AG_ESC=!!(r&&(r.recursos||[]).includes('agendaPeriodoEscritorio')); if(EDIT) render(); }).catch(()=>{});
+const ESC_V='escritorio';
 function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4500);}
@@ -273,8 +276,9 @@ function renderSemana(S){
       h+=`<div class="linha"><span class="per">${per}</span><span class="u">${esc(it.unidade)}${it.visita?`<br><span class="muted">${esc(it.visita.entrada)}${it.visita.saida?'–'+esc(it.visita.saida):''}${it.situacao==='feita_outro_dia'?' em '+esc(it.visita.dia.slice(8)+'/'+it.visita.dia.slice(5,7)):''}</span>`:''}${it.motivo?`<br><span class="muted">${esc(it.motivo)}</span>`:''}</span><span class="chip ${cls}">${txt}</span></div>`;
       if(['atrasada','nao_cumprida'].includes(it.situacao)||(it.situacao==='hoje'&&ABA!=='proxima')) h+=`<button class="mini-btn" onclick="justificar('${S.semana}','${it.slot}','${esc(it.unidade)}')">📝 Justificar${it.situacao==='hoje'?' (não vou conseguir)':''}</button>`;
     });
+    if(pl.tipo==='trabalho') PER.forEach(([k,n])=>{ if(pl[k]===ESC_V) h+=`<div class="linha"><span class="per">${n}</span><span class="u">🏢 Escritório / reunião</span></div>`; });
     ex.forEach(x=>{ h+=`<div class="linha"><span class="per">Extra</span><span class="u">${esc(x.unidade)}<br><span class="muted">${esc(x.entrada)}${x.saida?'–'+esc(x.saida):''}</span></span><span class="chip c-feita">✅ Visita extra</span></div>`; });
-    if(!its.length&&!ex.length&&pl.tipo!=='folga'&&pl.tipo!=='escritorio') h+='<div class="muted">Sem visita</div>';
+    if(!its.length&&!ex.length&&pl.tipo!=='folga'&&pl.tipo!=='escritorio'&&!PER.some(([k])=>pl[k]===ESC_V)) h+='<div class="muted">Sem visita</div>';
     h+='</div>';
   });
   h+='</div>';
@@ -297,12 +301,12 @@ function editar(aba){
 function renderEditor(S){
   const troca=S.enviada;
   let h=`<div class="card"><div class="tit">${troca?'🔁 Trocar visitas':'📝 Montar a agenda'} · ${esc(S.dias[0].rotulo.slice(4))} a ${esc(S.dias[6].rotulo.slice(4))}</div>
-    <div class="muted" style="margin-bottom:10px;line-height:1.5">Escolha a loja de cada período (noite = 17h30 até o fechamento). Folgas iguais às dos funcionários: <b>${S.folgasExigidas} por semana</b> e <b>1 domingo de folga no mês</b>.${troca?' Dias que já passaram não mudam.':''}</div><div class="dias">`;
+    <div class="muted" style="margin-bottom:10px;line-height:1.5">Escolha a loja de cada período (noite = 17h30 até o fechamento)${AG_ESC?' ou 🏢 Escritório / reunião (ex.: escritório à tarde e visita à noite)':''}. Folgas iguais às dos funcionários: <b>${S.folgasExigidas} por semana</b> e <b>1 domingo de folga no mês</b>.${troca?' Dias que já passaram não mudam.':''}</div><div class="dias">`;
   S.dias.forEach(d=>{
     const x=EDIT.dias[d.dia], pass=d.dia<E.hoje, dis=pass?'disabled':'';
     h+=`<div class="dia${pass?' passado':''}${x.tipo==='folga'?' folga':''}${d.dia===E.hoje?' hoje':''}"><div class="dia-tit">${esc(d.rotulo)}</div>
       <select ${dis} onchange="mudaTipo('${d.dia}',this.value)"><option value="trabalho" ${x.tipo==='trabalho'?'selected':''}>Visitas</option><option value="folga" ${x.tipo==='folga'?'selected':''}>Folga</option><option value="escritorio" ${x.tipo==='escritorio'?'selected':''}>Escritório / reunião</option></select>`;
-    if(x.tipo==='trabalho') PER.forEach(([k,n])=>{ h+=`<label>${n}</label><select ${dis} onchange="EDIT.dias['${d.dia}'].${k}=this.value;contar()"><option value="">—</option>${E.lojas.map(u=>`<option ${x[k]===u?'selected':''}>${esc(u)}</option>`).join('')}</select>`; });
+    if(x.tipo==='trabalho') PER.forEach(([k,n])=>{ h+=`<label>${n}</label><select ${dis} onchange="EDIT.dias['${d.dia}'].${k}=this.value;contar()"><option value="">—</option>${AG_ESC||x[k]===ESC_V?`<option value="${ESC_V}" ${x[k]===ESC_V?'selected':''}>🏢 Escritório / reunião</option>`:''}${E.lojas.map(u=>`<option ${x[k]===u?'selected':''}>${esc(u)}</option>`).join('')}</select>`; });
     h+='</div>';
   });
   h+=`</div><div id="contador" class="muted" style="margin:12px 0 8px"></div>`;
@@ -316,9 +320,10 @@ function renderEditor(S){
 function mudaTipo(dia,t){ EDIT.dias[dia].tipo=t; if(t!=='trabalho') PER.forEach(([k])=>EDIT.dias[dia][k]=''); render(); }
 function contar(){
   const S=E[ABA], el=document.getElementById('contador'); if(!el) return;
-  const vis=Object.values(EDIT.dias).reduce((n,d)=>n+(d.tipo==='trabalho'?PER.filter(([k])=>d[k]).length:0),0);
+  const vis=Object.values(EDIT.dias).reduce((n,d)=>n+(d.tipo==='trabalho'?PER.filter(([k])=>d[k]&&d[k]!==ESC_V).length:0),0);
+  const escN=Object.values(EDIT.dias).reduce((n,d)=>n+(d.tipo==='trabalho'?PER.filter(([k])=>d[k]===ESC_V).length:0),0);
   const folg=Object.values(EDIT.dias).filter(d=>d.tipo==='folga').length;
-  el.innerHTML=`<b>${vis}</b> visita(s) · <b class="${folg>=S.folgasExigidas?'verde':'verm'}">${folg}</b> folga(s) de ${S.folgasExigidas}`;
+  el.innerHTML=`<b>${vis}</b> visita(s)${escN?` · <b>${escN}</b> período(s) de escritório`:''} · <b class="${folg>=S.folgasExigidas?'verde':'verm'}">${folg}</b> folga(s) de ${S.folgasExigidas}`;
 }
 async function enviarAgenda(){
   const S=E[ABA], b=document.getElementById('edBtn'), er=document.getElementById('edErro');
@@ -327,7 +332,20 @@ async function enviarAgenda(){
   try{
     const r=await post({action:'agendaSalvar',chave:H,semana:S.semana,dias:EDIT.dias,motivo});
     EDIT=null; toast(r.nova?(r.atrasada?'Agenda enviada (depois do prazo de segunda 10h).':'✅ Agenda da semana enviada.'):'✅ Troca salva.'); await carregar();
-  }catch(e){ er.textContent=e.message; er.style.display='block'; b.disabled=false; b.textContent=S.enviada?'Salvar a troca':'Enviar a agenda da semana'; }
+  }catch(e){ er.textContent=e.message; er.style.display='block'; b.disabled=false; b.textContent=S.enviada?'Salvar a troca':'Enviar a agenda da semana'; agErroJanela(e.message); }
+}
+
+// Quando não salva: janela grande no meio da tela com o motivo (pedido do Robson 20/11/2026: a caixa vermelha embaixo do botão passava despercebida)
+function agErroJanela(msg){
+  let m=document.getElementById('agErroModal');
+  if(!m){ m=document.createElement('div'); m.id='agErroModal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:3000;display:flex;align-items:center;justify-content:center;padding:18px'; document.body.appendChild(m); }
+  const dm=String(msg||'').match(/(\d{2})\/(\d{2})/);
+  m.innerHTML='<div style="background:var(--card,#11151d);border:2px solid var(--danger,#ff4d4d);border-radius:16px;padding:20px;max-width:420px;width:100%;color:var(--text,#fff);text-align:center">'+
+    '<div style="font-size:2.4rem">⚠️</div><div style="font-weight:900;font-size:1.1rem;margin:6px 0 10px">A agenda ainda NÃO foi salva</div>'+
+    '<div style="font-size:.98rem;line-height:1.5">'+esc(msg||'Não salvou. Tente de novo.')+'</div>'+
+    '<button class="btn" style="margin-top:16px" onclick="document.getElementById(\'agErroModal\').style.display=\'none\'">Entendi — vou corrigir</button></div>';
+  m.style.display='flex';
+  if(dm){ const alvo=[...document.querySelectorAll('.dia-tit')].find(t=>t.textContent.includes(dm[1]+'/'+dm[2])); if(alvo){ const d=alvo.closest('.dia'); d.style.outline='3px solid var(--danger,#ff4d4d)'; setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'center'}),300); } }
 }
 
 // ═════════ PAINEL (Robson) ═════════
