@@ -185,7 +185,7 @@ function desenharAbas(){
   const el=$('abasEq'); if(!PD){ el.style.display='none'; return; }
   const temLocal=(PD.locais||[]).length>0, ab=[];
   if(temLocal) ab.push(['receber','📦 Receber']);
-  ab.push(['aut','✋ Sem nota',(PD.autorizacoes||[]).filter(a=>a.situacao==='pedida').length]);
+  ab.push(['aut','✋ Sem nota',(PD.autorizacoes||[]).filter(a=>a.situacao==='pedida').length+PD.pendencias.filter(p=>p.tipo==='confirmar_resp').length]);
   ab.push(['pend','⚠️ Pendências',PD.pendencias.length]); ab.push(['sem','🧾 Notas sem recebimento',PD.semRecebimento.length]); ab.push(['notas','🏆 Nota dos locais']);
   ab.push(['rec','📋 Recebimentos']); ab.push(['forn','🚚 Fornecedores']); ab.push(['termo','🌡️ Termômetros',PD.calibracao.filter(c=>c.descalibrado).length]);
   if((PD.gerencia||[]).length) ab.push(['pes','👥 Pessoas autorizadas']); if(PD.cnpjs) ab.push(['cnpj','⚙️ CNPJ']);
@@ -240,12 +240,15 @@ async function calibrar(){
 }
 function itemPend(p){
   const pode=PD&&(PD.resolve||[]).includes(p.origem)&&p.situacao==='aberta';
-  return '<div class="item '+(p.situacao==='aberta'?(p.acao==='recusado'?'red':'am'):'ok')+'"><div class="it-top"><span>'+esc(p.tipoTxt)+': '+esc(p.produto)+(p.qtd?' ('+esc(p.qtd)+')':'')+'</span><span class="tag '+(p.acao==='recusado'?'t-red':'t-am')+'">'+(p.acao==='recusado'?'Recusado':'Aceito com ressalva')+'</span></div>'
+  return '<div class="item '+(p.situacao==='aberta'?(p.acao==='recusado'?'red':'am'):'ok')+'"><div class="it-top"><span>'+esc(p.tipoTxt)+': '+esc(p.produto)+(p.qtd?' ('+esc(p.qtd)+')':'')+'</span><span class="tag '+(p.acao==='recusado'?'t-red':'t-am')+'">'+(p.tipo==='confirmar_resp'?'Aguarda confirmação':p.tipo==='nota_pendente'?'Nota pendente':p.acao==='recusado'?'Recusado':'Aceito com ressalva')+'</span></div>'
     +'<div class="linha">'+esc(p.local)+' · '+(p.origem==='central'?'🏭 Cozinha central':'🚚 '+esc(p.fornecedor))+(p.notaNum?' · nota '+esc(p.notaNum):'')+' · '+esc(p.quando)+'</div>'
     +(p.obs?'<div class="linha muted">💬 '+esc(p.obs)+'</div>':'')+(p.foto?'<div class="linha"><a href="'+esc(p.foto)+'" target="_blank" style="color:var(--gold)">📷 Ver foto</a></div>':'')
     +(p.situacao==='resolvida'?'<div class="aviso av-ok">✔️ '+esc(p.resolucaoTxt)+' — '+esc(p.obsResolucao)+' ('+esc(p.resolvidoPor)+', '+esc(p.resolvidoEm)+')</div>':'')
-    +(pode?'<div class="grid2"><div><label>Como foi resolvido</label><select id="rs_'+p.id+'"><option value="">— escolha —</option>'+Object.keys(PD.resolTipos).map(k=>'<option value="'+k+'">'+esc(PD.resolTipos[k])+'</option>').join('')+'</select></div><div><label>O que foi feito</label><input id="ro_'+p.id+'" maxlength="300"></div></div><button class="btn ok peq" onclick="resolver(\''+p.id+'\')">✔️ Marcar resolvida</button>':'')+'</div>';
+    +(pode?(()=>{ const ops=(PD.resolPorTipo&&PD.resolPorTipo[p.tipo])||PD.resolGeral||Object.keys(PD.resolTipos); const conf=p.tipo==='confirmar_resp';
+      return '<div class="grid2"><div><label>'+(conf?'Seguiu as regras?':'Como foi resolvido')+'</label><select id="rs_'+p.id+'"><option value="">— escolha —</option>'+ops.map(k=>'<option value="'+k+'">'+esc(PD.resolTipos[k])+'</option>').join('')+'</select></div><div><label>'+(conf?'Se não aprovar: qual regra não seguiu':'O que foi feito')+'</label><input id="ro_'+p.id+'" maxlength="300"></div></div><button class="btn ok peq" onclick="resolver(\''+p.id+'\')">✔️ Salvar</button>'
+        +(p.tipo==='nota_pendente'?' <button class="btn sec peq" onclick="cobrarNota(\''+p.id+'\')">🔁 Continuar cobrando (+2 dias úteis)</button>':''); })():'')+'</div>';
 }
+async function cobrarNota(id){ try{ const r=await post({action:'rcbPendCobrar',id}); toast(r.ok?'🔁 Novo prazo: '+r.prazo+'. O aviso volta se não chegar.':'⚠️ '+(r.erro||'')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
 async function resolver(id){ const rs=$('rs_'+id).value, o=$('ro_'+id).value; if(!rs) return toast('Escolha como foi resolvido.');
   try{ const r=await post({action:'rcbPendResolver',id,resolucao:rs,obs:o}); toast(r.ok?'✔️ Resolvida.':'⚠️ '+(r.erro||'Não salvou.')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
 function itemRec(x){
@@ -254,7 +257,7 @@ function itemRec(x){
     +'<div class="linha muted">'+esc(x.local)+' · '+esc(x.dia)+' '+esc(x.hora)+' · '+esc(x.quem)+(x.divergencias?' · '+x.divergencias+' divergência(s)':'')+'</div></summary>'
     +'<div class="linha">'+gs.map(g=>'• <b>'+esc(g.nome)+'</b>'+(g.temp!==null&&g.temp!==undefined?' — '+String(g.temp).replace('.',',')+' °C'+(g.temp>g.max?' <span class="tag t-red">acima de '+g.max+' °C</span>':''):'')+(g.validade?' · val. '+br(g.validade):'')+(g.lote?' · lote '+esc(g.lote):'')+(g.fotoTermo?' · <a href="'+esc(g.fotoTermo)+'" target="_blank" style="color:var(--gold)">📷</a>':'')).join('<br>')+'</div>'
     +'<div class="linha muted">Veículo: baú limpo '+sn(x.veiculo.bau)+' · refrigerado '+sn(x.veiculo.refrigerado)+' · uniforme '+sn(x.veiculo.uniforme)+' · limpeza separada '+sn(x.veiculo.separado)+' · entregador '+esc(x.entregador)+'</div>'
-    +'<div class="linha muted">Documento: '+({ok:'✅ nota, CNPJ conferido pelo sistema',confirmado:'☑️ nota, CNPJ confirmado por quem recebeu',outro:'🚫 nota de outro CNPJ',nao_se_aplica:'transferência',nota_depois:'⏳ sem nota — vem depois',sem_documento:'✋ sem documento (autorizado)',cupom:'🧾 cupom fiscal'}[x.cnpjSit]||esc(x.cnpjSit))+(x.minConf?' · conferência em '+x.minConf+' min':'')+(x.valor?' · R$ '+Number(x.valor).toFixed(2).replace('.',','):'')+'</div>'
+    +'<div class="linha muted">Documento: '+({sem_documento_resp:'🌙 sem documento, sob responsabilidade de quem recebeu',ok:'✅ nota, CNPJ conferido pelo sistema',confirmado:'☑️ nota, CNPJ confirmado por quem recebeu',outro:'🚫 nota de outro CNPJ',nao_se_aplica:'transferência',nota_depois:'⏳ sem nota — vem depois',sem_documento:'✋ sem documento (autorizado)',cupom:'🧾 cupom fiscal'}[x.cnpjSit]||esc(x.cnpjSit))+(x.minConf?' · conferência em '+x.minConf+' min':'')+(x.valor?' · R$ '+Number(x.valor).toFixed(2).replace('.',','):'')+'</div>'
     +(x.obs?'<div class="linha">💬 '+esc(x.obs)+'</div>':'')+(x.fotoNota?'<div class="linha"><a href="'+esc(x.fotoNota)+'" target="_blank" style="color:var(--gold)">📄 Ver a nota</a></div>':'')+'</details>';
 }
 function sn(v){ return v==='sim'?'✅':v==='nao'?'❌':'—'; }
@@ -294,7 +297,7 @@ function avancar(){ guardarCampos(); const e=validarPasso(); if(e) return toast(
 function guardarCampos(){
   if(!W) return; const v=id=>{ const e=$(id); return e?e.value:undefined; };
   if($('nfForn')){ W.nota.fornecedor=v('nfForn'); W.nota.numero=v('nfNum'); W.nota.valor=v('nfValor'); }
-  if($('nfConf')) W.nota.cnpjConfirmado=$('nfConf').checked; if($('nfMotivo')) W.nota.motivo=$('nfMotivo').value;
+  if($('nfConf')) W.nota.cnpjConfirmado=$('nfConf').checked; if($('nfMotivo')) W.nota.motivo=$('nfMotivo').value; if($('nfTermo')) W.nota.termo=$('nfTermo').checked;
   if($('veEnt')){ W.entregador=v('veEnt'); W.veiculo.obs=v('veObs'); }
   Object.keys(W.grupos).forEach(g=>{ const G=W.grupos[g]; ['temp','validade','lote'].forEach(k=>{ const x=v('g_'+g+'_'+k); if(x!==undefined) G[k]=x; });
     (G.itensPeso||[]).forEach((it,i)=>{ ['nome','pesoNota','pesoBalanca'].forEach(k=>{ const x=v('gp_'+g+'_'+i+'_'+k); if(x!==undefined) it[k]=x; }); }); });
@@ -308,6 +311,7 @@ function validarPasso(){
   if(p==='origem'&&!W.origem) return 'Escolha de onde veio a mercadoria.';
   if(p==='nota'&&(W.nota.tipo||'nf')!=='nf'){ if(W.decisao==='recusado') return ''; const t=W.nota.tipo; if((W.nota.fornecedor||'').trim().length<3) return 'Escreva o nome do fornecedor.';
     if(t==='cupom'&&!FOTOS.nota&&!TESTE) return 'Tire a foto do cupom.'; if(t==='depois'&&!FOTOS.nota&&!TESTE) return 'Tire a foto do romaneio ou do pedido.';
+    if(t==='sem'&&W.nota.resp){ if((W.nota.motivo||'').trim().length<10) return 'Escreva o que chegou e por que veio sem documento.'; if(!W.nota.termo) return 'Leia e marque o termo de responsabilidade.'; return ''; }
     if(t==='sem'){ const a=W.nota.aut||{}; if(!W.nota.autId) return 'Peça a autorização da Lia ou do Sidinei.'; if(a.situacao==='pedida') return 'Esperando a Lia ou o Sidinei autorizar.'; if(a.situacao==='recusada') return 'Não autorizado: recuse a entrega.'; } return ''; }
   if(p==='nota'){ if(W.decisao==='recusado') return ''; if(!FOTOS.nota&&!TESTE) return 'Tire a foto da nota.'; if((W.nota.fornecedor||'').trim().length<3) return 'Escreva o nome do fornecedor.'; if(!(W.nota.numero||'').replace(/\D/g,'')&&!W.nota.chave) return 'Digite o número da nota.';
     if(W.nota.duplicada) return 'Esta nota já foi recebida. Se for outra entrega, confira o número.';
@@ -331,7 +335,7 @@ function pOrigem(){
     +nav(false);
 }
 // passo 2 — nota
-const NT={nf:['📄 Nota fiscal','Veio com nota (DANFE).'],cupom:['🧾 Cupom fiscal','Compra em mercado ou atacado (cupom / NFC-e).'],depois:['⏳ Sem nota — vem depois','O fornecedor manda a nota depois (e-mail, WhatsApp). Fotografe o romaneio ou o pedido.'],sem:['✋ Sem documento nenhum','Ceasa, produtor, pequeno fornecedor. Só recebe com autorização da Lia ou do Sidinei.']};
+const NT={nf:['📄 Nota fiscal','Veio com nota (DANFE).'],cupom:['🧾 Cupom fiscal','Compra em mercado ou atacado (cupom / NFC-e).'],depois:['⏳ Sem nota — vem depois','O fornecedor manda a nota depois (e-mail, WhatsApp). Fotografe o romaneio ou o pedido.'],sem:['✋ Sem documento nenhum','Ceasa, produtor, pequeno fornecedor. Só recebe com autorização da Lia ou do Sidinei (à noite: sob sua responsabilidade).']};
 function tipoNota(t){ guardarCampos(); W.nota.tipo=t; if(t!=='nf'){ W.nota.cnpjSit=''; } pararAut(); render(); }
 function pNota(){
   const N=W.nota, t=N.tipo||'nf';
@@ -355,12 +359,18 @@ function pNota(){
   return h;
 }
 function pSemDoc(){
-  const N=W.nota, a=N.aut||{};
-  let h='<label>Fornecedor</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'"'+(N.autId?' disabled':'')+'><label>Valor (R$)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'"'+(N.autId?' disabled':'')+'>';
-  if(!N.autId) return h+'<label>O que chegou e por que veio sem documento</label><textarea id="nfMotivo" maxlength="300">'+esc(N.motivo||'')+'</textarea>'+camBotao('nota','Foto do recibo ou da mercadoria (se tiver)')+'<button class="btn lg" onclick="pedirAut()">✋ Pedir autorização à Lia / Sidinei</button>';
-  if(a.situacao==='aprovada') return h+'<div class="aviso av-ok">✅ Autorizado por '+esc(a.decididoPor||'')+'. Pode seguir com a conferência.</div>';
+  const N=W.nota, a=N.aut||{}, H=LD.autHorario||{agora:true,txt:'segunda a sábado, das 7h às 17h',esperaMin:15}, noite=!H.agora||N.simNoite;
+  let h='<label>Fornecedor</label><input id="nfForn" maxlength="60" value="'+esc(N.fornecedor||'')+'"'+(N.autId&&!N.resp?' disabled':'')+'><label>Valor (R$)</label><input id="nfValor" inputmode="decimal" value="'+esc(N.valor||'')+'"'+(N.autId&&!N.resp?' disabled':'')+'>';
+  const termo=()=>'<label>O que chegou e por que veio sem documento</label><textarea id="nfMotivo" maxlength="300">'+esc(N.motivo||'')+'</textarea>'+camBotao('nota','Foto do recibo ou da mercadoria (se tiver)')
+    +'<div class="aviso av-red" style="font-weight:600">📝 <b>Termo de responsabilidade</b><br>'+esc(LD.termo||'')+'<label class="chk"><input type="checkbox" id="nfTermo" '+(N.termo?'checked':'')+'> Li e assumo a responsabilidade.</label></div>';
+  if(N.resp) return h+'<div class="aviso av-am">🌙 Você vai receber <b>sob sua responsabilidade</b>. Siga todas as regras da conferência. A Lia ou o Sidinei confirmam no próximo dia útil até 12h.</div>'+termo();
+  if(!N.autId&&noite) return h+'<div class="aviso av-am">🌙 Fora do horário da Lia e do Sidinei ('+esc(H.txt)+'). Você pode receber <b>sob sua responsabilidade</b>: eles conferem no próximo dia útil.</div><button class="btn lg" onclick="guardarCampos();W.nota.resp=true;render()">Receber sob minha responsabilidade</button>';
+  if(!N.autId) return h+'<label>O que chegou e por que veio sem documento</label><textarea id="nfMotivo" maxlength="300">'+esc(N.motivo||'')+'</textarea>'+camBotao('nota','Foto do recibo ou da mercadoria (se tiver)')+'<button class="btn lg" onclick="pedirAut()">✋ Pedir autorização à Lia / Sidinei</button>'
+    +(TESTE?'<button class="btn sec peq" onclick="guardarCampos();W.nota.simNoite=true;render()">🧪 Teste: ver como fica à noite</button>':'');
+  if(a.situacao==='aprovada') return h+'<div class="aviso av-ok">✅ Autorizado por '+esc(a.decididoPor||'')+'. Pode seguir com a conferência.</div>'+(TESTE?'<button class="btn sec peq" onclick="W.nota.aut={situacao:\'pedida\',podeResp:true};pararAut();render()">🧪 Teste: ver como fica se ninguém responder em 15 min</button>':'');
   if(a.situacao==='recusada') return h+'<div class="aviso av-red">🚫 NÃO autorizado'+(a.motivoDecisao?': '+esc(a.motivoDecisao):'')+'.<br><button class="btn" style="width:100%" onclick="recusarTudo(\'Sem documento e não autorizado\')">🚫 Recusar a entrega</button></div>';
-  return h+'<div class="aviso av-am">⏳ Pedido enviado. A Lia e o Sidinei receberam no WhatsApp. Fique nesta tela: assim que um deles responder, aparece aqui.</div><button class="btn sec peq" onclick="consultarAut()">🔄 Ver se já responderam</button>';
+  return h+'<div class="aviso av-am">⏳ Pedido enviado. A Lia e o Sidinei receberam no WhatsApp. Fique nesta tela: assim que um deles responder, aparece aqui.'+(a.podeResp?'':(a.faltaMin?'<br>Se ninguém responder em '+a.faltaMin+' min, você poderá receber sob sua responsabilidade.':''))+'</div>'
+    +(a.podeResp?'<button class="btn lg" onclick="guardarCampos();W.nota.resp=true;pararAut();render()">⏰ Ninguém respondeu em '+(H.esperaMin||15)+' min — receber sob minha responsabilidade</button>':'')+'<button class="btn sec peq" onclick="consultarAut()">🔄 Ver se já responderam</button>';
 }
 let _autTimer=null;
 function pararAut(){ if(_autTimer){ clearInterval(_autTimer); _autTimer=null; } }
@@ -368,7 +378,7 @@ async function pedirAut(){ guardarCampos(); const m=($('nfMotivo')||{}).value||'
   try{ const r=await post({action:'rcbAutPedir',local:LOCAL,fornecedor:W.nota.fornecedor,valor:W.nota.valor,motivo:m,foto:foto('nota')}); if(!r.ok) return toast('⚠️ '+(r.erro||'Não enviou.'));
     W.nota.autId=r.id; W.nota.aut={situacao:'pedida'}; toast(r.msg); render(true); pararAut(); _autTimer=setInterval(consultarAut,15000); consultarAut(); }catch(e){ toast('⚠️ Sem conexão.'); } }
 async function consultarAut(){ if(!W||!W.nota.autId){ pararAut(); return; }
-  try{ const r=await get({action:'rcbAutSituacao',id:W.nota.autId}); if(r.ok){ const antes=(W.nota.aut||{}).situacao; W.nota.aut=r; if(r.situacao!=='pedida') pararAut(); if(antes!==r.situacao&&passoAtual()==='nota') render(); if(antes==='pedida'&&r.situacao!=='pedida') try{ navigator.vibrate&&navigator.vibrate([300,150,300]); }catch(e){} } }catch(e){} }
+  try{ const r=await get({action:'rcbAutSituacao',id:W.nota.autId}); if(r.ok){ const antes=(W.nota.aut||{}).situacao; W.nota.aut=r; if(r.situacao!=='pedida') pararAut(); if((antes!==r.situacao||r.podeResp)&&passoAtual()==='nota'&&!W.nota.resp) render(); if(antes==='pedida'&&r.situacao!=='pedida') try{ navigator.vibrate&&navigator.vibrate([300,150,300]); }catch(e){} } }catch(e){} }
 async function lerNota(){
   W.nota.lendo=true; W.nota.msg=''; render();
   try{ const r=await post({action:'rcbLerNota',local:LOCAL,foto:foto('nota')}); guardarCampos(); W.nota.lendo=false;
@@ -491,10 +501,11 @@ async function salvar(){
 // ---------- painel da equipe ----------
 function telaAut(){
   const ls=PD.autorizacoes||[], pend=ls.filter(a=>a.situacao==='pedida'), outras=ls.filter(a=>a.situacao!=='pedida');
-  const it=a=>'<div class="item '+(a.situacao==='pedida'?'am':a.situacao==='recusada'?'red':'ok')+'"'+(Q.get('aut')===a.id?' style="box-shadow:0 0 0 3px var(--gold)"':'')+'><div class="it-top"><span>'+esc(a.local)+' · '+esc(a.fornecedor)+(a.valor?' · R$ '+Number(a.valor).toFixed(2).replace('.',','):'')+'</span><span class="tag '+(a.situacao==='pedida'?'t-am':a.situacao==='recusada'?'t-red':'t-ok')+'">'+({pedida:'Esperando',aprovada:'Autorizado',recusada:'Não autorizado',usada:'Recebido'}[a.situacao]||a.situacao)+'</span></div>'
+  const it=a=>'<div class="item '+(a.situacao==='pedida'?'am':a.situacao==='recusada'?'red':'ok')+'"'+(Q.get('aut')===a.id?' style="box-shadow:0 0 0 3px var(--gold)"':'')+'><div class="it-top"><span>'+esc(a.local)+' · '+esc(a.fornecedor)+(a.valor?' · R$ '+Number(a.valor).toFixed(2).replace('.',','):'')+'</span><span class="tag '+(a.situacao==='pedida'?'t-am':a.situacao==='recusada'?'t-red':'t-ok')+'">'+({pedida:'Esperando',aprovada:'Autorizado',recusada:'Não autorizado',usada:'Recebido',responsabilidade:'Sob responsabilidade'}[a.situacao]||a.situacao)+'</span></div>'
     +'<div class="linha">💬 '+esc(a.motivo)+'</div><div class="linha muted">Pedido por '+esc(a.quem)+' em '+esc(a.quando)+(a.decididoPor?' · decidido por '+esc(a.decididoPor)+' em '+esc(a.decididoEm)+(a.motivoDecisao?' ('+esc(a.motivoDecisao)+')':''):'')+'</div>'+(a.foto?'<div class="linha"><a href="'+esc(a.foto)+'" target="_blank" style="color:var(--gold)">📷 Ver foto</a></div>':'')
     +(a.situacao==='pedida'&&PD.autoriza?'<label>Motivo (obrigatório para não autorizar)</label><input id="adm_'+a.id+'" maxlength="200"><div class="nav"><button class="btn sec" onclick="decidirAut(\''+a.id+'\',\'recusada\')">🚫 Não autorizar</button><button class="btn ok" onclick="decidirAut(\''+a.id+'\',\'aprovada\')">✅ Autorizar</button></div>':'')+'</div>';
-  return '<div class="card"><div class="tit">✋ Entrada sem documento — pedidos ('+pend.length+')</div><div class="muted">Ceasa, produtor ou pequeno fornecedor sem nota: a loja só recebe com a autorização da Lia OU do Sidinei. Quem responder primeiro decide.</div>'+(pend.length?pend.map(it).join(''):'<div class="aviso av-ok">Nenhum pedido esperando.</div>')+'</div>'
+  const conf=PD.pendencias.filter(p=>p.tipo==='confirmar_resp');
+  return (conf.length?'<div class="card"><div class="tit">🌙 Recebidos sob responsabilidade — confirmar ('+conf.length+')</div><div class="muted">Fora do horário (ou sem resposta em 15 min) o gerente recebeu assumindo a responsabilidade. Confira as fotos e confirme até 12h do próximo dia útil. Não aprovado = ocorrência: a loja perde 10 pontos e o GDI é avisado.</div>'+conf.map(itemPend).join('')+'</div>':'')+'<div class="card"><div class="tit">✋ Entrada sem documento — pedidos ('+pend.length+')</div><div class="muted">Ceasa, produtor ou pequeno fornecedor sem nota: a loja só recebe com a autorização da Lia OU do Sidinei. Quem responder primeiro decide.</div>'+(pend.length?pend.map(it).join(''):'<div class="aviso av-ok">Nenhum pedido esperando.</div>')+'</div>'
     +(outras.length?'<div class="card"><div class="tit">🕓 Últimos 15 dias</div>'+outras.map(it).join('')+'</div>':'');
 }
 async function decidirAut(id,dec){ const m=($('adm_'+id)||{}).value||''; try{ const r=await post({action:'rcbAutDecidir',id,decisao:dec,motivo:m}); toast(r.ok?(dec==='aprovada'?'✅ Autorizado. A loja já vê.':'🚫 Não autorizado. A loja já vê.'):'⚠️ '+(r.erro||'')); if(r.ok) recarregar(); }catch(e){ toast('⚠️ Sem conexão.'); } }
