@@ -2090,6 +2090,7 @@
   }
   function chkEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+  let CHK_FOTO_TIPOS=null; // 📷 foto obrigatória conferida pela IA (servidor 2026-11-20-d); sem o servidor novo não aparece
   async function carregarChkAdm(){
     const sel=document.getElementById('chkAdmLoja');
     if(!sel.options.length) sel.innerHTML='<option value="">Todas as lojas</option>'+CHK_LOJAS.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
@@ -2097,7 +2098,7 @@
     try{
       const r=await chkAdmJsonp({action:'chkAdminListar'});
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'O Apps Script publicado ainda não tem a edição do checklist');
-      chkAdmItens=r.itens||[]; chkAdmCarregado=true; renderChkAdm();
+      chkAdmItens=r.itens||[]; CHK_FOTO_TIPOS=r.fotoTipos||null; chkAdmCarregado=true; renderChkAdm();
     }catch(e){
       document.getElementById('chkAdmLista').innerHTML='<div style="color:var(--danger);font-size:0.85rem">⚠ '+chkEsc(e.message)+'</div>';
     }
@@ -2113,7 +2114,7 @@
       if(it.secao!==sec){ sec=it.secao; h+='<div class="chk-adm-secao">'+chkEsc(sec)+'</div>'; }
       const tipoTag=it.tipo==='abertura'?'<span class="chk-adm-tag ab">Abertura</span>':it.tipo==='fechamento'?'<span class="chk-adm-tag fe">Fechamento</span>':'<span class="chk-adm-tag">Abertura e fechamento</span>';
       const fora=it.lojasExcluidas.map(sl=>(CHK_LOJAS.find(l=>l[0]===sl)||[sl,sl])[1]);
-      h+=`<div class="chk-adm-item${it.ativo?'':' off'}"><div class="chk-adm-txt"><b>${chkEsc(it.item)}</b><div class="chk-adm-tags">${tipoTag}${it.ativo?'':'<span class="chk-adm-tag off">Tirado</span>'}${fora.length?'<span class="chk-adm-tag">Não aparece em: '+chkEsc(fora.join(', '))+'</span>':'<span class="chk-adm-tag">Todas as lojas</span>'}</div></div>
+      h+=`<div class="chk-adm-item${it.ativo?'':' off'}"><div class="chk-adm-txt"><b>${chkEsc(it.item)}</b><div class="chk-adm-tags">${tipoTag}${it.foto&&CHK_FOTO_TIPOS&&CHK_FOTO_TIPOS[it.foto]?'<span class="chk-adm-tag ab">📷 Foto: '+chkEsc(CHK_FOTO_TIPOS[it.foto].nome)+'</span>':''}${it.ativo?'':'<span class="chk-adm-tag off">Tirado</span>'}${fora.length?'<span class="chk-adm-tag">Não aparece em: '+chkEsc(fora.join(', '))+'</span>':'<span class="chk-adm-tag">Todas as lojas</span>'}</div></div>
         <div class="chk-adm-acoes"><button title="Subir" onclick="moverChkItem('${it.id}',-1)">↑</button><button title="Descer" onclick="moverChkItem('${it.id}',1)">↓</button><button onclick="abrirChkItem('${it.id}')">Editar</button>${it.ativo?`<button class="tirar" onclick="ativoChkItem('${it.id}',false)">Tirar</button>`:`<button class="voltar" onclick="ativoChkItem('${it.id}',true)">Voltar</button>`}</div></div>`;
     });
     if(!lista.length) h+='<div style="color:var(--muted);font-size:0.85rem;margin-top:12px">Nenhum item com esse filtro.</div>';
@@ -2133,6 +2134,11 @@
     document.querySelectorAll('#chkItemTipo button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===chkAdmEdit.tipo); b.onclick=()=>{ chkAdmEdit.tipo=b.dataset.v; document.querySelectorAll('#chkItemTipo button').forEach(x=>x.classList.toggle('on',x===b)); }; });
     const excl=it?it.lojasExcluidas:[];
     document.getElementById('chkItemLojas').innerHTML=CHK_LOJAS.map(([v,n])=>`<label><input type="checkbox" value="${v}" ${excl.includes(v)?'':'checked'}> ${n}</label>`).join('');
+    // 📷 foto obrigatória: o que a foto tem que mostrar (a IA confere)
+    let fb=document.getElementById('chkItemFotoBox');
+    if(!fb){ fb=document.createElement('div'); fb.id='chkItemFotoBox'; fb.style.marginTop='12px'; const tx=document.getElementById('chkItemTexto'); tx.parentNode.insertBefore(fb,tx.nextSibling); }
+    fb.style.display=CHK_FOTO_TIPOS?'block':'none';
+    if(CHK_FOTO_TIPOS) fb.innerHTML='<label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">📷 Foto obrigatória (o gerente só marca o item depois de bater a foto; a IA confere)</label><select id="chkItemFoto" style="width:100%;padding:10px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border)"><option value="">Sem foto obrigatória</option>'+Object.entries(CHK_FOTO_TIPOS).map(([k,v])=>`<option value="${k}" ${it&&it.foto===k?'selected':''}>📷 ${chkEsc(v.nome)} — mostrar ${chkEsc(v.mostrar)}</option>`).join('')+'</select>';
     document.getElementById('chkItemErro').textContent='';
     document.getElementById('modalChkItem').style.display='flex';
   }
@@ -2153,7 +2159,8 @@
     const btn=document.getElementById('chkItemSalvarBtn'); btn.disabled=true; btn.textContent='Salvando...';
     try{
       const atual=chkAdmEdit.id?chkAdmItens.find(x=>x.id===chkAdmEdit.id):null;
-      await chkAdmPost({action:'chkAdminSalvar',id:chkAdmEdit.id||'',secao,item,tipo:chkAdmEdit.tipo,lojasExcluidas,ativo:atual?atual.ativo:true});
+      const fsel=document.getElementById('chkItemFoto');
+      await chkAdmPost(Object.assign({action:'chkAdminSalvar',id:chkAdmEdit.id||'',secao,item,tipo:chkAdmEdit.tipo,lojasExcluidas,ativo:atual?atual.ativo:true},CHK_FOTO_TIPOS&&fsel?{foto:fsel.value}:{}));
       fecharModal('modalChkItem'); showToast('Item salvo no checklist','ok');
       registrarLog('Checklist: item '+(chkAdmEdit.id?'editado':'incluído')+' — '+item,'ok');
       await carregarChkAdm();
