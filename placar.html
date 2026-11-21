@@ -2421,9 +2421,9 @@ function chkConferirHorarioAbertura(continuar){
 
 const _chkItensCache={};
 async function chkItensDoTurno(turno){
-  const k=slugLoja(unidadeAtual)+'|'+turno;
+  const k=slugLoja(unidadeAtual)+'|'+unidadeAtual+'|'+turno;
   if(_chkItensCache[k]) return _chkItensCache[k];
-  const r=await chkJsonp({action:'getChecklistItens',loja:slugLoja(unidadeAtual),turno:turno});
+  const r=await chkJsonp({action:'getChecklistItens',loja:slugLoja(unidadeAtual),unidade:unidadeAtual,turno:turno}); // unidade: Isaac Manhã e Noite com itens separados (21/11/2026)
   if(!r||!r.ok) throw new Error('itens');
   return (_chkItensCache[k]=r.itens||[]);
 }

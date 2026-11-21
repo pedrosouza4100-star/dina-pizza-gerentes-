@@ -72,7 +72,7 @@ function restaurar(){ try{ const g=JSON.parse(localStorage.getItem(rasc())||'nul
 async function iniciar(){
   if(TESTE){
     document.getElementById('testeBar').style.display='block';
-    let it=[]; try{ const r=await jsonp({action:'getChecklistItens',loja:Q.get('slug')||'',turno:Q.get('turno')||'abertura'}); it=(r&&r.itens||[]).filter(x=>String(x.secao)===String(Q.get('secao')||'')).map(x=>({id:String(x.id),item:x.item})); }catch(e){}
+    let it=[]; try{ const r=await jsonp({action:'getChecklistItens',loja:Q.get('slug')||'',unidade:Q.get('loja')||'',turno:Q.get('turno')||'abertura'}); it=(r&&r.itens||[]).filter(x=>String(x.secao)===String(Q.get('secao')||'')).map(x=>({id:String(x.id),item:x.item})); }catch(e){}
     if(!it.length) it=[{id:'t1',item:'(exemplo) Primeiro item desta parte'},{id:'t2',item:'(exemplo) Segundo item desta parte'}];
     D={ok:true,unidade:Q.get('loja')||'Loja',turno:Q.get('turno')||'abertura',secao:Q.get('secao')||'Parte',pessoa:Q.get('pessoa')||'Colaborador',situacao:'aberta',confere:false,itens:it};
   } else {
