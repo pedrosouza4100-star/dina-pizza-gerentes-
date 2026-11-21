@@ -56,8 +56,11 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 const Q=new URLSearchParams(location.search), TESTE=Q.get('teste')==='1', TOKEN=Q.get('t')||'';
 let D=null, RESP={}, OBS={}, RESOLV={}, FOTO={}, TENTOU=false, ENVIANDO=false, MIN=5;
 // 📷 foto obrigatória conferida pela IA (servidor 2026-11-20-d): item com foto só é marcado depois da foto
-const MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão'};
-const GAS={}; function pronto(id,t){ return fotoOk(id)&&(t!=='gas'||!!GAS[id]); }
+const MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão',termostato:'o painel do termostato do buffet (o número da temperatura)'};
+const TEMP={}, TFX=[80,90]; // termostato do buffet (21/11/2026): a IA lê; se não ler, digita
+function tempPor(id,val){ const n=parseFloat(String(val).replace(',','.')); const t=TEMP[id]=TEMP[id]||{v:null,lido:null}; t.v=isFinite(n)?Math.round(n*10)/10:null; }
+function tempOk(id,val){ tempPor(id,val); const t=TEMP[id]; if(t.v!==null&&(t.v<TFX[0]||t.v>TFX[1])){ RESP[id]='nao_conforme'; if((OBS[id]||'').trim().length<MIN) OBS[id]='Temperatura do buffet '+t.v+' °C (o certo é de '+TFX[0]+' a '+TFX[1]+' °C)'; } desenhar(); }
+const GAS={}; function pronto(id,t){ return fotoOk(id)&&(t!=='gas'||!!GAS[id])&&(t!=='termostato'||!!(TEMP[id]&&TEMP[id].v!==null)); }
 function gasMarcar(id,n){ GAS[id]=n; if(n==='acabando'){ RESP[id]='nao_conforme'; if((OBS[id]||'').trim().length<MIN) OBS[id]='Gás acabando (ponteiro no vermelho)'; } desenhar(); }
 const FIA={}; // id → {ia, tent, msg, conferindo}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -104,12 +107,14 @@ function desenhar(){
   h+='<button class="btn" id="btEnviar" onclick="enviar()">Enviar para o gerente</button><div class="msg" id="msg"></div>';
   document.getElementById('main').innerHTML=h; botao();
 }
-function responder(id,st){ const it=D.itens.find(x=>String(x.id)===id); if(it&&it.foto&&!fotoOk(id)){ fotoTirar(id); return; } if(it&&it.foto==='gas'&&!GAS[id]){ alert('Primeiro marque onde está o ponteiro do relógio do gás.'); return; } if(it&&GAS[id]==='acabando'&&st==='conforme'){ alert('Gás 🔴 acabando: o item fica com problema.'); return; } RESP[id]=st; guardar(); const y=window.scrollY; desenhar(); window.scrollTo(0,y); }
+function responder(id,st){ const it=D.itens.find(x=>String(x.id)===id); if(it&&it.foto&&!fotoOk(id)){ fotoTirar(id); return; } if(it&&it.foto==='gas'&&!GAS[id]){ alert('Primeiro marque onde está o ponteiro do relógio do gás.'); return; } if(it&&it.foto==='termostato'){ const t=TEMP[id]; if(!t||t.v===null){ alert('Primeiro informe a temperatura do painel.'); return; } if((t.v<TFX[0]||t.v>TFX[1])&&st==='conforme'){ alert('Temperatura fora de '+TFX[0]+'–'+TFX[1]+' °C: o item fica com problema.'); return; } } if(it&&GAS[id]==='acabando'&&st==='conforme'){ alert('Gás 🔴 acabando: o item fica com problema.'); return; } RESP[id]=st; guardar(); const y=window.scrollY; desenhar(); window.scrollTo(0,y); }
 function faltam(){ return D.itens.filter(it=>{ const id=String(it.id), r=RESP[id]; return !r||(r==='nao_conforme'&&(OBS[id]||'').trim().length<MIN)||(it.foto&&!pronto(id,it.foto)); }).length; }
 function fotoOk(id){ return !!(FIA[id]&&FIA[id].ia&&FOTO[id]); }
 function fotoObrigHtml(id,tipo){
   const x=FIA[id]||{}, m=MOSTRAR[tipo]||'o item';
   if(x.conferindo) return '<div class="muted" style="margin-top:8px">⏳ Conferindo a foto…</div>';
+  if(fotoOk(id)&&tipo==='termostato'){ const t=TEMP[id]||{v:null,lido:null};
+    return '<div class="linha"><img src="'+FOTO[id]+'"><b style="color:'+(t.lido!==null?'var(--green)':'#ffb020')+'">'+(t.lido!==null?'✅ A IA leu '+t.lido+' °C':'⚠️ Digite a temperatura que aparece no painel')+'</b><button type="button" class="btn sec" onclick="fotoTirar(\''+id+'\')">Tirar outra</button></div><div style="font-weight:700;margin:8px 0 4px">🌡️ Temperatura: <input type="number" inputmode="decimal" value="'+(t.v===null?'':t.v)+'" oninput="tempPor(\''+id+'\',this.value)" onchange="tempOk(\''+id+'\',this.value)" style="width:90px;padding:8px;font-size:16px;font-weight:800"> °C (certo: '+TFX[0]+' a '+TFX[1]+' °C)</div>'; }
   if(fotoOk(id)&&tipo==='gas'){ const g=GAS[id]||'', b=(v,t,c)=>'<button type="button" onclick="gasMarcar(\''+id+'\',\''+v+'\')" style="flex:1;padding:10px 4px;border-radius:10px;font-weight:800;border:2px solid '+(g===v?c:'var(--border)')+';background:'+(g===v?c:'var(--card)')+';color:'+(g===v?'#06110b':'var(--text)')+'">'+t+'</button>';
     return '<div class="linha"><img src="'+FOTO[id]+'"><b style="color:var(--green)">📷 Foto guardada</b><button type="button" class="btn sec" onclick="fotoTirar(\''+id+'\')">Tirar outra</button></div><div style="font-weight:700;margin:8px 0 4px">Onde está o ponteiro do relógio do gás?</div><div style="display:flex;gap:6px">'+b('cheio','🟢 Cheio','#2ecc71')+b('metade','🟡 Metade','#ffd000')+b('acabando','🔴 Acabando','#ff4d4d')+'</div>'; }
   if(fotoOk(id)) return '<div class="linha"><img src="'+FOTO[id]+'"><b style="color:'+(x.ia==='conferir'?'var(--gold)':'var(--green)')+'">'+(x.ia==='conferir'?'⚠️ Foto aceita — vai ser conferida':x.ia==='sem_ia'?'📷 Foto guardada':'✅ Foto conferida')+'</b><button type="button" class="btn sec" onclick="fotoTirar(\''+id+'\')">Tirar outra</button></div>';
@@ -121,6 +126,7 @@ function fotoTirar(id){ _camDepois=async foto=>{
   if(TESTE){ try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelFotoConferir',unidade:Q.get('loja')||'',senha:(sessionStorage.getItem('dina_teste_admin')||''),tipo:it.foto,foto})}); r=JSON.parse(await y.text()); }catch(e){} }
   else { try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelFotoConferir',tk:TOKEN,tipo:it.foto,foto})}); r=JSON.parse(await y.text()); }catch(e){} }
   x.conferindo=false;
+  if(it.foto==='termostato'){ FOTO[id]=foto; const lido=r&&r.ok&&r.temp!==undefined&&r.temp!==null?Number(r.temp):null; x.ia=lido!==null?'ok':(r&&r.ok&&!r.semIa?'conferir':'sem_ia'); TEMP[id]={v:lido,lido:lido}; if(lido!==null) tempOk(id,lido); else desenhar(); return; }
   if(!r||!r.ok||r.reconheceu===null||r.semIa){ FOTO[id]=foto; x.ia='sem_ia'; }
   else if(r.reconheceu){ FOTO[id]=foto; x.ia='ok'; }
   else { x.tent=(x.tent||0)+1; if(x.tent>=2){ FOTO[id]=foto; x.ia='conferir'; } else { x.ia=''; delete FOTO[id]; x.msg=(r.motivo||'Não reconheci o equipamento na foto. Bata de novo.')+' (tentativa 1 de 2)'; } }
@@ -138,7 +144,7 @@ async function enviar(){
     let c=null; if(D.confere){ msg.style.color='var(--muted)'; msg.textContent='📍 Conferindo se você está na loja…'; c=await posicao();
       if(!c){ msg.style.color='var(--red)'; msg.textContent='📍 Ligue a localização do celular e permita para este site. Esta parte só pode ser enviada dentro da loja.'; return; } }
     msg.style.color='var(--muted)'; msg.textContent='Enviando…';
-    const R={}; D.itens.forEach(it=>{ const id=String(it.id); R[id]={status:RESP[id],obs:RESP[id]==='nao_conforme'?(OBS[id]||'').trim():'',resolvido:RESP[id]==='nao_conforme'&&!!RESOLV[id],foto:(RESP[id]==='nao_conforme'||it.foto)&&FOTO[id]?FOTO[id]:'',fotoIA:it.foto?((FIA[id]||{}).ia||'sem_ia'):'',nivel:it.foto==='gas'?(GAS[id]||''):''}; });
+    const R={}; D.itens.forEach(it=>{ const id=String(it.id); R[id]={status:RESP[id],obs:RESP[id]==='nao_conforme'?(OBS[id]||'').trim():'',resolvido:RESP[id]==='nao_conforme'&&!!RESOLV[id],foto:(RESP[id]==='nao_conforme'||it.foto)&&FOTO[id]?FOTO[id]:'',fotoIA:it.foto?((FIA[id]||{}).ia||'sem_ia'):'',nivel:it.foto==='gas'?(GAS[id]||''):'',temp:it.foto==='termostato'&&TEMP[id]?TEMP[id].v:null,tempLida:it.foto==='termostato'&&TEMP[id]?(TEMP[id].lido!==null&&TEMP[id].v===TEMP[id].lido):false}; });
     let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelEnviar',tk:TOKEN,respostas:R,lat:c?c.latitude:'',lng:c?c.longitude:'',acc:c?c.accuracy:''})}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
     if(!(r&&r.ok)){ msg.style.color='var(--red)'; msg.textContent='Não enviou: '+((r&&r.erro)||'sem conexão. Tente de novo.'); return; }
     try{ localStorage.removeItem(rasc()); }catch(e){}
