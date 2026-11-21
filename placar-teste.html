@@ -2514,6 +2514,21 @@ function renderEtapasChecklist(info){
   if(typeof verificarBotaoRegistrar==='function') verificarBotaoRegistrar();
 }
 
+async function chkSv2(){ try{ return await chkServidorV2(); }catch(e){ return false; } }
+// Confere no servidor se todos os itens do turno já estão gravados hoje para esta loja (2 tentativas, com espera)
+async function chkConferirSalvo(turno, ids){
+  for(const espera of [2500,6000]){
+    await new Promise(res=>setTimeout(res,espera));
+    try{
+      const d=await chkJsonp({action:'getChecklistStatus'},20000); if(!(d&&d.ok)) continue;
+      let r=d.resumo&&(d.resumo[slugLoja(unidadeAtual)]||d.resumo[unidadeAtual]);
+      if(r&&slugCompartilhado(unidadeAtual)){ const g=r.porGerente&&r.porGerente[unidadeAtual]; r=g?{idsAbertura:g.idsAbertura,idsFechamento:g.idsFechamento}:null; }
+      const tem=new Set(((r&&(turno==='fechamento'?r.idsFechamento:r.idsAbertura))||[]).map(String));
+      if(ids.length&&ids.every(id=>tem.has(id))) return true;
+    }catch(e){}
+  }
+  return false;
+}
 function chkOkLocal(turno){ try{ return !!localStorage.getItem(chaveHoje('chk_ok_'+turno)); }catch(e){ return false; } }
 async function carregarStatusChecklist(){
   if(!unidadeAtual) return;
@@ -2539,7 +2554,8 @@ async function carregarStatusChecklist(){
   try{ itAb=await chkItensDoTurno('abertura'); }catch(e){ _exibirBloqueioAbertura('Não consegui conferir o checklist. Verifique a internet.'); renderEtapasChecklist(); return; }
   try{ itFe=await chkItensDoTurno('fechamento'); }catch(e){ itFe=null; }
   // abertura completa = todos os itens de abertura conferidos hoje (se a loja não tem itens, não bloqueia)
-  const faltamAb=itAb.filter(it=>!idsAb.has(String(it.id).trim()));
+  // 21/11/2026: item que entrou hoje no Admin (novoHoje) não obriga quem já salvou o checklist hoje a refazer — vale a partir de amanhã
+  const faltamAb=itAb.filter(it=>!idsAb.has(String(it.id).trim())&&!(it.novoHoje&&idsAb.size));
   if(!faltamAb.length) _liberarAbertura();
   else {
     // servidor diz que falta, mas este celular salvou: não manda refazer, só registra para conferirmos
@@ -2547,7 +2563,7 @@ async function carregarStatusChecklist(){
     _exibirBloqueioAbertura(idsAb.size?'O checklist de abertura de hoje está incompleto. Preencha todos os itens.':undefined);
   }
   // fechamento completo = todos os itens de fechamento conferidos hoje (loja sem itens de fechamento não trava o envio)
-  if(itFe && (!itFe.length || itFe.every(it=>idsFe.has(String(it.id))))) chkFechamentoFeito = true;
+  if(itFe && (!itFe.length || itFe.every(it=>idsFe.has(String(it.id))||(it.novoHoje&&idsFe.size)))) chkFechamentoFeito = true;
   renderEtapasChecklist({nokAb:r&&r.abertura?r.abertura.nok:0});
 }
 
@@ -3031,6 +3047,8 @@ async function _salvarChecklist(){
       r=await chkJsonp({action:'salvarChecklist',payload:JSON.stringify({loja:slug,turno:turno,gerente:unidadeAtual,itens:itens})},20000);
     }
   }catch(e){ r=null; }
+  // 21/11/2026: sem resposta (internet lenta) não quer dizer que não salvou — confere no servidor antes de dizer "não salvou"
+  if(!r && !chkOkLocal(turno) && await chkSv2()){ msg.textContent='Conferindo no servidor se salvou...'; if(await chkConferirSalvo(turno, chkItensData.map(it=>String(it.id)))){ r={ok:true}; if(typeof logProva==='function') logProva('CHECKLIST_SALVO_CONFERIDO', turno+': sem resposta, mas o servidor tem tudo'); } }
   atualizarBotaoSalvarChk();
   if(r&&r.antes){ msg.textContent='⏰ '+r.erro; msg.style.color='#FFD000'; if(typeof logProva==='function') logProva('CHECKLIST_NAO_SALVOU', turno+': antes do horário'); return; }
   if(!(r&&r.ok===true)){
