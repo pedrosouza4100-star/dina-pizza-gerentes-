@@ -56,7 +56,9 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 const Q=new URLSearchParams(location.search), TESTE=Q.get('teste')==='1', TOKEN=Q.get('t')||'';
 let D=null, RESP={}, OBS={}, RESOLV={}, FOTO={}, TENTOU=false, ENVIANDO=false, MIN=5;
 // 📷 foto obrigatória conferida pela IA (servidor 2026-11-20-d): item com foto só é marcado depois da foto
-const MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado'};
+const MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão'};
+const GAS={}; function pronto(id,t){ return fotoOk(id)&&(t!=='gas'||!!GAS[id]); }
+function gasMarcar(id,n){ GAS[id]=n; if(n==='acabando'){ RESP[id]='nao_conforme'; if((OBS[id]||'').trim().length<MIN) OBS[id]='Gás acabando (ponteiro no vermelho)'; } desenhar(); }
 const FIA={}; // id → {ia, tent, msg, conferindo}
 function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jsonp(params){ return new Promise((res,rej)=>{ const cb='ecCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
@@ -91,9 +93,9 @@ function desenhar(){
     '<div class="parte">'+esc(D.secao)+'</div>'+
     (D.situacao==='enviada'?'<div class="muted" style="margin-top:10px;color:var(--gold)">Você já enviou às '+esc(D.enviadoHora||'')+'. Se precisar corrigir, mude e envie de novo antes de o gerente confirmar.</div>':'')+'</div>';
   D.itens.forEach(it=>{
-    const id=String(it.id), r=RESP[id]||'', falta=TENTOU&&(!r||(r==='nao_conforme'&&(OBS[id]||'').trim().length<MIN)||(it.foto&&!fotoOk(id)));
+    const id=String(it.id), r=RESP[id]||'', falta=TENTOU&&(!r||(r==='nao_conforme'&&(OBS[id]||'').trim().length<MIN)||(it.foto&&!pronto(id,it.foto)));
     h+='<div class="item'+(falta?' falta':'')+'" data-id="'+id+'"><div class="item-txt">'+esc(it.item)+'</div>'+(it.foto?fotoObrigHtml(id,it.foto):'')+
-      '<div class="bts"'+(it.foto&&!fotoOk(id)?' style="opacity:.35"':'')+'><button class="ok'+(r==='conforme'?' sel':'')+'" onclick="responder(\''+id+'\',\'conforme\')">✓</button><button class="nok'+(r==='nao_conforme'?' sel':'')+'" onclick="responder(\''+id+'\',\'nao_conforme\')">✗</button></div>'+
+      '<div class="bts"'+(it.foto&&!pronto(id,it.foto)?' style="opacity:.35"':'')+'><button class="ok'+(r==='conforme'?' sel':'')+'" onclick="responder(\''+id+'\',\'conforme\')">✓</button><button class="nok'+(r==='nao_conforme'?' sel':'')+'" onclick="responder(\''+id+'\',\'nao_conforme\')">✗</button></div>'+
       (r==='nao_conforme'?'<textarea placeholder="Descreva o problema (obrigatório)" oninput="OBS[\''+id+'\']=this.value;guardar();botao()">'+esc(OBS[id]||'')+'</textarea>'+
         (it.foto?'':'<div class="linha"><button type="button" class="btn sec" onclick="camAbrir(\''+id+'\')">📷 '+(FOTO[id]?'Tirar outra foto':'Tirar foto agora (opcional)')+'</button>'+(FOTO[id]?'<img src="'+FOTO[id]+'">':'')+'</div>')+
         '<label class="linha" style="cursor:pointer"><input type="checkbox" style="width:18px;height:18px" '+(RESOLV[id]?'checked':'')+' onchange="RESOLV[\''+id+'\']=this.checked;guardar()"> Já resolvi este problema</label>':'')+
@@ -102,12 +104,14 @@ function desenhar(){
   h+='<button class="btn" id="btEnviar" onclick="enviar()">Enviar para o gerente</button><div class="msg" id="msg"></div>';
   document.getElementById('main').innerHTML=h; botao();
 }
-function responder(id,st){ const it=D.itens.find(x=>String(x.id)===id); if(it&&it.foto&&!fotoOk(id)){ fotoTirar(id); return; } RESP[id]=st; guardar(); const y=window.scrollY; desenhar(); window.scrollTo(0,y); }
-function faltam(){ return D.itens.filter(it=>{ const id=String(it.id), r=RESP[id]; return !r||(r==='nao_conforme'&&(OBS[id]||'').trim().length<MIN)||(it.foto&&!fotoOk(id)); }).length; }
+function responder(id,st){ const it=D.itens.find(x=>String(x.id)===id); if(it&&it.foto&&!fotoOk(id)){ fotoTirar(id); return; } if(it&&it.foto==='gas'&&!GAS[id]){ alert('Primeiro marque onde está o ponteiro do relógio do gás.'); return; } if(it&&GAS[id]==='acabando'&&st==='conforme'){ alert('Gás 🔴 acabando: o item fica com problema.'); return; } RESP[id]=st; guardar(); const y=window.scrollY; desenhar(); window.scrollTo(0,y); }
+function faltam(){ return D.itens.filter(it=>{ const id=String(it.id), r=RESP[id]; return !r||(r==='nao_conforme'&&(OBS[id]||'').trim().length<MIN)||(it.foto&&!pronto(id,it.foto)); }).length; }
 function fotoOk(id){ return !!(FIA[id]&&FIA[id].ia&&FOTO[id]); }
 function fotoObrigHtml(id,tipo){
   const x=FIA[id]||{}, m=MOSTRAR[tipo]||'o item';
   if(x.conferindo) return '<div class="muted" style="margin-top:8px">⏳ Conferindo a foto…</div>';
+  if(fotoOk(id)&&tipo==='gas'){ const g=GAS[id]||'', b=(v,t,c)=>'<button type="button" onclick="gasMarcar(\''+id+'\',\''+v+'\')" style="flex:1;padding:10px 4px;border-radius:10px;font-weight:800;border:2px solid '+(g===v?c:'var(--border)')+';background:'+(g===v?c:'var(--card)')+';color:'+(g===v?'#06110b':'var(--text)')+'">'+t+'</button>';
+    return '<div class="linha"><img src="'+FOTO[id]+'"><b style="color:var(--green)">📷 Foto guardada</b><button type="button" class="btn sec" onclick="fotoTirar(\''+id+'\')">Tirar outra</button></div><div style="font-weight:700;margin:8px 0 4px">Onde está o ponteiro do relógio do gás?</div><div style="display:flex;gap:6px">'+b('cheio','🟢 Cheio','#2ecc71')+b('metade','🟡 Metade','#ffd000')+b('acabando','🔴 Acabando','#ff4d4d')+'</div>'; }
   if(fotoOk(id)) return '<div class="linha"><img src="'+FOTO[id]+'"><b style="color:'+(x.ia==='conferir'?'var(--gold)':'var(--green)')+'">'+(x.ia==='conferir'?'⚠️ Foto aceita — vai ser conferida':x.ia==='sem_ia'?'📷 Foto guardada':'✅ Foto conferida')+'</b><button type="button" class="btn sec" onclick="fotoTirar(\''+id+'\')">Tirar outra</button></div>';
   return '<div style="margin-top:8px;border:1px dashed var(--gold);border-radius:10px;padding:9px">'+(x.msg?'<div style="color:var(--red);font-weight:700;font-size:.85rem;margin-bottom:6px">'+esc(x.msg)+'</div>':'')+'<button type="button" class="btn sec" style="width:100%;padding:11px;font-weight:800" onclick="fotoTirar(\''+id+'\')">📷 Bata a foto antes de marcar: mostre '+esc(m)+'</button></div>';
 }
@@ -134,7 +138,7 @@ async function enviar(){
     let c=null; if(D.confere){ msg.style.color='var(--muted)'; msg.textContent='📍 Conferindo se você está na loja…'; c=await posicao();
       if(!c){ msg.style.color='var(--red)'; msg.textContent='📍 Ligue a localização do celular e permita para este site. Esta parte só pode ser enviada dentro da loja.'; return; } }
     msg.style.color='var(--muted)'; msg.textContent='Enviando…';
-    const R={}; D.itens.forEach(it=>{ const id=String(it.id); R[id]={status:RESP[id],obs:RESP[id]==='nao_conforme'?(OBS[id]||'').trim():'',resolvido:RESP[id]==='nao_conforme'&&!!RESOLV[id],foto:(RESP[id]==='nao_conforme'||it.foto)&&FOTO[id]?FOTO[id]:'',fotoIA:it.foto?((FIA[id]||{}).ia||'sem_ia'):''}; });
+    const R={}; D.itens.forEach(it=>{ const id=String(it.id); R[id]={status:RESP[id],obs:RESP[id]==='nao_conforme'?(OBS[id]||'').trim():'',resolvido:RESP[id]==='nao_conforme'&&!!RESOLV[id],foto:(RESP[id]==='nao_conforme'||it.foto)&&FOTO[id]?FOTO[id]:'',fotoIA:it.foto?((FIA[id]||{}).ia||'sem_ia'):'',nivel:it.foto==='gas'?(GAS[id]||''):''}; });
     let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelEnviar',tk:TOKEN,respostas:R,lat:c?c.latitude:'',lng:c?c.longitude:'',acc:c?c.accuracy:''})}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
     if(!(r&&r.ok)){ msg.style.color='var(--red)'; msg.textContent='Não enviou: '+((r&&r.erro)||'sem conexão. Tente de novo.'); return; }
     try{ localStorage.removeItem(rasc()); }catch(e){}
