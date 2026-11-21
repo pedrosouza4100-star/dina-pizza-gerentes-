@@ -823,7 +823,7 @@ const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirD
   const fetchOrig=window.fetch.bind(window);
   window.fetch=function(url,opt){
     if(MODO_TESTE && opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
-      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
+      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir'||b.action==='chkDelFotoConferir') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
       return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify({ok:true,status:'ok',teste:true}),{status:200,headers:{'Content-Type':'application/json'}})),500));
     }
     return fetchOrig(url,opt);
@@ -2684,15 +2684,16 @@ function renderItensChecklist(){
     html+=`<div class="chk-item-row${falta}" data-id="${id}">
       ${ab?`<div class="chk-reinc${ab.vezes>=2?' forte':''}">${chkTextoAberto(ab)}</div>`:''}
       <span class="chk-item-txt">${it.item}</span>
-      <div class="chk-item-btns">
+      ${it.foto?'<div style="flex-basis:100%;width:100%">'+chkFotoObrigHtml(id,it.foto)+'</div>':''}
+      <div class="chk-item-btns"${it.foto&&!chkItemPronto(id,it.foto)?' style="opacity:.35"':''}>
         <button class="chk-btn-ok ${resp==='conforme'?'sel':''}" onclick="chkResponder('${id}','conforme')">✓</button>
         <button class="chk-btn-nok ${resp==='nao_conforme'?'sel':''}" onclick="chkResponder('${id}','nao_conforme')">✗</button>
       </div>
       ${resp==='nao_conforme'?`<div class="chk-det">
         <textarea id="chkObs_${id}" class="${chkTentouSalvar&&(chkObs[id]||'').trim().length<CHK_MIN_DESC?'falta':''}" placeholder="Descreva o problema (obrigatório)" oninput="chkObs['${id}']=this.value;chkGuardarRascunho();atualizarBotaoSalvarChk()">${escChk(chkObs[id]||'')}</textarea>
         <div class="chk-det-linha">
-          <button type="button" class="chk-foto-btn" onclick="chkAbrirCamera('${id}')">📷 ${chkFotos[id]?'Tirar outra foto':'Tirar foto agora (opcional)'}</button>
-          ${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto"><button type="button" class="chk-foto-btn" onclick="delete chkFotos['${id}'];renderItensChecklist()">Remover foto</button>`:''}
+          ${it.foto?'':`<button type="button" class="chk-foto-btn" onclick="chkAbrirCamera('${id}')">📷 ${chkFotos[id]?'Tirar outra foto':'Tirar foto agora (opcional)'}</button>
+          ${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto"><button type="button" class="chk-foto-btn" onclick="delete chkFotos['${id}'];renderItensChecklist()">Remover foto</button>`:''}`}
         </div>
          <label class="chk-det-linha" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" style="width:18px;height:18px;flex-shrink:0;margin:0" ${chkResolvido[id]?'checked':''} onchange="chkResolvido['${id}']=this.checked;chkGuardarRascunho()"> Já resolvi hoje (se não marcar, o placar lembra amanhã)</label>
       </div>`:''}
@@ -2716,7 +2717,8 @@ async function chkDelCarregar(){
   chkDelAplicar();
 }
 function chkDelCopiar(x,sobre){ Object.keys(x.respostas||{}).forEach(id=>{ const v=x.respostas[id]; if(!sobre&&chkRespostas[id]) return; chkRespostas[id]=v.status;
-  if(v.status==='nao_conforme'){ chkObs[id]=v.obs||''; chkResolvido[id]=!!v.resolvido; if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; } }); }
+  if(v.status==='nao_conforme'){ chkObs[id]=v.obs||''; chkResolvido[id]=!!v.resolvido; }
+  if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; if(v.fotoIA) CHK_FOTO_OK[id]={ia:v.fotoIA,tent:0,equipe:true}; if(v.nivel) CHK_GAS[id]=v.nivel; }); }
 function chkDelAplicar(){
   Object.values(CHK_DEL).forEach(x=>{ if(x.situacao==='confirmada'&&x.turno===chkTurnoAtual) chkDelCopiar(x,false); });
   if(chkItensData.length) renderItensChecklist();
@@ -2806,6 +2808,44 @@ function chkDelSimular(i){ // só no modo teste: mostra ao Robson o que acontece
   renderItensChecklist();
 }
 
+// ── Foto obrigatória conferida pela IA (20/11/2026, servidor 2026-11-20-d, recurso chkFotoObrig; teste do Robson) ──
+// Item marcado no Admin com "📷 Foto obrigatória": ✓ e ✗ só depois da foto ao vivo. O servidor pergunta à IA do Google
+// se a foto mostra o equipamento: reconheceu = ok; não reconheceu = bate de novo; na 2ª vez aceita como "⚠️ para o GDI
+// conferir". IA fora do ar ou sem internet = aceita (a loja nunca trava por erro da IA).
+const CHK_FOTO_MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão'};
+const CHK_GAS={}; // id → 'cheio'|'metade'|'acabando' (ponteiro do relógio do gás, marcado pelo gerente depois da foto; servidor 2026-11-20-e)
+function chkItemPronto(id,tipo){ return chkFotoOk(id)&&(tipo!=='gas'||!!CHK_GAS[id]); }
+function chkGasMarcar(id,n){ CHK_GAS[id]=n;
+  if(n==='acabando'){ chkRespostas[id]='nao_conforme'; if((chkObs[id]||'').trim().length<CHK_MIN_DESC) chkObs[id]='Gás acabando (ponteiro no vermelho)'; }
+  else if(chkRespostas[id]==='nao_conforme'&&chkObs[id]==='Gás acabando (ponteiro no vermelho)'){ delete chkRespostas[id]; chkObs[id]=''; }
+  chkGuardarRascunho(); renderItensChecklist(); }
+const CHK_FOTO_OK={}; // id → {ia:'ok'|'conferir'|'sem_ia', tent, msg}
+function chkFotoOk(id){ const x=CHK_FOTO_OK[id]; return !!(x&&x.ia&&(chkFotos[id]||chkFotoUrl[id])); }
+function chkFotoObrigHtml(id,tipo){
+  const x=CHK_FOTO_OK[id]||{}, m=CHK_FOTO_MOSTRAR[tipo]||'o item';
+  if(x.conferindo) return `<div class="chk-det" style="font-size:13px;color:var(--muted)">⏳ Conferindo a foto…</div>`;
+  if(chkFotoOk(id)&&tipo==='gas'&&!x.equipe){ const g=CHK_GAS[id]||'', b=(v,t,c)=>`<button type="button" onclick="chkGasMarcar('${id}','${v}')" style="flex:1;padding:10px 4px;border-radius:10px;font-weight:800;font-size:13px;border:2px solid ${g===v?c:'var(--border)'};background:${g===v?c:'var(--surface)'};color:${g===v?'#06110b':'var(--text)'}">${t}</button>`;
+    return `<div class="chk-det-linha" style="font-size:13px">${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0">`:''}<span style="color:${x.ia==='conferir'?'#ffb020':'#2ecc71'};font-weight:700">${x.ia==='conferir'?'⚠️ Foto aceita — o GDI vai conferir':'✅ Foto guardada'}</span><button type="button" class="chk-foto-btn" onclick="chkFotoObrigTirar('${id}')">Tirar outra</button></div>
+      <div style="font-size:13px;font-weight:700;margin:6px 0 4px">Onde está o ponteiro do relógio do gás?</div><div style="display:flex;gap:6px">${b('cheio','🟢 Cheio','#2ecc71')}${b('metade','🟡 Metade','#ffd000')}${b('acabando','🔴 Acabando','#ff4d4d')}</div>${g==='acabando'?'<div style="color:#ff4d4d;font-size:12px;margin-top:4px">O Sidinei e o GDI vão ser avisados para trocar o gás.</div>':''}`; }
+  if(chkFotoOk(id)) return `<div class="chk-det-linha" style="font-size:13px">${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0">`:''}<span style="color:${x.ia==='conferir'?'#ffb020':'#2ecc71'};font-weight:700">${x.ia==='conferir'?'⚠️ Foto aceita — o GDI vai conferir':x.ia==='sem_ia'?'📷 Foto guardada':'✅ Foto conferida'}</span>${x.equipe?'':`<button type="button" class="chk-foto-btn" onclick="chkFotoObrigTirar('${id}')">Tirar outra</button>`}</div>`;
+  return `<div class="chk-det" style="border:1px dashed #ffb020;border-radius:10px;padding:9px;margin:6px 0">${x.msg?`<div style="color:#ff4d4d;font-weight:700;font-size:13px;margin-bottom:6px">${escChk(x.msg)}</div>`:''}<button type="button" class="chk-foto-btn" style="width:100%;padding:11px;font-weight:800" onclick="chkFotoObrigTirar('${id}')">📷 Bata a foto antes de marcar: mostre ${escChk(m)}</button></div>`;
+}
+function chkFotoObrigTirar(id){
+  const it=chkItensData.find(x=>String(x.id)===String(id)); if(!it) return;
+  const m=CHK_FOTO_MOSTRAR[it.foto]||'o item';
+  chkAbrirCamera(id, async foto=>{
+    const x=CHK_FOTO_OK[id]=Object.assign(CHK_FOTO_OK[id]||{tent:0},{conferindo:true,msg:''}); renderItensChecklist();
+    let r=null; try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelFotoConferir',unidade:unidadeAtual,senha:pvSenha(),tipo:it.foto,foto})}); r=JSON.parse(await y.text()); }catch(e){ r=null; }
+    x.conferindo=false;
+    if(!r||!r.ok||r.reconheceu===null||r.semIa){ chkFotos[id]=foto; x.ia='sem_ia'; }
+    else if(r.reconheceu){ chkFotos[id]=foto; x.ia='ok'; }
+    else { x.tent=(x.tent||0)+1;
+      if(x.tent>=2){ chkFotos[id]=foto; x.ia='conferir'; if(typeof logProva==='function') logProva('CHECKLIST_FOTO_CONFERIR', it.foto+' item '+id); }
+      else { x.ia=''; delete chkFotos[id]; x.msg=(r.motivo||'Não reconheci o equipamento na foto. Bata de novo.')+' (tentativa 1 de 2)'; } }
+    renderItensChecklist();
+  }, {msg:'Mostre '+m+' e toque em “Bater foto”.'});
+}
+
 // Foto do problema: reduz para no máximo 1280px (economiza internet e espaço)
 // Câmera aberta dentro do placar: o gerente só consegue bater a foto na hora (não existe opção de galeria)
 let _chkCamStream=null, _chkCamItem=null, _camAoBater=null;
@@ -2885,12 +2925,18 @@ function atualizarBotaoSalvarChk(){
   const semDesc=chkItensData.filter(it=>chkRespostas[String(it.id)]==='nao_conforme' && (chkObs[String(it.id)]||'').trim().length<CHK_MIN_DESC).length;
   const espera=chkDelEsperando();
   if(espera.length){ btn.disabled=true; btn.textContent='Aguardando a equipe: '+espera.join(', '); return; }
+  const semFoto=chkItensData.filter(it=>it.foto&&!chkItemPronto(String(it.id),it.foto)&&!chkDelPendente(it.secao)).length;
+  if(semFoto){ const soPont=!chkItensData.some(it=>it.foto&&!chkFotoOk(String(it.id))&&!chkDelPendente(it.secao)); btn.disabled=true; btn.textContent=soPont?'Marque onde está o ponteiro do gás 🔥':'Falta bater a foto de '+semFoto+' item(ns) 📷'; return; }
   const completo= total>0 && feitos===total && !semDesc;
   btn.disabled=!completo;
   btn.textContent= completo ? 'Salvar Checklist' : (!total ? 'Aguardando itens do checklist' : feitos<total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Descreva o problema dos itens com ✗ ('+semDesc+')');
 }
 
 function chkResponder(id, status){
+  const itF=chkItensData.find(x=>String(x.id)===String(id));
+  if(itF&&itF.foto&&!chkFotoOk(String(id))){ chkFotoObrigTirar(String(id)); return; } // foto obrigatória: primeiro a foto
+  if(itF&&itF.foto==='gas'&&!CHK_GAS[String(id)]){ alert('Primeiro marque onde está o ponteiro do relógio do gás (🟢 / 🟡 / 🔴).'); return; }
+  if(itF&&itF.foto==='gas'&&CHK_GAS[String(id)]==='acabando'&&status==='conforme'){ alert('Você marcou o gás 🔴 acabando: este item fica com problema até trocar o gás.'); return; }
   chkRespostas[String(id)] = status;
   chkGuardarRascunho();
   renderItensChecklist();
@@ -2934,7 +2980,9 @@ async function _salvarChecklist(){
   try{
     if(await chkServidorV2()){
       const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
-        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: nok&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null, fotoUrl: nok&&!chkFotos[id]&&chkFotoUrl[id]?chkFotoUrl[id]:undefined }; });
+        const fo=!!it.foto, comFoto=nok||fo;
+        return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: comFoto&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null, fotoUrl: comFoto&&!chkFotos[id]&&chkFotoUrl[id]?chkFotoUrl[id]:undefined,
+          fotoObrig: fo||undefined, fotoIA: fo?((CHK_FOTO_OK[id]||{}).ia||'sem_ia'):undefined, nivel: it.foto==='gas'?(CHK_GAS[id]||undefined):undefined }; });
       const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens:itens})});
       try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
