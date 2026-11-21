@@ -573,6 +573,10 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     </div>
 
     <!-- Equipe do dia: quantas pessoas trabalham hoje em cada setor e por que falta alguém (vaga aberta avisa a RH) -->
+    <div class="card card-full" id="cardBufMont" style="display:none">
+      <div class="card-label">🍽️ Buffet montado</div>
+      <div id="bufMontBox"></div>
+    </div>
     <div class="card card-full" id="cardEquipe" style="display:none">
       <div class="card-label">👥 Equipe do dia</div>
       <div class="card-meta" id="eqMeta"></div>
@@ -825,7 +829,7 @@ const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirD
   const fetchOrig=window.fetch.bind(window);
   window.fetch=function(url,opt){
     if(MODO_TESTE && opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
-      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir'||b.action==='chkDelFotoConferir') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
+      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir'||b.action==='chkDelFotoConferir'||b.action==='bufMontadoSalvar') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
       return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify({ok:true,status:'ok',teste:true}),{status:200,headers:{'Content-Type':'application/json'}})),500));
     }
     return fetchOrig(url,opt);
@@ -1795,7 +1799,7 @@ function iniciarApp(u){
   alpPreparar();
   alpcPreparar();
   hfPreparar();
-  pvIniciar(); manBotao(); rcbBotao();
+  pvIniciar(); manBotao(); rcbBotao(); bufMontCarregar();
   sdPreparar();
   setTimeout(()=>plcConferir(true),2500); // placar de hoje cancelado? (06/11/2026)
   renderEtapasChecklist();
@@ -2362,6 +2366,36 @@ function chkJsonp(params, ms){
 }
 // O servidor já tem o checklist novo (descrição, foto e reincidência)?
 let _chkV2=null, _chkRecursos=null;
+// ── Foto do buffet montado (servidor 2026-11-21-c): card próprio, só no horário (18h50–19h50; Isaac Manhã 11h–12h), não trava o placar.
+let BUF_M=null, _bufTimer=null, _bufTent=0;
+async function bufMontCarregar(){
+  const c=document.getElementById('cardBufMont'); if(!c) return; clearTimeout(_bufTimer);
+  let rc=[]; try{ rc=await chkRecursos(); }catch(e){}
+  if(!rc.includes('buffetMontado')||!unidadeAtual){ c.style.display='none'; return; }
+  try{ BUF_M=await chkJsonp({action:'bufMontadoSituacao',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){ BUF_M=null; }
+  if(!BUF_M||!BUF_M.ok||!BUF_M.ativo){ c.style.display='none'; return; }
+  c.style.display='block'; bufMontDesenhar();
+  if(BUF_M.estado==='antes'||BUF_M.estado==='aberta') _bufTimer=setTimeout(bufMontCarregar,60000);
+}
+function bufMontDesenhar(){
+  const b=document.getElementById('bufMontBox'); if(!b||!BUF_M) return; const j=BUF_M.janela||['',''], e=BUF_M.estado, f=BUF_M.feito;
+  const teste=MODO_TESTE?'<div style="font-size:0.78rem;color:#b48cff;margin-top:4px">🧪 Modo teste: o horário não trava e nada é gravado.</div>':'';
+  if(e==='feito'&&f) { b.innerHTML='<div style="color:#2ecc71;font-weight:800">✅ Foto do buffet montado às '+f.hora+(f.ia==='conferir'?' — <span style="color:#ffb020">⚠️ o GDI vai conferir</span>':'')+'</div>'+teste; return; }
+  if(e==='antes'){ b.innerHTML='<div class="card-meta">Bata a foto do buffet <b>montado, com as cubas cheias</b>, entre <b>'+j[0]+'</b> e <b>'+j[1]+'</b>. Abre às '+j[0]+'.</div>'+teste; return; }
+  if(e==='perdeu'){ b.innerHTML='<div style="color:#ff4d4d;font-weight:800">❌ NÃO feito — o horário fechou às '+j[1]+'.</div><div class="card-meta">O GDI foi avisado. Amanhã: entre '+j[0]+' e '+j[1]+'.</div>'+teste; return; }
+  b.innerHTML='<div class="card-meta">Agora: bata a foto do buffet <b>montado, com as cubas cheias</b>. Fecha às <b>'+j[1]+'</b>.</div><div id="bufMontMsg" style="font-size:0.82rem;margin:6px 0;min-height:14px"></div><button class="camera-btn" onclick="bufMontFoto()">📷 Bater a foto do buffet montado</button>'+teste;
+}
+function bufMontFoto(){
+  chkAbrirCamera('bufmont', async foto=>{
+    const m=document.getElementById('bufMontMsg'); if(m){ m.textContent='⏳ Conferindo a foto…'; m.style.color='#888'; }
+    _bufTent++;
+    let r=null; try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'bufMontadoSalvar',unidade:unidadeAtual,senha:pvSenha(),foto,tentativa:_bufTent})}); r=JSON.parse(await y.text()); }catch(e){ r=null; }
+    if(r&&r.ok){ BUF_M.estado='feito'; BUF_M.feito=r.feito; _bufTent=0; if(typeof logProva==='function') logProva('BUFFET_MONTADO', (r.feito&&r.feito.hora)+' '+(r.ia||'')); bufMontDesenhar(); return; }
+    const m2=document.getElementById('bufMontMsg');
+    if(m2){ m2.textContent=(r&&(r.motivo||r.erro))?(r.motivo||r.erro)+(r.reconheceu===false?' (tentativa 1 de 2)':''):'Não enviou (sem conexão). Tente de novo.'; m2.style.color='#ff6b6b'; }
+    if(r&&r.erro&&/fechou/.test(r.erro)){ BUF_M.estado='perdeu'; bufMontDesenhar(); }
+  }, {msg:'Mostre o buffet montado, com as cubas cheias, e toque em “Bater foto”.'});
+}
 async function chkRecursos(){
   if(_chkRecursos!==null) return _chkRecursos;
   try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; tmpJanelasAplicar(r&&r.tempoJanelas); }
@@ -2774,7 +2808,7 @@ async function chkDelCarregar(){
 }
 function chkDelCopiar(x,sobre){ Object.keys(x.respostas||{}).forEach(id=>{ const v=x.respostas[id]; if(!sobre&&chkRespostas[id]) return; chkRespostas[id]=v.status;
   if(v.status==='nao_conforme'){ chkObs[id]=v.obs||''; chkResolvido[id]=!!v.resolvido; }
-  if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; if(v.fotoIA) CHK_FOTO_OK[id]={ia:v.fotoIA,tent:0,equipe:true}; if(v.nivel) CHK_GAS[id]=v.nivel; }); }
+  if(v.fotoUrl) chkFotoUrl[id]=v.fotoUrl; if(v.fotoIA) CHK_FOTO_OK[id]={ia:v.fotoIA,tent:0,equipe:true}; if(v.nivel) CHK_GAS[id]=v.nivel; if(v.temp!==undefined&&v.temp!==null&&v.temp!=='') CHK_TEMP[id]={v:Number(v.temp),lida:!!v.tempLida,lido:v.tempLida?Number(v.temp):null}; }); }
 function chkDelAplicar(){
   Object.values(CHK_DEL).forEach(x=>{ if(x.situacao==='confirmada'&&x.turno===chkTurnoAtual) chkDelCopiar(x,false); });
   if(chkItensData.length) renderItensChecklist();
@@ -2868,9 +2902,18 @@ function chkDelSimular(i){ // só no modo teste: mostra ao Robson o que acontece
 // Item marcado no Admin com "📷 Foto obrigatória": ✓ e ✗ só depois da foto ao vivo. O servidor pergunta à IA do Google
 // se a foto mostra o equipamento: reconheceu = ok; não reconheceu = bate de novo; na 2ª vez aceita como "⚠️ para o GDI
 // conferir". IA fora do ar ou sem internet = aceita (a loja nunca trava por erro da IA).
-const CHK_FOTO_MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão'};
+const CHK_FOTO_MOSTRAR={buffet:'o buffet montado (as cubas com comida)',refrigerante:'a máquina de refrigerante (o painel e os bicos)',tv:'as TVs do salão',ar:'o aparelho de ar-condicionado',gas:'o cilindro de gás com o relógio de pressão',termostato:'o painel do termostato do buffet (o número da temperatura)'};
+// Termostato do buffet (servidor 2026-11-21-c): a IA lê o número; se não ler, o gerente digita (o GDI confere). Fora de 80–90 °C = problema
+const BUF_TEMP=[80,90], CHK_TEMP={}; // id → {v:número|null, lida:true|false, lido:número da IA}
+function chkTempObs(v){ return 'Temperatura do buffet '+v+' °C (o certo é de '+BUF_TEMP[0]+' a '+BUF_TEMP[1]+' °C)'; }
+function chkTempAplicar(id){ const t=CHK_TEMP[id]; if(!t||t.v===null||t.v===undefined) return;
+  if(t.v<BUF_TEMP[0]||t.v>BUF_TEMP[1]){ chkRespostas[id]='nao_conforme'; if((chkObs[id]||'').trim().length<CHK_MIN_DESC||/^Temperatura do buffet/.test(chkObs[id]||'')) chkObs[id]=chkTempObs(t.v); }
+  else if(chkRespostas[id]==='nao_conforme'&&/^Temperatura do buffet/.test(chkObs[id]||'')){ delete chkRespostas[id]; chkObs[id]=''; } }
+function chkTempDigitar(id,val){ const n=parseFloat(String(val).replace(',','.')); const t=CHK_TEMP[id]=CHK_TEMP[id]||{v:null,lida:false};
+  t.v=isFinite(n)?Math.round(n*10)/10:null; t.lida=t.lido!==undefined&&t.lido!==null&&t.v===t.lido; }
+function chkTempConfirmar(id,val){ chkTempDigitar(id,val); chkTempAplicar(id); chkGuardarRascunho(); renderItensChecklist(); }
 const CHK_GAS={}; // id → 'cheio'|'metade'|'acabando' (ponteiro do relógio do gás, marcado pelo gerente depois da foto; servidor 2026-11-20-e)
-function chkItemPronto(id,tipo){ return chkFotoOk(id)&&(tipo!=='gas'||!!CHK_GAS[id]); }
+function chkItemPronto(id,tipo){ return chkFotoOk(id)&&(tipo!=='gas'||!!CHK_GAS[id])&&(tipo!=='termostato'||!!(CHK_TEMP[id]&&CHK_TEMP[id].v!==null)); }
 function chkGasMarcar(id,n){ CHK_GAS[id]=n;
   if(n==='acabando'){ chkRespostas[id]='nao_conforme'; if((chkObs[id]||'').trim().length<CHK_MIN_DESC) chkObs[id]='Gás acabando (ponteiro no vermelho)'; }
   else if(chkRespostas[id]==='nao_conforme'&&chkObs[id]==='Gás acabando (ponteiro no vermelho)'){ delete chkRespostas[id]; chkObs[id]=''; }
@@ -2880,6 +2923,9 @@ function chkFotoOk(id){ const x=CHK_FOTO_OK[id]; return !!(x&&x.ia&&(chkFotos[id
 function chkFotoObrigHtml(id,tipo){
   const x=CHK_FOTO_OK[id]||{}, m=CHK_FOTO_MOSTRAR[tipo]||'o item';
   if(x.conferindo) return `<div class="chk-det" style="font-size:13px;color:var(--muted)">⏳ Conferindo a foto…</div>`;
+  if(chkFotoOk(id)&&tipo==='termostato'&&!x.equipe){ const t=CHK_TEMP[id]||{v:null}, lido=t.lido!==undefined&&t.lido!==null, fora=t.v!==null&&(t.v<BUF_TEMP[0]||t.v>BUF_TEMP[1]);
+    return `<div class="chk-det-linha" style="font-size:13px">${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0">`:''}<span style="color:${lido?'#2ecc71':'#ffb020'};font-weight:700">${lido?'✅ A IA leu '+t.lido+' °C':'⚠️ A IA não leu o número — digite o que aparece no painel (o GDI confere a foto)'}</span><button type="button" class="chk-foto-btn" onclick="chkFotoObrigTirar('${id}')">Tirar outra</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;font-weight:700">🌡️ Temperatura: <input type="number" inputmode="decimal" id="chkTemp_${id}" value="${t.v===null?'':t.v}" oninput="chkTempDigitar('${id}',this.value)" onchange="chkTempConfirmar('${id}',this.value)" style="width:90px;padding:8px;border-radius:8px;border:2px solid ${fora?'#ff4d4d':'var(--border)'};background:var(--surface);color:var(--text);font-size:16px;font-weight:800"> °C <span style="font-weight:400;color:var(--muted)">(certo: ${BUF_TEMP[0]} a ${BUF_TEMP[1]} °C)</span></div>${fora?'<div style="color:#ff4d4d;font-size:12px;margin-top:4px">Fora da faixa: o item fica com problema. Ajuste o termostato e confira de novo.</div>':''}`; }
   if(chkFotoOk(id)&&tipo==='gas'&&!x.equipe){ const g=CHK_GAS[id]||'', b=(v,t,c)=>`<button type="button" onclick="chkGasMarcar('${id}','${v}')" style="flex:1;padding:10px 4px;border-radius:10px;font-weight:800;font-size:13px;border:2px solid ${g===v?c:'var(--border)'};background:${g===v?c:'var(--surface)'};color:${g===v?'#06110b':'var(--text)'}">${t}</button>`;
     return `<div class="chk-det-linha" style="font-size:13px">${chkFotos[id]?`<img src="${chkFotos[id]}" alt="foto" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0">`:''}<span style="color:${x.ia==='conferir'?'#ffb020':'#2ecc71'};font-weight:700">${x.ia==='conferir'?'⚠️ Foto aceita — o GDI vai conferir':'✅ Foto guardada'}</span><button type="button" class="chk-foto-btn" onclick="chkFotoObrigTirar('${id}')">Tirar outra</button></div>
       <div style="font-size:13px;font-weight:700;margin:6px 0 4px">Onde está o ponteiro do relógio do gás?</div><div style="display:flex;gap:6px">${b('cheio','🟢 Cheio','#2ecc71')}${b('metade','🟡 Metade','#ffd000')}${b('acabando','🔴 Acabando','#ff4d4d')}</div>${g==='acabando'?'<div style="color:#ff4d4d;font-size:12px;margin-top:4px">O Sidinei e o GDI vão ser avisados para trocar o gás.</div>':''}`; }
@@ -2893,6 +2939,10 @@ function chkFotoObrigTirar(id){
     const x=CHK_FOTO_OK[id]=Object.assign(CHK_FOTO_OK[id]||{tent:0},{conferindo:true,msg:''}); renderItensChecklist();
     let r=null; try{ const y=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelFotoConferir',unidade:unidadeAtual,senha:pvSenha(),tipo:it.foto,foto})}); r=JSON.parse(await y.text()); }catch(e){ r=null; }
     x.conferindo=false;
+    if(it.foto==='termostato'){ chkFotos[id]=foto; const lido=r&&r.ok&&r.temp!==undefined&&r.temp!==null?Number(r.temp):null;
+      x.ia=lido!==null?'ok':(r&&r.ok&&!r.semIa?'conferir':'sem_ia'); CHK_TEMP[id]={v:lido,lida:lido!==null,lido:lido}; chkTempAplicar(id);
+      if(lido===null&&typeof logProva==='function') logProva('CHECKLIST_TEMP_NAO_LIDA','item '+id);
+      renderItensChecklist(); setTimeout(()=>{ const e=document.getElementById('chkTemp_'+id); if(e&&lido===null) e.focus(); },150); return; }
     if(!r||!r.ok||r.reconheceu===null||r.semIa){ chkFotos[id]=foto; x.ia='sem_ia'; }
     else if(r.reconheceu){ chkFotos[id]=foto; x.ia='ok'; }
     else { x.tent=(x.tent||0)+1;
@@ -2982,7 +3032,7 @@ function atualizarBotaoSalvarChk(){
   const espera=chkDelEsperando();
   if(espera.length){ btn.disabled=true; btn.textContent='Aguardando a equipe: '+espera.join(', '); return; }
   const semFoto=chkItensData.filter(it=>it.foto&&!chkItemPronto(String(it.id),it.foto)&&!chkDelPendente(it.secao)).length;
-  if(semFoto){ const soPont=!chkItensData.some(it=>it.foto&&!chkFotoOk(String(it.id))&&!chkDelPendente(it.secao)); btn.disabled=true; btn.textContent=soPont?'Marque onde está o ponteiro do gás 🔥':'Falta bater a foto de '+semFoto+' item(ns) 📷'; return; }
+  if(semFoto){ const soPont=!chkItensData.some(it=>it.foto&&!chkFotoOk(String(it.id))&&!chkDelPendente(it.secao)); btn.disabled=true; btn.textContent=soPont?'Falta completar: ponteiro do gás 🔥 ou temperatura do buffet 🌡️':'Falta bater a foto de '+semFoto+' item(ns) 📷'; return; }
   const completo= total>0 && feitos===total && !semDesc;
   btn.disabled=!completo;
   btn.textContent= completo ? 'Salvar Checklist' : (!total ? 'Aguardando itens do checklist' : feitos<total ? 'Confira todos os itens ('+feitos+' de '+total+')' : 'Descreva o problema dos itens com ✗ ('+semDesc+')');
@@ -2991,6 +3041,7 @@ function atualizarBotaoSalvarChk(){
 function chkResponder(id, status){
   const itF=chkItensData.find(x=>String(x.id)===String(id));
   if(itF&&itF.foto&&!chkFotoOk(String(id))){ chkFotoObrigTirar(String(id)); return; } // foto obrigatória: primeiro a foto
+  if(itF&&itF.foto==='termostato'){ const t=CHK_TEMP[String(id)]; if(!t||t.v===null){ alert('Primeiro informe a temperatura que aparece no painel do termostato.'); return; } chkTempAplicar(String(id)); if((t.v<BUF_TEMP[0]||t.v>BUF_TEMP[1])&&status==='conforme'){ alert('A temperatura está fora de '+BUF_TEMP[0]+'–'+BUF_TEMP[1]+' °C: o item fica com problema até ajustar o termostato.'); renderItensChecklist(); return; } }
   if(itF&&itF.foto==='gas'&&!CHK_GAS[String(id)]){ alert('Primeiro marque onde está o ponteiro do relógio do gás (🟢 / 🟡 / 🔴).'); return; }
   if(itF&&itF.foto==='gas'&&CHK_GAS[String(id)]==='acabando'&&status==='conforme'){ alert('Você marcou o gás 🔴 acabando: este item fica com problema até trocar o gás.'); return; }
   chkRespostas[String(id)] = status;
@@ -3038,7 +3089,7 @@ async function _salvarChecklist(){
       const itens=chkItensData.map(it=>{ const id=String(it.id), st=chkRespostas[id], nok=st==='nao_conforme';
         const fo=!!it.foto, comFoto=nok||fo;
         return { id: it.id, status: st, obs: nok?(chkObs[id]||'').trim():'', resolvido: nok&&!!chkResolvido[id], foto: comFoto&&chkFotos[id]?{base64:chkFotos[id].split(',')[1],tipo:'image/jpeg'}:null, fotoUrl: comFoto&&!chkFotos[id]&&chkFotoUrl[id]?chkFotoUrl[id]:undefined,
-          fotoObrig: fo||undefined, fotoIA: fo?((CHK_FOTO_OK[id]||{}).ia||'sem_ia'):undefined, nivel: it.foto==='gas'?(CHK_GAS[id]||undefined):undefined }; });
+          fotoObrig: fo||undefined, fotoIA: fo?((CHK_FOTO_OK[id]||{}).ia||'sem_ia'):undefined, nivel: it.foto==='gas'?(CHK_GAS[id]||undefined):undefined, temp: it.foto==='termostato'&&CHK_TEMP[id]?CHK_TEMP[id].v:undefined, tempLida: it.foto==='termostato'&&CHK_TEMP[id]?!!CHK_TEMP[id].lida:undefined }; });
       const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'salvarChecklistV2',loja:slug,turno:turno,gerente:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',itens:itens})});
       try{ r=JSON.parse(await resp.text()); }catch(e){ r=null; }
     } else {
