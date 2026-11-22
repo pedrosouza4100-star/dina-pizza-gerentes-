@@ -259,7 +259,7 @@
     <div class="tab-content active" id="tab-hoje">
       <div>
         <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Hoje na rede</span>
-          <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span><button class="action-btn btn-nova btnAtualizarHoje" onclick="atualizarAgora(this)">↻ Atualizar agora</button></span></div>
+          <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:0.72rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400" id="hojeAtualizado"></span><span id="hojeTempos" style="font-size:0.7rem;color:var(--muted);letter-spacing:0;text-transform:none;font-weight:400;flex-basis:100%"></span><button class="action-btn btn-nova btnAtualizarHoje" onclick="atualizarAgora(this)">↻ Atualizar agora</button></span></div>
         <div id="aparBox" style="display:none;margin-bottom:16px"></div>
         <div id="excAdmBox" style="display:none;margin-bottom:16px"></div>
         <div id="vagasAdmBox" style="display:none;margin-bottom:16px"></div>
@@ -848,16 +848,19 @@
     const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(o)});
     let j=null; try{ j=JSON.parse(await r.text()); }catch(e){}
     if(!j||j.ok!==true) throw new Error((j&&j.erro)||'Falha ao falar com o servidor');
+    ADM_HOJE_FRESCO=true; // depois de mudar algo, o próximo "Hoje na rede" vem na hora (não o guardado)
     return j;
   }
 
   // ── Hoje na rede ──
-  let hojeTimer=null;
-  async function carregarHoje(){
+  let hojeTimer=null, ADM_HOJE_FRESCO=false;
+  // 22/11/2026: abre com o "Hoje na rede" guardado pelo servidor (até 2 min, o robô atualiza); "↻ Atualizar agora" e depois de mudar algo = na hora
+  async function carregarHoje(fresco){
     const box=document.getElementById('hojeLojas');
     if(!(await admServidor())){ box.innerHTML='<div style="color:var(--yellow);font-size:0.85rem">⚠ O Apps Script publicado ainda não tem o painel "Hoje na rede". Cole a versão nova do código.</div>'; carregarProtecao(); return; }
     try{
-      const r=await admJsonp({action:'adminHoje'});
+      const f=fresco===true||ADM_HOJE_FRESCO; ADM_HOJE_FRESCO=false;
+      const r=await admJsonp(f?{action:'adminHoje',fresco:1}:{action:'adminHoje'});
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro ao carregar');
       renderHoje(r);
     }catch(e){ box.innerHTML='<div style="color:var(--danger);font-size:0.85rem">⚠ '+e.message+'</div>'; }
@@ -939,7 +942,9 @@
     renderVagasHoje(r.vagas);
     renderCobranca(r);
     carregarProtecao();
-    document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+' · atualiza sozinho a cada 2 min';
+    document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+(r.guardado?' (guardado há '+r.guardado.idadeS+' s)':'')+' · atualiza sozinho a cada 2 min';
+    try{ const tb=document.getElementById('hojeTempos'); if(tb&&r.tempos){ const s=ms=>(ms/1000).toFixed(1).replace('.',',')+' s'; const p=(r.tempos.partes||[]).slice(0,3).map(x=>x[0]+' '+s(x[1])).join(' · ');
+      tb.textContent='⏱️ O servidor levou '+s(r.tempos.totalMs)+(r.guardado?' (no cálculo guardado)':'')+' — mais lentas: '+p; tb.style.color=r.tempos.totalMs>25000?'var(--danger)':r.tempos.totalMs>12000?'var(--yellow)':'var(--muted)'; } }catch(e){}
   }
 
   // Botão "Atualizar agora": mostra que está atualizando e confere a proteção (robô) na hora, junto com as lojas
@@ -949,7 +954,7 @@
     const bts=[...document.querySelectorAll('.btnAtualizarHoje')];
     bts.forEach(b=>{ b.disabled=true; b.textContent='⏳ Atualizando...'; });
     const pb=document.getElementById('protBox'); if(pb) pb.style.opacity='0.5';
-    try{ await Promise.all([carregarProtecao(), carregarHoje()]); }catch(e){}
+    try{ await Promise.all([carregarProtecao(), carregarHoje(true)]); }catch(e){}
     if(pb) pb.style.opacity='';
     const h=new Date(), hh=String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0')+':'+String(h.getSeconds()).padStart(2,'0');
     bts.forEach(b=>{ b.disabled=false; b.textContent='✓ Atualizado às '+hh; });
