@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="gestao-guard.js?v=4"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Ao vivo na rede — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<style>
+  /* Ao vivo na rede (22/11/2026): corrida das lojas em pizzas e buffets, lida do Alpha a cada 5 min (servidor 2026-11-22-b, recurso aoVivo) */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root,[data-theme="light"]{--bg:var(--d-bg,#07090E);--card:var(--d-card,#10141c);--inner:var(--d-card-2,#161b25);--line:var(--d-line,#232a36);--text:var(--d-text,#eef2f7);--muted:var(--d-muted,#8a94a6);--red:var(--d-red-vivo,#ff3b3b);--ouro:#ffc83d;--prata:#c9d3e0;--bronze:#e0915a;--verde:#2ecc71}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',Arial,sans-serif;min-height:100vh}
+  .wrap{max-width:1500px;margin:0 auto;padding:16px 22px 40px;display:flex;flex-direction:column;gap:16px}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .logo-dina img{width:54px;height:54px;object-fit:contain}
+  h1{font-size:1.6rem;font-weight:900;letter-spacing:-.02em}
+  h1 .ao{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:800;color:#fff;background:var(--red);padding:3px 9px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  h1 .ao i{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulsa 1.2s infinite}
+  @keyframes pulsa{0%,100%{opacity:1}50%{opacity:.25}}
+  .sub{color:var(--muted);font-size:.85rem;margin-top:2px}
+  .dir{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;background:var(--inner);border:1px solid var(--line);border-radius:12px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--muted);font-weight:800;font-size:.85rem;padding:8px 12px;border-radius:9px;cursor:pointer}
+  .seg button.on{background:var(--red);color:#fff}
+  .btn{border:1px solid var(--line);background:var(--inner);color:var(--text);font-weight:700;font-size:.85rem;padding:9px 12px;border-radius:10px;cursor:pointer}
+  .totais{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .tot{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+  .tot .r{color:var(--muted);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .tot .n{font-size:2.2rem;font-weight:900;letter-spacing:-.03em;margin-top:2px;font-variant-numeric:tabular-nums}
+  .tot .d{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .corridas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.corridas{grid-template-columns:1fr}}
+  .corrida{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 14px 16px}
+  .corrida h2{font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .corrida h2 small{color:var(--muted);font-weight:600;font-size:.78rem;margin-left:auto}
+  .pista{position:relative}
+  .linha{position:absolute;left:0;right:0;height:54px;display:flex;align-items:center;gap:10px;transition:top .9s cubic-bezier(.2,.8,.2,1)}
+  .pos{width:40px;text-align:center;font-weight:900;font-size:1.15rem;flex-shrink:0}
+  .barra{position:relative;flex:1;height:44px;border-radius:12px;background:var(--inner);overflow:hidden}
+  .barra .enche{position:absolute;inset:0 auto 0 0;border-radius:12px;background:linear-gradient(90deg,rgba(255,59,59,.85),rgba(255,120,60,.85));transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .linha.p1 .enche{background:linear-gradient(90deg,#d99a00,var(--ouro))} .linha.p2 .enche{background:linear-gradient(90deg,#8090a6,var(--prata))} .linha.p3 .enche{background:linear-gradient(90deg,#a85e2e,var(--bronze))}
+  .barra .nome{position:absolute;left:12px;top:0;bottom:0;display:flex;align-items:center;font-weight:800;font-size:.95rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);white-space:nowrap}
+  .barra .extra{position:absolute;right:10px;top:0;bottom:0;display:flex;align-items:center;font-size:.75rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .val{width:92px;text-align:right;font-weight:900;font-size:1.35rem;font-variant-numeric:tabular-nums;flex-shrink:0}
+  .val small{display:block;font-size:.7rem;font-weight:700;color:var(--muted)}
+  .linha.subiu .barra{box-shadow:0 0 0 2px var(--verde),0 0 22px rgba(46,204,113,.55)}
+  .seta{color:var(--verde);font-weight:900;margin-left:4px}
+  .toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:50}
+  .toast{background:#0f2a1b;border:1px solid var(--verde);color:#eafff1;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.4);animation:entra .4s ease}
+  @keyframes entra{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;overflow-x:auto}
+  .bloco h3{font-size:1rem;font-weight:900;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:.86rem}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+  tr.tot td{font-weight:900}
+  .hist{display:flex;flex-direction:column;gap:6px;font-size:.88rem}
+  .hist div{padding:6px 10px;border-radius:9px;background:var(--inner)}
+  .msg{color:var(--muted);font-size:.9rem;padding:20px;text-align:center}
+  .erro{color:var(--red)}
+  details summary{cursor:pointer;color:var(--muted);font-weight:700;font-size:.85rem}
+  details .cx{margin-top:8px;font-size:.82rem;color:var(--muted);line-height:1.6}
+  body.tv .wrap{max-width:none} body.tv .bloco.opc{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza"></span>
+    <div>
+      <h1>Ao vivo na rede <span class="ao"><i></i>AO VIVO</span></h1>
+      <div class="sub" id="sub">Carregando…</div>
+    </div>
+    <div class="dir">
+      <div class="seg" id="modo"><button class="on" data-m="qtd" onclick="trocarModo('qtd')">Quantidade</button><button data-m="pct" onclick="trocarModo('pct')">% sobre a semana passada</button></div>
+      <button class="btn" onclick="atualizar(true)" title="Buscar agora no Alpha">↻</button>
+      <button class="btn" onclick="telaCheia()" title="Tela cheia (para a TV)">⛶</button>
+      <button class="tema-btn btn" onclick="temaAlternar()" title="Claro / escuro">☀︎</button>
+    </div>
+  </header>
+
+  <div class="totais">
+    <div class="tot"><div class="r">🍕 Pizzas na rede hoje</div><div class="n" id="totP">0</div><div class="d" id="totPd"></div></div>
+    <div class="tot"><div class="r">🍽️ Buffets na rede hoje</div><div class="n" id="totB">0</div><div class="d" id="totBd"></div></div>
+    <div class="tot"><div class="r">📏 Pizzas por tamanho</div><div class="d" id="totT" style="font-size:.95rem;color:var(--text);margin-top:8px;line-height:1.6"></div></div>
+    <div class="tot"><div class="r">🛵 Pizzas por canal</div><div class="d" id="totC" style="font-size:.95rem;color:var(--text);margin-top:8px;line-height:1.6"></div></div>
+  </div>
+
+  <div class="corridas">
+    <div class="corrida"><h2>🍕 Corrida das pizzas <small id="legP"></small></h2><div class="pista" id="pistaP"></div></div>
+    <div class="corrida"><h2>🍽️ Corrida do buffet <small id="legB"></small></h2><div class="pista" id="pistaB"></div></div>
+  </div>
+
+  <div class="bloco opc"><h3>🔄 Ultrapassagens de hoje</h3><div class="hist" id="hist"><div style="color:var(--muted)">Quando uma loja passar a outra, aparece aqui.</div></div></div>
+
+  <div class="bloco opc"><h3>📏 Pizzas por tamanho e canal, por loja</h3><div id="tabela"></div></div>
+
+  <div class="bloco opc"><details><summary>🔧 Conferir como o Alpha manda os nomes das pizzas</summary><div class="cx" id="conferir"></div></details></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const ATUALIZA_MS=5*60*1000, ALT=58;
+const TAM=[['broto','Broto'],['media','Média'],['grande','Grande'],['gigante','Gigante'],['outro','Sem tamanho']];
+const CAN=[['salao','Salão'],['balcao','Balcão'],['delivery','Delivery'],['ifood','iFood']];
+let D=null, MODO='qtd', ORDEM={P:[],B:[]}, VALORES={}, _timer=null, _ultimoFresco=0, _proxima=0;
+function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
+function jsonp(params,ms){ return new Promise((ok,falha)=>{ const cb='av'+Date.now()+Math.floor(Math.random()*1e4); const s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); falha(new Error('O servidor demorou para responder.')); }, ms||90000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); ok(j); };
+  s.onerror=()=>{ clearTimeout(t); delete window[cb]; falha(new Error('Sem conexão com o servidor.')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign({},params,{callback:cb,_:Date.now()})).toString(); document.body.appendChild(s); }); }
+const fmt=n=>Number(n||0).toLocaleString('pt-BR');
+const fmtPct=p=>p===null||p===undefined?'—':(p>0?'+':'')+String(p).replace('.',',')+'%';
+function primeiro(u){ return u; }
+
+// número que sobe como contador
+function contar(el,de,para){ if(!el) return; const t0=performance.now(), dur=1200; de=Number(de)||0; para=Number(para)||0;
+  const passo=t=>{ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3); el.textContent=fmt(Math.round(de+(para-de)*e)); if(k<1) requestAnimationFrame(passo); }; requestAnimationFrame(passo); }
+
+function trocarModo(m){ MODO=m; document.querySelectorAll('#modo button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); ORDEM={P:[],B:[]}; desenhar(false); }
+
+function toast(txt){ const c=document.getElementById('toasts'), d=document.createElement('div'); d.className='toast'; d.textContent=txt; c.appendChild(d); setTimeout(()=>d.remove(),9000);
+  const h=document.getElementById('hist'); if(h.firstElementChild&&!h.firstElementChild.dataset.ok) h.innerHTML=''; const it=document.createElement('div'); it.dataset.ok=1; it.textContent=(D?D.hora:'')+' — '+txt; h.prepend(it); }
+
+// uma corrida: k='P' (pizzas) ou 'B' (buffet)
+function corrida(k,avisar){
+  const pista=document.getElementById(k==='P'?'pistaP':'pistaB');
+  let lista=D.lojas.filter(l=>k==='P'||l.temBuffet).map(l=>({u:l.unidade, qtd:k==='P'?l.pizzas:l.buffets, pct:k==='P'?l.pctP:l.pctB, antes:k==='P'?l.semanaPassadaP:l.semanaPassadaB}));
+  const v=x=>MODO==='pct'?(x.pct===null||x.pct===undefined?-1e9:x.pct):x.qtd;
+  lista.sort((a,b)=>v(b)-v(a)||b.qtd-a.qtd||a.u.localeCompare(b.u));
+  const ant=ORDEM[k], nova=lista.map(x=>x.u);
+  // ultrapassagens: quem subiu e quem ficou para trás
+  const subiram={};
+  if(avisar&&ant.length){ nova.forEach((u,i)=>{ const j=ant.indexOf(u); if(j>i&&j>=0){ const passados=ant.slice(i,j).filter(o=>nova.indexOf(o)>i); if(passados.length){ subiram[u]=1; toast('⬆️ '+u+' passou '+passados.join(' e ')+(k==='P'?' nas pizzas':' no buffet')); } } }); }
+  ORDEM[k]=nova;
+  const max=Math.max(1,...lista.map(x=>x.qtd)), pcts=lista.map(x=>x.pct).filter(p=>p!==null&&p!==undefined), pmin=Math.min(0,...pcts), pmax=Math.max(1,...pcts);
+  pista.style.height=(lista.length*ALT)+'px';
+  lista.forEach((x,i)=>{
+    let el=pista.querySelector('[data-u="'+CSS.escape(x.u)+'"]');
+    if(!el){ el=document.createElement('div'); el.className='linha'; el.dataset.u=x.u; el.style.top=(lista.length*ALT)+'px';
+      el.innerHTML='<div class="pos"></div><div class="barra"><div class="enche" style="width:0"></div><div class="nome"></div><div class="extra"></div></div><div class="val"><span class="num">0</span><small></small></div>'; pista.appendChild(el); }
+    el.className='linha'+(i<3?' p'+(i+1):'')+(subiram[x.u]?' subiu':'');
+    if(subiram[x.u]) setTimeout(()=>el.classList.remove('subiu'),6000);
+    el.querySelector('.pos').textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'º';
+    el.querySelector('.nome').innerHTML=x.u+(subiram[x.u]?'<span class="seta">▲</span>':'');
+    let w; if(MODO==='pct') w=x.pct===null||x.pct===undefined?4:Math.max(4,((x.pct-pmin)/((pmax-pmin)||1))*100); else w=Math.max(x.qtd?4:0,(x.qtd/max)*100);
+    requestAnimationFrame(()=>{ el.style.top=(i*ALT)+'px'; el.querySelector('.enche').style.width=w+'%'; });
+    const num=el.querySelector('.num'), kk=k+x.u+MODO;
+    if(MODO==='pct'){ num.textContent=fmtPct(x.pct); el.querySelector('.val small').textContent=fmt(x.qtd)+(k==='P'?' pizzas':' buffets'); el.querySelector('.extra').textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+fmt(x.antes):''; }
+    else { contar(num,VALORES[kk]||0,x.qtd); el.querySelector('.val small').textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+' vs sem. passada'; el.querySelector('.extra').textContent=''; }
+    VALORES[kk]=x.qtd;
+  });
+  pista.querySelectorAll('.linha').forEach(el=>{ if(nova.indexOf(el.dataset.u)<0) el.remove(); });
+}
+
+function desenhar(avisar){
+  if(!D) return;
+  const r=D.rede;
+  contar(document.getElementById('totP'),VALORES.totP||0,r.pizzas); VALORES.totP=r.pizzas;
+  contar(document.getElementById('totB'),VALORES.totB||0,r.buffets); VALORES.totB=r.buffets;
+  const sp=D.lojas.reduce((t,l)=>t+(l.semanaPassadaP||0),0), sb=D.lojas.reduce((t,l)=>t+(l.semanaPassadaB||0),0);
+  document.getElementById('totPd').textContent=D.baseOk&&sp?'Semana passada até esta hora: '+fmt(sp)+' ('+fmtPct(Math.round((r.pizzas/sp-1)*1000)/10)+')':'';
+  document.getElementById('totBd').textContent=D.baseOk&&sb?'Semana passada até esta hora: '+fmt(sb)+' ('+fmtPct(Math.round((r.buffets/sb-1)*1000)/10)+')':'';
+  document.getElementById('totT').innerHTML=TAM.filter(t=>t[0]!=='outro'||r.tam.outro).map(t=>t[1]+': <b>'+fmt(r.tam[t[0]])+'</b>').join(' · ');
+  document.getElementById('totC').innerHTML=CAN.map(c=>c[1]+': <b>'+fmt(r.canais[c[0]])+'</b>').join(' · ');
+  const leg=MODO==='pct'?'% sobre o mesmo dia da semana passada, até esta hora':'quantidade vendida hoje';
+  document.getElementById('legP').textContent=leg; document.getElementById('legB').textContent=leg;
+  corrida('P',avisar); corrida('B',avisar);
+  // tabela por loja
+  const ls=[...D.lojas].sort((a,b)=>b.pizzas-a.pizzas);
+  document.getElementById('tabela').innerHTML='<table><tr><th>Loja</th><th>Pizzas</th>'+TAM.map(t=>'<th>'+t[1]+'</th>').join('')+CAN.map(c=>'<th>'+c[1]+'</th>').join('')+'<th>Buffets</th></tr>'+
+    ls.map(l=>'<tr><td>'+l.unidade+'</td><td><b>'+fmt(l.pizzas)+'</b></td>'+TAM.map(t=>'<td>'+fmt(l.tam[t[0]])+'</td>').join('')+CAN.map(c=>'<td>'+fmt(l.canais[c[0]])+'</td>').join('')+'<td>'+(l.temBuffet?fmt(l.buffets):'—')+'</td></tr>').join('')+
+    '<tr class="tot"><td>Rede</td><td>'+fmt(r.pizzas)+'</td>'+TAM.map(t=>'<td>'+fmt(r.tam[t[0]])+'</td>').join('')+CAN.map(c=>'<td>'+fmt(r.canais[c[0]])+'</td>').join('')+'<td>'+fmt(r.buffets)+'</td></tr></table>';
+  const cf=D.conferir||{};
+  document.getElementById('conferir').innerHTML='<b>Grupos que contam como pizza:</b><br>'+((cf.grupos||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join('<br>')||'nenhum ainda hoje')+
+    '<br><br><b>Pizzas sem tamanho no nome</b> (entram em "Sem tamanho"; se tiver algum aqui, me mande um print para eu ajustar):<br>'+((cf.semTamanho||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join('<br>')||'nenhuma 👍');
+}
+
+async function atualizar(fresco){
+  clearTimeout(_timer);
+  if(fresco&&Date.now()-_ultimoFresco<60000) fresco=false; // no máximo 1 busca forçada por minuto
+  if(fresco) _ultimoFresco=Date.now();
+  const sub=document.getElementById('sub');
+  try{
+    const r=await jsonp(Object.assign({action:'aoVivoDados',chave:chave()},fresco?{fresco:1}:{}));
+    if(!r||!r.ok) throw new Error((r&&r.erro)||'Erro ao carregar');
+    const primeiro=!D; D=r; desenhar(!primeiro);
+    sub.classList.remove('erro');
+  }catch(e){ sub.textContent='⚠ '+e.message+' — tento de novo em 1 min'; sub.classList.add('erro'); _timer=setTimeout(()=>atualizar(false),60000); return; }
+  _proxima=Date.now()+ATUALIZA_MS; _timer=setTimeout(()=>atualizar(false),ATUALIZA_MS);
+}
+setInterval(()=>{ if(!D) return; const s=Math.max(0,Math.round((_proxima-Date.now())/1000)); const sub=document.getElementById('sub'); if(sub.classList.contains('erro')) return;
+  const dd=D.dia.split('-').reverse().join('/'); sub.textContent='Hoje, '+dd+' · dados do Alpha às '+D.hora+(D.guardadoS?' · ':'')+' · próxima atualização em '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },1000);
+function telaCheia(){ document.body.classList.toggle('tv'); try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }catch(e){} }
+atualizar(false);
+</script>
+</body>
+</html>
