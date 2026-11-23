@@ -36,6 +36,7 @@
   .corridas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:900px){.corridas{grid-template-columns:1fr}}
   .info .so-cel{display:none}
+  .val .num,.val small{white-space:nowrap} #pistaF .val{width:auto;min-width:118px} #pistaF .val small{font-size:.66rem}
   @media(max-width:700px){ .barra .extra{display:none!important} .info{white-space:normal!important;height:45px!important;line-height:15px;overflow:hidden} .info .so-cel{display:inline!important;color:var(--text,#fff);font-weight:700} .val .num,.val small{white-space:nowrap!important} .val small{font-size:.66rem!important} #pistaF .val{width:auto;min-width:92px} #pistaF .val .num{font-size:1.05rem} }
   .corrida{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 14px 16px}
   .corrida h2{font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -185,7 +186,7 @@ function corrida(k,avisar){
     requestAnimationFrame(()=>{ el.style.top=(i*altK)+'px'; en.style.width=w+'%'; });
     const num=el.querySelector('.num'), kk=k+x.u+MODO, sm=el.querySelector('.val small'), ex=el.querySelector('.extra');
     if(MODO==='pct'){ num.textContent=fmtPct(x.pct); sm.textContent=k==='F'?fmtRS(x.qtd):fmt(x.qtd)+UN_K[k]; ex.textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+(k==='F'?fmtRS(x.antes):fmt(x.antes)):''; }
-    else { if(k==='F'){ num.textContent=CEL()?fmtRScurto(x.qtd):fmtRS(x.qtd); } else contar(num,VALORES[kk]||0,x.qtd); sm.textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+(CEL()?' vs sem. pas.':' vs sem. passada'); ex.textContent=k==='D'?'próprio '+x.l.del.proprio+' · iFood '+x.l.del.ifood:''; }
+    else { if(k==='F'){ num.textContent=CEL()?fmtRScurto(x.qtd):fmtRS(x.qtd); } else contar(num,VALORES[kk]||0,x.qtd); sm.textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+(CEL()||k==='F'?' vs sem. pas.':' vs sem. passada'); ex.textContent=k==='D'?'próprio '+x.l.del.proprio+' · iFood '+x.l.del.ifood:''; }
     VALORES[kk]=x.qtd;
   });
   pista.querySelectorAll('.linha').forEach(el=>{ if(nova.indexOf(el.dataset.u)<0) el.remove(); });
@@ -219,7 +220,8 @@ function desenhar(avisar){
     '<tr class="tot"><td>Rede</td><td>'+fmt(r.pizzas)+'</td>'+TAM.map(t=>'<td>'+fmt(r.tam[t[0]])+'</td>').join('')+CAN.map(c=>'<td>'+fmt(r.canais[c[0]])+'</td>').join('')+'<td>'+fmt(r.buffets)+'</td></tr></table>';
   const cf=D.conferir||{};
   document.getElementById('conferir').innerHTML='<b>Grupos que contam como pizza:</b><br>'+((cf.grupos||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join('<br>')||'nenhum ainda hoje')+
-    '<br><br><b>Pizzas sem tamanho no nome</b> (entram em "Sem tamanho"; se tiver algum aqui, me mande um print para eu ajustar):<br>'+((cf.semTamanho||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join('<br>')||'nenhuma 👍');
+    '<br><br><b>Como cada tamanho foi reconhecido</b> (grupo / nome no Alpha):<br>'+TAM.filter(t=>t[0]!=='outro').map(t=>'<u>'+t[1]+'</u>: '+(((cf.porTamanho||{})[t[0]]||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join(' · ')||'nenhuma')+'<br>').join('')+
+    '<br><b>Pizzas sem tamanho no nome</b> (entram em "Sem tamanho"; se tiver algum aqui, me mande um print para eu ajustar):<br>'+((cf.semTamanho||[]).map(g=>g[0]+' ('+fmt(g[1])+')').join('<br>')||'nenhuma 👍');
 }
 
 async function atualizar(fresco){
