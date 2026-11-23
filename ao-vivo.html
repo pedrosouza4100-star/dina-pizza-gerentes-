@@ -36,7 +36,7 @@
   .corridas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:900px){.corridas{grid-template-columns:1fr}}
   .info .so-cel{display:none}
-  @media(max-width:700px){ .barra .extra{display:none!important} .info{white-space:normal!important;height:45px!important;line-height:15px;overflow:hidden} .info .so-cel{display:inline!important;color:var(--text,#fff);font-weight:700} }
+  @media(max-width:700px){ .barra .extra{display:none!important} .info{white-space:normal!important;height:45px!important;line-height:15px;overflow:hidden} .info .so-cel{display:inline!important;color:var(--text,#fff);font-weight:700} .val .num,.val small{white-space:nowrap!important} .val small{font-size:.66rem!important} #pistaF .val{width:auto;min-width:92px} #pistaF .val .num{font-size:1.05rem} }
   .corrida{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 14px 16px}
   .corrida h2{font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .corrida h2 small{color:var(--muted);font-weight:600;font-size:.78rem;margin-left:auto}
@@ -145,6 +145,7 @@ function toast(txt){ const c=document.getElementById('toasts'), d=document.creat
 // uma corrida: P pizzas · B buffet · D delivery (próprio + iFood) · F faturamento
 const NOME_K={P:' nas pizzas',B:' no buffet',D:' no delivery',F:' no faturamento'}, UN_K={P:' pizzas',B:' buffets',D:' pedidos',F:''};
 const fmtRS=n=>'R$ '+Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:0});
+const fmtRScurto=n=>{ n=Number(n||0); return n>=1000?'R$ '+(n/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' mil':fmtRS(n); };
 function itensDa(k){
   return D.lojas.filter(l=>k==='P'||k==='F'||(k==='B'&&l.temBuffet)||(k==='D'&&l.temDelivery)).map(l=>{
     if(k==='P') return {u:l.unidade,qtd:l.pizzas,pct:l.pctP,antes:l.semanaPassadaP,l};
@@ -184,7 +185,7 @@ function corrida(k,avisar){
     requestAnimationFrame(()=>{ el.style.top=(i*altK)+'px'; en.style.width=w+'%'; });
     const num=el.querySelector('.num'), kk=k+x.u+MODO, sm=el.querySelector('.val small'), ex=el.querySelector('.extra');
     if(MODO==='pct'){ num.textContent=fmtPct(x.pct); sm.textContent=k==='F'?fmtRS(x.qtd):fmt(x.qtd)+UN_K[k]; ex.textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+(k==='F'?fmtRS(x.antes):fmt(x.antes)):''; }
-    else { if(k==='F'){ num.textContent=fmtRS(x.qtd); } else contar(num,VALORES[kk]||0,x.qtd); sm.textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+' vs sem. passada'; ex.textContent=k==='D'?'próprio '+x.l.del.proprio+' · iFood '+x.l.del.ifood:''; }
+    else { if(k==='F'){ num.textContent=CEL()?fmtRScurto(x.qtd):fmtRS(x.qtd); } else contar(num,VALORES[kk]||0,x.qtd); sm.textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+(CEL()?' vs sem. pas.':' vs sem. passada'); ex.textContent=k==='D'?'próprio '+x.l.del.proprio+' · iFood '+x.l.del.ifood:''; }
     VALORES[kk]=x.qtd;
   });
   pista.querySelectorAll('.linha').forEach(el=>{ if(nova.indexOf(el.dataset.u)<0) el.remove(); });
