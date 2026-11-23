@@ -2370,11 +2370,14 @@ let _chkV2=null, _chkRecursos=null;
 let BUF_M=null, _bufTimer=null, _bufTent=0;
 async function bufMontCarregar(){
   const c=document.getElementById('cardBufMont'); if(!c) return; clearTimeout(_bufTimer);
-  let rc=[]; try{ rc=await chkRecursos(); }catch(e){}
-  if(!rc.includes('buffetMontado')||!unidadeAtual){ c.style.display='none'; return; }
-  try{ BUF_M=await chkJsonp({action:'bufMontadoSituacao',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){ BUF_M=null; }
-  if(!BUF_M||!BUF_M.ok||!BUF_M.ativo){ c.style.display='none'; return; }
-  c.style.display='block'; bufMontDesenhar();
+  // 22/11/2026: conferência que falha (internet da loja, servidor lento) NÃO esconde o card — mantém o que estava e tenta de novo em 1 min
+  let rc=null; try{ rc=await chkRecursos(); }catch(e){}
+  if(!unidadeAtual){ c.style.display='none'; return; }
+  if(Array.isArray(rc)&&rc.length&&!rc.includes('buffetMontado')){ c.style.display='none'; return; }
+  let r=null; try{ r=await chkJsonp({action:'bufMontadoSituacao',unidade:unidadeAtual,senha:pvSenha()},20000); }catch(e){ r=null; }
+  if(r&&r.ok&&r.ativo===false){ c.style.display='none'; return; } // a loja não tem buffet
+  if(!r||!r.ok){ if(typeof logProva==='function') logProva('BUFFET_CARD_FALHOU', (r&&r.erro)||'sem resposta'); if(BUF_M){ c.style.display='block'; bufMontDesenhar(); } _bufTimer=setTimeout(bufMontCarregar,60000); return; }
+  BUF_M=r; c.style.display='block'; bufMontDesenhar();
   if(BUF_M.estado==='antes'||BUF_M.estado==='aberta') _bufTimer=setTimeout(bufMontCarregar,60000);
 }
 function bufMontDesenhar(){
