@@ -35,6 +35,8 @@
   .tot .d{font-size:.8rem;color:var(--muted);margin-top:2px}
   .corridas{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:900px){.corridas{grid-template-columns:1fr}}
+  .info .so-cel{display:none}
+  @media(max-width:700px){ .barra .extra{display:none!important} .info{white-space:normal!important;height:45px!important;line-height:15px;overflow:hidden} .info .so-cel{display:inline!important;color:var(--text,#fff);font-weight:700} }
   .corrida{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 14px 16px}
   .corrida h2{font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .corrida h2 small{color:var(--muted);font-weight:600;font-size:.78rem;margin-left:auto}
@@ -154,6 +156,7 @@ function infoD(l){ const p=[]; if(l.ritmoDel) p.push('⚡ '+l.ritmoDel+' na últ
   if(l.tempo) p.push('⏱️ '+'App '+l.tempo.app+' / iFood '+l.tempo.ifood+' min ('+l.tempo.hora+')');
   const tk=[]; if(l.ticket&&l.ticket.proprio) tk.push('próprio '+fmtRS(l.ticket.proprio)); if(l.ticket&&l.ticket.ifood) tk.push('iFood '+fmtRS(l.ticket.ifood)); if(tk.length) p.push('🎟️ ticket '+tk.join(' · '));
   return p.join('  ·  '); }
+const CEL=()=>window.matchMedia('(max-width:700px)').matches;
 function corrida(k,avisar){
   const pista=document.getElementById('pista'+k);
   let lista=itensDa(k);
@@ -163,7 +166,7 @@ function corrida(k,avisar){
   const subiram={};
   if(avisar&&ant.length){ nova.forEach((u,i)=>{ const j=ant.indexOf(u); if(j>i&&j>=0){ const passados=ant.slice(i,j).filter(o=>nova.indexOf(o)>i); if(passados.length){ subiram[u]=1; toast('⬆️ '+u+' passou '+passados.join(' e ')+NOME_K[k]); } } }); }
   ORDEM[k]=nova;
-  const altK=k==='D'?ALT+16:ALT;
+  const altK=k==='D'?ALT+(CEL()?46:16):ALT;
   const max=Math.max(1,...lista.map(x=>x.qtd)), pcts=lista.map(x=>x.pct).filter(p=>p!==null&&p!==undefined), pmin=Math.min(0,...pcts), pmax=Math.max(1,...pcts);
   pista.style.height=(lista.length*altK)+'px';
   lista.forEach((x,i)=>{
@@ -177,7 +180,7 @@ function corrida(k,avisar){
     el.querySelector('.nome').innerHTML=x.u+(subiram[x.u]?'<span class="seta">▲</span>':'');
     let w; if(MODO==='pct') w=x.pct===null||x.pct===undefined?4:Math.max(4,((x.pct-pmin)/((pmax-pmin)||1))*100); else w=Math.max(x.qtd?4:0,(x.qtd/max)*100);
     const en=el.querySelector('.enche');
-    if(k==='D'){ const t=(x.l.del.proprio+x.l.del.ifood)||1; en.querySelector('.pr').style.width=(x.l.del.proprio/t*100)+'%'; en.querySelector('.if').style.width=(x.l.del.ifood/t*100)+'%'; const inf=el.querySelector('.info'); if(inf) inf.textContent=infoD(x.l); }
+    if(k==='D'){ const t=(x.l.del.proprio+x.l.del.ifood)||1; en.querySelector('.pr').style.width=(x.l.del.proprio/t*100)+'%'; en.querySelector('.if').style.width=(x.l.del.ifood/t*100)+'%'; const inf=el.querySelector('.info'); if(inf) inf.innerHTML='<span class="so-cel">🟠 próprio '+x.l.del.proprio+' · 🔴 iFood '+x.l.del.ifood+(infoD(x.l)?'  ·  ':'')+'</span>'+infoD(x.l).replace(/</g,'&lt;'); }
     requestAnimationFrame(()=>{ el.style.top=(i*altK)+'px'; en.style.width=w+'%'; });
     const num=el.querySelector('.num'), kk=k+x.u+MODO, sm=el.querySelector('.val small'), ex=el.querySelector('.extra');
     if(MODO==='pct'){ num.textContent=fmtPct(x.pct); sm.textContent=k==='F'?fmtRS(x.qtd):fmt(x.qtd)+UN_K[k]; ex.textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+(k==='F'?fmtRS(x.antes):fmt(x.antes)):''; }
@@ -235,6 +238,7 @@ setInterval(()=>{ if(!D) return; const s=Math.max(0,Math.round((_proxima-Date.no
   const dd=D.dia.split('-').reverse().join('/'); sub.textContent='Hoje, '+dd+' · dados do Alpha às '+D.hora+(D.guardadoS?' · ':'')+' · próxima atualização em '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },1000);
 function telaCheia(){ document.body.classList.toggle('tv'); try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }catch(e){} }
 atualizar(false);
+window.addEventListener('resize',()=>{ clearTimeout(window._rz); window._rz=setTimeout(()=>{ if(D) desenhar(false); },300); });
 </script>
 </body>
 </html>
