@@ -39,7 +39,7 @@
   .corrida h2{font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .corrida h2 small{color:var(--muted);font-weight:600;font-size:.78rem;margin-left:auto}
   .pista{position:relative}
-  .linha{position:absolute;left:0;right:0;height:54px;display:flex;align-items:center;gap:10px;transition:top .9s cubic-bezier(.2,.8,.2,1)}
+  .linha{position:absolute;left:0;right:0;height:54px;flex-wrap:wrap;display:flex;align-items:center;gap:10px;transition:top .9s cubic-bezier(.2,.8,.2,1)}
   .pos{width:40px;text-align:center;font-weight:900;font-size:1.15rem;flex-shrink:0}
   .barra{position:relative;flex:1;height:44px;border-radius:12px;background:var(--inner);overflow:hidden}
   .barra .enche{position:absolute;inset:0 auto 0 0;border-radius:12px;background:linear-gradient(90deg,rgba(255,59,59,.85),rgba(255,120,60,.85));transition:width .9s cubic-bezier(.2,.8,.2,1)}
@@ -48,6 +48,10 @@
   .barra .extra{position:absolute;right:10px;top:0;bottom:0;display:flex;align-items:center;font-size:.75rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
   .val{width:92px;text-align:right;font-weight:900;font-size:1.35rem;font-variant-numeric:tabular-nums;flex-shrink:0}
   .val small{display:block;font-size:.7rem;font-weight:700;color:var(--muted)}
+  .enche.dup{background:none!important;display:flex}
+  .enche.dup i{display:block;height:100%} .enche.dup i.pr{background:linear-gradient(90deg,#d35400,#ff8a3d)} .enche.dup i.if{background:linear-gradient(90deg,#c0141f,#ea1d2c)}
+  .info{font-size:.72rem;color:var(--muted);margin:-6px 0 0 50px;height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .legcor{display:inline-flex;align-items:center;gap:5px;margin-left:8px} .legcor b{width:10px;height:10px;border-radius:3px;display:inline-block}
   .linha.subiu .barra{box-shadow:0 0 0 2px var(--verde),0 0 22px rgba(46,204,113,.55)}
   .seta{color:var(--verde);font-weight:900;margin-left:4px}
   .toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:50}
@@ -88,6 +92,8 @@
   <div class="totais">
     <div class="tot"><div class="r">🍕 Pizzas na rede hoje</div><div class="n" id="totP">0</div><div class="d" id="totPd"></div></div>
     <div class="tot"><div class="r">🍽️ Buffets na rede hoje</div><div class="n" id="totB">0</div><div class="d" id="totBd"></div></div>
+    <div class="tot"><div class="r">🛵 Pedidos de delivery hoje</div><div class="n" id="totD">0</div><div class="d" id="totDd"></div></div>
+    <div class="tot"><div class="r">💰 Faturamento da rede hoje</div><div class="n" id="totF">R$ 0</div><div class="d" id="totFd"></div></div>
     <div class="tot"><div class="r">📏 Pizzas por tamanho</div><div class="d" id="totT" style="font-size:.95rem;color:var(--text);margin-top:8px;line-height:1.6"></div></div>
     <div class="tot"><div class="r">🛵 Pizzas por canal</div><div class="d" id="totC" style="font-size:.95rem;color:var(--text);margin-top:8px;line-height:1.6"></div></div>
   </div>
@@ -95,9 +101,13 @@
   <div class="corridas">
     <div class="corrida"><h2>🍕 Corrida das pizzas <small id="legP"></small></h2><div class="pista" id="pistaP"></div></div>
     <div class="corrida"><h2>🍽️ Corrida do buffet <small id="legB"></small></h2><div class="pista" id="pistaB"></div></div>
+    <div class="corrida"><h2>🛵 Corrida do delivery <span class="legcor" style="font-size:.72rem;font-weight:700;color:var(--muted)"><b style="background:#ff8a3d"></b>Próprio <b style="background:#ea1d2c"></b>iFood</span><small id="legD"></small></h2><div class="pista" id="pistaD"></div></div>
+    <div class="corrida"><h2>💰 Corrida do faturamento <small id="legF"></small></h2><div class="pista" id="pistaF"></div></div>
   </div>
 
   <div class="bloco opc"><h3>🔄 Ultrapassagens de hoje</h3><div class="hist" id="hist"><div style="color:var(--muted)">Quando uma loja passar a outra, aparece aqui.</div></div></div>
+
+  <div class="bloco opc"><h3>🛵 Delivery por loja</h3><div id="tabelaD"></div></div>
 
   <div class="bloco opc"><h3>📏 Pizzas por tamanho e canal, por loja</h3><div id="tabela"></div></div>
 
@@ -110,7 +120,7 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139d
 const ATUALIZA_MS=5*60*1000, ALT=58;
 const TAM=[['broto','Broto'],['media','Média'],['grande','Grande'],['gigante','Gigante'],['outro','Sem tamanho']];
 const CAN=[['salao','Salão'],['balcao','Balcão'],['delivery','Delivery'],['ifood','iFood']];
-let D=null, MODO='qtd', ORDEM={P:[],B:[]}, VALORES={}, _timer=null, _ultimoFresco=0, _proxima=0;
+let D=null, MODO='qtd', ORDEM={P:[],B:[],D:[],F:[]}, VALORES={}, _timer=null, _ultimoFresco=0, _proxima=0;
 function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
 function jsonp(params,ms){ return new Promise((ok,falha)=>{ const cb='av'+Date.now()+Math.floor(Math.random()*1e4); const s=document.createElement('script');
   const t=setTimeout(()=>{ delete window[cb]; s.remove(); falha(new Error('O servidor demorou para responder.')); }, ms||90000);
@@ -125,37 +135,53 @@ function primeiro(u){ return u; }
 function contar(el,de,para){ if(!el) return; const t0=performance.now(), dur=1200; de=Number(de)||0; para=Number(para)||0;
   const passo=t=>{ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3); el.textContent=fmt(Math.round(de+(para-de)*e)); if(k<1) requestAnimationFrame(passo); }; requestAnimationFrame(passo); }
 
-function trocarModo(m){ MODO=m; document.querySelectorAll('#modo button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); ORDEM={P:[],B:[]}; desenhar(false); }
+function trocarModo(m){ MODO=m; document.querySelectorAll('#modo button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); ORDEM={P:[],B:[],D:[],F:[]}; desenhar(false); }
 
 function toast(txt){ const c=document.getElementById('toasts'), d=document.createElement('div'); d.className='toast'; d.textContent=txt; c.appendChild(d); setTimeout(()=>d.remove(),9000);
   const h=document.getElementById('hist'); if(h.firstElementChild&&!h.firstElementChild.dataset.ok) h.innerHTML=''; const it=document.createElement('div'); it.dataset.ok=1; it.textContent=(D?D.hora:'')+' — '+txt; h.prepend(it); }
 
-// uma corrida: k='P' (pizzas) ou 'B' (buffet)
+// uma corrida: P pizzas · B buffet · D delivery (próprio + iFood) · F faturamento
+const NOME_K={P:' nas pizzas',B:' no buffet',D:' no delivery',F:' no faturamento'}, UN_K={P:' pizzas',B:' buffets',D:' pedidos',F:''};
+const fmtRS=n=>'R$ '+Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:0});
+function itensDa(k){
+  return D.lojas.filter(l=>k==='P'||k==='F'||(k==='B'&&l.temBuffet)||(k==='D'&&l.temDelivery)).map(l=>{
+    if(k==='P') return {u:l.unidade,qtd:l.pizzas,pct:l.pctP,antes:l.semanaPassadaP,l};
+    if(k==='B') return {u:l.unidade,qtd:l.buffets,pct:l.pctB,antes:l.semanaPassadaB,l};
+    if(k==='D') return {u:l.unidade,qtd:l.delTotal||0,pct:l.pctD,antes:l.semanaPassadaD,l};
+    return {u:l.unidade,qtd:l.fat||0,pct:l.pctF,antes:l.semanaPassadaF,l}; });
+}
+function infoD(l){ const p=[]; if(l.ritmoDel) p.push('⚡ '+l.ritmoDel+' na última hora');
+  if(l.tempo) p.push('⏱️ '+'App '+l.tempo.app+' / iFood '+l.tempo.ifood+' min ('+l.tempo.hora+')');
+  const tk=[]; if(l.ticket&&l.ticket.proprio) tk.push('próprio '+fmtRS(l.ticket.proprio)); if(l.ticket&&l.ticket.ifood) tk.push('iFood '+fmtRS(l.ticket.ifood)); if(tk.length) p.push('🎟️ ticket '+tk.join(' · '));
+  return p.join('  ·  '); }
 function corrida(k,avisar){
-  const pista=document.getElementById(k==='P'?'pistaP':'pistaB');
-  let lista=D.lojas.filter(l=>k==='P'||l.temBuffet).map(l=>({u:l.unidade, qtd:k==='P'?l.pizzas:l.buffets, pct:k==='P'?l.pctP:l.pctB, antes:k==='P'?l.semanaPassadaP:l.semanaPassadaB}));
+  const pista=document.getElementById('pista'+k);
+  let lista=itensDa(k);
   const v=x=>MODO==='pct'?(x.pct===null||x.pct===undefined?-1e9:x.pct):x.qtd;
   lista.sort((a,b)=>v(b)-v(a)||b.qtd-a.qtd||a.u.localeCompare(b.u));
-  const ant=ORDEM[k], nova=lista.map(x=>x.u);
-  // ultrapassagens: quem subiu e quem ficou para trás
+  const ant=ORDEM[k]||[], nova=lista.map(x=>x.u);
   const subiram={};
-  if(avisar&&ant.length){ nova.forEach((u,i)=>{ const j=ant.indexOf(u); if(j>i&&j>=0){ const passados=ant.slice(i,j).filter(o=>nova.indexOf(o)>i); if(passados.length){ subiram[u]=1; toast('⬆️ '+u+' passou '+passados.join(' e ')+(k==='P'?' nas pizzas':' no buffet')); } } }); }
+  if(avisar&&ant.length){ nova.forEach((u,i)=>{ const j=ant.indexOf(u); if(j>i&&j>=0){ const passados=ant.slice(i,j).filter(o=>nova.indexOf(o)>i); if(passados.length){ subiram[u]=1; toast('⬆️ '+u+' passou '+passados.join(' e ')+NOME_K[k]); } } }); }
   ORDEM[k]=nova;
+  const altK=k==='D'?ALT+16:ALT;
   const max=Math.max(1,...lista.map(x=>x.qtd)), pcts=lista.map(x=>x.pct).filter(p=>p!==null&&p!==undefined), pmin=Math.min(0,...pcts), pmax=Math.max(1,...pcts);
-  pista.style.height=(lista.length*ALT)+'px';
+  pista.style.height=(lista.length*altK)+'px';
   lista.forEach((x,i)=>{
     let el=pista.querySelector('[data-u="'+CSS.escape(x.u)+'"]');
-    if(!el){ el=document.createElement('div'); el.className='linha'; el.dataset.u=x.u; el.style.top=(lista.length*ALT)+'px';
-      el.innerHTML='<div class="pos"></div><div class="barra"><div class="enche" style="width:0"></div><div class="nome"></div><div class="extra"></div></div><div class="val"><span class="num">0</span><small></small></div>'; pista.appendChild(el); }
+    if(!el){ el=document.createElement('div'); el.className='linha'; el.dataset.u=x.u; el.style.top=(lista.length*altK)+'px';
+      el.innerHTML='<div class="pos"></div><div class="barra"><div class="enche'+(k==='D'?' dup':'')+'" style="width:0">'+(k==='D'?'<i class="pr"></i><i class="if"></i>':'')+'</div><div class="nome"></div><div class="extra"></div></div><div class="val"><span class="num">0</span><small></small></div>'+(k==='D'?'<div class="info" style="flex-basis:100%"></div>':''); pista.appendChild(el); }
+    if(k==='D') el.style.height=altK+'px';
     el.className='linha'+(i<3?' p'+(i+1):'')+(subiram[x.u]?' subiu':'');
     if(subiram[x.u]) setTimeout(()=>el.classList.remove('subiu'),6000);
     el.querySelector('.pos').textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'º';
     el.querySelector('.nome').innerHTML=x.u+(subiram[x.u]?'<span class="seta">▲</span>':'');
     let w; if(MODO==='pct') w=x.pct===null||x.pct===undefined?4:Math.max(4,((x.pct-pmin)/((pmax-pmin)||1))*100); else w=Math.max(x.qtd?4:0,(x.qtd/max)*100);
-    requestAnimationFrame(()=>{ el.style.top=(i*ALT)+'px'; el.querySelector('.enche').style.width=w+'%'; });
-    const num=el.querySelector('.num'), kk=k+x.u+MODO;
-    if(MODO==='pct'){ num.textContent=fmtPct(x.pct); el.querySelector('.val small').textContent=fmt(x.qtd)+(k==='P'?' pizzas':' buffets'); el.querySelector('.extra').textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+fmt(x.antes):''; }
-    else { contar(num,VALORES[kk]||0,x.qtd); el.querySelector('.val small').textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+' vs sem. passada'; el.querySelector('.extra').textContent=''; }
+    const en=el.querySelector('.enche');
+    if(k==='D'){ const t=(x.l.del.proprio+x.l.del.ifood)||1; en.querySelector('.pr').style.width=(x.l.del.proprio/t*100)+'%'; en.querySelector('.if').style.width=(x.l.del.ifood/t*100)+'%'; const inf=el.querySelector('.info'); if(inf) inf.textContent=infoD(x.l); }
+    requestAnimationFrame(()=>{ el.style.top=(i*altK)+'px'; en.style.width=w+'%'; });
+    const num=el.querySelector('.num'), kk=k+x.u+MODO, sm=el.querySelector('.val small'), ex=el.querySelector('.extra');
+    if(MODO==='pct'){ num.textContent=fmtPct(x.pct); sm.textContent=k==='F'?fmtRS(x.qtd):fmt(x.qtd)+UN_K[k]; ex.textContent=x.antes!==null&&x.antes!==undefined?'sem. passada até agora: '+(k==='F'?fmtRS(x.antes):fmt(x.antes)):''; }
+    else { if(k==='F'){ num.textContent=fmtRS(x.qtd); } else contar(num,VALORES[kk]||0,x.qtd); sm.textContent=x.pct===null||x.pct===undefined?'':fmtPct(x.pct)+' vs sem. passada'; ex.textContent=k==='D'?'próprio '+x.l.del.proprio+' · iFood '+x.l.del.ifood:''; }
     VALORES[kk]=x.qtd;
   });
   pista.querySelectorAll('.linha').forEach(el=>{ if(nova.indexOf(el.dataset.u)<0) el.remove(); });
@@ -172,8 +198,16 @@ function desenhar(avisar){
   document.getElementById('totT').innerHTML=TAM.filter(t=>t[0]!=='outro'||r.tam.outro).map(t=>t[1]+': <b>'+fmt(r.tam[t[0]])+'</b>').join(' · ');
   document.getElementById('totC').innerHTML=CAN.map(c=>c[1]+': <b>'+fmt(r.canais[c[0]])+'</b>').join(' · ');
   const leg=MODO==='pct'?'% sobre o mesmo dia da semana passada, até esta hora':'quantidade vendida hoje';
-  document.getElementById('legP').textContent=leg; document.getElementById('legB').textContent=leg;
-  corrida('P',avisar); corrida('B',avisar);
+  ['P','B','D','F'].forEach(k=>{ const e=document.getElementById('leg'+k); if(e) e.textContent=leg; });
+  corrida('P',avisar); corrida('B',avisar); if(r.del) corrida('D',avisar); if(r.fat!==undefined) corrida('F',avisar);
+  if(r.del){ const dt=r.del.proprio+r.del.ifood; contar(document.getElementById('totD'),VALORES.totD||0,dt); VALORES.totD=dt;
+    const sd=D.lojas.reduce((t,l)=>t+(l.semanaPassadaD||0),0);
+    document.getElementById('totDd').textContent='Próprio '+fmt(r.del.proprio)+' · iFood '+fmt(r.del.ifood)+' · ⚡ '+fmt(r.ritmoDel)+' na última hora'+(D.baseOk&&sd?' · sem. passada até agora: '+fmt(sd):'');
+    const sf=D.lojas.reduce((t,l)=>t+(l.semanaPassadaF||0),0);
+    document.getElementById('totF').textContent=fmtRS(r.fat); document.getElementById('totFd').textContent=D.baseOk&&sf?'Semana passada até esta hora: '+fmtRS(sf)+' ('+fmtPct(Math.round((r.fat/sf-1)*1000)/10)+')':'';
+    const ld=D.lojas.filter(l=>l.temDelivery).sort((a,b)=>b.delTotal-a.delTotal);
+    document.getElementById('tabelaD').innerHTML='<table><tr><th>Loja</th><th>Pedidos</th><th>Próprio</th><th>iFood</th><th>Ticket próprio</th><th>Ticket iFood</th><th>Última hora</th><th>Último tempo (App / iFood)</th></tr>'+
+      ld.map(l=>{ const tm=l.tempo, alto=tm&&(tm.app>40||tm.ifood>40); return '<tr><td>'+l.unidade+'</td><td><b>'+fmt(l.delTotal)+'</b></td><td>'+fmt(l.del.proprio)+'</td><td>'+fmt(l.del.ifood)+'</td><td>'+(l.ticket.proprio?fmtRS(l.ticket.proprio):'—')+'</td><td>'+(l.ticket.ifood?fmtRS(l.ticket.ifood):'—')+'</td><td>'+(l.ritmoDel?'⚡ '+l.ritmoDel:'0')+'</td><td style="color:'+(alto?'var(--red)':'inherit')+'">'+(tm?tm.app+' / '+tm.ifood+' min às '+tm.hora+(alto?' ⚠️':''):'—')+'</td></tr>'; }).join('')+'</table>'; }
   // tabela por loja
   const ls=[...D.lojas].sort((a,b)=>b.pizzas-a.pizzas);
   document.getElementById('tabela').innerHTML='<table><tr><th>Loja</th><th>Pizzas</th>'+TAM.map(t=>'<th>'+t[1]+'</th>').join('')+CAN.map(c=>'<th>'+c[1]+'</th>').join('')+'<th>Buffets</th></tr>'+
