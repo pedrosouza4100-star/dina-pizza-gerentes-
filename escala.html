@@ -320,6 +320,7 @@ async function entrarTeste(loja){
     const r=await fetch(ESCALA_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authGestaoLogin',hash:h})});
     const j=JSON.parse(await r.text()); ok=!!(h&&j&&j.valido&&j.papel==='admin');
   }catch(e){}
+  if(!ok){ try{ const h=sessionStorage.getItem('dina_teste_admin')||''; const r2=await fetch(ESCALA_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authTreinoLogin',hash:h})}); const j2=JSON.parse(await r2.text()); ok=!!(h&&j2&&j2.valido); }catch(e){} } // senha de treino (24/11/2026)
   if(!ok||!ESCALA_UNIDADES.includes(loja)){ card.innerHTML='<div class="auth-logo">DINA <span>PIZZA</span></div><div class="muted" style="text-align:center">O modo teste da escala abre pelo placar: entre no placar com a senha do Admin e toque em "Escala da equipe".</div><a class="btn" href="placar" style="text-align:center;text-decoration:none">Ir para o Placar</a>'; return; }
   ESC_TESTE=true;
   // nada vai para o servidor: o salvamento finge que deu certo
