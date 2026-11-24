@@ -3584,7 +3584,7 @@ function verificarBotaoRegistrar(){
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(ALPC_ATIVO){ if(bebLista().map(b=>b[1]).some(id=>!filled(id))) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
-  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HF.compra.semCompra && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
@@ -4094,15 +4094,21 @@ function hfRenderCompra(){
   hfRenderCompraBase();
   // 19/11/2026 (recurso hfPendente): saída para quando a compra não salva (Fazenda 18/11 parou 01:36 sem enviar)
   const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
-  if(!c||c.feita||c.pendente) return;
+  if(!c||c.feita||c.pendente||c.semCompra) return;
   const rc=_chkRecursos||[];
+  // os links ficam antes do "📝 Lista para amanhã" (24/11/2026)
+  const _lista=[...box.children].find(e=>/Lista para amanhã/.test(e.textContent)), _antes=_lista&&_lista.previousElementSibling;
+  const poe=h=>{ if(_antes) _antes.insertAdjacentHTML('beforebegin',h); else box.insertAdjacentHTML('beforeend',h); };
+  // 24/11/2026 (Campo Largo 23/11 parou só com a foto da compra): "🚫 Não teve compra hoje" libera o envio e avisa o Sidinei
+  if(rc.includes('hfSemCompra')&&!HFC_DIA_PEND&&!HFC_MANUAL) poe('<div style="margin-top:10px"><a href="#" onclick="document.getElementById(\'hfSemForm\').style.display=\'block\';return false" style="color:var(--muted);font-size:.85rem;font-weight:700">🚫 Não teve compra hoje</a><div id="hfSemForm" style="display:none;margin-top:6px"><select id="hfSemTipo" class="hf-txt" style="min-height:0"><option value="">Por que não teve compra?</option><option value="fornecedor">O fornecedor não entregou</option><option value="nao_precisou">Não precisou comprar</option><option value="outro">Outro motivo</option></select><textarea class="hf-txt" id="hfSemMotivo" maxlength="300" placeholder="Explique (obrigatório em Outro motivo)" style="min-height:48px;margin-top:6px"></textarea><button type="button" class="hf-mg" onclick="hfSemCompra()">Confirmar — avisar o Sidinei</button><div id="hfSemMsg" class="alp-info"></div></div></div>');
   if(HFC_MANUAL){ box.insertAdjacentHTML('afterbegin','<div class="hf-aviso" style="border-color:var(--gold);margin-bottom:6px">✍️ <b>Registrando digitando</b>: diga o que chegou e a quantidade de cada item e o <b>total da nota</b>. Preço por item só se tiver; foto só se conseguir. O Sidinei confere. <a href="#" onclick="HFC_MANUAL=false;hfRenderCompra();return false" style="color:var(--gold)">voltar para a foto</a></div>'); return; }
   // 19/11/2026 (pedido do Robson): a foto ou a leitura da nota não funcionou → digita na hora (nada fica para o dia seguinte)
-  if(rc.includes('hfManual')) box.insertAdjacentHTML('beforeend','<div style="margin-top:10px"><a href="#" onclick="hfcManual();return false" style="color:var(--gold);font-size:.85rem;font-weight:700">✍️ A foto ou a leitura da nota não funcionou? Registrar digitando</a></div>');
+  if(rc.includes('hfManual')) poe('<div style="margin-top:10px"><a href="#" onclick="hfcManual();return false" style="color:var(--gold);font-size:.85rem;font-weight:700">✍️ A foto ou a leitura da nota não funcionou? Registrar digitando</a></div>');
 }
 function hfRenderCompraBase(){
   const box=document.getElementById('hfCompraBox'), c=HF&&HF.compra;
   if(!c){ box.style.display='none'; return; }
+  if(c.semCompra&&!HFC_DIA_PEND&&!c.feita){ box.style.display='block'; box.innerHTML='<div class="hf-aviso">🚫 <b>Não teve compra de hortifrúti hoje</b> ('+escR(c.semCompra.hora)+'): '+escR(c.semCompra.motivo)+'<br>O Sidinei foi avisado. O placar já pode ser enviado.</div>'; return; }
   if(c.pendente&&!HFC_DIA_PEND){ box.style.display='block'; box.innerHTML='<div class="hf-aviso">⏳ <b>Compra de hoje não registrada</b> ('+escR(c.pendente.hora)+'): '+escR(c.pendente.motivo)+'<br>O Sidinei foi avisado. <b>Amanhã</b> o placar pede para registrar esta compra: guarde a nota.</div>'; return; }
   box.style.display='block';
   if(c.feita&&hfcMulti()){ hfRenderNotas(box,c); return; }
@@ -4137,6 +4143,18 @@ function hfRenderNotas(box,c){
 // Compra pendente (19/11/2026): hoje não deu → amanhã registra a compra de ontem (diaPend) ou fecha sem registro
 let HFC_DIA_PEND='', HFC_MANUAL=false;
 function hfcManual(){ HFC_MANUAL=true; if(typeof logProva==='function') logProva('HF_COMPRA_DIGITADA','a foto/leitura da nota não funcionou'); hfRenderCompra(); document.getElementById('hfCompraBox').scrollIntoView({behavior:'smooth',block:'start'}); }
+async function hfSemCompra(){
+  const tp=document.getElementById('hfSemTipo').value, m=document.getElementById('hfSemMotivo').value.trim(), msg=document.getElementById('hfSemMsg');
+  if(!tp){ msg.innerHTML='<span style="color:var(--danger)">Escolha o motivo.</span>'; return; }
+  if(tp==='outro'&&m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
+  msg.textContent='Enviando…';
+  try{ const r=await (await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfCompraPendente',semCompra:true,tipo:tp,unidade:unidadeAtual,papel:localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente',motivo:m})})).json();
+    if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; return; }
+    const txt=r.motivo||({fornecedor:'O fornecedor não entregou',nao_precisou:'Não precisou comprar'}[tp]||'')+(m?': '+m:'');
+    HF.compra.semCompra={motivo:txt+(r.teste?' (teste: nada foi enviado)':''),hora:new Date().toTimeString().slice(0,5)}; logProva('HF_SEM_COMPRA',txt);
+    hfRenderCompra(); verificarBotaoRegistrar();
+  }catch(e){ msg.innerHTML='<span style="color:var(--danger)">⚠ Sem conexão. Tente de novo.</span>'; }
+}
 async function hfPendMarcar(){
   const m=document.getElementById('hfPendMotivo').value.trim(), msg=document.getElementById('hfPendMsg');
   if(m.length<10){ msg.innerHTML='<span style="color:var(--danger)">Explique o que aconteceu (mínimo 10 letras).</span>'; return; }
