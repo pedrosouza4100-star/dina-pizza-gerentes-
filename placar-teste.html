@@ -829,7 +829,7 @@ const TESTE_GRAVACOES=['salvarTempoReal','registrarPedidoDesbloqueio','chkPedirD
   const fetchOrig=window.fetch.bind(window);
   window.fetch=function(url,opt){
     if(MODO_TESTE && opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
-      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir'||b.action==='chkDelFotoConferir'||b.action==='bufMontadoSalvar') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
+      try{ const b=JSON.parse(opt.body||'{}'); if(b.action==='alphaConferir'||b.action==='chkDelFotoConferir'||b.action==='bufMontadoSalvar'||b.action==='hfLerNota') return fetchOrig(url,opt); /* só lê o Alpha; com a senha do Admin o servidor não grava */ if(b.action==='salvarChecklistV2' && TESTE_CHK[b.turno]) (b.itens||[]).forEach(it=>TESTE_CHK[b.turno].push(String(it.id))); }catch(e){}
       return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify({ok:true,status:'ok',teste:true}),{status:200,headers:{'Content-Type':'application/json'}})),500));
     }
     return fetchOrig(url,opt);
@@ -4215,7 +4215,7 @@ function hfcFotoNota(){
     HFC_NOTA=f; const btn=document.getElementById('hfcNotaBtn'), info=document.getElementById('hfcLeitura');
     btn.textContent='✓ Foto da nota tirada — tirar outra'; info.innerHTML='📄 Lendo a nota…';
     try{
-      const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfLerNota',unidade:unidadeAtual,foto:{base64:f}})});
+      const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'hfLerNota',unidade:unidadeAtual,senha:MODO_TESTE?pvSenha():undefined,foto:{base64:f}})}); // no teste a leitura da nota também funciona (24/11/2026; só lê, não grava)
       const r=await resp.json();
       if(!r||r.ok!==true){ HFC_LIDO=null; info.innerHTML='⚠️ '+escR((r&&r.erro)||'Não consegui ler a nota.')+' Preencha à mão olhando a nota.'; logProva('HF_NOTA_NAO_LIDA',(r&&r.erro)||''); return; }
       HFC_LIDO={itens:r.itens||{},total:r.total||null};
