@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>Treino — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--d-bg);color:var(--d-text);font-family:Arial,sans-serif;min-height:100vh;padding:24px 16px 40px}
+  main{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .topo{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;margin-bottom:6px}
+  .topo img{width:84px;height:84px;object-fit:contain}
+  .topo h1{font-size:1.35rem;font-weight:900}.topo h1 span{color:var(--d-gold)}
+  .topo p{font-size:.85rem;color:var(--d-muted);line-height:1.45}
+  .card{background:var(--d-card);border:1px solid var(--d-line);border-radius:14px;padding:16px}
+  label{display:block;font-size:.75rem;font-weight:800;color:var(--d-gold);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  input,select{width:100%;background:var(--d-card-2);border:1px solid var(--d-line);border-radius:10px;color:var(--d-text);font-size:1rem;padding:12px}
+  .btn{display:flex;align-items:center;gap:14px;width:100%;background:var(--d-card);border:1px solid var(--d-line);border-radius:14px;padding:16px;color:var(--d-text);font-size:1rem;font-weight:800;cursor:pointer;text-align:left}
+  .btn:active{transform:scale(.98)}
+  .btn .ic{font-size:1.9rem;width:44px;text-align:center}
+  .btn small{display:block;font-size:.78rem;font-weight:400;color:var(--d-muted);margin-top:3px;line-height:1.35}
+  .entrar{background:var(--d-red);color:#fff;border:none;border-radius:10px;padding:13px;font-size:1rem;font-weight:800;width:100%;cursor:pointer;margin-top:10px}
+  .erro{color:var(--d-t-err,#ff6b6b);font-size:.85rem;margin-top:8px;min-height:1em}
+  .faixa{background:#7a3cff;color:#fff;border-radius:10px;padding:10px 12px;font-size:.82rem;font-weight:700;text-align:center;line-height:1.4}
+  .sair{background:none;border:none;color:var(--d-muted);text-decoration:underline;font-size:.8rem;cursor:pointer;margin-top:6px}
+  #lojaBox{display:none;margin-top:10px}
+</style>
+</head>
+<body>
+<main>
+  <div class="topo"><img src="logo-emblema.png" alt="Dina Pizza"><h1>Treino <span>Dina Pizza</span></h1><p>Para treinar antes de ensinar os gerentes.<br>Tudo aqui é <b>modo teste</b>: nada é gravado e ninguém é avisado.</p></div>
+
+  <div class="card" id="login">
+    <label for="senha">Senha de treino</label>
+    <input type="password" id="senha" placeholder="Digite a senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="entrar" onclick="entrar()">Entrar</button>
+    <div class="erro" id="erro"></div>
+  </div>
+
+  <div id="menu" style="display:none;flex-direction:column;gap:12px">
+    <div class="faixa">🎓 Treino: <span id="quem">RH e GDI</span> — modo teste</div>
+    <button class="btn" onclick="abrirPlacarEscolha()"><span class="ic">📲</span><span>Placar da loja<small>Faça o placar inteiro como o gerente: checklist, Start Dina, tempos, hortifrúti, fechamento e envio. Fotos reais, a IA confere.</small></span></button>
+    <div class="card" id="lojaBox">
+      <label for="loja">Qual loja?</label>
+      <select id="loja"></select>
+      <button class="entrar" onclick="abrirPlacar()">Abrir o placar em modo teste</button>
+    </div>
+    <button class="btn" onclick="abrir('agenda')"><span class="ic">📅</span><span>Agenda das visitas<small>Painel do mês: visitas do GDI, da RH e da nutricionista, o que foi cumprido e o que não foi. Só para ver.</small></span></button>
+    <button class="btn" onclick="abrir('regional')"><span class="ic">📋</span><span>Checklist do GDI<small>A visita do GDI na loja, com as correções dos gerentes. Sem GPS, nada é gravado.</small></span></button>
+    <button class="btn" onclick="abrir('nutricionista')"><span class="ic">🥗</span><span>Checklist da nutricionista<small>A visita de qualidade, com a nota calculada na hora. Nada é gravado.</small></span></button>
+    <button class="sair" onclick="sair()">Sair</button>
+  </div>
+</main>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const LOJAS=['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
+const K='dina_treino_hash';
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return String(h);}
+function ler(){ try{ return localStorage.getItem(K)||''; }catch(e){ return ''; } }
+async function conferir(h){ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authTreinoLogin',hash:h})}); return r.json(); }
+async function entrar(hGuardado){
+  const err=document.getElementById('erro'); let h=hGuardado;
+  if(!h){ const s=document.getElementById('senha').value; if(!s){ err.textContent='Digite a senha.'; return; } h=hash(s); }
+  err.textContent='Conferindo...';
+  try{
+    const r=await conferir(h);
+    if(!r||!r.valido){ err.textContent=hGuardado?'':'Senha de treino incorreta.'; try{localStorage.removeItem(K);}catch(e){} document.getElementById('login').style.display='block'; return; }
+    try{ localStorage.setItem(K,h); }catch(e){}
+    err.textContent=''; document.getElementById('senha').value='';
+    document.getElementById('quem').textContent=r.nome||'RH e GDI';
+    document.getElementById('login').style.display='none'; document.getElementById('menu').style.display='flex';
+  }catch(e){ err.textContent='Sem conexão. Tente de novo.'; }
+}
+function abrirPlacarEscolha(){ const b=document.getElementById('lojaBox'); b.style.display=b.style.display==='block'?'none':'block'; }
+function abrirPlacar(){
+  const h=ler(), u=document.getElementById('loja').value; if(!h) return location.reload();
+  try{ sessionStorage.setItem('dina_teste_admin',h); sessionStorage.setItem('dina_teste_loja',u); localStorage.setItem('dina_ultima_loja',u); }catch(e){}
+  location.href='placar-teste.html';
+}
+function abrir(qual){
+  const h=ler(); if(!h) return location.reload();
+  try{
+    if(qual==='agenda') localStorage.setItem('dina_agenda_hash',h);
+    if(qual==='nutricionista') localStorage.setItem('dina_nutri_hash',h);
+    if(qual==='regional') localStorage.setItem('dina_gestao_hash',h);
+  }catch(e){}
+  location.href=qual+'.html';
+}
+function sair(){ try{ const h=ler(); ['dina_agenda_hash','dina_nutri_hash','dina_gestao_hash'].forEach(k=>{ if(h&&localStorage.getItem(k)===h) localStorage.removeItem(k); }); localStorage.removeItem(K); sessionStorage.removeItem('dina_teste_admin'); sessionStorage.removeItem('dina_teste_loja'); }catch(e){} location.reload(); }
+document.getElementById('loja').innerHTML=LOJAS.map(l=>'<option>'+l+'</option>').join('');
+(function(){ const h=ler(); if(h){ document.getElementById('login').style.display='none'; entrar(h); } })();
+</script>
+</body>
+</html>
