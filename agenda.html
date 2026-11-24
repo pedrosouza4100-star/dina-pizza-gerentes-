@@ -147,7 +147,7 @@ async function entrar(){
   try{
     const r=await post({action:'agendaLogin',hash:hash(s)});
     err.textContent=''; H=hash(s); gravarK(H); document.getElementById('senha').value='';
-    if(r.painel) abrirPainel(); else carregar();
+    SOVER=r.soVer?(r.treino||'treino'):''; if(r.painel) abrirPainel(); else carregar();
   }catch(e){ err.style.color='var(--danger)'; err.textContent=/reconhecida/.test(e.message)?'O servidor ainda não tem a agenda. Peça para colar o código novo no Apps Script.':e.message; }
 }
 
@@ -349,10 +349,11 @@ function agErroJanela(msg){
 }
 
 // ═════════ PAINEL (Robson) ═════════
+let SOVER=''; // senha de treino (24/11/2026): painel só para ver, sem o modo teste da agenda
 async function abrirPainel(mes){
   document.getElementById('login').style.display='none';
   const app=document.getElementById('app'); app.style.display='flex';
-  document.getElementById('quem').innerHTML='<b>Painel da gestão</b><br><a onclick="sair()">sair</a>';
+  document.getElementById('quem').innerHTML=SOVER?'<b>Painel (só para ver)</b><br>'+esc(SOVER)+' · <a onclick="sair()">sair</a>':'<b>Painel da gestão</b><br><a onclick="sair()">sair</a>';
   app.innerHTML='<div class="card muted">Carregando os números...</div>';
   try{
     const r=await jsonp({action:'agendaPainel',chave:H,mes:mes||''});
@@ -366,7 +367,7 @@ function renderPainel(){
   for(let i=0;i<6;i++){ const d=new Date(ay,am-1-i,1); const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); opts.push(`<option value="${v}" ${v===P.mes?'selected':''}>${NM[d.getMonth()]} ${d.getFullYear()}</option>`); }
   let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="tit" style="margin:0">📊 Agenda da gestão — números do mês</div><select style="width:auto" onchange="abrirPainel(this.value)">${opts.join('')}</select></div>
     <div class="muted" style="margin-top:6px">Conta só as visitas planejadas até hoje. "Feita" = check-in pelo GPS dentro da loja.</div>
-    <div style="height:12px"></div><button class="btn sec" onclick="entrarTeste()">🧪 Testar a agenda (ver como o GDI, a RH e a nutricionista usam)</button></div>`;
+    ${SOVER?'':'<div style="height:12px"></div><button class="btn sec" onclick="entrarTeste()">🧪 Testar a agenda (ver como o GDI, a RH e a nutricionista usam)</button>'}</div>`;
   P.pessoas.forEach(p=>{
     const c=p.cumprimento, cc=c==null?'':c>=90?'verde':c>=70?'amar':'verm';
     h+=`<div class="card"><div class="tit">${esc(p.rotulo)} · <span style="color:var(--text)">${esc(p.nome)}</span></div><div class="kpis">
@@ -398,7 +399,7 @@ async function zerarTeste(){
 // ── início ──
 window.addEventListener('DOMContentLoaded',async()=>{
   H=lerK(); if(!H) return;
-  try{ const r=await post({action:'agendaLogin',hash:H}); if(r.painel) abrirPainel(); else carregar(); }
+  try{ const r=await post({action:'agendaLogin',hash:H}); SOVER=r.soVer?(r.treino||'treino'):''; if(r.painel) abrirPainel(); else carregar(); }
   catch(e){ sair(); }
 });
 </script>

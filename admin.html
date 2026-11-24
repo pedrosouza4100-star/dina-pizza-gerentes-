@@ -304,6 +304,13 @@
         </div>
       </div>
       <div>
+        <div class="section-title">Senhas de treino</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:24px">
+          <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px">Para quem vai às lojas ensinar os gerentes. Digitada no lugar da senha de <b>qualquer loja</b> no placar, abre o <b>modo teste</b> (faixa roxa, nada é gravado). Em <a href="agenda" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/agenda</a> abre o painel das visitas do GDI, RH e nutricionista <b>só para ver</b>. Não abre o Admin nem a gestão.</div>
+          <div id="treinoLista" style="display:flex;flex-direction:column;gap:8px"><span style="color:var(--muted);font-size:0.8rem">Carregando…</span></div>
+        </div>
+      </div>
+      <div>
         <div class="section-title">Senha do Call center</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px">
           <div style="flex:1;min-width:200px"><div style="font-size:0.82rem;color:var(--muted);line-height:1.6">As atendentes entram em <a href="posvenda" target="_blank" style="color:var(--gold)">gerentes.dinapizza.com.br/posvenda</a> com esta senha para chamar as lojas e registrar o pós-venda. <span id="ccStatus"></span></div></div>
@@ -1664,6 +1671,14 @@
     catch(e){ showToast('Não salvou: '+e.message,'warn'); }
   }
 
+  // Senhas de treino (Kescelin e coordenadora do GDI), servidor 2026-11-24-b
+  async function definirSenhaTreino(quem,nome){
+    const sn=prompt('Nova senha de treino para '+nome+' (mínimo 4 caracteres):'); if(sn==null) return;
+    if(sn.length<4){ showToast('Mínimo 4 caracteres.','warn'); return; }
+    try{ const r=await admPost({action:'authDefinirSenhaTreino',quem:quem,hash:hash(sn)}); if(r&&r.ok===false) throw new Error(r.erro||'O Apps Script publicado ainda não tem as senhas de treino.'); showToast('Senha de treino salva.','ok'); registrarLog('Senha de treino definida: '+nome,'ok'); renderTabelaServidor(); }
+    catch(e){ showToast('Não salvou: '+e.message,'warn'); }
+  }
+
   // Senha do call center (pós-venda e chamados, servidor 2026-11-14-d)
   async function definirSenhaCC(){
     const sn=prompt('Nova senha do call center (mínimo 4 caracteres):'); if(sn==null) return;
@@ -1707,6 +1722,7 @@
       tbody.innerHTML=r.lojas.map(l=>`<tr><td style="font-weight:600">${l.unidade}</td>${cel(l.unidade,l,'gerente')}${cel(l.unidade,l.assistente||{situacao:'sem'},'assistente')}</tr>`).join('');
       const ta=document.getElementById('tabelaAgenda');
       if(ta) ta.innerHTML=r.agenda?Object.keys(r.agenda).map(k=>{ const a=r.agenda[k]; return `<tr><td style="font-weight:600">${escH(a.rotulo)}</td><td>${a.ativa?`<span class="badge ok">✓ Cadastrada</span><div style="font-size:0.7rem;color:var(--muted);margin-top:4px">desde ${quando(a.em)}</div>`:'<span class="badge sem">Sem senha</span>'}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',true)">Gerar</button><button class="action-btn btn-nova" onclick="senhaAgenda('${k}','${escH(a.rotulo)}',false)">Escolher</button></div></td></tr>`; }).join(''):'<tr><td colspan="2" style="color:var(--yellow)">Falta colar o código novo no Apps Script.</td></tr>';
+      const tl=document.getElementById('treinoLista'); if(tl) tl.innerHTML=r.treino===undefined?'<b style="color:var(--yellow);font-size:0.82rem">Falta colar o código novo no Apps Script.</b>':Object.keys(r.treino).map(k=>{ const t=r.treino[k]; return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-weight:600;min-width:180px">🎓 '+escH(t.nome)+'</span>'+(t.ativa?'<span class="badge ok">✓ Cadastrada</span>':'<span class="badge sem">Sem senha</span>')+'<button class="action-btn btn-nova" style="padding:6px 14px;font-size:0.78rem" onclick="definirSenhaTreino(\''+k+'\',\''+escH(t.nome)+'\')">'+(t.ativa?'Trocar senha':'Definir senha')+'</button></div>'; }).join('');
       const cs=document.getElementById('ccStatus'); if(cs) cs.innerHTML=r.callcenter===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.callcenter?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const rs=document.getElementById('rosiSenhaStatus'); if(rs) rs.innerHTML=r.rosi===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.rosi?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
       const es=document.getElementById('estSenhaStatus'); if(es) es.innerHTML=r.estoque===undefined?'<b style="color:var(--yellow)">Falta colar o código novo no Apps Script.</b>':(r.estoque?'<b style="color:var(--green)">Definida.</b>':'<b style="color:var(--yellow)">Ainda não definida.</b>');
