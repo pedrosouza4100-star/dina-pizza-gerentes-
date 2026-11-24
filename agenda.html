@@ -381,9 +381,9 @@ function renderPainel(){
   });
   h+='<div class="card"><div class="tit">🏪 Dias sem visita por loja</div><div class="wrap-t"><table class="tabela"><thead><tr><th>Loja</th>'+P.pessoas.map(p=>`<th>${esc(p.rotulo)}</th>`).join('')+'</tr></thead><tbody>';
   P.lojas.forEach(u=>{
-    h+=`<tr><td>${esc(u)}</td>`+P.pessoas.map(p=>{ const x=p.diasSemVisita.find(y=>y.unidade===u)||{}; const cl=x.dias==null||x.dias>30?'verm':x.dias>15?'amar':'verde'; return `<td class="n ${cl}">${x.dias==null?'nunca':x.dias+' d'}<br><span class="muted" style="font-weight:400">${esc(x.ultima||'')}</span></td>`; }).join('')+'</tr>';
+    h+=`<tr><td>${esc(u)}</td>`+P.pessoas.map(p=>{ const x=p.diasSemVisita.find(y=>y.unidade===u)||{}; const cl=x.dias==null||x.dias>30?'verm':x.dias>15?'amar':'verde'; return `<td class="n ${cl}">${x.dias==null?'nunca':x.dias+' d'}${x.ultima?'<br><span class="muted" style="font-weight:400">última '+esc(x.ultima)+'</span>':''}${x.naoFoi?'<br><span style="font-weight:700;color:var(--danger);font-size:0.78rem">⚠️ marcada '+esc(x.naoFoi)+', não foi</span>':''}</td>`; }).join('')+'</tr>';
   });
-  h+='</tbody></table></div><div class="muted" style="margin-top:8px">Verde até 15 dias · amarelo 16 a 30 · vermelho mais de 30 ou nunca.</div></div>';
+  h+='</tbody></table></div><div class="muted" style="margin-top:8px">Verde até 15 dias · amarelo 16 a 30 · vermelho mais de 30 ou nunca. ⚠️ = visita marcada na agenda que não aconteceu (últimos 60 dias).</div></div>';
   document.getElementById('app').innerHTML=h;
 }
 
