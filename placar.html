@@ -867,9 +867,13 @@ function entrarTeste(u){
   const esc=document.querySelector('a[href*="escala.html"]'); if(esc) esc.href='escala.html?teste=1&loja='+encodeURIComponent(u); // escala em modo teste (nada é salvo)
   iniciarApp(u);
   document.getElementById('unitBadge').textContent=u+' · 🧪 TESTE';
+  try{ const tn=sessionStorage.getItem('dina_teste_nome'); const tf=document.getElementById('testeFaixa'); if(tn&&tf&&!tf.querySelector('.treinoNome')) tf.insertAdjacentHTML('afterbegin','<span class="treinoNome" style="font-weight:800;margin-right:8px">🎓 Treino: '+tn.replace(/</g,'')+'</span>'); }catch(e){}
 }
-async function ehSenhaAdmin(h){
-  try{ const g=await authPost({action:'authGestaoLogin',hash:h}); return !!(g&&g.valido&&g.papel==='admin'); }catch(e){ return false; }
+async function ehSenhaAdmin(h,u){
+  try{ const g=await authPost({action:'authGestaoLogin',hash:h}); if(g&&g.valido&&g.papel==='admin'){ try{sessionStorage.removeItem('dina_teste_nome');}catch(e){} return true; } }catch(e){}
+  // senha de treino (Kescelin / coordenadora do GDI, 24/11/2026): abre só o modo teste
+  try{ const t=await authPost({action:'authTreinoLogin',hash:h,unidade:u||''}); if(t&&t.valido){ try{sessionStorage.setItem('dina_teste_nome',t.nome||'Treino');}catch(e){} return true; } }catch(e){}
+  return false;
 }
 
 const TODAS_UNIDADES=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"];
@@ -1604,7 +1608,7 @@ async function entrar(){
     err.textContent='Conferindo...';
     try{
       const r=await authPost({action:'authVerificar',unidade:u,hash:h,aparelho:aparelhoId(),info:aparelhoInfo()});
-      if(r.situacao!=='ok' && await ehSenhaAdmin(h)){ err.textContent=''; document.getElementById('loginSenha').value=''; try{ sessionStorage.setItem('dina_teste_admin',h); }catch(e){} entrarTeste(u); return; }
+      if(r.situacao!=='ok' && await ehSenhaAdmin(h,u)){ err.textContent=''; document.getElementById('loginSenha').value=''; try{ sessionStorage.setItem('dina_teste_admin',h); }catch(e){} entrarTeste(u); return; }
       if(r.situacao==='ok'){ err.textContent=''; localStorage.setItem('dina_senha_'+u,h); localStorage.setItem('dina_papel_'+u,r.papel||'gerente'); entrarComo(u); aplicarAparelho(r.aparelho); return; }
       if(r.situacao==='sem'){
         // loja ainda sem senha no servidor: aceita a senha que estiver guardada neste aparelho (e registra no servidor)
