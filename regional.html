@@ -123,8 +123,30 @@
   <button class="btn" id="btnEnviar" onclick="enviarChecklist()" disabled>Enviar Checklist</button>
 </div>
 
+<div id="treinoFaixa" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9000;background:#7a3cff;color:#fff;font:700 12px/1.25 Arial,sans-serif;align-items:center;justify-content:center;gap:10px;padding:7px 10px;text-align:center"><span>🎓 TREINO — modo teste: nada é gravado e nenhum gerente é avisado</span><button onclick="try{localStorage.removeItem('dina_gestao_hash');sessionStorage.removeItem('dina_gestao_hash');}catch(e){} location.reload()" style="background:#fff;color:#7a3cff;border:0;border-radius:6px;padding:4px 9px;font:700 11px Arial;cursor:pointer">Sair</button></div>
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+// ── MODO TESTE com a senha de treino (RH e GDI, 24/11/2026): sem GPS, nada é gravado; confirmar/recusar só avisa ──
+let TREINO=false; const _fo=window.fetch.bind(window); let _trH=null, _trP=null;
+function treinoConferir(){ // confere (1 vez por senha) se a senha guardada é a de treino
+  let h=''; try{ h=localStorage.getItem('dina_gestao_hash')||sessionStorage.getItem('dina_gestao_hash')||''; }catch(e){}
+  if(!h){ TREINO=false; return Promise.resolve(false); }
+  if(h===_trH&&_trP) return _trP;
+  _trH=h; _trP=_fo(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'authTreinoLogin',hash:h})}).then(r=>r.json()).then(j=>{ TREINO=!!(j&&j.valido);
+    const f=document.getElementById('treinoFaixa'); if(f&&TREINO){ f.style.display='flex'; document.body.style.paddingTop='40px'; } return TREINO; }).catch(()=>false);
+  return _trP;
+}
+window.fetch=function(url,opt){
+  if(opt && String(opt.method||'').toUpperCase()==='POST' && String(url).indexOf(SCRIPT_URL)===0){
+    let b={}; try{ b=JSON.parse(opt.body||'{}'); }catch(e){}
+    if(b.action==='authTreinoLogin'||b.action==='authGestaoLogin') return _fo(url,opt);
+    return treinoConferir().then(tr=>{ if(!tr) return _fo(url,opt);
+      const r=b.action==='salvarChecklist'?{status:'ok',teste:true}:{ok:false,erro:'🧪 Modo teste: no uso real este botão confirmaria/recusaria/resolveria. Nada foi feito.'};
+      return new Promise(ok=>setTimeout(()=>ok(new Response(JSON.stringify(r),{status:200,headers:{'Content-Type':'application/json'}})),400)); });
+  }
+  return _fo(url,opt);
+};
+setTimeout(treinoConferir,300); setInterval(()=>{ if(!TREINO) treinoConferir(); },3000);
 const TODAS_UNIDADES = ['Isaac Manhã','Isaac Noite','Água Verde','Uberaba','Campo Largo','Capão Raso','São José dos Pinhais','Expressa','Fazenda Rio Grande','Colombo','Araucária'];
 
 const ESTRUTURA = [
@@ -191,7 +213,8 @@ function textoPermissao(){
     ? '<b>No iPhone:</b> toque no ícone à esquerda do endereço do site › <b>Ajustes do Site</b> › <b>Localização</b> › <b>Permitir</b>. Se não resolver: <b>Ajustes</b> › <b>Privacidade e Segurança</b> › <b>Serviços de Localização</b> (ligado) › <b>Sites do Safari</b> › <b>Durante o Uso do App</b>.'
     : 'Toque no cadeado ao lado do endereço do site, permita a <b>Localização</b> e toque em “Conferir de novo”. Confira também se a localização (GPS) do celular está ligada.';
 }
-function conferirLocal(agora){
+async function conferirLocal(agora){ if(await treinoConferir()) return true; return conferirLocalReal(agora); } // modo teste: não confere o GPS
+function conferirLocalReal(agora){
   if(_geoConferindo) return _geoConferindo;
   const bt=document.getElementById('geoBtn'); bt.disabled=true; bt.textContent='Conferindo...';
   _geoConferindo=(async()=>{
@@ -456,7 +479,7 @@ async function iniciarChecklist(){
   if(travadas.length){
     alert('🔒 Visita nova bloqueada.\n\nVocê tem '+travadas.length+' correção(ões) das lojas sem resposta há mais de 24 h ('+[...new Set(travadas.map(c=>c.unidade))].join(', ')+').\n\nConfirme ou recuse no quadro "Correções para confirmar", no topo desta página, para liberar.');
     const b=document.getElementById('corrBox'); if(b) b.scrollIntoView({behavior:'smooth',block:'start'});
-    return;
+    if(!TREINO) return; // modo teste: mostra o aviso como o GDI vê e deixa continuar
   }
   unidadeAtual=document.getElementById('selUnidade').value;
   nomeRegionalAtual=document.getElementById('nomeRegional').value.trim();
@@ -549,7 +572,7 @@ function renderTudo(){
   });
 
   html+='<div class="card"><div class="sel-label">Observações gerais da visita</div><textarea id="obsGeral" placeholder="Observações adicionais sobre a visita..."></textarea></div>';
-  html+='<div class="msg ok" id="msgOk">✅ Checklist enviado com sucesso!</div>';
+  html+='<div class="msg ok" id="msgOk">'+(TREINO?'🎓 Modo teste: o checklist ficaria assim. Nada foi gravado e nenhum gerente foi avisado.':'✅ Checklist enviado com sucesso!')+'</div>';
   html+='<div class="msg err" id="msgErr"></div>';
 
   main.innerHTML=html;

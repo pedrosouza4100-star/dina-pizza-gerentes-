@@ -177,6 +177,7 @@ async function entrar(senhaHash){
     err.textContent=''; H=h; gravarK(H); document.getElementById('senha').value='';
     document.getElementById('login').style.display='none';
     if(r.painel){ PAINEL_OK=true; ADMIN=!!r.admin; abrirPainel(); }
+    else if(r.treino){ TREINO=r.nome||'Treino'; NOME='🎓 Treino'; entrarTeste(); } // senha de treino (24/11/2026): direto no modo teste
     else { NOME=r.nome||''; inicio(); }
   }catch(e){ err.style.color='var(--danger)'; err.textContent=/reconhecida/.test(e.message)?'O servidor ainda não tem o checklist da nutricionista. Peça para colar o código novo no Apps Script.':e.message; if(senhaHash) gravarK(''); }
 }
@@ -430,7 +431,8 @@ async function verVisita(id){
   }catch(e){ d.innerHTML='<div class="card aviso err">⚠ '+esc(e.message)+'</div>'; }
 }
 function entrarTeste(){ TESTE=true; document.getElementById('testeFaixa').style.display='flex'; document.body.style.paddingTop='36px'; inicio(); }
-function sairTeste(){ TESTE=false; abrirPainel(); }
+let TREINO='';
+function sairTeste(){ if(TREINO){ TREINO=''; sair(); return; } TESTE=false; abrirPainel(); }
 
 (function(){ const h=lerK(); if(h) entrar(h); })();
 </script>
