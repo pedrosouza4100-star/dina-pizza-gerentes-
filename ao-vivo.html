@@ -240,7 +240,8 @@ async function atualizar(fresco){
 setInterval(()=>{ if(!D) return; const s=Math.max(0,Math.round((_proxima-Date.now())/1000)); const sub=document.getElementById('sub'); if(sub.classList.contains('erro')) return;
   const dd=D.dia.split('-').reverse().join('/'); sub.textContent='Hoje, '+dd+' · dados do Alpha às '+D.hora+(D.guardadoS?' · ':'')+' · próxima atualização em '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },1000);
 function telaCheia(){ document.body.classList.toggle('tv'); try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }catch(e){} }
-atualizar(false);
+// 1ª vez no aparelho: espera a senha da gestão ser aceita antes de buscar (antes dava "senha inválida" por 1 min; varredura 25/11/2026)
+(function comecar(){ if(!chave()) return setTimeout(comecar,700); atualizar(false); })();
 window.addEventListener('resize',()=>{ clearTimeout(window._rz); window._rz=setTimeout(()=>{ if(D) desenhar(false); },300); });
 </script>
 </body>
