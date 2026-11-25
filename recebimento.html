@@ -113,6 +113,7 @@ th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
   <div style="display:flex;gap:10px"><button class="btn" id="camBater" onclick="camBater()">📸 Bater foto</button><button class="btn sec" onclick="camFechar()">Cancelar</button></div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="etq-leitor.js?v=1"></script>
 <script>
 // Recebimento (19/11/2026). GET rcbLoja, rcbPainel, rcbPessoasLocais · POST rcbLerNota, rcbSalvar, rcbCalibrar, rcbHabilitar, rcbPessoaEntrar, rcbPessoaSalvar, rcbPendResolver, rcbAlphaAtualizar, rcbCnpjSalvar.
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
@@ -133,6 +134,7 @@ function hojeIso(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'Amer
 function br(iso){ const p=String(iso||'').split('-'); return p.length===3?p[2]+'/'+p[1]:iso; }
 function num(v){ if(v===''||v==null) return null; const n=Number(String(v).replace(',','.')); return isFinite(n)?n:null; }
 function corNota(n){ return n>=90?'n-ok':n>=70?'n-am':'n-red'; }
+let ETQ_ON=false; // etiquetas da cozinha central (25/11/2026): leitura do QR na transferência, se o servidor já tiver o recurso 'etiquetas'
 const DEC={aceito:['✅ Aceito','t-ok'],ressalva:['⚠️ Com ressalva','t-am'],recusado:['🚫 Recusado','t-red']};
 
 // ---------- câmera (só a câmera, nunca a galeria; carimbo com data, hora e local) ----------
@@ -173,6 +175,7 @@ async function iniciar(){
   if(!r||!r.ok){ $('carregando').style.display='none'; $('login').style.display='block'; if(r&&r.erro&&r.erro!=='senha') $('lgMsg').textContent=r.erro; return false; }
   $('carregando').style.display='none'; $('btnSair').style.display=AUTH.unidade?'none':'';
   $('quem').textContent=r.nome||'';
+  jsonp({action:'authPing'}).then(p=>{ ETQ_ON=(p.recursos||[]).indexOf('etiquetas')>=0; }).catch(()=>{});
   if(AUTH.chave){ try{ PD=await get({action:'rcbPainel'}); if(!PD.ok) PD=null; }catch(e){ PD=null; } }
   if(r.escolher||!r.local){ LD=null; LOCAL=''; } else { LD=r; LOCAL=r.local; }
   if(PD){ if(!LOCAL&&PD.locais.length===1){ LOCAL=PD.locais[0]; await carregarLoja(); } ABA=Q.get('aut')?'aut':(LD?'receber':'pend'); desenharAbas(); }
@@ -275,7 +278,7 @@ async function habilitar(){ if(!$('trOk').checked) return toast('Marque que leu 
 // ---------- novo recebimento (passo a passo) ----------
 const PASSOS=['origem','nota','grupos','veiculo','conferir','diverg','fim'];
 function novoRecebimento(){
-  W={passo:(LD.habilitado||TESTE_HAB)?1:0, inicioMs:Date.now(), origem:LD.central?'fornecedor':'', nota:{}, grupos:{}, veiculo:{}, divs:[], decisao:'', justificativa:'', guardado:false, entregador:'', obs:'', erros:[]};
+  W={passo:(LD.habilitado||TESTE_HAB)?1:0, inicioMs:Date.now(), origem:LD.central?'fornecedor':'', nota:{}, grupos:{}, veiculo:{}, divs:[], decisao:'', justificativa:'', guardado:false, entregador:'', obs:'', erros:[], etq:[]};
   Object.keys(FOTOS).forEach(k=>{ if(k!=='calib') delete FOTOS[k]; });
   if(W.passo===1&&LD.central) W.passo=2;
   render(); window.scrollTo(0,0);
@@ -412,6 +415,7 @@ function pVeiculo(){
 // passo 5 — conferência por grupo
 function pConferir(){
   let h='<div class="tit">🔎 Conferência</div><div class="muted">Refrigerados e congelados primeiro.</div>';
+  if(W.origem==='central'&&ETQ_ON&&!LD.central) h+=etqBloco();
   if(temTemp()&&!(LD.calib.feita||TESTE_CALIB)) h+='<div class="item am"><b>🌡️ Calibre o termômetro desta semana antes</b>'+formCalib()+'</div>';
   const hoje=hojeIso();
   Object.keys(W.grupos).sort((a,b)=>(GR(b).temp?1:0)-(GR(a).temp?1:0)).forEach(g=>{
@@ -496,6 +500,25 @@ async function salvar(){
     if(!r.ok){ if(r.treino){ W.passo=0; } W.erros=r.erros||[r.erro||'Não salvou.']; render(); window.scrollTo(0,document.body.scrollHeight); return; }
     pararAut(); W=null; toast(r.msg||'Salvo.'); $('tela').innerHTML='<div class="card"><div class="tit">'+(r.decisao==='recusado'?'🚫 Recusa registrada':r.decisao==='ressalva'?'⚠️ Recebido com ressalva':'✅ Recebimento registrado')+'</div><div class="muted">'+esc(r.msg||'')+'</div>'+(r.fora&&r.fora.length?'<div class="aviso av-am">Fora da regra: '+r.fora.map(esc).join('; ')+'</div>':'')+'<button class="btn lg" onclick="recarregar()">OK</button></div>';
   }catch(e){ W.salvando=false; W.erros=['Sem conexão. Nada foi perdido: confira a internet e toque em Salvar de novo.']; render(); }
+}
+
+// ---------- etiquetas da cozinha central: entrada lendo o QR (25/11/2026, Etiquetas.gs) ----------
+function etqBloco(){
+  const l=W.etq||[], ok=l.filter(x=>x.ok).length;
+  let h='<div class="item"><div class="it-top"><span>🏷️ Etiquetas da cozinha central</span><span class="tag '+(ok?'t-ok':'t-am')+'">'+ok+' lida(s)</span></div>'
+    +'<div class="muted">Leia o QR de <b>cada pacote</b> que veio com etiqueta. A entrada já fica registrada na sua loja e o placar avisa quando for vencer.'+(TESTE?' <b>Modo teste: lê, mas não grava.</b>':'')+'</div>'
+    +'<button type="button" class="btn sec" onclick="etqLer()">📷 Ler etiquetas</button>';
+  l.slice().reverse().forEach(x=>{ h+='<div class="linha">'+(x.ok?(x.avisos&&x.avisos.some(a=>/VENCIDO|HOJE/.test(a))?'⚠️ ':'✅ '):'🚫 ')+(x.e?esc(x.e.produto)+' · '+esc(x.e.estadoNome)+' · val. '+esc(x.e.validade):'<span style="font-family:monospace;font-weight:800">'+esc(x.id)+'</span>')+(x.txt?' — '+esc(x.txt):'')+'</div>'; });
+  return h+'</div>';
+}
+function etqLer(){ guardarCampos(); etqLeitorAbrir(etqUmaLida,{continuo:true,titulo:'🏷️ Leia o QR de cada pacote',aoFechar:()=>render()}); }
+async function etqUmaLida(id){
+  const ja=(W.etq||[]).find(x=>x.id===id&&x.ok); if(ja){ etqLeitorMsg('✅ '+(ja.e?'<b>'+esc(ja.e.produto)+'</b> ':'')+'já foi lido.<br><small>'+W.etq.filter(y=>y.ok).length+' lida(s). Leia o próximo ou toque em Terminei.</small>'); return; }
+  etqLeitorMsg('Conferindo '+esc(id)+'…');
+  try{ const r=await post({action:'etqEntrada',id}); const e=r.etiqueta||null, av=r.avisos||[];
+    const x={id,ok:!!r.ok,e,avisos:av,txt:r.ok?(r.teste?'teste: não gravado':r.repetida?'já tinha entrado':av.join(' ')):(r.erro||'não deu')}; W.etq=(W.etq||[]).filter(y=>y.id!==id).concat([x]);
+    etqLeitorMsg((r.ok?'✅ ':'🚫 ')+(e?'<b>'+esc(e.produto)+'</b> · '+esc(e.estadoNome)+' · val. '+esc(e.validade)+'<br>':'')+esc(x.txt||'')+'<br><small>'+W.etq.filter(y=>y.ok).length+' lida(s). Leia o próximo ou toque em Terminei.</small>');
+  }catch(e){ etqLeitorMsg('⚠️ Sem conexão. Tente de novo.'); }
 }
 
 // ---------- painel da equipe ----------

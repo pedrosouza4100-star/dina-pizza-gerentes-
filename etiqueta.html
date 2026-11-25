@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Página do QR da etiqueta (25/11/2026, servidor Etiquetas.gs, GET etqVer público). O QR de cada pacote abre
+     gerentes.dinapizza.com.br/etiqueta?id=XXXXXX. Mostra o que está impresso e onde o pacote está.
+     Se o celular tem o login do placar (gerente/assistente), mostra o botão "Dar entrada na loja" (POST etqEntrada). -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Etiqueta — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<script src="qrcode.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--yellow:var(--d-yellow);--danger:var(--d-danger);--gold:var(--d-gold)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4vw;background:var(--d-surface);border-bottom:1px solid var(--border)}
+.hdr-dir{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.hdr-dir a,.lnk{color:var(--gold);font-weight:700;text-decoration:none;cursor:pointer;background:none;border:none;font-size:.78rem}
+main{padding:16px 4vw 80px;max-width:1100px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.tit{font-weight:800;font-size:1.02rem;margin-bottom:8px}
+.muted{color:var(--muted);font-size:.82rem;line-height:1.45}
+label{display:block;font-size:.74rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:1rem;font-family:inherit}
+textarea{min-height:64px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.btn{border:none;border-radius:12px;padding:13px 18px;font-weight:800;font-size:.98rem;cursor:pointer;background:var(--d-red);color:#fff;margin-top:12px}
+.btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn.ok{background:var(--green);color:var(--d-on-cor,#06110b)}
+.btn.peq{padding:7px 12px;font-size:.8rem;margin-top:6px}
+.btn.lg{width:100%;font-size:1.08rem;padding:16px}
+.btn:disabled{opacity:.55;cursor:default}
+.sn{display:flex;gap:8px;margin-top:6px}
+.sn button{flex:1;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:11px;font-weight:800;cursor:pointer;font-size:.95rem}
+.sn button.on.s{background:rgba(61,220,151,.16);border-color:var(--green);color:var(--d-t-ok)}
+.sn button.on.n{background:var(--d-red-soft);border-color:var(--danger);color:var(--d-t-err)}
+.pq{margin-top:12px;font-weight:700;font-size:.92rem;line-height:1.35}
+.pq small{display:block;color:var(--muted);font-weight:600;font-size:.76rem;margin-top:2px}
+.item{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface)}
+.item.red{border-color:var(--danger);background:var(--d-red-soft)}
+.item.ok{border-color:rgba(61,220,151,.45)}
+.item.am{border-color:var(--yellow)}
+.it-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+.tag{font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.t-red{background:var(--d-red-soft);color:var(--d-t-err);border:1px solid var(--danger)}
+.t-ok{background:rgba(61,220,151,.12);color:var(--d-t-ok);border:1px solid rgba(61,220,151,.4)}
+.t-am{background:rgba(255,208,0,.12);color:var(--d-t-info);border:1px solid rgba(255,208,0,.45)}
+.aviso{border-radius:12px;padding:12px 14px;margin-top:10px;font-size:.9rem;line-height:1.45;font-weight:600}
+.av-red{background:var(--d-red-soft);border:2px solid var(--danger);color:var(--d-t-err)}
+.av-ok{background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.45);color:var(--d-t-ok)}
+.av-am{background:rgba(255,208,0,.08);border:1px solid rgba(255,208,0,.5);color:var(--d-t-info)}
+.chk{display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-weight:700;font-size:.92rem;line-height:1.35;text-transform:none;letter-spacing:0;color:var(--text)}
+.chk input{width:22px;height:22px;flex:none;margin-top:1px}
+.grp{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:8px;cursor:pointer;background:var(--surface)}
+.grp input{width:22px;height:22px;flex:none}
+.grp b{display:block}.grp small{color:var(--muted);font-size:.78rem}
+.grp.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.nav{display:flex;gap:10px}.nav .btn{flex:1}
+.n-ok{color:var(--d-t-ok)}.n-am{color:var(--d-t-info)}.n-red{color:var(--d-t-err)}
+.abas{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.aba{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:12px;padding:9px 13px;font-weight:800;cursor:pointer;font-size:.86rem}
+.aba.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.aba .n{background:var(--d-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.72rem;margin-left:5px}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-size:.7rem;text-transform:uppercase}
+.tbl{overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--d-card-2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.92rem;font-weight:700;z-index:3000;display:none;max-width:92vw;text-align:center}
+.linha{font-size:.88rem;margin-top:6px;line-height:1.45}
+#faixaTeste{background:#7b3fe4;color:#fff;text-align:center;font-weight:800;padding:8px;font-size:.85rem;position:sticky;top:0;z-index:60;display:none}
+@media(max-width:700px){header{flex-wrap:wrap;row-gap:6px;padding:8px 4vw}.hdr-tit small{display:none}.hdr-dir{width:100%;justify-content:space-between}main{padding:12px 3vw 80px}.grid2{grid-template-columns:1fr}}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;letter-spacing:.04em}
+main{max-width:640px}
+.val{border-radius:16px;padding:16px;text-align:center;margin-top:10px;background:var(--surface);border:2px solid var(--border)}
+.val small{display:block;font-weight:800;letter-spacing:.08em;color:var(--muted);font-size:.74rem}
+.val b{display:block;font-size:2.1rem;font-weight:900;margin-top:4px}
+.val.red{border-color:var(--danger);background:var(--d-red-soft)}.val.red b{color:var(--d-t-err)}
+.val.am{border-color:var(--yellow)}.val.am b{color:var(--d-t-info)}
+.val.ok{border-color:rgba(61,220,151,.5)}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:12px;font-size:.9rem}
+.campos div small{display:block;color:var(--muted);font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.campos div b{font-weight:800}
+.prevbox{width:calc(60mm * 1.3);height:calc(60mm * 1.3);margin:12px auto 0}.prevbox .etq{transform:scale(1.3);transform-origin:top left;box-shadow:0 0 0 1px #999;border-radius:2mm}
+</style>
+</head>
+<body>
+<header class="dina-aneis">
+  <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza" width="44" height="43"></span><span class="hdr-tit"><b>Etiqueta</b><small>Cozinha central Dina Pizza</small></span></div>
+  <div class="hdr-dir"><span id="quem"></span><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Tema"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
+</header>
+<main><div id="tela" class="card muted">Carregando…</div></main>
+<div class="toast" id="toast"></div>
+<script src="etq-etiqueta.js?v=1"></script>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search), ID=String(Q.get('id')||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+let E=null, LOJA=null;
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function $(id){ return document.getElementById(id); }
+function toast(m){ const t=$('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',6500); }
+function ls(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='etqCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },30000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign({},params,{callback:cb,t:Date.now()})).toString(); document.head.appendChild(s); }); }
+function kg(p){ return p==null?'':Number(p).toLocaleString('pt-BR',{maximumFractionDigits:3})+' kg'; }
+function hojeIso(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'}); }
+function amanhaIso(){ return new Date(Date.now()+86400000).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'}); }
+(function(){ const u=ls('dina_unidade_logada'), h=u?ls('dina_senha_'+u):''; if(u&&h&&ls('dina_login_v')==='2'){ LOJA={unidade:u,senha:h}; $('quem').textContent=u; } })();
+
+function render(){
+  const e=E, ativo=['emitida','loja'].includes(e.situacao), cor=!ativo?'':e.vencida?'red':e.validadeDia===hojeIso()?'am':'ok';
+  const onde={emitida:'📦 Na cozinha central (ainda sem entrada em loja)',loja:'🏪 Na '+esc(e.lojaEntrada)+' desde '+esc(e.entrada),usada:'✅ Já usado',descartada:'🗑️ Descartado',substituida:'🔁 Ganhou etiqueta nova (descongelado/aberto)'}[e.situacao]||esc(e.situacao);
+  let h='<div class="tit" style="font-size:1.25rem">'+esc(e.produto)+'</div><div class="muted">'+esc(e.estadoNome)+' · '+kg(e.peso)+' · '+esc(e.conservacao)+'</div>';
+  h+='<div class="val '+cor+'"><small>'+(e.vencida&&ativo?'🚫 VENCIDO — NÃO USE':'NOVA VALIDADE')+'</small><b>'+esc(e.validade)+'</b>'+(e.valTeste?'<div class="muted">Validade de teste (o Fábio está conferindo)</div>':'')+'</div>';
+  if(e.baixa) h+='<div class="aviso '+(e.baixa.tipo==='descartado'?'av-red':'av-ok')+'">'+onde+' em '+esc(e.baixa.quando)+(e.baixa.por?' por '+esc(e.baixa.por):'')+(e.baixa.tipo==='descartado'&&e.baixa.motivo?' — '+esc(e.baixa.motivo):'')+'</div>';
+  else h+='<div class="aviso av-am" style="margin-top:12px">'+onde+'</div>';
+  h+='<div class="campos"><div><small>Manipulação</small><b>'+esc(e.manipulacao)+'</b></div><div><small>Validade original</small><b>'+esc(e.valOriginal||'—')+'</b></div>'
+    +'<div><small>Lote</small><b>'+esc(e.lote)+'</b></div><div><small>Responsável</small><b>'+esc(e.responsavel)+'</b></div>'
+    +'<div><small>Código</small><b class="mono">'+esc(e.id)+'</b></div><div><small>Produto (Tabela e Ficha)</small><b>'+esc(e.codigo)+'</b></div></div>'
+    +'<div class="aviso av-am" style="margin-top:12px">'+esc(e.alergenicos)+'</div>'
+    +'<div class="muted" style="margin-top:10px">'+esc(e.fornecedor)+(e.sif?' · SIF '+esc(e.sif):'')+'<br>'+esc(e.unidade)+(e.cnpj?' · CNPJ '+esc(e.cnpj):'')+(e.endereco?'<br>'+esc(e.endereco):'')+'</div>';
+  if(LOJA&&e.situacao==='emitida') h+='<button class="btn ok lg" id="btEnt" onclick="entrada()">📥 Dar entrada na '+esc(LOJA.unidade)+'</button><div class="muted" style="margin-top:6px">O certo é ler pelo 📦 Recebimento do placar, junto com a conferência. Use aqui só se o pacote ficou de fora.</div>';
+  h+='<details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Ver como está impressa</summary><div class="prevbox">'+etqEtiquetaHtml(e)+'</div></details>';
+  $('tela').innerHTML=h;
+}
+async function entrada(){
+  if(!confirm('Dar entrada deste pacote na '+LOJA.unidade+'?')) return;
+  const b=$('btEnt'); b.disabled=true; b.textContent='Gravando…';
+  try{ const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(Object.assign({action:'etqEntrada',id:ID},LOJA))}).then(x=>x.json());
+    if(!r.ok){ toast('⚠️ '+(r.erro||'Não deu entrada.')); b.disabled=false; b.textContent='📥 Dar entrada'; return; }
+    toast(r.msg+(r.avisos&&r.avisos.length?' '+r.avisos.join(' '):'')); if(r.etiqueta) E=r.etiqueta; render();
+  }catch(e){ toast('⚠️ Sem conexão.'); b.disabled=false; }
+}
+(async function(){
+  if(!ID){ $('tela').innerHTML='<div class="tit">Etiqueta sem código</div><div class="muted">Leia de novo o QR da etiqueta.</div>'; return; }
+  try{ const p=await jsonp({action:'authPing'}); if((p.recursos||[]).indexOf('etiquetas')<0){ $('tela').innerHTML='<div class="tit">Código '+esc(ID)+'</div><div class="muted">As etiquetas ainda não estão no servidor.</div>'; return; }
+    const r=await jsonp({action:'etqVer',id:ID}); if(!r.ok){ $('tela').innerHTML='<div class="tit">Etiqueta '+esc(ID)+' não encontrada</div><div class="muted">Confira se é uma etiqueta da Dina Pizza. Se for, avise o Fábio.</div>'; return; }
+    E=r.etiqueta; $('tela').className='card'; render();
+  }catch(e){ $('tela').innerHTML='<div class="tit">Sem conexão</div><div class="muted">Confira a internet e leia o QR de novo.</div>'; }
+})();
+</script>
+</body>
+</html>
