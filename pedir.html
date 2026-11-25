@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dina Pizza — Fazer pedido</title>
+<meta name="theme-color" content="#c8102e">
+<link rel="icon" href="logo.png">
+<noscript><meta http-equiv="refresh" content="0;url=https://app.dinapizza.com.br/"></noscript>
+<style>
+  /* Link de entrada da Dina (25/11/2026): conta a entrada no cardápio e manda na hora para o app do Alpha.
+     gerentes.dinapizza.com.br/pedir?loja=<loja>&origem=<instagram|facebook|whatsapp|google|site|qrcode|leadsfood>[-detalhe] */
+  :root{--bg:#fff7f2;--text:#2b1a12;--red:#c8102e;--muted:#7a6559}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#120c09;--text:#f6ece6;--muted:#b9a397}}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center}
+  img{width:96px;height:96px;object-fit:contain}
+  h1{font-size:1.25rem;margin:14px 0 6px}
+  p{color:var(--muted);font-size:.95rem}
+  a.bt{display:inline-block;margin-top:18px;background:var(--red);color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:999px}
+  .gira{width:28px;height:28px;border:3px solid rgba(200,16,46,.2);border-top-color:var(--red);border-radius:50%;margin:16px auto 0;animation:g 0.8s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div>
+  <img src="logo.png" alt="Dina Pizza">
+  <h1>Abrindo o cardápio da Dina Pizza…</h1>
+  <div class="gira"></div>
+  <a class="bt" id="bt" href="https://app.dinapizza.com.br/">Toque aqui se não abrir</a>
+</div>
+<script>
+(function(){
+  var SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+  // destino sempre o app da Dina (nunca um endereço vindo do link): 'fidelidade' abre o cadastro do QUERO+
+  var DESTINOS={'':'https://app.dinapizza.com.br/','fidelidade':'https://app.dinapizza.com.br/?irParaCadastroFidelidade=true'};
+  var q=new URLSearchParams(location.search);
+  var destino=DESTINOS[(q.get('para')||'').toLowerCase()]||DESTINOS[''];
+  document.getElementById('bt').href=destino;
+  var ir=function(){ try{ location.replace(destino); }catch(e){ location.href=destino; } };
+  try{
+    var ua=navigator.userAgent||'';
+    var teste=q.get('teste')==='1'; // modo teste: mostra o que mandaria e não conta nem redireciona
+    if(navigator.webdriver&&!teste||/bot|crawl|spider|preview|facebookexternalhit/i.test(ua)){ ir(); return; }
+    var v=''; try{ v=localStorage.getItem('dina_vid')||''; if(!/^[A-Za-z0-9]{12,32}$/.test(v)){ v=(Date.now().toString(36)+Math.random().toString(36).slice(2,12)).replace(/[^a-z0-9]/g,''); localStorage.setItem('dina_vid',v); } }catch(e){}
+    var p={action:'entRegistrar',loja:q.get('loja')||'',origem:q.get('origem')||q.get('utm_source')||'',v:v,ref:(document.referrer||'').slice(0,120),ua:ua.slice(0,160)};
+    var url=SCRIPT_URL+'?'+new URLSearchParams(p).toString();
+    if(teste){ document.querySelector('h1').textContent='Modo teste: esta entrada NÃO foi contada'; document.querySelector('.gira').remove();
+      var pre=document.createElement('p'); pre.style.marginTop='12px'; pre.textContent='Loja: '+(p.loja||'(sem loja)')+' · Origem: '+(p.origem||'(pelo site de onde veio)')+' · Destino: '+destino; document.body.firstElementChild.appendChild(pre); return; }
+    // manda sem esperar a resposta (keepalive: continua mesmo depois de trocar de página)
+    try{ fetch(url,{mode:'no-cors',keepalive:true,credentials:'omit'}); }catch(e){ try{ (new Image()).src=url; }catch(e2){} }
+  }catch(e){}
+  setTimeout(ir,150);
+})();
+</script>
+</body>
+</html>

@@ -74,6 +74,13 @@
   details summary{cursor:pointer;color:var(--muted);font-weight:700;font-size:.85rem}
   details .cx{margin-top:8px;font-size:.82rem;color:var(--muted);line-height:1.6}
   body.tv .wrap{max-width:none} body.tv .bloco.opc{display:none}
+  /* Entradas no cardápio e conversão do delivery próprio (25/11/2026, Entradas.gs, recurso entradas) */
+  #blocoEnt h3 small{color:var(--muted);font-weight:600;font-size:.75rem;margin-left:6px}
+  #blocoEnt .totais{margin-bottom:12px} #blocoEnt .tot{background:var(--inner)} #blocoEnt .tot .n{font-size:1.9rem}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;font-size:.84rem;align-items:center}
+  .chips span{background:var(--inner);border:1px solid var(--line);border-radius:999px;padding:4px 10px} .chips b{font-variant-numeric:tabular-nums}
+  .futuro{margin-top:10px;font-size:.82rem;color:var(--muted);background:var(--inner);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+  td.alerta{color:var(--red);font-weight:800}
 </style>
 </head>
 <body>
@@ -106,6 +113,26 @@
     <div class="corrida"><h2>🍽️ Corrida do buffet <small id="legB"></small></h2><div class="pista" id="pistaB"></div></div>
     <div class="corrida"><h2>🛵 Corrida do delivery <span class="legcor" style="font-size:.72rem;font-weight:700;color:var(--muted)"><b style="background:#ff8a3d"></b>Próprio <b style="background:#ea1d2c"></b>iFood</span><small id="legD"></small></h2><div class="pista" id="pistaD"></div></div>
     <div class="corrida"><h2>💰 Corrida do faturamento <small id="legF"></small></h2><div class="pista" id="pistaF"></div></div>
+  </div>
+
+  <div class="bloco" id="blocoEnt" style="display:none">
+    <h3>📲 Entradas no cardápio e conversão do delivery próprio <small id="entHora"></small></h3>
+    <div class="totais">
+      <div class="tot"><div class="r">👀 Agora</div><div class="n" id="entAgora">0</div><div class="d">entradas nos últimos 15 min</div></div>
+      <div class="tot"><div class="r">📲 Entradas hoje</div><div class="n" id="entDia">0</div><div class="d" id="entDiaD"></div></div>
+      <div class="tot"><div class="r">🛵 Pedidos do delivery próprio</div><div class="n" id="entPed">0</div><div class="d">vindos do Alpha (inclui pedidos por telefone)</div></div>
+      <div class="tot"><div class="r">🎯 Conversão</div><div class="n" id="entConv">—</div><div class="d" id="entConvD">pedidos ÷ entradas</div></div>
+    </div>
+    <div class="chips" id="entOrig"></div>
+    <div id="entTab"></div>
+    <div class="futuro" id="entFuturo">🟦 No cardápio agora / carrinhos abandonados: ainda não disponível (aguardando o Alpha).</div>
+    <details style="margin-top:10px"><summary>Como ler este quadro</summary><div class="cx">
+      <b>Entrada</b> = alguém tocou num link de pedido da Dina (Instagram, WhatsApp, Google, site ou QR Code). A mesma pessoa em 30 minutos conta 1 vez.<br>
+      <b>Conversão</b> = pedidos do delivery próprio ÷ entradas. Não mostra quem está no cardápio neste segundo.<br>
+      <b>Sem loja</b> = link que não diz a loja (ex.: bio do Instagram da rede). Essas entradas entram só no total da rede.<br>
+      Enquanto houver cliente entrando no app sem o link novo (app salvo no celular, link antigo), a conversão fica mais alta do que a real; acima de 100% quer dizer exatamente isso.<br>
+      ⚠️ = loja com 20 entradas ou mais e conversão abaixo de 60% da conversão da rede.
+    </div></details>
   </div>
 
   <div class="bloco opc"><h3>🔄 Ultrapassagens de hoje</h3><div class="hist" id="hist"><div style="color:var(--muted)">Quando uma loja passar a outra, aparece aqui.</div></div></div>
@@ -204,6 +231,7 @@ function desenhar(avisar){
   document.getElementById('totC').innerHTML=CAN.map(c=>c[1]+': <b>'+fmt(r.canais[c[0]])+'</b>').join(' · ');
   const leg=MODO==='pct'?'% sobre o mesmo dia da semana passada, até esta hora':'quantidade vendida hoje';
   ['P','B','D','F'].forEach(k=>{ const e=document.getElementById('leg'+k); if(e) e.textContent=leg; });
+  if(typeof desenharEnt==='function') desenharEnt();
   corrida('P',avisar); corrida('B',avisar); if(r.del) corrida('D',avisar); if(r.fat!==undefined) corrida('F',avisar);
   if(r.del){ const dt=r.del.proprio+r.del.ifood; contar(document.getElementById('totD'),VALORES.totD||0,dt); VALORES.totD=dt;
     const sd=D.lojas.reduce((t,l)=>t+(l.semanaPassadaD||0),0);
@@ -242,6 +270,37 @@ setInterval(()=>{ if(!D) return; const s=Math.max(0,Math.round((_proxima-Date.no
 function telaCheia(){ document.body.classList.toggle('tv'); try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }catch(e){} }
 // 1ª vez no aparelho: espera a senha da gestão ser aceita antes de buscar (antes dava "senha inválida" por 1 min; varredura 25/11/2026)
 (function comecar(){ if(!chave()) return setTimeout(comecar,700); atualizar(false); })();
+// ── Entradas no cardápio (25/11/2026): pede a cada 1 min; servidor sem o Entradas.gs = quadro escondido ──
+let E=null, _timerEnt=null;
+function convTxt(ped,ent){ if(!ent||ent<10||ped===null||ped===undefined) return '—'; return (Math.round(ped/ent*1000)/10).toLocaleString('pt-BR')+'%'; }
+function desenharEnt(){
+  if(!E) return; document.getElementById('blocoEnt').style.display='';
+  const nomes=E.origensNomes||{}, r=E.rede, pedR=D&&D.rede&&D.rede.del?D.rede.del.proprio:null;
+  document.getElementById('entHora').textContent='atualizado às '+E.hora;
+  document.getElementById('entAgora').textContent=fmt(r.q15); document.getElementById('entDia').textContent=fmt(r.dia);
+  document.getElementById('entDiaD').textContent=r.semanaPassada===null?'semana passada: ainda sem dados':'semana passada até esta hora: '+fmt(r.semanaPassada)+' ('+fmtPct(r.pct)+')';
+  document.getElementById('entPed').textContent=pedR===null?'—':fmt(pedR);
+  const cr=convTxt(pedR,r.dia); document.getElementById('entConv').textContent=cr;
+  document.getElementById('entConvD').textContent=r.dia<10?'aparece a partir de 10 entradas':(pedR>r.dia?'acima de 100%: ainda tem cliente entrando sem o link novo':'pedidos ÷ entradas');
+  const og=Object.keys(r.origens||{}).sort((a,b)=>r.origens[b]-r.origens[a]);
+  document.getElementById('entOrig').innerHTML='<span style="border:0;background:none;padding-left:0;color:var(--muted)">De onde vieram hoje:</span>'+(og.length?og.map(o=>'<span>'+(nomes[o]||o)+' <b>'+fmt(r.origens[o])+'</b></span>').join(''):'<span>nenhuma entrada ainda</span>');
+  const convRede=pedR&&r.dia>=10?pedR/r.dia:null;
+  const linhas=E.lojas.map(x=>{ const l=D?D.lojas.find(y=>y.unidade===x.unidade):null; return {x, ped:l?l.del.proprio:null, tem:l?l.temDelivery:false}; })
+    .filter(o=>o.x.dia>0||o.tem).sort((a,b)=>b.x.dia-a.x.dia||a.x.unidade.localeCompare(b.x.unidade));
+  const sl=E.semLoja||{q15:0,dia:0};
+  document.getElementById('entTab').innerHTML='<table><tr><th>Loja</th><th>15 min</th><th>Hoje</th><th>× sem. passada</th><th>Pedidos</th><th>Conversão</th></tr>'+
+    linhas.map(o=>{ const c=o.ped!==null&&o.x.dia>=10?o.ped/o.x.dia:null, alerta=c!==null&&convRede&&o.x.dia>=20&&c<convRede*0.6;
+      return '<tr><td>'+o.x.unidade+'</td><td>'+fmt(o.x.q15)+'</td><td><b>'+fmt(o.x.dia)+'</b></td><td>'+fmtPct(o.x.pct)+'</td><td>'+(o.ped===null?'—':fmt(o.ped))+'</td><td'+(alerta?' class="alerta"':'')+'>'+convTxt(o.ped,o.x.dia)+(alerta?' ⚠️':'')+'</td></tr>'; }).join('')+
+    '<tr><td>Sem loja (link geral)</td><td>'+fmt(sl.q15)+'</td><td><b>'+fmt(sl.dia)+'</b></td><td>—</td><td>—</td><td>—</td></tr>'+
+    '<tr class="tot"><td>Rede</td><td>'+fmt(r.q15)+'</td><td>'+fmt(r.dia)+'</td><td>'+fmtPct(r.pct)+'</td><td>'+(pedR===null?'—':fmt(pedR))+'</td><td>'+cr+'</td></tr></table>';
+  const f=E.futuro||{}; if(f.noCardapioAgora!==null&&f.noCardapioAgora!==undefined) document.getElementById('entFuturo').textContent='🟢 No cardápio agora: '+fmt(f.noCardapioAgora)+(f.carrinhosAbandonados!=null?' · carrinhos abandonados hoje: '+fmt(f.carrinhosAbandonados):'');
+}
+async function atualizarEnt(){
+  clearTimeout(_timerEnt);
+  try{ const r=await jsonp({action:'entFunil',chave:chave()},20000); if(!r||!r.ok) throw new Error((r&&r.erro)||'erro'); E=r; desenharEnt(); _timerEnt=setTimeout(atualizarEnt,60000); }
+  catch(e){ _timerEnt=setTimeout(atualizarEnt,E?60000:300000); }
+}
+(function comecarEnt(){ if(!chave()) return setTimeout(comecarEnt,700); atualizarEnt(); })();
 window.addEventListener('resize',()=>{ clearTimeout(window._rz); window._rz=setTimeout(()=>{ if(D) desenhar(false); },300); });
 </script>
 </body>
