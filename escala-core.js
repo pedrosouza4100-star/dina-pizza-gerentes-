@@ -40,6 +40,32 @@ const TURNOS_PADRAO = [
   { id: 't3', nome: 'Dobra',   p: [['11:00','15:00'],['19:00','23:00']] },
 ];
 
+// Fim de ano (Robson, 24/11/2026): lojas FECHADAS — 24/12 à noite, 25/12 de dia, 31/12 e 01/01 o dia todo.
+// Quem é desse turno fica com "Loja fechada": folga EXTRA (não conta como folga da semana nem como dia trabalhado).
+// Turno do dia = começa antes das 15h; da noite = começa às 15h ou depois; dobra (dia e noite) fecha nos dois.
+const ESCALA_FECHAMENTOS = { '12-24': 'noite', '12-25': 'dia', '12-31': 'todos', '01-01': 'todos' };
+function eFechamentoDia(chave){ return ESCALA_FECHAMENTOS[String(chave||'').slice(5,10)]||''; }
+function eTurnoParte(ps){ ps=(ps||[]).filter(x=>x&&x[0]); const d=ps.some(x=>x[0]<'15:00'), n=ps.some(x=>x[0]>='15:00'); return d&&n?'dobra':(n?'noite':'dia'); }
+function eFechadoPara(chave, parte){ const f=eFechamentoDia(chave); if(!f) return false; return f==='todos'||parte==='dobra'||f===parte; }
+function eParteDaPessoa(p, turnos, cell){
+  if(cell&&cell.t==='trab'&&(cell.p||[]).some(x=>x&&x[0])) return eTurnoParte(cell.p);
+  const ts=turnos&&turnos.length?turnos:TURNOS_PADRAO, t=ts.find(x=>x.id===p.turno)||ts[0];
+  return eTurnoParte(t&&t.p);
+}
+// marca "Loja fechada" na grade da semana (não mexe em férias/atestado); devolve quantas células mudaram
+function eAplicarFechamentos(grade, equipe, turnos, semana){
+  let n=0;
+  for(let d=0;d<7;d++){
+    const chave=eSomarDias(semana,d); if(!eFechamentoDia(chave)) continue;
+    (equipe||[]).filter(p=>p.ativo!==false).forEach(p=>{
+      const cells=grade[p.id]||(grade[p.id]=[null,null,null,null,null,null,null]), c=cells[d];
+      if(c&&(c.t==='ferias'||c.t==='atestado'||c.t==='fechado')) return;
+      if(eFechadoPara(chave, eParteDaPessoa(p, turnos, c))){ cells[d]={t:'fechado'}; n++; }
+    });
+  }
+  return n;
+}
+
 // Horários em que a tabela conta quantas pessoas estão trabalhando
 const COBERTURA = [
   { label: 'Almoço (12h)', min: 12 * 60 },
@@ -86,6 +112,7 @@ function eTextoCelula(cell){
   if(!cell) return '';
   if(cell.t==='folga') return 'Folga';
   if(cell.t==='ferias') return 'Férias';
+  if(cell.t==='fechado') return 'Loja fechada';
   if(cell.t==='atestado') return 'Afastado';
   if(cell.t==='trab') return (cell.p||[]).filter(p=>p&&p[0]&&p[1]).map(p=>p[0]+'–'+p[1]).join(' / ');
   return '';
@@ -331,6 +358,7 @@ function eRenderGrade(el, o){
       if(!c||!c.t){ cls+=' eg-vz'; txt=o.editavel?'<span class="eg-mais">+</span>':'—'; }
       else if(c.t==='folga'){ cls+=' eg-folga'; txt='FOLGA'; }
       else if(c.t==='ferias'){ cls+=' eg-ferias'; txt='FÉRIAS'; }
+      else if(c.t==='fechado'){ cls+=' eg-ferias'; txt='🎄 FECHADA'; }
       else if(c.t==='atestado'){ cls+=' eg-ferias'; txt='AFASTADO'; }
       else { cls+=' eg-trab'; txt=(c.p||[]).filter(x=>x&&x[0]&&x[1]).map(x=>'<div>'+x[0]+'–'+x[1]+'</div>').join('')+'<small>'+eFmtH(d.contab)+'</small>'; }
       if(errDia) cls+=' eg-err'; else if(avDia) cls+=' eg-av';
@@ -449,7 +477,9 @@ function eGerarSemana(o){
     const setor=p.funcao||'Outro';
     const cells=atual[p.id]||[];
     const afast=[0,1,2,3,4,5,6].filter(d=>cells[d]&&(cells[d].t==='ferias'||cells[d].t==='atestado'));
-    const livres=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d));
+    const parte=eParteDaPessoa(p, o.turnos, null);
+    const fech=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d)&&eFechadoPara(eSomarDias(o.semana,d),parte)); // fim de ano: loja fechada = folga extra
+    const livres=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d)&&!fech.includes(d));
     const nF=Math.min(livres.length, afast.length?Math.max(0,F-afast.length):F);
     const p0=ant[0]&&ant[0].grade?ant[0].grade[p.id]:null, p1=ant[1]&&ant[1].grade?ant[1].grade[p.id]:null;
     let corrida=0; if(p0){ for(let d=6;d>=0&&eTrab(p0[d]);d--) corrida++; }
@@ -486,7 +516,7 @@ function eGerarSemana(o){
       if(!relaxar && S.some(d=>d!==6 && !diasOk.has(d))) return false;
       let run=corrida;
       for(let d=0;d<7;d++){
-        if(S.includes(d)||afast.includes(d)) run=0; else { run++; if(run>maxSeg) return false; }
+        if(S.includes(d)||afast.includes(d)||fech.includes(d)) run=0; else { run++; if(run>maxSeg) return false; }
       }
       return true;
     };
@@ -507,7 +537,7 @@ function eGerarSemana(o){
       S.forEach(d=>{ c+=((d+idx+nSem)%7)*0.01; });
       return c;
     };
-    return { p, idx, setor, afast, nF, cands, relaxado, turno, custoProprio, escolha:null };
+    return { p, idx, setor, afast, fech, nF, cands, relaxado, turno, custoProprio, escolha:null };
   });
 
   // contagem de quem está fora (folga ou afastado) por setor e dia
@@ -547,6 +577,7 @@ function eGerarSemana(o){
     const cells=atual[x.p.id]||[];
     grade[x.p.id]=[0,1,2,3,4,5,6].map(d=>{
       if(x.afast.includes(d)) return JSON.parse(JSON.stringify(cells[d]));
+      if(x.fech.includes(d)) return {t:'fechado'};
       if(x.escolha.includes(d)) return {t:'folga'};
       return {t:'trab',p:JSON.parse(JSON.stringify(x.turno.p))};
     });
@@ -556,6 +587,7 @@ function eGerarSemana(o){
   const pend=[];
   Object.keys(tamSetor).forEach(s=>{
     for(let d=0;d<7;d++){
+      if(info.filter(x=>x.setor===s).every(x=>x.fech.includes(d))) continue; // loja fechada nesse dia (fim de ano)
       const trab=tamSetor[s]-fora[s][d], m=minimo(s,d);
       if(trab<m) pend.push(DIAS_CURTO[d]+' '+eDiaMes(eSomarDias(o.semana,d))+': '+s+' com '+trab+' de '+m+' no mínimo');
     }

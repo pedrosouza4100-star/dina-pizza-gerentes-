@@ -1776,6 +1776,7 @@ async function missaoLi(){
 // Botão "📊 Minha loja" (Painel da Diretoria, 13/11/2026): só para o GERENTE (não o assistente) e fora do modo teste
 function mlMostrar(u){ const b=document.getElementById('btnMinhaLoja'); if(!b) return; if(MODO_TESTE){ b.href='minha-loja.html?teste=1&gdi=1&loja='+encodeURIComponent(u); b.onclick=()=>{ window.open(b.href,'_blank'); return false; }; b.style.display=''; return; } /* 18/11: no teste abre só para ver, em aba nova */ b.onclick=null; b.href='minha-loja.html'; b.style.display=((localStorage.getItem('dina_papel_'+u)||'gerente')==='gerente')?'':'none'; }
 function iniciarApp(u){
+  setTimeout(()=>{ try{ fimConferir(); }catch(e){} },300); // fim de ano: loja fechada
   mlMostrar(u);
   missaoCarregar(u);
   unidadeAtual=u;
@@ -2403,9 +2404,24 @@ function bufMontFoto(){
     if(r&&r.erro&&/fechou/.test(r.erro)){ BUF_M.estado='perdeu'; bufMontDesenhar(); }
   }, {msg:'Mostre o buffet montado, com as cubas cheias, e toque em “Bater foto”.'});
 }
+// ── Fim de ano: loja fechada (servidor 2026-11-25-a; 24/12 noite, 25/12 dia, 31/12 e 01/01) ──
+let FIM_FECHA_CLI=null, FIM_LOJAS_DIA_CLI=['Isaac Manhã'];
+function fimFechadaHoje(u){
+  if(!FIM_FECHA_CLI||!u) return false;
+  const d=dataTurno(), k=String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), f=FIM_FECHA_CLI[k]; if(!f) return false;
+  if(f==='todos') return true; const doDia=FIM_LOJAS_DIA_CLI.includes(u); return f==='dia'?doDia:!doDia;
+}
+async function fimConferir(){
+  await chkRecursos(); const u=unidadeAtual; if(!fimFechadaHoje(u)) return;
+  const d=dataTurno(), chave='fim_ok_'+u+'_'+d.toDateString(); try{ if(sessionStorage.getItem(chave)) return; }catch(e){}
+  if(document.getElementById('fimOverlay')) return;
+  document.body.insertAdjacentHTML('beforeend','<div id="fimOverlay" style="position:fixed;inset:0;z-index:1200;background:rgba(7,9,14,.97);display:flex;align-items:center;justify-content:center;padding:22px"><div style="max-width:420px;text-align:center;color:#fff;font-family:Arial,sans-serif"><div style="font-size:64px">🎄</div><h2 style="font-size:22px;margin:10px 0">Loja fechada hoje</h2><p style="font-size:15px;line-height:1.5;color:#cfd6e4"><b>'+u+'</b> não abre neste turno (fim de ano). Não tem placar, checklist nem cobrança hoje.<br><br>Boas festas e bom descanso para você e sua equipe! 🍕</p><button onclick="fimFechar()" style="margin-top:18px;background:none;border:1px solid #556;color:#aab;border-radius:10px;padding:10px 14px;font-size:13px;cursor:pointer">A loja abriu hoje? Usar o placar normalmente</button></div></div>');
+  try{ logProva('LOJA_FECHADA_FIM_DE_ANO', u); }catch(e){}
+}
+function fimFechar(){ const u=unidadeAtual, d=dataTurno(); try{ sessionStorage.setItem('fim_ok_'+u+'_'+d.toDateString(),'1'); }catch(e){} const o=document.getElementById('fimOverlay'); if(o) o.remove(); try{ logProva('LOJA_FECHADA_ABRIU_MESMO_ASSIM', u); }catch(e){} }
 async function chkRecursos(){
   if(_chkRecursos!==null) return _chkRecursos;
-  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; tmpJanelasAplicar(r&&r.tempoJanelas); }
+  try{ const r=await chkJsonp({action:'authPing'},8000); _chkRecursos=(r&&r.ok&&Array.isArray(r.recursos))?r.recursos:[]; tmpJanelasAplicar(r&&r.tempoJanelas); if(r&&r.fechamentos){ FIM_FECHA_CLI=r.fechamentos; FIM_LOJAS_DIA_CLI=r.lojasDoDia||['Isaac Manhã']; } }
   catch(e){ return []; } // não guarda: tenta de novo depois
   return _chkRecursos;
 }

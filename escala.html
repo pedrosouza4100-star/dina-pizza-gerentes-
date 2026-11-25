@@ -272,7 +272,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="escala-core.js?v=3"></script>
+<script src="escala-core.js?v=4"></script>
 <script>
 const S = {
   unidade:null, gerente:'', semana:null, regra:'atual', regraManual:false,
@@ -438,6 +438,7 @@ function rhAplicar(){
 function rhDia(pid,dia){ const d=S.rh&&S.rh.dias&&S.rh.dias[pid]; return d&&d[dia]!==null&&d[dia]!==undefined?d[dia]:null; }
 function render(){
   rhAplicar();
+  if(S.grade&&S.semana&&eAplicarFechamentos(S.grade,S.equipe,S.turnos,S.semana)>0) marcarSujo(); // fim de ano: loja fechada (24/11/2026)
   const a=eAnalisar(S.equipe,S.grade,S.anteriores,S.regra,S.semana);
   S.analise=a;
   document.getElementById('selRegra').value=S.regra;
@@ -506,6 +507,7 @@ function abrirDia(pid,dia){
   const rh=rhDia(pid,dia);
   if(rh){ toast('🔒 '+(rh==='folga'?'Folga lançada':rh==='ferias'?'Férias lançadas':'Atestado lançado')+' pela RH. Para trocar, peça no placar.','err',4000); return; }
   const atual=(S.grade[pid]||[])[dia];
+  if(atual&&atual.t==='fechado'){ toast('🎄 Loja fechada neste dia (fim de ano): folga extra, não conta como folga da semana.','ok',4500); return; }
   D={ pid, dia, t: atual&&atual.t ? atual.t : 'trab', p: atual&&atual.p ? JSON.parse(JSON.stringify(atual.p)) : [['','']], rep:new Set([dia]), soTrab: rh==='' };
   if(D.soTrab) D.t='trab';
   if(!D.p.length) D.p=[['','']];
