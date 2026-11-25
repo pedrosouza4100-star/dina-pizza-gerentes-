@@ -366,7 +366,7 @@ function eRenderGrade(el, o){
       h+='<td class="'+cls+(o.editavel?' eg-click':'')+'" data-p="'+eEsc(p.id)+'" data-d="'+i+'">'+txt+'</td>';
     }
     const lim=Math.min(r.contrato,a.regra.semanal);
-    h+='<td class="eg-tot'+(temErro?' eg-err':'')+'"><b>'+eFmtH(r.total)+'</b><small>de '+lim+'h · '+r.cont.folga+' folga'+(r.cont.folga===1?'':'s')+'</small></td></tr>';
+    h+='<td class="eg-tot'+(temErro?' eg-err':'')+'"><b>'+eFmtH(r.total)+'</b><small>de '+lim+'h · '+(r.cont.folga+(r.cont.fechado||0))+' folga'+((r.cont.folga+(r.cont.fechado||0))===1?'':'s')+(r.cont.fechado?' (🎄 '+r.cont.fechado+')':'')+'</small></td></tr>';
   });
   h+='</tbody><tfoot><tr><td class="eg-pes">Trabalhando</td>';
   a.cobertura.forEach(c=>{ h+='<td><b>'+c.total+'</b></td>'; });
