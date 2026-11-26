@@ -403,7 +403,7 @@
         <div class="section-title">Metas de Tempo de Entrega (Global)</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
           <div style="font-size:0.78rem;color:var(--muted)">Válido para todas as lojas com entrega própria. O gerente registra 3 vezes por noite.</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
             <div>
               <div class="section-title" style="font-size:0.72rem;margin-bottom:8px">1º Registro — Início</div>
               <div style="display:flex;align-items:center;gap:8px">
@@ -2185,6 +2185,9 @@
     const outras=atualIt?atualIt.lojasExcluidas.filter(sl=>!chkLojasUI().some(l=>l[0]===sl)&&!(CHK_ISAAC_SEP&&/^isaac/.test(sl))):[];
     let lojasExcluidas=marcadas.filter(c=>!c.checked).map(c=>c.value).concat(outras);
     if(lojasExcluidas.includes('isaac-manha')&&lojasExcluidas.includes('isaac-noite')) lojasExcluidas=lojasExcluidas.filter(x=>!/^isaac-/.test(x)).concat(['isaac']); // as duas = 'isaac' (igual ao de antes)
+    const fsel0=document.getElementById('chkItemFoto');
+    // 25/11/2026: a foto do buffet pronto não pode travar a abertura (o buffet só fica pronto depois; a foto é a do card Buffet montado)
+    if(CHK_FOTO_TIPOS&&fsel0&&fsel0.value==='buffet'&&chkAdmEdit.tipo==='abertura'){err.textContent='A foto do buffet pronto não pode ser obrigatória na abertura: a abertura trava o placar e o buffet só fica pronto depois. A foto do buffet já é pedida no card "Buffet montado" (18h50–19h50). Tire a foto deste item ou coloque o item no fechamento.';return;}
     const btn=document.getElementById('chkItemSalvarBtn'); btn.disabled=true; btn.textContent='Salvando...';
     try{
       const atual=chkAdmEdit.id?chkAdmItens.find(x=>x.id===chkAdmEdit.id):null;

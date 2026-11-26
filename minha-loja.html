@@ -105,7 +105,7 @@ const tela=h=>{ document.getElementById('conteudo').innerHTML=h; };
 
 function pedirSenha(msg){
   tela('<div class="card"><span class="rot">Entrar</span><p class="sub" style="margin-top:6px">'+esc(msg||'O gerente abre esta tela pelo botão do placar. GDI e gestão: digite a sua senha.')+'</p>'
-    +'<input id="senha" type="password" placeholder="Senha do GDI ou da gestão" autocomplete="current-password"><button class="btn prim" style="width:100%" onclick="entrarGdi()">Entrar</button></div>');
+    +'<input id="senha" type="password" placeholder="Senha do GDI ou da gestão" autocomplete="current-password" enterkeyhint="go" onkeydown="if(event.key===\'Enter\')entrarGdi()"><button class="btn prim" style="width:100%" onclick="entrarGdi()">Entrar</button></div>');
   document.getElementById('sub').textContent='';
 }
 async function entrarGdi(){ const s=document.getElementById('senha').value.trim(); if(!s) return; CHAVE=hash(s); MODO='gdi'; LOJA=''; await carregar(true); }
