@@ -40,6 +40,8 @@
   .opts button.nao.on{background:var(--danger);border-color:var(--danger);color:#fff}
   .extra{display:flex;flex-direction:column;gap:8px;margin-top:10px}
   .extra label{font-size:0.7rem;color:var(--muted);font-weight:800;text-transform:uppercase}
+  .pesos{display:flex;gap:6px}.pesos button{flex:1;padding:9px 4px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:800;font-size:0.8rem;cursor:pointer}.pesos button.on{background:var(--gold);color:#111;border-color:var(--gold)}
+  .av-novo{border:1px dashed var(--gold);border-radius:10px;padding:10px;margin-top:10px}
   .foto-btn{background:transparent;border:1px dashed var(--border);color:var(--text);border-radius:8px;padding:9px;font-size:0.82rem;cursor:pointer;width:100%}
   .foto-prev{max-width:140px;border-radius:8px;border:1px solid var(--border)}
   .reinc{font-size:0.76rem;color:var(--d-t-err);background:rgba(255,77,77,0.10);border-radius:6px;padding:6px 8px;margin-bottom:8px;line-height:1.45}
@@ -320,19 +322,77 @@ function render(){
     });
     h+='</div>';
   });
+  h+=renderAvulsos();
   h+=`<div class="card"><div class="tit">Observações gerais da visita</div><textarea id="obsGeral" placeholder="Opcional" oninput="R.__obs=this.value;guardarRasc()">${esc(R.__obs||'')}</textarea></div><div id="msgFim"></div>`;
   app().innerHTML=h;
   document.getElementById('barra').style.display='flex';
   atualizarBarra();
 }
 function itensTodos(){ return SECOES.flatMap(s=>s.itens); }
+// ═════════ ITENS AVULSOS (26/11/2026) ═════════
+// Cobrar algo que não está no checklist: texto, peso 1/3/5 e foto obrigatória. Nasce como NÃO e vira correção para o gerente.
+// Na próxima visita da loja aparece de novo: Resolvido = sai da lista; Não resolvido = continua. Máximo de 5 abertos por loja.
+function avAbertos(){ return (INFO&&INFO.avulsos)||[]; }
+function avNovos(){ return R.__avn||(R.__avn=[]); }
+function avVagas(){ const lim=(INFO&&INFO.avLimite)||5; const cont=avAbertos().filter(a=>!(R['av_'+a.id]&&R['av_'+a.id].resp==='sim')).length; return lim-cont-avNovos().length; }
+function avValido(){
+  const sem=avAbertos().filter(a=>!(R['av_'+a.id]&&R['av_'+a.id].resp)); if(sem.length) return 'Diga se '+(sem.length>1?'os '+sem.length+' itens avulsos foram resolvidos':'o item avulso "'+sem[0].texto+'" foi resolvido')+'.';
+  for(let i=0;i<avNovos().length;i++){ const n=avNovos()[i];
+    if((n.texto||'').trim().length<10) return 'Item avulso novo '+(i+1)+': escreva o que está cobrando (mínimo 10 letras).';
+    if(!n.peso) return 'Item avulso novo '+(i+1)+': escolha o peso (1 leve, 3 médio ou 5 grave).';
+    if(!FOTOS[n.k]) return 'Item avulso novo '+(i+1)+': tire a foto do problema (obrigatória).'; }
+  if(avVagas()<0) return 'No máximo '+((INFO&&INFO.avLimite)||5)+' itens avulsos abertos nesta loja.';
+  return '';
+}
+function avNovo(){ if(avVagas()<=0){ toast('Esta loja já tem '+((INFO&&INFO.avLimite)||5)+' itens avulsos abertos. Marque como resolvido o que já foi resolvido.'); return; } avNovos().push({k:'avn_'+Date.now(),texto:'',peso:0,obs:'',plano:''}); guardarRasc(); const y=window.scrollY; render(); window.scrollTo(0,y); }
+function avTirar(k){ R.__avn=avNovos().filter(n=>n.k!==k); delete FOTOS[k]; guardarRasc(); const y=window.scrollY; render(); window.scrollTo(0,y); }
+function avCampo(k,campo,v){ const n=avNovos().find(x=>x.k===k); if(!n) return; n[campo]=campo==='peso'?Number(v):v; guardarRasc(); if(campo==='peso'){ const y=window.scrollY; render(); window.scrollTo(0,y); } else atualizarBarra(); }
+function avTexto(id){ const k='av_'+id; R[k]=R[k]||{resp:'nao'}; const o=document.getElementById('obs_'+k), pl=document.getElementById('plano_'+k); R[k].obs=o?o.value:''; R[k].plano=pl?pl.value:''; guardarRasc(); }
+function renderAvulsos(){
+  if(!INFO||INFO.avLimite==null) return ''; // servidor antigo
+  const lim=INFO.avLimite, PESOS=[[1,'1 · Leve'],[3,'3 · Médio'],[5,'5 · Grave']];
+  let h=`<div class="card"><div class="secao"><span>➕ Itens avulsos</span><span class="muted">${avAbertos().length+avNovos().length} de ${lim}</span></div>
+    <div class="muted" style="margin-bottom:8px">Para cobrar algo que <b>não está no checklist</b>. Nasce como <b>NÃO</b>, entra na nota e vira correção para o gerente. Na próxima visita aparece aqui para você dizer se foi resolvido. No máximo ${lim} abertos por loja.</div>`;
+  avAbertos().forEach(a=>{
+    const k='av_'+a.id, r=R[k]||{}, p=pendDo(k), falta=tentou&&!r.resp;
+    h+=`<div class="item pend${falta?' falta':''}" id="it_${k}">
+      <div class="reinc">🔁 Item avulso desde ${esc(a.criadoDia)}${p&&p.vezes>=2?' · <b>reincidência '+p.vezes+'x</b>':''}${a.foto&&/^https/.test(a.foto)?` · <a href="${esc(a.foto)}" target="_blank" style="color:var(--gold)">foto</a>`:''}${p?(p.situacao==='justificada'?`<br><b>O gerente disse que fez:</b> ${esc(p.justificativa)||'(só foto)'}${p.foto&&/^https/.test(p.foto)?` · <a href="${esc(p.foto)}" target="_blank" style="color:var(--gold)">ver foto</a>`:''}`:'<br><b>Ainda sem resposta do gerente.</b>'):''}</div>
+      <div class="item-txt">${esc(a.texto)}<span class="peso">peso ${a.peso}</span></div>
+      <div class="opts"><button class="sim${r.resp==='sim'?' on':''}" onclick="responder('${k}','sim')">✓ Resolvido (sai da lista)</button><button class="nao${r.resp==='nao'?' on':''}" onclick="responder('${k}','nao')">✗ Não resolvido</button></div>
+      ${r.resp==='nao'?`<div class="extra"><label>O que você encontrou hoje (opcional)</label><textarea id="obs_${k}" placeholder="Se deixar em branco, vale o texto do item" oninput="avTexto('${a.id}')">${esc(r.obs||'')}</textarea>
+        <label>Plano de ação para o gerente</label><textarea id="plano_${k}" placeholder="O que deve ser feito?" oninput="avTexto('${a.id}')">${esc(r.plano||'')}</textarea>
+        ${FOTOS[k]?`<div style="display:flex;gap:10px;align-items:center"><img class="foto-prev" src="${FOTOS[k].url}"><button class="foto-btn" style="width:auto" onclick="tirarFoto('${k}')">📷 Trocar foto</button></div>`:`<button class="foto-btn" onclick="tirarFoto('${k}')">📷 Tirar foto (opcional)</button>`}</div>`:''}
+    </div>`;
+  });
+  avNovos().forEach((n,i)=>{
+    const ft=tentou&&(n.texto||'').trim().length<10, fp=tentou&&!n.peso, ff=tentou&&!FOTOS[n.k];
+    h+=`<div class="av-novo${ft||fp||ff?' falta':''}" id="it_${n.k}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b class="amar">Novo item avulso ${i+1}</b><button class="foto-btn" style="width:auto;padding:5px 10px" onclick="avTirar('${n.k}')">✖ Tirar</button></div>
+      <div class="extra" style="margin-top:0">
+        <label>O que você está cobrando (obrigatório)</label>
+        <textarea class="${ft?'falta':''}" placeholder="Ex.: Coifa da cozinha engordurada" oninput="avCampo('${n.k}','texto',this.value)">${esc(n.texto||'')}</textarea>
+        <label>Peso (obrigatório)</label>
+        <div class="pesos${fp?' falta':''}">${PESOS.map(([v,t])=>`<button class="${n.peso===v?'on':''}" onclick="avCampo('${n.k}','peso',${v})">${t}</button>`).join('')}</div>
+        <label>O que encontrou (opcional)</label>
+        <textarea placeholder="Detalhe o problema" oninput="avCampo('${n.k}','obs',this.value)">${esc(n.obs||'')}</textarea>
+        <label>Plano de ação para o gerente</label>
+        <textarea placeholder="O que deve ser feito?" oninput="avCampo('${n.k}','plano',this.value)">${esc(n.plano||'')}</textarea>
+        ${FOTOS[n.k]?`<div style="display:flex;gap:10px;align-items:center"><img class="foto-prev" src="${FOTOS[n.k].url}"><button class="foto-btn" style="width:auto" onclick="tirarFoto('${n.k}')">📷 Trocar foto</button></div>`:`<button class="foto-btn${ff?' falta':''}" onclick="tirarFoto('${n.k}')">📷 Tirar foto (obrigatória)</button>`}
+      </div></div>`;
+  });
+  const vg=avVagas();
+  h+=`<button class="btn sec" style="margin-top:12px;padding:10px" ${vg<=0?'disabled':''} onclick="avNovo()">➕ Cobrar algo fora do checklist${vg>0?' ('+vg+(vg>1?' vagas':' vaga')+')':' — limite de '+lim+' abertos'}</button></div>`;
+  return h;
+}
 function notaParcial(){
   let p=0,t=0; itensTodos().forEach(it=>{ const r=R[it.id]; if(r&&(r.resp==='sim'||r.resp==='nao')){ t+=it.peso; if(r.resp==='sim') p+=it.peso; } });
+  avAbertos().forEach(a=>{ const r=R['av_'+a.id]; if(r&&(r.resp==='sim'||r.resp==='nao')){ t+=a.peso; if(r.resp==='sim') p+=a.peso; } });
+  avNovos().forEach(n=>{ if(n.peso) t+=n.peso; });
   return t?Math.round(p/t*1000)/10:null;
 }
 function fmtNota(n){ return n==null?'—':String(n).replace('.',',')+'%'; }
 function corNota(n){ return n==null?'':n>=90?'verde':n>=75?'amar':'verm'; }
-function valido(){ return itensTodos().every(it=>{ const r=R[it.id]; return r&&r.resp&&(r.resp==='sim'||(r.obs||'').trim().length>=5); }); }
+function valido(){ return itensTodos().every(it=>{ const r=R[it.id]; return r&&r.resp&&(r.resp==='sim'||(r.obs||'').trim().length>=5); }) && avValido()===''; }
 function atualizarBarra(){
   const tot=itensTodos().length, resp=itensTodos().filter(it=>R[it.id]&&R[it.id].resp).length, n=notaParcial();
   document.getElementById('barraInfo').innerHTML=`<b class="${corNota(n)}">${fmtNota(n)}</b> nota parcial<br>${resp} de ${tot} itens`;
@@ -366,9 +426,9 @@ async function enviar(){
   tentou=true;
   if(!valido()){
     const y=window.scrollY; render(); window.scrollTo(0,y);
-    const prim=document.querySelector('.item.falta'); if(prim) prim.scrollIntoView({behavior:'smooth',block:'center'});
+    const prim=document.querySelector('.item.falta, .av-novo.falta'); if(prim) prim.scrollIntoView({behavior:'smooth',block:'center'});
     const faltam=itensTodos().filter(it=>!(R[it.id]&&R[it.id].resp)).length;
-    toast(faltam?'Faltam '+faltam+' item(ns) sem resposta.':'Descreva o problema dos itens marcados NÃO.'); return;
+    const av=avValido(); toast(faltam?'Faltam '+faltam+' item(ns) sem resposta.':av||'Descreva o problema dos itens marcados NÃO.'); return;
   }
   const bt=document.getElementById('btnEnviar'); bt.disabled=true; bt.textContent='Conferindo a localização...';
   _geoAoOk=enviar;
@@ -377,7 +437,8 @@ async function enviar(){
   bt.textContent='Enviando...';
   const itens=itensTodos().map(it=>{ const r=R[it.id]; return {id:it.id,resp:r.resp,obs:r.resp==='nao'?r.obs:'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS[it.id]?{base64:FOTOS[it.id].base64,tipo:'image/jpeg'}:null}; });
   try{
-    const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||''});
+    const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||'',avulsos:avAbertos().map(a=>{ const r=R['av_'+a.id]||{}; return {id:a.id,resp:r.resp,obs:r.resp==='nao'?(r.obs||''):'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS['av_'+a.id]?{base64:FOTOS['av_'+a.id].base64,tipo:'image/jpeg'}:null}; }),
+      avulsosNovos:avNovos().map(n=>({texto:n.texto,peso:n.peso,obs:n.obs||'',plano:n.plano||'',foto:FOTOS[n.k]?{base64:FOTOS[n.k].base64,tipo:'image/jpeg'}:null}))});
     try{ localStorage.removeItem(chaveRasc()); }catch(e){}
     document.getElementById('barra').style.display='none';
     app().innerHTML=`<div class="card" style="text-align:center"><div class="tit">${r.teste?'🧪 Teste — nada foi gravado':'✅ Checklist enviado'}</div>
