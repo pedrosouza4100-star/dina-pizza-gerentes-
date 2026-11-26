@@ -258,8 +258,9 @@
     <h3>⚡ Gerar escala automática<small id="gerSub"></small></h3>
     <div class="opts" style="grid-template-columns:1fr 1fr" id="gerQuanto">
       <button class="opt on" data-n="1">Só esta semana</button>
-      <button class="opt" data-n="4">4 semanas (mês)</button>
+      <button class="opt" data-n="mes">Mês inteiro</button>
     </div>
+    <div id="gerMesBox" style="display:none;margin:8px 0"><select id="gerMes" style="width:100%" onchange="G.mes=this.value;textoGerar()"></select></div>
     <div class="muted" id="gerTexto"></div>
     <div class="prev" id="gerResultado" style="display:none"></div>
     <div class="row">
@@ -272,7 +273,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="escala-core.js?v=4"></script>
+<script src="escala-core.js?v=5"></script>
 <script>
 const S = {
   unidade:null, gerente:'', semana:null, regra:'atual', regraManual:false,
@@ -507,7 +508,7 @@ function abrirDia(pid,dia){
   const rh=rhDia(pid,dia);
   if(rh){ toast('🔒 '+(rh==='folga'?'Folga lançada':rh==='ferias'?'Férias lançadas':'Atestado lançado')+' pela RH. Para trocar, peça no placar.','err',4000); return; }
   const atual=(S.grade[pid]||[])[dia];
-  if(atual&&atual.t==='fechado'){ toast('🎄 Loja fechada neste dia (fim de ano): folga extra, não conta como folga da semana.','ok',4500); return; }
+  if(atual&&atual.t==='fechado'){ toast('🎄 Loja fechada neste dia (fim de ano): conta como uma das folgas da semana.','ok',4500); return; }
   D={ pid, dia, t: atual&&atual.t ? atual.t : 'trab', p: atual&&atual.p ? JSON.parse(JSON.stringify(atual.p)) : [['','']], rep:new Set([dia]), soTrab: rh==='' };
   if(D.soTrab) D.t='trab';
   if(!D.p.length) D.p=[['','']];
@@ -665,12 +666,26 @@ async function salvarCfg(){
 }
 
 /* ───────── Gerar escala ───────── */
-const G={n:1, rodando:false};
+const G={n:1, mes:'', semanas:[], rodando:false};
+// Mês inteiro (25/11/2026): todas as semanas do mês do calendário (de segunda a domingo; a 1ª e a última podem pegar dias do mês vizinho).
+// Semanas que já passaram não são refeitas.
+function gerMesDaSemana(sem){ return eSomarDias(sem,3).slice(0,7); } // mês da quinta-feira da semana
+function gerSomaMes(m,n){ const y=+m.slice(0,4), mm=+m.slice(5,7)-1+n; const d=new Date(y,mm,1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function gerSemanasDoMes(m){
+  const y=+m.slice(0,4), mm=+m.slice(5,7)-1, ult=new Date(y,mm+1,0);
+  const ini=eSegundaDe(new Date(y,mm,1)), fim=eSegundaDe(ult), hojeSeg=eSegundaDe(new Date()), l=[];
+  for(let s=ini; s<=fim; s=eSomarDias(s,7)) if(s>=hojeSeg) l.push(s);
+  return l;
+}
+function gerMesNome(m){ return MESES[+m.slice(5,7)-1]+'/'+m.slice(0,4); }
 function abrirGerar(){
   const ativos=S.equipe.filter(p=>p.ativo!==false);
   if(!ativos.length){ toast('Cadastre a equipe na aba Equipe e turnos.','err'); mudarAba('equipe'); return; }
   G.n=1;
-  document.querySelectorAll('#gerQuanto .opt').forEach(b=>{ b.classList.toggle('on',b.dataset.n==='1'); b.onclick=()=>{ G.n=Number(b.dataset.n); document.querySelectorAll('#gerQuanto .opt').forEach(x=>x.classList.toggle('on',x===b)); textoGerar(); }; });
+  const m0=gerMesDaSemana(S.semana); G.mes=m0;
+  document.getElementById('gerMes').innerHTML=[m0,gerSomaMes(m0,1)].map(m=>'<option value="'+m+'">'+gerMesNome(m)+'</option>').join('');
+  document.getElementById('gerMesBox').style.display='none';
+  document.querySelectorAll('#gerQuanto .opt').forEach(b=>{ b.classList.toggle('on',b.dataset.n==='1'); b.onclick=()=>{ G.n=b.dataset.n==='mes'?'mes':1; document.querySelectorAll('#gerQuanto .opt').forEach(x=>x.classList.toggle('on',x===b)); document.getElementById('gerMesBox').style.display=G.n==='mes'?'block':'none'; textoGerar(); }; });
   document.getElementById('gerResultado').style.display='none';
   document.getElementById('gerBtn').disabled=false;
   document.getElementById('gerCancelar').textContent='Cancelar';
@@ -679,43 +694,61 @@ function abrirGerar(){
 }
 function textoGerar(){
   const ativos=S.equipe.filter(p=>p.ativo!==false).length;
-  const fim=eSomarDias(S.semana,7*G.n-1);
-  document.getElementById('gerSub').textContent=ativos+' pessoas · '+eDiaMes(S.semana)+' a '+eDataBR(fim);
-  document.getElementById('gerTexto').innerHTML=(G.n===1
-    ?'Monta a semana na tela para você conferir e depois salvar.'
-    :'Monta e <b>já salva</b> as 4 semanas, uma seguida da outra, mantendo o rodízio de domingo entre elas.')+
-    '<br>O que já estiver montado nessas semanas será substituído. <b>Férias e afastamentos marcados são mantidos.</b> Cada pessoa trabalha no seu turno padrão.';
+  if(G.n!=='mes'){
+    document.getElementById('gerSub').textContent=ativos+' pessoas · '+eDiaMes(S.semana)+' a '+eDataBR(eSomarDias(S.semana,6));
+    document.getElementById('gerBtn').disabled=false;
+    document.getElementById('gerTexto').innerHTML='Monta a semana na tela para você conferir e depois salvar.<br>O que já estiver montado nesta semana será substituído. <b>Férias e afastamentos marcados são mantidos.</b> Cada pessoa trabalha no seu turno padrão.';
+    return;
+  }
+  G.semanas=gerSemanasDoMes(G.mes);
+  const n=G.semanas.length;
+  document.getElementById('gerBtn').disabled=!n;
+  if(!n){ document.getElementById('gerSub').textContent=ativos+' pessoas · '+gerMesNome(G.mes); document.getElementById('gerTexto').innerHTML='As semanas de '+gerMesNome(G.mes)+' já passaram.'; return; }
+  document.getElementById('gerSub').textContent=ativos+' pessoas · '+eDiaMes(G.semanas[0])+' a '+eDataBR(eSomarDias(G.semanas[n-1],6))+' ('+n+(n>1?' semanas':' semana')+')';
+  document.getElementById('gerTexto').innerHTML='Monta e <b>'+(ESC_TESTE?'mostra':'já salva')+'</b> '+(n>1?'as '+n+' semanas':'a semana')+' de '+gerMesNome(G.mes)+', uma seguida da outra, mantendo o rodízio de domingo entre elas'
+    +(eSegundaDe(new Date(+G.mes.slice(0,4),+G.mes.slice(5,7)-1,1))<G.semanas[0]?' (as semanas que já passaram não são refeitas)':'')+'.'
+    +'<br>O que já estiver montado nessas semanas será substituído. <b>Férias e afastamentos marcados são mantidos.</b> Cada pessoa trabalha no seu turno padrão.'
+    +(ESC_TESTE?'<br>🧪 Modo teste: as semanas ficam só neste aparelho, como rascunho, para você conferir (nada vai para o servidor).':'');
 }
 
 async function gerar(){
   const btn=document.getElementById('gerBtn'), res=document.getElementById('gerResultado');
   btn.disabled=true; G.rodando=true;
   try{
-    if(G.n===1){
+    if(G.n!=='mes'){
       const r=eGerarSemana({equipe:S.equipe,turnos:S.turnos,gerador:S.gerador,semana:S.semana,regraId:S.regra,gradeAtual:S.grade,anteriores:S.anteriores});
       S.grade=r.grade; marcarSujo(); S.pendencias=r.pendencias; render();
       G.rodando=false; fechar('ovGerar');
       toast('⚡ Escala gerada. Confira e toque em Salvar escala.','ok',4000);
     } else {
       res.style.display='block';
-      let ant=S.anteriores, sem=S.semana, pend=0;
-      for(let w=0;w<G.n;w++){
-        res.innerHTML='⏳ Gerando e salvando a semana '+(w+1)+' de '+G.n+' ('+eTituloSemana(sem)+')...';
-        let atual=S.grade;
-        if(w>0){ const g=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:sem}); atual=g&&g.ok&&g.escala?g.escala.grade:{}; }
-        const regraId=w===0?S.regra:eRegraDaSemana(sem);
+      const lista=G.semanas.slice(), N=lista.length;
+      let ant=S.anteriores, pend=0;
+      // semanas anteriores da 1ª semana do mês (para o rodízio de domingo), se não for a semana da tela
+      if(lista[0]!==S.semana){ try{ const g0=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:lista[0]}); if(g0&&g0.ok) ant=(g0.anteriores||[null,null]).concat([null,null]); }catch(e){} }
+      for(let w=0;w<N;w++){
+        const sem=lista[w];
+        res.innerHTML='⏳ Gerando'+(ESC_TESTE?'':' e salvando')+' a semana '+(w+1)+' de '+N+' ('+eTituloSemana(sem)+')...';
+        let atual=sem===S.semana?S.grade:null;
+        if(!atual){ const g=await eJsonp({action:'escalaGet',unidade:S.unidade,semana:sem}); atual=g&&g.ok&&g.escala?g.escala.grade:{}; }
+        const regraId=sem===S.semana?S.regra:eRegraDaSemana(sem);
         const r=eGerarSemana({equipe:S.equipe,turnos:S.turnos,gerador:S.gerador,semana:sem,regraId,gradeAtual:atual,anteriores:ant});
         const a=eAnalisar(S.equipe,r.grade,ant,regraId,sem);
-        await ePost({action:'escalaSalvar',unidade:S.unidade,semana:sem,grade:r.grade,regra:regraId,gerente:S.gerente+' (automática)',obs:'',
-          resumo:{erros:a.erros,avisos:a.avisos,vazios:a.vazios,pessoas:a.pessoas.length,horasTotal:a.horasTotal},detalhe:eDetalhe(a,r.grade,sem)});
-        gravarLS('esc_rasc_'+S.unidade+'_'+sem,null);
+        if(ESC_TESTE){
+          // modo teste: nada vai ao servidor; a semana fica como rascunho neste aparelho para o Robson conferir
+          gravarLS('esc_rasc_'+S.unidade+'_'+sem,JSON.stringify({grade:r.grade,obs:'',regra:regraId,regraManual:false}));
+        } else {
+          await ePost({action:'escalaSalvar',unidade:S.unidade,semana:sem,grade:r.grade,regra:regraId,gerente:S.gerente+' (automática)',obs:'',
+            resumo:{erros:a.erros,avisos:a.avisos,vazios:a.vazios,pessoas:a.pessoas.length,horasTotal:a.horasTotal},detalhe:eDetalhe(a,r.grade,sem)});
+          gravarLS('esc_rasc_'+S.unidade+'_'+sem,null);
+        }
         pend+=r.pendencias.length;
         ant=[{semana:sem,grade:r.grade},ant[0],ant[1],ant[2]];
-        sem=eSomarDias(sem,7);
       }
       G.rodando=false; fechar('ovGerar');
+      S.semana=lista[0];
       await carregar();
-      toast('⚡ '+G.n+' semanas geradas e salvas'+(pend?'. Algumas têm avisos de cobertura, confira cada semana.':'!'),'ok',5000);
+      toast('⚡ '+N+(N>1?' semanas':' semana')+' de '+gerMesNome(G.mes)+(ESC_TESTE?' geradas (teste: só neste aparelho, use ‹ › para ver cada semana)':' geradas e salvas')+(pend?'. Algumas têm avisos de cobertura, confira cada semana.':'!'),'ok',6000);
     }
   }catch(e){
     res.style.display='block';

@@ -41,7 +41,7 @@ const TURNOS_PADRAO = [
 ];
 
 // Fim de ano (Robson, 24/11/2026): lojas FECHADAS — 24/12 à noite, 25/12 de dia, 31/12 e 01/01 o dia todo.
-// Quem é desse turno fica com "Loja fechada": folga EXTRA (não conta como folga da semana nem como dia trabalhado).
+// Quem é desse turno fica com "Loja fechada": conta como UMA DAS FOLGAS da semana (Robson, 25/11/2026; antes era folga extra).
 // Turno do dia = começa antes das 15h; da noite = começa às 15h ou depois; dobra (dia e noite) fecha nos dois.
 const ESCALA_FECHAMENTOS = { '12-24': 'noite', '12-25': 'dia', '12-31': 'todos', '01-01': 'todos' };
 function eFechamentoDia(chave){ return ESCALA_FECHAMENTOS[String(chave||'').slice(5,10)]||''; }
@@ -196,8 +196,9 @@ function eCalcPessoa(pessoa, cells, prev, regra, semana){
   if(cont.vazio>0) avisos.push({msg:cont.vazio+(cont.vazio>1?' dias':' dia')+' sem definir',dia:null,vazio:true});
 
   if(!afastado){
-    if(cont.folga+cont.vazio<regra.folgasMin)
-      erros.push({msg:cont.folga+(cont.folga===1?' folga':' folgas')+' na semana — a regra pede no mínimo '+regra.folgasMin,dia:null});
+    const nFolga=cont.folga+(cont.fechado||0); // loja fechada (fim de ano) conta como folga da semana
+    if(nFolga+cont.vazio<regra.folgasMin)
+      erros.push({msg:nFolga+(nFolga===1?' folga':' folgas')+' na semana — a regra pede no mínimo '+regra.folgasMin,dia:null});
     const lim=Math.min(contrato,regra.semanal)*60;
     if(total>lim+10) avisos.push({msg:eFmtH(total)+' na semana — '+eFmtH(total-lim)+' de hora extra (limite de '+Math.min(contrato,regra.semanal)+' h)',dia:null});
   }
@@ -365,7 +366,7 @@ function eRenderGrade(el, o){
       h+='<td class="'+cls+(o.editavel?' eg-click':'')+'" data-p="'+eEsc(p.id)+'" data-d="'+i+'">'+txt+'</td>';
     }
     const lim=Math.min(r.contrato,a.regra.semanal);
-    h+='<td class="eg-tot'+(temErro?' eg-err':'')+'"><b>'+eFmtH(r.total)+'</b><small>de '+lim+'h · '+r.cont.folga+' folga'+(r.cont.folga===1?'':'s')+'</small></td></tr>';
+    h+='<td class="eg-tot'+(temErro?' eg-err':'')+'"><b>'+eFmtH(r.total)+'</b><small>de '+lim+'h · '+(r.cont.folga+(r.cont.fechado||0))+' folga'+((r.cont.folga+(r.cont.fechado||0))===1?'':'s')+(r.cont.fechado?' (🎄 '+r.cont.fechado+')':'')+'</small></td></tr>';
   });
   h+='</tbody><tfoot><tr><td class="eg-pes">Trabalhando</td>';
   a.cobertura.forEach(c=>{ h+='<td><b>'+c.total+'</b></td>'; });
@@ -478,9 +479,9 @@ function eGerarSemana(o){
     const cells=atual[p.id]||[];
     const afast=[0,1,2,3,4,5,6].filter(d=>cells[d]&&(cells[d].t==='ferias'||cells[d].t==='atestado'));
     const parte=eParteDaPessoa(p, o.turnos, null);
-    const fech=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d)&&eFechadoPara(eSomarDias(o.semana,d),parte)); // fim de ano: loja fechada = folga extra
+    const fech=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d)&&eFechadoPara(eSomarDias(o.semana,d),parte)); // fim de ano: loja fechada = uma das folgas da semana
     const livres=[0,1,2,3,4,5,6].filter(d=>!afast.includes(d)&&!fech.includes(d));
-    const nF=Math.min(livres.length, afast.length?Math.max(0,F-afast.length):F);
+    const nF=Math.min(livres.length, Math.max(0,F-afast.length-fech.length)); // loja fechada conta como folga da semana (25/11/2026)
     const p0=ant[0]&&ant[0].grade?ant[0].grade[p.id]:null, p1=ant[1]&&ant[1].grade?ant[1].grade[p.id]:null;
     let corrida=0; if(p0){ for(let d=6;d>=0&&eTrab(p0[d]);d--) corrida++; }
     const dom0=p0?eTrab(p0[6]):false, dom1=p1?eTrab(p1[6]):false;
