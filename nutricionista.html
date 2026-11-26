@@ -445,6 +445,7 @@ async function enviar(){
     const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||'',avulsos:avAbertos().map(a=>{ const r=R['av_'+a.id]||{}; return {id:a.id,resp:r.resp,sugerir:!!r.sugerir,obs:r.resp==='nao'?(r.obs||''):'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS['av_'+a.id]?{base64:FOTOS['av_'+a.id].base64,tipo:'image/jpeg'}:null}; }),
       avulsosNovos:avNovos().map(n=>({texto:n.texto,peso:n.peso,resp:n.resp,sugerir:!!n.sugerir,obs:n.obs||'',plano:n.plano||'',foto:FOTOS[n.k]?{base64:FOTOS[n.k].base64,tipo:'image/jpeg'}:null}))});
     try{ localStorage.removeItem(chaveRasc()); }catch(e){}
+    bt.textContent='Enviar checklist'; // a próxima visita começa com o botão certo (antes ficava "Enviando...")
     document.getElementById('barra').style.display='none';
     app().innerHTML=`<div class="card" style="text-align:center"><div class="tit">${r.teste?'🧪 Teste — nada foi gravado':'✅ Checklist enviado'}</div>
       <div class="muted">${esc(LOJA)} · ${new Date().toLocaleDateString('pt-BR')}</div>
