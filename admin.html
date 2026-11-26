@@ -2291,7 +2291,7 @@
   }
 
   // ── Checklist da nutricionista (aba "Checklist nutricionista") ──
-  let nutAdmItens=[], nutAdmEdit=null, nutAdmCarregado=false;
+  let nutAdmItens=[], nutAdmEdit=null, nutAdmCarregado=false, nutAdmSug=[];
   async function carregarNutAdm(){
     const sel=document.getElementById('nutAdmLoja');
     if(!sel.options.length) sel.innerHTML='<option value="">Todas as lojas</option>'+REG_LOJAS.map(n=>`<option value="${chkEsc(n)}">${chkEsc(n)}</option>`).join('');
@@ -2299,7 +2299,7 @@
     try{
       const r=await chkAdmJsonp({action:'chkAdminNutListar'});
       if(!r||r.ok!==true) throw new Error((r&&r.erro&&!/não reconhecida/.test(r.erro))?r.erro:'Falta colar no Apps Script o código novo (CODIGO_APPS_SCRIPT_31102026_a) para editar o checklist da nutricionista.');
-      nutAdmItens=r.itens||[]; nutAdmCarregado=true; renderNutAdm();
+      nutAdmItens=r.itens||[]; nutAdmSug=r.sugestoes||[]; nutAdmCarregado=true; renderNutAdm();
     }catch(e){
       document.getElementById('nutAdmLista').innerHTML='<div style="color:var(--danger);font-size:0.85rem">⚠ '+chkEsc(e.message)+'</div>';
     }
@@ -2308,7 +2308,7 @@
     const loja=document.getElementById('nutAdmLoja').value, inat=document.getElementById('nutAdmInativos').checked;
     const lista=nutAdmItens.filter(it=>(inat||it.ativo) && (!loja||!it.lojasExcluidas.includes(loja)));
     const ativos=nutAdmItens.filter(it=>it.ativo), soma=ativos.reduce((a,it)=>a+it.peso,0);
-    let h='<div style="font-size:0.78rem;color:var(--muted)">'+ativos.length+' itens ativos · soma dos pesos '+soma+(loja?' · '+lista.filter(i=>i.ativo).length+' aparecem em '+chkEsc(loja):'')+'</div>';
+    let h=nutSugHtml()+'<div style="font-size:0.78rem;color:var(--muted)">'+ativos.length+' itens ativos · soma dos pesos '+soma+(loja?' · '+lista.filter(i=>i.ativo).length+' aparecem em '+chkEsc(loja):'')+'</div>';
     let sec=null;
     lista.forEach(it=>{
       if(it.secao!==sec){ sec=it.secao; h+='<div class="chk-adm-secao">'+chkEsc(sec)+'</div>'; }
@@ -2360,6 +2360,28 @@
     const it=nutAdmItens.find(x=>x.id===id);
     if(!ativo && !confirm('Tirar este item do checklist da nutricionista?\n\n"'+(it?it.item:'')+'"\n\nEle some da visita. Dá para voltar depois.')) return;
     try{ await chkAdmPost({action:'chkAdminNutAtivo',id,ativo}); showToast(ativo?'Item voltou para o checklist da nutricionista':'Item tirado do checklist da nutricionista','ok'); registrarLog('Checklist nutricionista: item '+(ativo?'voltou':'tirado')+' — '+(it?it.item:id),'ok'); await carregarNutAdm(); }
+    catch(e){ showToast(e.message,'warn'); }
+  }
+  // ⭐ Sugestões da nutricionista para o checklist fixo (26/11/2026): itens avulsos que ela marcou para virar item fixo
+  function nutSugHtml(){
+    if(!nutAdmSug.length) return '';
+    const secoes=[...new Set(nutAdmItens.map(x=>x.secao))];
+    let h='<div style="border:1px solid var(--gold);border-radius:12px;padding:12px;margin-bottom:16px"><div style="font-weight:800;color:var(--gold);margin-bottom:4px">⭐ Sugestões da nutricionista para o checklist fixo ('+nutAdmSug.length+')</div><div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Itens que ela cobrou fora do checklist e quer que virem item fixo. Aprovado = entra no checklist de todas as lojas a partir da próxima visita.</div>';
+    nutAdmSug.forEach(x=>{
+      h+=`<div class="chk-adm-item" style="flex-wrap:wrap"><div class="chk-adm-txt" style="min-width:200px"><b>${chkEsc(x.texto)}</b><div style="font-size:0.75rem;color:var(--muted);margin-top:3px">${chkEsc(x.unidade)} · ${chkEsc(x.criadoDia)} · peso ${x.peso}${x.foto&&/^https/.test(x.foto)?` · <a href="${chkEsc(x.foto)}" target="_blank" style="color:var(--gold)">foto</a>`:''}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;width:100%;margin-top:8px">
+          <select class="modal-input" id="nutSugSec_${x.id}" style="flex:1;min-width:140px">${secoes.map(sc=>`<option>${chkEsc(sc)}</option>`).join('')}<option>Itens avulsos aprovados</option></select>
+          <select class="modal-input" id="nutSugPeso_${x.id}" style="width:110px">${[1,2,3,4,5,6,7,8,9,10].map(v=>`<option value="${v}" ${v===x.peso?'selected':''}>peso ${v}</option>`).join('')}</select>
+          <button class="modal-btn confirm" style="padding:8px 12px;flex:0 0 auto" onclick="nutSugDecidir('${x.id}','aprovar')">✅ Aprovar</button>
+          <button class="modal-btn cancel" style="padding:8px 12px;flex:0 0 auto" onclick="nutSugDecidir('${x.id}','recusar')">Recusar</button></div></div>`;
+    });
+    return h+'</div>';
+  }
+  async function nutSugDecidir(id,decisao){
+    const x=nutAdmSug.find(y=>y.id===id); if(!x) return;
+    const secao=(document.getElementById('nutSugSec_'+id)||{}).value||'', peso=Number((document.getElementById('nutSugPeso_'+id)||{}).value)||x.peso;
+    if(decisao==='aprovar'&&!confirm('Colocar no checklist da nutricionista de TODAS as lojas?\n\n"'+x.texto+'"\nSeção: '+secao+' · peso '+peso)) return;
+    try{ await chkAdmPost({action:'chkAdminNutSugDecidir',id,decisao,secao,peso}); showToast(decisao==='aprovar'?'Item incluído no checklist da nutricionista':'Sugestão recusada','ok'); registrarLog('Checklist nutricionista: sugestão '+(decisao==='aprovar'?'aprovada':'recusada')+' — '+x.texto,'ok'); await carregarNutAdm(); }
     catch(e){ showToast(e.message,'warn'); }
   }
   async function moverNutItem(id,dir){

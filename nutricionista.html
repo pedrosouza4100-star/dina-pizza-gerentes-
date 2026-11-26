@@ -334,49 +334,54 @@ function itensTodos(){ return SECOES.flatMap(s=>s.itens); }
 // Na próxima visita da loja aparece de novo: Resolvido = sai da lista; Não resolvido = continua. Máximo de 5 abertos por loja.
 function avAbertos(){ return (INFO&&INFO.avulsos)||[]; }
 function avNovos(){ return R.__avn||(R.__avn=[]); }
-function avVagas(){ const lim=(INFO&&INFO.avLimite)||5; const cont=avAbertos().filter(a=>!(R['av_'+a.id]&&R['av_'+a.id].resp==='sim')).length; return lim-cont-avNovos().length; }
+function avVagas(){ const lim=(INFO&&INFO.avLimite)||5; const cont=avAbertos().filter(a=>!(R['av_'+a.id]&&R['av_'+a.id].resp==='sim')).length; return lim-cont-avNovos().filter(n=>n.resp!=='sim').length; } // feito na hora não ocupa vaga
 function avValido(){
   const sem=avAbertos().filter(a=>!(R['av_'+a.id]&&R['av_'+a.id].resp)); if(sem.length) return 'Diga se '+(sem.length>1?'os '+sem.length+' itens avulsos foram resolvidos':'o item avulso "'+sem[0].texto+'" foi resolvido')+'.';
   for(let i=0;i<avNovos().length;i++){ const n=avNovos()[i];
     if((n.texto||'').trim().length<10) return 'Item avulso novo '+(i+1)+': escreva o que está cobrando (mínimo 10 letras).';
     if(!n.peso) return 'Item avulso novo '+(i+1)+': escolha o peso (1 leve, 3 médio ou 5 grave).';
+    if(!n.resp) return 'Item avulso novo '+(i+1)+': marque se está feito ou não feito.';
     if(!FOTOS[n.k]) return 'Item avulso novo '+(i+1)+': tire a foto do problema (obrigatória).'; }
   if(avVagas()<0) return 'No máximo '+((INFO&&INFO.avLimite)||5)+' itens avulsos abertos nesta loja.';
   return '';
 }
-function avNovo(){ if(avVagas()<=0){ toast('Esta loja já tem '+((INFO&&INFO.avLimite)||5)+' itens avulsos abertos. Marque como resolvido o que já foi resolvido.'); return; } avNovos().push({k:'avn_'+Date.now(),texto:'',peso:0,obs:'',plano:''}); guardarRasc(); const y=window.scrollY; render(); window.scrollTo(0,y); }
+function avNovo(){ if(avVagas()<=0){ toast('Esta loja já tem '+((INFO&&INFO.avLimite)||5)+' itens avulsos abertos. Marque como resolvido o que já foi resolvido.'); return; } avNovos().push({k:'avn_'+Date.now(),texto:'',peso:0,resp:'',sugerir:false,obs:'',plano:''}); guardarRasc(); const y=window.scrollY; render(); window.scrollTo(0,y); }
 function avTirar(k){ R.__avn=avNovos().filter(n=>n.k!==k); delete FOTOS[k]; guardarRasc(); const y=window.scrollY; render(); window.scrollTo(0,y); }
-function avCampo(k,campo,v){ const n=avNovos().find(x=>x.k===k); if(!n) return; n[campo]=campo==='peso'?Number(v):v; guardarRasc(); if(campo==='peso'){ const y=window.scrollY; render(); window.scrollTo(0,y); } else atualizarBarra(); }
+function avCampo(k,campo,v){ const n=avNovos().find(x=>x.k===k); if(!n) return; n[campo]=campo==='peso'?Number(v):v; guardarRasc(); if(campo==='peso'||campo==='resp'||campo==='sugerir'){ const y=window.scrollY; render(); window.scrollTo(0,y); } else atualizarBarra(); }
 function avTexto(id){ const k='av_'+id; R[k]=R[k]||{resp:'nao'}; const o=document.getElementById('obs_'+k), pl=document.getElementById('plano_'+k); R[k].obs=o?o.value:''; R[k].plano=pl?pl.value:''; guardarRasc(); }
 function renderAvulsos(){
   if(!INFO||INFO.avLimite==null) return ''; // servidor antigo
   const lim=INFO.avLimite, PESOS=[[1,'1 · Leve'],[3,'3 · Médio'],[5,'5 · Grave']];
   let h=`<div class="card"><div class="secao"><span>➕ Itens avulsos</span><span class="muted">${avAbertos().length+avNovos().length} de ${lim}</span></div>
-    <div class="muted" style="margin-bottom:8px">Para cobrar algo que <b>não está no checklist</b>. Nasce como <b>NÃO</b>, entra na nota e vira correção para o gerente. Na próxima visita aparece aqui para você dizer se foi resolvido. No máximo ${lim} abertos por loja.</div>`;
+    <div class="muted" style="margin-bottom:8px">Para algo que <b>não está no checklist</b>. <b>Não feito</b> entra na nota como NÃO e vira correção para o gerente; <b>feito na hora</b> conta SIM e fica só registrado. Marque ⭐ para sugerir que vire item fixo do checklist. Na próxima visita aparece aqui para você dizer se foi resolvido. No máximo ${lim} abertos por loja.</div>`;
   avAbertos().forEach(a=>{
     const k='av_'+a.id, r=R[k]||{}, p=pendDo(k), falta=tentou&&!r.resp;
     h+=`<div class="item pend${falta?' falta':''}" id="it_${k}">
       <div class="reinc">🔁 Item avulso desde ${esc(a.criadoDia)}${p&&p.vezes>=2?' · <b>reincidência '+p.vezes+'x</b>':''}${a.foto&&/^https/.test(a.foto)?` · <a href="${esc(a.foto)}" target="_blank" style="color:var(--gold)">foto</a>`:''}${p?(p.situacao==='justificada'?`<br><b>O gerente disse que fez:</b> ${esc(p.justificativa)||'(só foto)'}${p.foto&&/^https/.test(p.foto)?` · <a href="${esc(p.foto)}" target="_blank" style="color:var(--gold)">ver foto</a>`:''}`:'<br><b>Ainda sem resposta do gerente.</b>'):''}</div>
       <div class="item-txt">${esc(a.texto)}<span class="peso">peso ${a.peso}</span></div>
       <div class="opts"><button class="sim${r.resp==='sim'?' on':''}" onclick="responder('${k}','sim')">✓ Resolvido (sai da lista)</button><button class="nao${r.resp==='nao'?' on':''}" onclick="responder('${k}','nao')">✗ Não resolvido</button></div>
+      ${a.sugerido?`<div class="muted" style="margin-top:8px">⭐ ${a.sugerido==='pendente'?'Sugerido para o checklist fixo — esperando a aprovação':a.sugerido==='recusado'?'Sugestão para o checklist fixo não aprovada':'Já está no checklist fixo'}</div>`:`<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:0.85rem"><input type="checkbox" ${r.sugerir?'checked':''} onchange="R['${k}']=Object.assign(R['${k}']||{},{sugerir:this.checked});guardarRasc()"> ⭐ Sugerir para o checklist fixo (todas as lojas)</label>`}
       ${r.resp==='nao'?`<div class="extra"><label>O que você encontrou hoje (opcional)</label><textarea id="obs_${k}" placeholder="Se deixar em branco, vale o texto do item" oninput="avTexto('${a.id}')">${esc(r.obs||'')}</textarea>
         <label>Plano de ação para o gerente</label><textarea id="plano_${k}" placeholder="O que deve ser feito?" oninput="avTexto('${a.id}')">${esc(r.plano||'')}</textarea>
         ${FOTOS[k]?`<div style="display:flex;gap:10px;align-items:center"><img class="foto-prev" src="${FOTOS[k].url}"><button class="foto-btn" style="width:auto" onclick="tirarFoto('${k}')">📷 Trocar foto</button></div>`:`<button class="foto-btn" onclick="tirarFoto('${k}')">📷 Tirar foto (opcional)</button>`}</div>`:''}
     </div>`;
   });
   avNovos().forEach((n,i)=>{
-    const ft=tentou&&(n.texto||'').trim().length<10, fp=tentou&&!n.peso, ff=tentou&&!FOTOS[n.k];
-    h+=`<div class="av-novo${ft||fp||ff?' falta':''}" id="it_${n.k}">
+    const ft=tentou&&(n.texto||'').trim().length<10, fp=tentou&&!n.peso, ff=tentou&&!FOTOS[n.k], fr=tentou&&!n.resp;
+    h+=`<div class="av-novo${ft||fp||ff||fr?' falta':''}" id="it_${n.k}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b class="amar">Novo item avulso ${i+1}</b><button class="foto-btn" style="width:auto;padding:5px 10px" onclick="avTirar('${n.k}')">✖ Tirar</button></div>
       <div class="extra" style="margin-top:0">
         <label>O que você está cobrando (obrigatório)</label>
         <textarea class="${ft?'falta':''}" placeholder="Ex.: Coifa da cozinha engordurada" oninput="avCampo('${n.k}','texto',this.value)">${esc(n.texto||'')}</textarea>
         <label>Peso (obrigatório)</label>
         <div class="pesos${fp?' falta':''}">${PESOS.map(([v,t])=>`<button class="${n.peso===v?'on':''}" onclick="avCampo('${n.k}','peso',${v})">${t}</button>`).join('')}</div>
+        <label>Situação (obrigatório)</label>
+        <div class="opts${tentou&&!n.resp?' falta':''}" style="margin-top:0"><button class="nao${n.resp==='nao'?' on':''}" onclick="avCampo('${n.k}','resp','nao')">✗ Não feito — cobrar o gerente</button><button class="sim${n.resp==='sim'?' on':''}" onclick="avCampo('${n.k}','resp','sim')">✓ Feito na hora</button></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:0.85rem;text-transform:none"><input type="checkbox" ${n.sugerir?'checked':''} onchange="avCampo('${n.k}','sugerir',this.checked)"> ⭐ Sugerir para o checklist fixo (todas as lojas; o Robson aprova)</label>
         <label>O que encontrou (opcional)</label>
         <textarea placeholder="Detalhe o problema" oninput="avCampo('${n.k}','obs',this.value)">${esc(n.obs||'')}</textarea>
-        <label>Plano de ação para o gerente</label>
-        <textarea placeholder="O que deve ser feito?" oninput="avCampo('${n.k}','plano',this.value)">${esc(n.plano||'')}</textarea>
+        ${n.resp!=='sim'?`<label>Plano de ação para o gerente</label>
+        <textarea placeholder="O que deve ser feito?" oninput="avCampo('${n.k}','plano',this.value)">${esc(n.plano||'')}</textarea>`:''}
         ${FOTOS[n.k]?`<div style="display:flex;gap:10px;align-items:center"><img class="foto-prev" src="${FOTOS[n.k].url}"><button class="foto-btn" style="width:auto" onclick="tirarFoto('${n.k}')">📷 Trocar foto</button></div>`:`<button class="foto-btn${ff?' falta':''}" onclick="tirarFoto('${n.k}')">📷 Tirar foto (obrigatória)</button>`}
       </div></div>`;
   });
@@ -387,7 +392,7 @@ function renderAvulsos(){
 function notaParcial(){
   let p=0,t=0; itensTodos().forEach(it=>{ const r=R[it.id]; if(r&&(r.resp==='sim'||r.resp==='nao')){ t+=it.peso; if(r.resp==='sim') p+=it.peso; } });
   avAbertos().forEach(a=>{ const r=R['av_'+a.id]; if(r&&(r.resp==='sim'||r.resp==='nao')){ t+=a.peso; if(r.resp==='sim') p+=a.peso; } });
-  avNovos().forEach(n=>{ if(n.peso) t+=n.peso; });
+  avNovos().forEach(n=>{ if(n.peso&&n.resp){ t+=n.peso; if(n.resp==='sim') p+=n.peso; } });
   return t?Math.round(p/t*1000)/10:null;
 }
 function fmtNota(n){ return n==null?'—':String(n).replace('.',',')+'%'; }
@@ -437,8 +442,8 @@ async function enviar(){
   bt.textContent='Enviando...';
   const itens=itensTodos().map(it=>{ const r=R[it.id]; return {id:it.id,resp:r.resp,obs:r.resp==='nao'?r.obs:'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS[it.id]?{base64:FOTOS[it.id].base64,tipo:'image/jpeg'}:null}; });
   try{
-    const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||'',avulsos:avAbertos().map(a=>{ const r=R['av_'+a.id]||{}; return {id:a.id,resp:r.resp,obs:r.resp==='nao'?(r.obs||''):'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS['av_'+a.id]?{base64:FOTOS['av_'+a.id].base64,tipo:'image/jpeg'}:null}; }),
-      avulsosNovos:avNovos().map(n=>({texto:n.texto,peso:n.peso,obs:n.obs||'',plano:n.plano||'',foto:FOTOS[n.k]?{base64:FOTOS[n.k].base64,tipo:'image/jpeg'}:null}))});
+    const r=await post({action:'nutriSalvar',chave:H,unidade:LOJA,lat:POS?POS.lat:'',lng:POS?POS.lng:'',acc:POS?POS.acc:'',itens,obs:R.__obs||'',avulsos:avAbertos().map(a=>{ const r=R['av_'+a.id]||{}; return {id:a.id,resp:r.resp,sugerir:!!r.sugerir,obs:r.resp==='nao'?(r.obs||''):'',plano:r.resp==='nao'?(r.plano||''):'',foto:r.resp==='nao'&&FOTOS['av_'+a.id]?{base64:FOTOS['av_'+a.id].base64,tipo:'image/jpeg'}:null}; }),
+      avulsosNovos:avNovos().map(n=>({texto:n.texto,peso:n.peso,resp:n.resp,sugerir:!!n.sugerir,obs:n.obs||'',plano:n.plano||'',foto:FOTOS[n.k]?{base64:FOTOS[n.k].base64,tipo:'image/jpeg'}:null}))});
     try{ localStorage.removeItem(chaveRasc()); }catch(e){}
     document.getElementById('barra').style.display='none';
     app().innerHTML=`<div class="card" style="text-align:center"><div class="tit">${r.teste?'🧪 Teste — nada foi gravado':'✅ Checklist enviado'}</div>
