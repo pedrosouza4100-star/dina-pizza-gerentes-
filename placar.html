@@ -209,6 +209,7 @@
   .hdr-bt:active{transform:scale(.97)}
   .hdr-n{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:.7rem;line-height:20px}
   footer .sair-link{display:block;margin:0 auto 8px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--muted);font:700 .8rem Inter,Arial,sans-serif;padding:9px 16px;cursor:pointer}
+  .rs{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer;border-bottom:1px dashed var(--muted);white-space:nowrap}.rs.ver{border-bottom-color:transparent}
   .sub-etapa{grid-column:1/-1;font-size:.74rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 2px -2px}
   /* cartões que abrem e fecham: fechado = só o título e um resumo */
   .card.cx>.cx-lab{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -690,21 +691,6 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     <!-- Etapa 3: números do caixa, no fim da noite -->
     <div class="etapa-titulo"><b>3</b> Números do caixa — no fim da noite</div>
     <div class="cards-grid">
-      <!-- Faturamento -->
-      <div class="card card-full" id="cardFat">
-        <div class="card-label">💰 Faturamento do dia</div>
-        <div class="atencao-campo">⚠️ Informe o <b>faturamento LÍQUIDO do Alpha</b> (já tirados os descontos e as cortesias). É esse número que o placar confere com o sistema.</div>
-        <div class="card-meta" id="metaFatDisplay"></div>
-        <div class="card-meta muted" id="periodoDisplay"></div>
-        <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
-        <div id="alpBox" class="alp-box" style="display:none">
-          <button type="button" class="alp-btn" id="alpBtn" onclick="alpBuscar()">🔌 Buscar no Alpha</button>
-          <div id="alpInfo" class="alp-info"></div>
-        </div>
-        <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
-        <span class="tag" id="fatTag"></span>
-        <div class="meta-mes" id="mm_fat"></div>
-      </div>
       <div class="card card-full" id="cardBuffets" style="display:none">
         <div class="card-label">🍽️ Buffets Vendidos</div>
         <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b> Buffet por quilo: <b>cada prato pesado na balança conta 1.</b></div>
@@ -753,17 +739,17 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <span class="tag" id="ifoodTag"></span>
         <div class="meta-mes" id="mm_ifood"></div>
       </div>
+      <div class="sub-etapa">📞 Chamados e cancelamentos do dia</div>
       <!-- Chamados -->
-      <div class="card card-full" id="cardChamados">
+      <div class="card" id="cardChamados">
         <div class="card-label">📞 Chamados</div>
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="chamados" type="number" inputmode="numeric" placeholder="0"></div>
         <span class="tag" id="chamadosTag"></span>
         <div class="meta-mes mini" id="mm_chamados"></div>
       </div>
-      <div class="sub-etapa">❌ Cancelamentos do dia</div>
       <!-- Cancelamentos -->
-      <div class="card card-full" id="cardCancel">
+      <div class="card" id="cardCancel">
         <div class="card-label">❌ Cancelamentos</div>
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
@@ -796,6 +782,22 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div id="pedidosIfoodAlerta" style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:rgba(255,68,68,0.12);border:1px solid var(--danger);color:var(--danger);font-size:0.85rem;font-weight:700">
           🚨 Você está com problema na operação — sugiro que busque ajuda.
         </div>
+      </div>
+      <div class="sub-etapa">💰 Fechamento do caixa</div>
+      <!-- Faturamento -->
+      <div class="card card-full" id="cardFat">
+        <div class="card-label">💰 Faturamento do dia</div>
+        <div class="atencao-campo">⚠️ Informe o <b>faturamento LÍQUIDO do Alpha</b> (já tirados os descontos e as cortesias). É esse número que o placar confere com o sistema.</div>
+        <div class="card-meta" id="metaFatDisplay"></div>
+        <div class="card-meta muted" id="periodoDisplay"></div>
+        <div class="input-wrap"><span class="prefix">R$</span><input class="val" id="fat" type="text" inputmode="decimal" placeholder="0,00" oninput="formatarMoedaInput(this)" onblur="validarFaturamento()"></div>
+        <div id="alpBox" class="alp-box" style="display:none">
+          <button type="button" class="alp-btn" id="alpBtn" onclick="alpBuscar()">🔌 Buscar no Alpha</button>
+          <div id="alpInfo" class="alp-info"></div>
+        </div>
+        <div id="fatAlerta" style="display:none;font-size:0.95rem;line-height:1.5;padding:18px 16px;border-radius:12px;margin-top:12px;background:rgba(255,59,59,0.18);border:3px solid var(--danger);color:#fff;text-align:center;box-shadow:0 0 16px rgba(255,59,59,0.4)"></div>
+        <span class="tag" id="fatTag"></span>
+        <div class="meta-mes" id="mm_fat"></div>
       </div>
       <!-- Conferir com o Alpha: último dos números (confere todos os de cima) -->
       <!-- Conferir com o Alpha (08/11/2026): o gerente preenche primeiro e depois confere -->
@@ -1753,9 +1755,16 @@ async function missaoCarregar(u){
     window._missao=r; missaoDesenhar(); card.style.display='';
   }catch(e){ card.style.display='none'; }
 }
+// Valores em R$ da Missão só aparecem enquanto o dedo está em cima (26/11/2026, igual ao Minha loja): print não mostra o faturamento.
+function rsMask(txt){ return '<span class="rs" data-v="'+String(txt).replace(/"/g,'&quot;')+'">R$ ••••</span>'; }
+function rsEsconder(){ document.querySelectorAll('.rs.ver').forEach(e=>{ e.classList.remove('ver'); e.textContent='R$ ••••'; }); }
+document.addEventListener('pointerdown',ev=>{ const e=ev.target.closest&&ev.target.closest('.rs'); if(!e) return; rsEsconder(); e.classList.add('ver'); e.textContent=e.dataset.v; });
+['pointerup','pointercancel','scroll','blur'].forEach(t=>window.addEventListener(t,rsEsconder,true));
+document.addEventListener('visibilitychange',rsEsconder);
+document.addEventListener('contextmenu',ev=>{ if(ev.target.closest&&ev.target.closest('.rs')) ev.preventDefault(); });
 function missaoDesenhar(){
   const r=window._missao, el=document.getElementById('missaoCorpo'); if(!r||!el) return;
-  const fmt=(v,rs)=>rs?'R$ '+Math.round(v).toLocaleString('pt-BR'):Math.round(v).toLocaleString('pt-BR');
+  const fmt=(v,rs)=>rs?rsMask('R$ '+Math.round(v).toLocaleString('pt-BR')):Math.round(v).toLocaleString('pt-BR');
   const atras=r.itens.filter(i=>i.atrasado);
   let h=atras.length?'<div style="font-size:0.9rem;margin:4px 0 8px;color:var(--d-text2)">Para voltar ao ritmo do mês, hoje a loja precisa de:</div>'
     :'<div style="font-weight:700;color:var(--d-green);margin:4px 0 8px">✅ Loja no ritmo do mês. Mantenha!</div>';
@@ -3607,7 +3616,6 @@ function verificarBotaoRegistrar(){
   }
   if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
-  if(!filled('fat')) faltando.push('💰 Faturamento');
   if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
   if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
   if(_bebFalta) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão');
@@ -3630,6 +3638,7 @@ function verificarBotaoRegistrar(){
     const piv=ival('pedidosIfood');
     if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos Pedidos Não Confirmados');
   }
+  if(!filled('fat')) faltando.push('💰 Faturamento');
   if(ALPC_ATIVO&&!_bebFalta&&!ALPC) faltando.push('🔌 Conferir com o Alpha'); // o Alpha é o último dos números
   if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
