@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Hortifrúti pelo QR Code da equipe (26/11/2026, servidor 2026-11-26-b, recurso hfEquipe).
+     Aberta pelo QR Code que o gerente mostra no card do hortifrúti do placar (?t=<token>): sem senha, só hoje, só dentro da loja.
+     A pessoa (normalmente o chefe de cozinha) conta o que TEM, diz quanto PEDIR e o que jogou fora, e envia para o gerente conferir.
+     Modo teste do placar: ?teste=1&loja=<loja>&pessoa=<nome> — mostra a tela como a pessoa vê e não grava nada. -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Hortifrúti da equipe — Dina Pizza</title>
+<meta name="theme-color" content="#07090E">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<link rel="icon" href="logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:var(--d-bg);--card:var(--d-card);--surface:var(--d-surface);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--gold:var(--d-gold);--red:var(--d-red)}
+body{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--d-surface);border-bottom:1px solid var(--border)}
+header img{width:40px;height:40px}
+.h-tit{font-weight:900;font-size:1rem}.h-sub{font-size:.78rem;color:var(--muted)}
+main{padding:16px;max-width:620px;margin:0 auto 60px}
+.teste{background:#4b1d7a;color:#fff;font-weight:800;text-align:center;padding:8px;font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.ola{font-size:1.15rem;font-weight:900}.muted{color:var(--muted);font-size:.85rem;line-height:1.4}
+.tit{font-weight:900;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.it{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--surface)}
+.it.falta{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset}
+.it.on{border-color:var(--green)}
+.it-nome{font-weight:800;font-size:.95rem}
+.campos{display:flex;gap:10px;margin-top:8px}
+.campos label{flex:1;font-size:.75rem;color:var(--muted);font-weight:700}
+.campos input,.um input{display:block;width:100%;margin-top:4px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:1.05rem;font-weight:800}
+.um{display:flex;align-items:center;gap:10px}.um .it-nome{flex:1}.um input{width:90px;margin:0}.um .u{font-size:.8rem;color:var(--muted);width:56px}
+.dica{font-size:.8rem;color:var(--muted);margin-top:6px;line-height:1.35}
+.dica b{color:var(--text)}
+.nada{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-weight:700;cursor:pointer}
+.nada input{width:20px;height:20px}
+.txt{width:100%;margin-top:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:.92rem;font-family:inherit}
+details{margin-top:10px;border:1px dashed var(--border);border-radius:12px;padding:8px 12px}
+details summary{cursor:pointer;font-weight:800;font-size:.9rem}
+.btn{width:100%;border:none;border-radius:14px;padding:15px;font-weight:900;font-size:1rem;cursor:pointer;background:var(--red);color:#fff;margin-top:14px}
+.btn:disabled{opacity:.55}
+.msg{margin-top:10px;font-size:.9rem;font-weight:700;min-height:18px}
+.fim{text-align:center;font-size:1.05rem;line-height:1.5}
+.fim b{font-size:2.6rem;display:block}
+</style>
+</head>
+<body>
+<div id="testeBar" class="teste" style="display:none">🧪 MODO TESTE — é assim que a pessoa da equipe vê. Nada é gravado.</div>
+<header><img src="logo-emblema.png" alt="Dina Pizza"><div><div class="h-tit">Dina Pizza · Hortifrúti da equipe</div><div class="h-sub" id="hLoja">Carregando…</div></div></header>
+<main id="main"><div class="card muted">Carregando a contagem do hortifrúti…</div></main>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+const Q=new URLSearchParams(location.search), TESTE=Q.get('teste')==='1', TOKEN=Q.get('t')||'';
+let D=null, TEM={}, PED={}, JOG={}, AUTO={}, NADA=false, OUTROS='', TENTOU=false, ENVIANDO=false, EST={};
+function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function num(v){ let s=String(v==null?'':v).trim(); if(!s) return NaN; if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.'); return Number(s); }
+function vazio(v){ return String(v==null?'':v).trim()===''; }
+function fmt(n){ return String(Math.round(n*10)/10).replace('.',','); }
+function jsonp(params){ return new Promise((res,rej)=>{ const cb='ehCb_'+Date.now()+Math.floor(Math.random()*999), s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); rej(new Error('tempo')); },25000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); res(j); }; s.onerror=()=>{ clearTimeout(t); delete window[cb]; rej(new Error('rede')); };
+  s.src=SCRIPT_URL+'?'+new URLSearchParams(Object.assign(params,{callback:cb,_:Date.now()})).toString(); document.head.appendChild(s); }); }
+function rasc(){ return 'eqhf_'+(TOKEN||'teste'); }
+function guardar(){ try{ localStorage.setItem(rasc(),JSON.stringify({TEM,PED,JOG,AUTO,NADA,OUTROS})); }catch(e){} }
+function restaurar(){ try{ const g=JSON.parse(localStorage.getItem(rasc())||'null'); if(g){ TEM=g.TEM||{}; PED=g.PED||{}; JOG=g.JOG||{}; AUTO=g.AUTO||{}; NADA=!!g.NADA; OUTROS=g.OUTROS||''; } }catch(e){} }
+
+async function iniciar(){
+  if(TESTE){
+    document.getElementById('testeBar').style.display='block';
+    let r=null; try{ r=await jsonp({action:'hfEstado',unidade:Q.get('loja')||''}); }catch(e){}
+    D={ok:true,tipo:'hf',unidade:Q.get('loja')||'Loja',pessoa:Q.get('pessoa')||'Colaborador',situacao:'aberta',confere:false,
+      catalogo:(r&&r.catalogo)||[{nome:'Tomate',un:'kg'},{nome:'Cebola',un:'kg'},{nome:'Alface',un:'pé'}],caixa:!!(r&&r.caixa),caixaKg:(r&&r.caixaKg)||21,estoque:(r&&r.estoque)||null,sugestao:(r&&r.sugestao)||null};
+  } else {
+    if(!TOKEN){ erro('Este endereço não tem o código do QR. Peça ao gerente para mostrar o QR Code de novo.'); return; }
+    try{ D=await jsonp({action:'chkDelAbrir',tk:TOKEN}); }catch(e){ D=null; }
+    if(!D||!D.ok){ erro((D&&D.erro)||'Sem conexão. Confira a internet e abra o QR de novo.'); return; }
+    if(D.tipo!=='hf'){ location.replace('equipe-checklist.html'+location.search); return; }
+  }
+  (D.estoque&&D.estoque.itens||[]).forEach(e=>{ EST[e.nome]=e; });
+  restaurar();
+  if(D.situacao==='enviada'&&D.respostas&&!Object.keys(TEM).length&&!Object.keys(PED).length){ // já enviou: mostra o que mandou
+    const R=D.respostas; Object.entries(R.estoque||{}).forEach(([k,v])=>TEM[k]=fmt(v)); Object.entries(R.qtd||{}).forEach(([k,v])=>PED[k]=fmt(v)); Object.entries(R.perda||{}).forEach(([k,v])=>JOG[k]=fmt(v)); NADA=!!R.nadaFalta; OUTROS=R.outros||''; }
+  else if(!Object.keys(PED).length&&D.sugestao&&D.sugestao.ativa) Object.entries(D.sugestao.itens||{}).forEach(([k,v])=>{ if(!EST[k]){ PED[k]=fmt(v); AUTO[k]=1; } });
+  desenhar();
+}
+function erro(t){ document.getElementById('hLoja').textContent=''; document.getElementById('main').innerHTML='<div class="card fim"><b>⚠️</b>'+esc(t)+'</div>'; }
+
+function dica(nome){ // igual ao placar: usa X/dia, dá para Y dias, sugerido pedir Z
+  const e=EST[nome]; if(!e||vazio(TEM[nome])) return '';
+  const E=num(TEM[nome]); if(isNaN(E)||E<0) return '<span style="color:var(--red)">Use só números (ex.: 2 ou 1,5).</span>';
+  const c=e.consumoDia, M=(D.estoque&&D.estoque.margem)||0.15;
+  if(c===null||c===undefined) return '📊 O sistema ainda está aprendendo o consumo da loja.';
+  if(c<=0) return '✅ Não gastou nos últimos dias.';
+  const dias=E/c, falta=Math.max(0,c*(1+M)-E), fat=e.fator; let ped=0;
+  if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:(x>0?Math.max(1,Math.ceil(x-0.25)):0); if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
+  if(fat&&!NADA&&(vazio(PED[nome])||AUTO[nome])){ PED[nome]=ped>0?fmt(ped):''; AUTO[nome]=1; }
+  let h=(ped>0?'🛒':'✅')+' Usa <b>'+fmt(c)+' '+esc(e.un)+'/dia</b>. O que tem dá para <b>'+fmt(dias)+' dia'+(dias>=1.05&&dias<1.95?'':'s')+'</b>. '+(fat?(ped>0?'Sugerido pedir <b>'+fmt(ped)+' '+esc(e.unCompra)+'</b>.':'Não precisa pedir.'):'');
+  const P=num(PED[nome])||0, dur=(E+(fat?P*fat:0))/c;
+  if(dur>e.frescor+0.01) h+='<br><span style="color:var(--red)">⚠️ Vai ter para '+fmt(dur)+' dias: '+esc(nome.toLowerCase())+' dura cerca de '+e.frescor+'. Risco de estragar, peça menos.</span>';
+  return h;
+}
+function faltamTem(){ return Object.keys(EST).filter(n=>vazio(TEM[n])||isNaN(num(TEM[n]))||num(TEM[n])<0); }
+function desenhar(){
+  document.getElementById('hLoja').textContent=D.unidade+' · Lista de compras do hortifrúti';
+  if(D.situacao==='confirmada'){ document.getElementById('main').innerHTML='<div class="card fim"><b>✅</b>O gerente já conferiu e salvou a lista.<br>Obrigado, '+esc(D.pessoa.split(' ')[0])+'!</div>'; return; }
+  const y=window.scrollY, fT=TENTOU?faltamTem():[];
+  let h='<div class="card"><div class="ola">Olá, '+esc(D.pessoa.split(' ')[0])+'!</div><div class="muted" style="margin-top:6px">O gerente passou para você a <b>contagem do hortifrúti</b>. Conte <b>de verdade</b> o que tem na câmara fria e no estoque e diga quanto precisa pedir para amanhã. Fica gravado com o seu nome e o gerente confere antes de salvar.</div>'
+    +(D.caixa?'<div class="muted" style="margin-top:6px">📦 Aqui o pedido é em <b>caixas</b> (cerca de '+esc(D.caixaKg)+' kg cada).</div>':'')
+    +(D.situacao==='enviada'?'<div class="muted" style="margin-top:10px;color:var(--gold)">Você já enviou às '+esc(D.enviadoHora||'')+'. Se precisar corrigir, mude e envie de novo antes de o gerente salvar.</div>':'')+'</div>';
+  const cat=D.catalogo||[], comE=cat.filter(i=>EST[i.nome]), semE=cat.filter(i=>!EST[i.nome]);
+  comE.forEach(i=>dica(i.nome)); // preenche o pedido sugerido antes de desenhar
+  if(comE.length){
+    h+='<div class="card"><div class="tit">1 · Conte o que tem agora</div><div class="muted">Se não tem, coloque 0. O sistema mostra para quantos dias dá e sugere quanto pedir.</div>';
+    comE.forEach(i=>{ const e=EST[i.nome], n=esc(i.nome);
+      h+='<div class="it'+(fT.indexOf(i.nome)>=0?' falta':'')+(num(PED[i.nome])>0?' on':'')+'" data-n="'+n+'"><div class="it-nome">'+n+'</div><div class="campos">'
+        +'<label>tem ('+esc(e.un)+')<input inputmode="decimal" value="'+esc(TEM[i.nome]||'')+'" placeholder="?" oninput="mudouTem(\''+n+'\',this.value)"></label>'
+        +'<label>pedir ('+esc(i.un)+')<input inputmode="decimal" data-p="'+n+'" value="'+esc(PED[i.nome]||'')+'" placeholder="0" oninput="mudouPed(\''+n+'\',this.value)"></label></div>'
+        +'<div class="dica" data-d="'+n+'">'+dica(i.nome)+'</div></div>'; });
+    h+='</div>';
+  }
+  if(semE.length){
+    h+='<div class="card"><div class="tit">'+(comE.length?'2 · ':'')+'Quanto pedir dos outros itens</div><div class="muted">Deixe em branco o que não precisa.</div>';
+    semE.forEach(i=>{ const n=esc(i.nome);
+      h+='<div class="it um'+(num(PED[i.nome])>0?' on':'')+'"><div class="it-nome">'+n+(AUTO[i.nome]?' <span style="font-size:.7rem;color:var(--gold)">sugerido</span>':'')+'</div><input inputmode="decimal" data-p="'+n+'" value="'+esc(PED[i.nome]||'')+'" placeholder="0" oninput="mudouPed(\''+n+'\',this.value)"><span class="u">'+esc(i.un)+'</span></div>'; });
+    h+='</div>';
+  }
+  h+='<div class="card"><label class="nada"><input type="checkbox" '+(NADA?'checked':'')+' onchange="mudouNada(this.checked)"> ✅ Conferi, não precisa pedir nada</label>'
+    +'<input class="txt" maxlength="200" placeholder="Outros itens com quantidade (ex.: abacaxi 3 unidades) — opcional" value="'+esc(OUTROS)+'" oninput="OUTROS=this.value;if(this.value.trim())NADA=false;guardar()">';
+  if(comE.length) h+='<details'+(Object.values(JOG).some(v=>num(v)>0)?' open':'')+'><summary>🗑️ Joguei fora hoje (opcional)</summary><div class="muted" style="margin:4px 0">Mercadoria que estragou e foi para o lixo. Ajuda a pedir só o necessário.</div>'
+    +comE.map(i=>'<div class="it um"><div class="it-nome">'+esc(i.nome)+'</div><input inputmode="decimal" value="'+esc(JOG[i.nome]||'')+'" placeholder="0" oninput="JOG[\''+esc(i.nome)+'\']=this.value;guardar()"><span class="u">'+esc(EST[i.nome].un)+'</span></div>').join('')+'</details>';
+  h+='<button class="btn" id="btEnviar" onclick="enviar()">Enviar para o gerente</button><div class="msg" id="msg"></div></div>';
+  document.getElementById('main').innerHTML=h; window.scrollTo(0,y); botao();
+}
+function atualizaLinha(nome){ const row=document.querySelector('.it[data-n="'+CSS.escape(nome)+'"]'); if(!row) return; const d=row.querySelector('.dica'); if(d) d.innerHTML=dica(nome);
+  const ip=row.querySelector('[data-p]'); if(ip&&AUTO[nome]) ip.value=PED[nome]||''; row.classList.toggle('on',num(PED[nome])>0); row.classList.remove('falta'); botao(); }
+function mudouTem(nome,v){ TEM[nome]=v; atualizaLinha(nome); guardar(); }
+function mudouPed(nome,v){ PED[nome]=v; delete AUTO[nome]; if(num(v)>0&&NADA){ NADA=false; const c=document.querySelector('.nada input'); if(c) c.checked=false; } const row=document.querySelector('.it[data-n="'+CSS.escape(nome)+'"]'); if(row){ const d=row.querySelector('.dica'); if(d) d.innerHTML=dica(nome); row.classList.toggle('on',num(v)>0); } guardar(); botao(); }
+function mudouNada(on){ NADA=on; if(on){ PED={}; AUTO={}; OUTROS=''; } guardar(); desenhar(); }
+function botao(){ const b=document.getElementById('btEnviar'); if(!b) return; const n=faltamTem().length; const m=document.getElementById('msg'); if(!n&&m&&/Conte quanto TEM/.test(m.textContent)) m.textContent=''; b.textContent=n?'Conte todos os itens (faltam '+n+')':'Enviar para o gerente'; }
+function posicao(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null);
+  navigator.geolocation.getCurrentPosition(p=>res(p.coords),()=>res(null),{enableHighAccuracy:true,timeout:20000,maximumAge:0}); }); }
+function avisa(t,cor){ const m=document.getElementById('msg'); m.style.color=cor||'var(--red)'; m.textContent=t; }
+async function enviar(){
+  if(ENVIANDO) return;
+  const fT=faltamTem(); if(fT.length){ TENTOU=true; desenhar(); const f=document.querySelector('.it.falta'); if(f) f.scrollIntoView({behavior:'smooth',block:'center'}); avisa('Conte quanto TEM de: '+fT.join(', ')+' (se não tem, coloque 0).'); return; }
+  const ruins=Object.keys(PED).filter(k=>!vazio(PED[k])&&(isNaN(num(PED[k]))||num(PED[k])<0)).concat(Object.keys(JOG).filter(k=>!vazio(JOG[k])&&(isNaN(num(JOG[k]))||num(JOG[k])<0)));
+  if(ruins.length){ avisa('Número inválido em: '+ruins.join(', ')+'. Use só números (ex.: 2 ou 1,5).'); return; }
+  const pedidos=Object.keys(PED).filter(k=>num(PED[k])>0).map(k=>({nome:k,qtd:num(PED[k])}));
+  if(!NADA&&!pedidos.length&&!OUTROS.trim()){ avisa('Coloque quanto precisa pedir ou marque "Conferi, não precisa pedir nada".'); return; }
+  ENVIANDO=true; const b=document.getElementById('btEnviar'); b.disabled=true;
+  try{
+    if(TESTE){ fim('🧪 No teste nada foi enviado. De verdade, o gerente veria agora no placar "'+esc(D.pessoa.split(' ')[0])+' enviou", com os números já no card, para conferir e salvar.'); return; }
+    let c=null; if(D.confere){ avisa('📍 Conferindo se você está na loja…','var(--muted)'); c=await posicao();
+      if(!c){ avisa('📍 Ligue a localização do celular e permita para este site. A contagem só pode ser enviada dentro da loja.'); return; } }
+    avisa('Enviando…','var(--muted)');
+    const corpo={action:'chkDelEnviar',tk:TOKEN,estoque:Object.keys(EST).map(k=>({nome:k,qtd:num(TEM[k])})),perda:Object.keys(JOG).filter(k=>num(JOG[k])>0).map(k=>({nome:k,qtd:num(JOG[k])})),pedidos,nadaFalta:NADA,outros:OUTROS.trim(),lat:c?c.latitude:'',lng:c?c.longitude:'',acc:c?c.accuracy:''};
+    let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(corpo)}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
+    if(!(r&&r.ok)){ avisa('Não enviou: '+((r&&r.erro)||'sem conexão. Tente de novo.')); return; }
+    try{ localStorage.removeItem(rasc()); }catch(e){}
+    fim('Enviado às '+esc(r.hora)+'. Avise o gerente que a contagem do hortifrúti está pronta para ele conferir.');
+  } finally { ENVIANDO=false; if(b) b.disabled=false; }
+}
+function fim(t){ document.getElementById('main').innerHTML='<div class="card fim"><b>✅</b>'+t+'</div>'; window.scrollTo(0,0); }
+iniciar();
+</script>
+</body>
+</html>

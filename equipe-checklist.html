@@ -82,6 +82,7 @@ async function iniciar(){
     if(!TOKEN){ erro('Este endereço não tem o código do QR. Peça ao gerente para mostrar o QR Code de novo.'); return; }
     try{ D=await jsonp({action:'chkDelAbrir',tk:TOKEN}); }catch(e){ D=null; }
     if(!D||!D.ok){ erro((D&&D.erro)||'Sem conexão. Confira a internet e abra o QR de novo.'); return; }
+    if(D.tipo==='hf'){ location.replace('equipe-hortifruti.html'+location.search); return; } // QR do hortifrúti (2026-11-26-b)
   }
   MIN=D.minDesc||5; restaurar(); desenhar();
 }
