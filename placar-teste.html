@@ -199,6 +199,36 @@
   .camera-btn,.falta-btn,.turno-btn,.chk-turno-btn{border-radius:12px}
   .chk-status-header,.chk-modal-header{background:linear-gradient(135deg,#B3261E,#D93025)}
   @media(max-width:360px){#dateDisplay{display:none}}
+  /* ═══ 26/11/2026: placar com ordem nova e visual padronizado ═══ */
+  header.dina-aneis{flex-direction:column;align-items:stretch;gap:10px;padding:12px 14px 10px}
+  .hdr-linha1{display:flex;align-items:center;gap:10px}
+  .hdr-linha1 .hdr-marca{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+  .hdr-linha1 .hdr-tit{display:flex;flex-direction:column;min-width:0}
+  .hdr-linha1 .unit-badge{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hdr-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:6px}
+  .hdr-bt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;padding:6px 4px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-decoration:none;font:700 0.72rem/1.15 Inter,Arial,sans-serif;text-align:center}
+  .hdr-bt .hdr-ic{font-size:1.15rem;line-height:1}
+  .hdr-bt:active{transform:scale(.97)}
+  .hdr-n{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:.7rem;line-height:20px}
+  footer .sair-link{display:block;margin:0 auto 8px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--muted);font:700 .8rem Inter,Arial,sans-serif;padding:9px 16px;cursor:pointer}
+  .sub-etapa{grid-column:1/-1;font-size:.74rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 2px -2px}
+  /* cartões que abrem e fecham: fechado = só o título e um resumo */
+  .card.cx>.cx-lab{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card.cx>.cx-lab::after{content:'▾';font-size:1rem;color:var(--muted);transition:transform .2s}
+  .card.cx.cx-fechado>.cx-lab::after{transform:rotate(-90deg)}
+  .card.cx.cx-fechado>*:not(.cx-lab):not(.cx-resumo){display:none!important}
+  .cx-resumo{display:none;font-size:.82rem;color:var(--muted);margin-top:6px;cursor:pointer}
+  .card.cx.cx-fechado>.cx-resumo{display:block}
+  .cx-resumo.ok{color:var(--green)} .cx-resumo.falta{color:var(--gold)}
+  /* meta do mês: uma linha; o detalhe abre no toque */
+  .meta-mes{padding:8px 12px;border-width:1px}
+  .meta-mes details>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .meta-mes details>summary::-webkit-details-marker{display:none}
+  .meta-mes details>summary .mm-tit{margin:0;font-size:.82rem}
+  .meta-mes .mm-abrir{font-size:.72rem;color:var(--muted);white-space:nowrap}
+  .meta-mes details[open] .mm-abrir{display:none}
+  .meta-mes details>div{margin-top:6px}
+
   .falta-ir{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:600 0.86rem Inter,Arial,sans-serif;text-align:left;cursor:pointer}
   .falta-ir span{color:var(--gold);font-size:1.1rem}
   @keyframes faltaPisca{0%,100%{box-shadow:0 0 0 0 rgba(255,208,0,0)}25%,75%{box-shadow:0 0 0 4px rgba(255,208,0,0.85)}50%{box-shadow:0 0 0 2px rgba(255,208,0,0.4)}}
@@ -332,11 +362,17 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
 <!-- APP -->
 <div id="appWrap">
   <header class="dina-aneis">
+    <!-- 26/11/2026: topo padronizado — linha 1 loja e data; linha 2 botões iguais; "Sair / Trocar loja" foi para o rodapé -->
+    <div class="hdr-linha1">
     <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza Gastronomia" width="48" height="47"></span><span class="hdr-tit"><span class="unit-badge" id="unitBadge"></span><span id="dateDisplay"></span></span></div>
-    <div class="header-right">
-      <div class="hdr-links"><a class="logout-btn" href="escala.html" style="background:var(--gold);color:var(--d-on-cor);text-decoration:none;padding:4px 9px;border-radius:8px">📅 Escala da equipe</a><a id="btnMan" class="logout-btn" href="manutencao.html?daloja=1" style="display:none;background:var(--d-blue,#3aa0ff);color:#fff;text-decoration:none;padding:4px 9px;border-radius:8px">🔧 Manutenção<span id="btnManN" style="display:none;background:var(--d-red,#e74c3c);color:#fff;border-radius:9px;padding:0 6px;margin-left:5px;font-size:.72rem"></span></a><a id="btnRcb" class="logout-btn" href="recebimento.html?daloja=1" style="display:none;background:var(--d-gold,#FFD000);color:var(--d-on-cor,#111);text-decoration:none;padding:4px 9px;border-radius:8px">📦 Recebimento<span id="btnRcbN" style="display:none;border-radius:9px;padding:0 6px;margin-left:5px;font-size:.72rem;color:#fff"></span></a><a id="btnMinhaLoja" class="logout-btn" href="minha-loja.html" style="display:none;background:var(--d-green);color:var(--d-on-cor);text-decoration:none;padding:4px 9px;border-radius:8px">📊 Minha loja</a><div class="logout-btn" onclick="sair()">Sair / Trocar loja</div></div>
       <button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Mudar entre tema escuro e claro" title="Tema escuro / claro"><svg class="sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     </div>
+    <nav class="hdr-nav">
+      <a class="hdr-bt" href="escala.html"><span class="hdr-ic">📅</span><span>Escala</span></a>
+      <a id="btnMan" class="hdr-bt" href="manutencao.html?daloja=1" style="display:none"><span class="hdr-ic">🔧</span><span>Manutenção</span><span id="btnManN" class="hdr-n" style="display:none"></span></a>
+      <a id="btnRcb" class="hdr-bt" href="recebimento.html?daloja=1" style="display:none"><span class="hdr-ic">📦</span><span>Recebimento</span><span id="btnRcbN" class="hdr-n" style="display:none"></span></a>
+      <a id="btnMinhaLoja" class="hdr-bt" href="minha-loja.html" style="display:none"><span class="hdr-ic">📊</span><span>Minha loja</span></a>
+    </nav>
   </header>
   <!-- Overlay bloqueio checklist abertura — visível por padrão, some após confirmação -->
   <!-- Aviso inicial — aparece só após login se abertura não feita; começa oculto -->
@@ -518,18 +554,6 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       </div>
     </div>
 
-    <!-- Etapa 2: início do turno -->
-    <div class="etapa-titulo"><b>2</b> Início do turno</div>
-    <!-- Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) -->
-    <div class="card card-full" id="cardPV" style="display:none">
-      <div class="card-label">📞 Call center — chamados e pós-venda</div>
-      <div id="pvCorpo"></div>
-    </div>
-    <!-- Missão de hoje (Painel da Diretoria, 13/11/2026): só gerente; não trava nada -->
-    <div class="card card-full" id="cardMissao" style="display:none">
-      <div class="card-label">🎯 Missão de hoje</div>
-      <div id="missaoCorpo"></div>
-    </div>
     <!-- Start Dina -->
     <div class="card card-full" id="cardStartDina">
       <div class="card-label" id="sdTitulo">⭐ Start Dina — Reunião de Abertura</div>
@@ -554,9 +578,21 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       </div>
     </div>
 
+    <div class="card card-full" id="cardEquipe" style="display:none">
+      <div class="card-label">👥 Equipe do dia</div>
+      <div class="card-meta" id="eqMeta"></div>
+      <div id="eqFeriado"></div>
+      <div id="eqSetores"></div>
+      <div id="eqVagas"></div>
+      <div id="fgrBox"></div>
+      <div id="eqMsg" style="font-size:0.82rem;margin-top:6px;min-height:14px"></div>
+      <button class="camera-btn" id="eqSalvarBtn" onclick="eqSalvarEquipe()" style="margin-top:8px">💾 Salvar equipe do dia</button>
+      <span class="tag" id="eqTag"></span>
+    </div>
+
     <!-- Motoboys (só lojas com entrega própria) -->
     <div class="card card-full" id="cardMotoboys" style="display:none">
-      <div class="card-label">👥 Motoboys em Serviço</div>
+      <div class="card-label">🛵 Motoboys em serviço</div>
       <div class="card-meta" id="metaMotoboysDisplay"></div>
       <div class="input-wrap"><input class="val" id="motoboys" type="number" inputmode="numeric" placeholder="0" oninput="onMotoboysInput()"><span class="suffix">mb.</span></div>
       <!-- input file fora de qualquer div que some -->
@@ -572,40 +608,18 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="meta-mes mini" id="mm_motoboys"></div>
     </div>
 
+    <!-- Etapa 2: durante o serviço (26/11/2026: ordem nova pedida pelo Robson) -->
+    <div class="etapa-titulo"><b>2</b> Durante o serviço</div>
+    <!-- Missão de hoje (Painel da Diretoria, 13/11/2026): só gerente; não trava nada -->
+    <div class="card card-full" id="cardMissao" style="display:none">
+      <div class="card-label">🎯 Missão de hoje</div>
+      <div id="missaoCorpo"></div>
+    </div>
+
     <!-- Equipe do dia: quantas pessoas trabalham hoje em cada setor e por que falta alguém (vaga aberta avisa a RH) -->
     <div class="card card-full" id="cardBufMont" style="display:none">
       <div class="card-label">🍽️ Buffet montado</div>
       <div id="bufMontBox"></div>
-    </div>
-    <div class="card card-full" id="cardEquipe" style="display:none">
-      <div class="card-label">👥 Equipe do dia</div>
-      <div class="card-meta" id="eqMeta"></div>
-      <div id="eqFeriado"></div>
-      <div id="eqSetores"></div>
-      <div id="eqVagas"></div>
-      <div id="fgrBox"></div>
-      <div id="eqMsg" style="font-size:0.82rem;margin-top:6px;min-height:14px"></div>
-      <button class="camera-btn" id="eqSalvarBtn" onclick="eqSalvarEquipe()" style="margin-top:8px">💾 Salvar equipe do dia</button>
-      <span class="tag" id="eqTag"></span>
-    </div>
-
-
-    <!-- Etapa 3: durante a noite -->
-    <div class="etapa-titulo"><b>3</b> Durante o turno</div>
-    <!-- Falta de Produto -->
-    <div class="card card-full" id="cardFaltaProduto">
-      <div class="card-label">📦 Falta de Produto</div>
-      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
-      <div class="falta-wrap" id="faltaWrap">
-        <div class="falta-btns">
-          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
-          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
-        </div>
-        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
-        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
-      </div>
-      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
-      <span class="tag" id="faltaTag"></span>
     </div>
 
     <!-- Tempo de Entrega (só lojas com entrega própria) -->
@@ -653,13 +667,34 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <span class="tag" id="tempoTag"></span>
     </div>
 
+    <!-- Falta de Produto -->
+    <div class="card card-full" id="cardFaltaProduto">
+      <div class="card-label">📦 Falta de Produto</div>
+      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
+      <div class="falta-wrap" id="faltaWrap">
+        <div class="falta-btns">
+          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
+          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
+        </div>
+        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
+        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
+      </div>
+      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
+      <span class="tag" id="faltaTag"></span>
+    </div>
 
-    <!-- Etapa 4: fechamento -->
-    <div class="etapa-titulo"><b>4</b> Fechamento — preencha no fim da noite</div>
+    <!-- Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) -->
+    <div class="card card-full" id="cardPV" style="display:none">
+      <div class="card-label">📞 Call center — chamados e pós-venda</div>
+      <div id="pvCorpo"></div>
+    </div>
+
+    <!-- Etapa 3: números do caixa, no fim da noite -->
+    <div class="etapa-titulo"><b>3</b> Números do caixa — no fim da noite</div>
     <div class="cards-grid">
       <!-- Faturamento -->
       <div class="card card-full" id="cardFat">
-        <div class="card-label">Faturamento do Dia</div>
+        <div class="card-label">💰 Faturamento do dia</div>
         <div class="atencao-campo">⚠️ Informe o <b>faturamento LÍQUIDO do Alpha</b> (já tirados os descontos e as cortesias). É esse número que o placar confere com o sistema.</div>
         <div class="card-meta" id="metaFatDisplay"></div>
         <div class="card-meta muted" id="periodoDisplay"></div>
@@ -672,38 +707,12 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <span class="tag" id="fatTag"></span>
         <div class="meta-mes" id="mm_fat"></div>
       </div>
-      <!-- Google -->
-      <div class="card card-full" id="cardGoogle">
-        <div class="card-label">Avaliações Google</div>
-        <div class="card-meta" id="metaGoogleDisplay"></div>
-        <div class="input-wrap"><input class="val" id="google" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
-        <span class="tag" id="googleTag"></span>
-        <div class="ggl-conf" id="googleConf"></div>
-        <div class="meta-mes" id="mm_google"></div>
-      </div>
-      <!-- iFood -->
-      <div class="card card-full" id="cardIfood">
-        <div class="card-label">Avaliações iFood</div>
-        <div class="card-meta" id="metaIfoodDisplay"></div>
-        <div class="input-wrap"><input class="val" id="ifood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
-        <span class="tag" id="ifoodTag"></span>
-        <div class="meta-mes" id="mm_ifood"></div>
-      </div>
-      <!-- Chamados -->
-      <div class="card" id="cardChamados">
-        <div class="card-label">Chamados</div>
-        <div class="card-meta muted">Meta: zero</div>
-        <div class="input-wrap"><input class="val" id="chamados" type="number" inputmode="numeric" placeholder="0"></div>
-        <span class="tag" id="chamadosTag"></span>
-        <div class="meta-mes mini" id="mm_chamados"></div>
-      </div>
-      <!-- Cancelamentos -->
-      <div class="card" id="cardCancel">
-        <div class="card-label">Cancelamentos</div>
-        <div class="card-meta muted">Meta: zero</div>
-        <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
-        <span class="tag" id="cancelTag"></span>
-        <div class="meta-mes mini" id="mm_cancel"></div>
+      <div class="card card-full" id="cardBuffets" style="display:none">
+        <div class="card-label">🍽️ Buffets Vendidos</div>
+        <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b> Buffet por quilo: <b>cada prato pesado na balança conta 1.</b></div>
+        <div class="card-meta" id="metaBuffetsDisplay"></div>
+        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
+        <div class="meta-mes" id="mm_buffets"></div>
       </div>
       <!-- Fichas de fliperama e buffets (quantidade) — não aparecem no Capão Raso e na Expressa -->
       <div class="card card-full" id="cardFichas" style="display:none">
@@ -712,13 +721,6 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div class="card-meta" id="metaFichasDisplay"></div>
         <div class="input-wrap"><input class="val" id="fichas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
         <div class="meta-mes" id="mm_fichas"></div>
-      </div>
-      <div class="card card-full" id="cardBuffets" style="display:none">
-        <div class="card-label">🍽️ Buffets Vendidos</div>
-        <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b> Buffet por quilo: <b>cada prato pesado na balança conta 1.</b></div>
-        <div class="card-meta" id="metaBuffetsDisplay"></div>
-        <div class="input-wrap"><input class="val" id="buffets" type="number" inputmode="numeric" min="0" placeholder="0" oninput="verificarBotaoRegistrar()"><span class="suffix">un.</span></div>
-        <div class="meta-mes" id="mm_buffets"></div>
       </div>
       <!-- Bebidas vendidas (08/11/2026; só com o recurso alphaConferir) -->
       <div class="card card-full" id="cardBebidas" style="display:none">
@@ -736,27 +738,39 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
           <label>Sucos no balcão<div class="input-wrap"><input class="val" id="bebSucosBalcao" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
         </div>
       </div>
-      <!-- Conferir com o Alpha (08/11/2026): o gerente preenche primeiro e depois confere -->
-      <div class="card card-full" id="cardAlpha" style="display:none">
-        <div class="card-label">🔌 Conferir com o Alpha</div>
-        <div class="card-meta muted" id="alpcAjuda">Preencha o faturamento, os buffets, as fichas e as bebidas. Depois toque em conferir: o placar compara o que você informou com o que está no sistema.</div>
-        <button type="button" class="alp-btn" id="alpcBtn" onclick="alpcConferir()" disabled>🔌 Conferir com o Alpha</button>
-        <div id="alpcRes" class="alp-info"></div>
+      <!-- Google -->
+      <div class="card card-full" id="cardGoogle">
+        <div class="card-label">⭐ Avaliações Google</div>
+        <div class="card-meta" id="metaGoogleDisplay"></div>
+        <div class="input-wrap"><input class="val" id="google" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
+        <span class="tag" id="googleTag"></span>
+        <div class="ggl-conf" id="googleConf"></div>
+        <div class="meta-mes" id="mm_google"></div>
       </div>
-      <!-- Lista de compras de hortifrúti (10/11/2026): obrigatória antes de enviar; menos Expressa, Capão Raso e Isaac Manhã -->
-      <div class="card card-full" id="cardHF" style="display:none">
-        <div class="card-label">🥬 Lista de compras — hortifrúti</div>
-        <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
-        <div id="hfPendBox" style="display:none"></div>
-        <div id="hfCompraBox" style="display:none"></div>
-        <div id="hfAvisoForn"></div>
-        <div class="hf-grid" id="hfItens"></div>
-        <label class="hf-nada" id="hfNadaLbl"><input type="checkbox" id="hfNada" onchange="hfNadaMudou()"> ✅ Conferi o estoque, não falta nada</label>
-        <input class="hf-txt" id="hfOutros" maxlength="200" placeholder="Outros (ex.: alho, limão) — opcional" oninput="hfMudou()">
-        <button type="button" class="alp-btn" id="hfBtn" onclick="hfSalvar()">💾 Salvar lista de compras</button>
-        <div id="hfMsg" class="alp-info"></div>
-        <div class="hf-forn" id="hfFornBox" style="display:none"></div>
-        <button type="button" class="hf-mg" id="hforaBtn" onclick="hforaAbrir()">🛒 Comprei em mercado grande</button>
+      <!-- iFood -->
+      <div class="card card-full" id="cardIfood">
+        <div class="card-label">📱 Avaliações iFood</div>
+        <div class="card-meta" id="metaIfoodDisplay"></div>
+        <div class="input-wrap"><input class="val" id="ifood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
+        <span class="tag" id="ifoodTag"></span>
+        <div class="meta-mes" id="mm_ifood"></div>
+      </div>
+      <!-- Chamados -->
+      <div class="card card-full" id="cardChamados">
+        <div class="card-label">📞 Chamados</div>
+        <div class="card-meta muted">Meta: zero</div>
+        <div class="input-wrap"><input class="val" id="chamados" type="number" inputmode="numeric" placeholder="0"></div>
+        <span class="tag" id="chamadosTag"></span>
+        <div class="meta-mes mini" id="mm_chamados"></div>
+      </div>
+      <div class="sub-etapa">❌ Cancelamentos do dia</div>
+      <!-- Cancelamentos -->
+      <div class="card card-full" id="cardCancel">
+        <div class="card-label">❌ Cancelamentos</div>
+        <div class="card-meta muted">Meta: zero</div>
+        <div class="input-wrap"><input class="val" id="cancel" type="number" inputmode="numeric" placeholder="0"></div>
+        <span class="tag" id="cancelTag"></span>
+        <div class="meta-mes mini" id="mm_cancel"></div>
       </div>
       <!-- Vendas Canceladas no Caixa -->
       <div class="card card-full" id="cardVendasCanceladas">
@@ -772,7 +786,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       </div>
       <!-- Pedidos Não Confirmados iFood (só lojas com entrega própria) -->
       <div class="card card-full" id="cardPedidosIfood" style="display:none">
-        <div class="card-label">Pedidos Não Confirmados iFood</div>
+        <div class="card-label">📱 Pedidos não confirmados iFood</div>
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0" oninput="onPedidosIfoodInput()"><span class="suffix">ped.</span></div>
         <span class="tag" id="pedidosIfoodTag"></span>
@@ -785,14 +799,40 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
           🚨 Você está com problema na operação — sugiro que busque ajuda.
         </div>
       </div>
+      <!-- Conferir com o Alpha: último dos números (confere todos os de cima) -->
+      <!-- Conferir com o Alpha (08/11/2026): o gerente preenche primeiro e depois confere -->
+      <div class="card card-full" id="cardAlpha" style="display:none">
+        <div class="card-label">🔌 Conferir com o Alpha</div>
+        <div class="card-meta muted" id="alpcAjuda">Preencha o faturamento, os buffets, as fichas e as bebidas. Depois toque em conferir: o placar compara o que você informou com o que está no sistema.</div>
+        <button type="button" class="alp-btn" id="alpcBtn" onclick="alpcConferir()" disabled>🔌 Conferir com o Alpha</button>
+        <div id="alpcRes" class="alp-info"></div>
+      </div>
     </div>
 
     <!-- Mensagem escalada de desempenho -->
     <div class="msg-escalada" id="msgEscalada"></div>
 
+    <!-- Etapa 4: fechamento da loja -->
+    <div class="etapa-titulo"><b>4</b> Fechamento da loja</div>
+    <!-- Lista de compras de hortifrúti (10/11/2026): obrigatória antes de enviar; menos Expressa, Capão Raso e Isaac Manhã -->
+    <div class="card card-full" id="cardHF" style="display:none">
+      <div class="card-label">🥬 Lista de compras — hortifrúti</div>
+      <div class="card-meta muted" id="hfAjuda">Confira o estoque e marque <b>o que precisa comprar</b>. A lista chega no seu WhatsApp às <b>15h</b>, para você comprar antes de abrir e não precisar sair da loja.</div>
+      <div id="hfPendBox" style="display:none"></div>
+      <div id="hfCompraBox" style="display:none"></div>
+      <div id="hfAvisoForn"></div>
+      <div class="hf-grid" id="hfItens"></div>
+      <label class="hf-nada" id="hfNadaLbl"><input type="checkbox" id="hfNada" onchange="hfNadaMudou()"> ✅ Conferi o estoque, não falta nada</label>
+      <input class="hf-txt" id="hfOutros" maxlength="200" placeholder="Outros (ex.: alho, limão) — opcional" oninput="hfMudou()">
+      <button type="button" class="alp-btn" id="hfBtn" onclick="hfSalvar()">💾 Salvar lista de compras</button>
+      <div id="hfMsg" class="alp-info"></div>
+      <div class="hf-forn" id="hfFornBox" style="display:none"></div>
+      <button type="button" class="hf-mg" id="hforaBtn" onclick="hforaAbrir()">🛒 Comprei em mercado grande</button>
+    </div>
+
     <!-- Observações -->
     <div class="obs-card">
-      <div class="card-label">Observações do Dia</div>
+      <div class="card-label">📝 Observações do dia</div>
       <textarea id="obs" placeholder="Ocorrências, reclamações, destaque de equipe..."></textarea>
     </div>
 
@@ -815,7 +855,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
     </div>
     <button class="save-btn" id="saveBtn" onclick="registrar()">Registrar Placar</button>
   </div>
-  <footer>Dina Pizza Gastronomia &nbsp;•&nbsp; Uso Interno</footer>
+  <footer><button type="button" class="sair-link" onclick="sair()">↩ Sair / Trocar loja</button><div>Dina Pizza Gastronomia &nbsp;•&nbsp; Uso Interno</div></footer>
 </div>
 
 <script>
@@ -1995,10 +2035,10 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
   const pct = esperado>0 ? feito/esperado*100 : 100;
   const dif = feito - esperado;
   const cls = esperado===0 ? 'av' : pct>=100 ? 'ok' : pct>=90 ? 'av' : 'err';
-  let h='';
-  if(esperado===0) h+=`<div class="mm-tit">🎯 META DO MÊS: ${mmFmt(metaMes,tipo)}</div>`;
-  else if(dif>=0) h+=`<div class="mm-tit">📈 ACIMA DA META DO MÊS (+${mmFmt(dif,tipo)})</div>`;
-  else h+=`<div class="mm-tit">${pct<90?'🚨':'📉'} ABAIXO DA META DO MÊS (−${mmFmt(-dif,tipo)})</div>`;
+  let h='', tit='';
+  if(esperado===0) tit=`🎯 Meta do mês: ${mmFmt(metaMes,tipo)}`;
+  else if(dif>=0) tit=`📈 Acima da meta do mês (+${mmFmt(dif,tipo)})`;
+  else tit=`${pct<90?'🚨':'📉'} Abaixo da meta do mês (−${mmFmt(-dif,tipo)})`;
   if(temHoje) h+=`Hoje: <b>${mmFmt(real,tipo)}</b> — ${real>=metaHoje?'<span style="color:var(--green)">bateu a meta do dia</span>':'<span style="color:#ff6b6b">abaixo da meta do dia</span>'} (${mmFmt(metaHoje,tipo)}${real<metaHoje?', faltaram '+mmFmt(metaHoje-real,tipo):''}).<br>`;
   if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${(tipo==='R$'||tipo==='buffets')?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
   if(falta<=0) h+=`<div class="mm-dia" style="color:var(--green)">🏆 Meta do mês (${mmFmt(metaMes,tipo)}) já batida!</div>`;
@@ -2016,7 +2056,8 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
     if(tipo==='R$' && METAS_FAT[unidadeAtual]){ const m=METAS_FAT[unidadeAtual]||FAT_DEF[unidadeAtual]; if(m&&m.semana!==m.fds) detalhe=`<br><span style="font-size:0.82rem;font-weight:600">Seg a Qui: ${mmFmt(m.semana*k,tipo)} por dia · Sex a Dom: ${mmFmt(m.fds*k,tipo)} por dia</span>`; }
     h+=`<div class="mm-dia" style="color:${cls==='ok'?'var(--green)':cls==='av'?'#FFD000':'#ff6b6b'}">👉 Você precisa fazer ${tipo==='R$'?'em média ':''}<span style="font-size:1.15rem">${mmFmt(porDia,tipo)} por dia</span> nos ${diasDepois} dia${diasDepois>1?'s':''} que ${temHoje?'restam':'restam (contando hoje)'}${detalhe}</div>`;
   }
-  el.className='meta-mes '+cls; el.innerHTML=h; el.style.display='block';
+  // 26/11/2026: uma linha só; o detalhe (quanto falta, quanto por dia) abre no toque
+  el.className='meta-mes '+cls; el.innerHTML='<details><summary><span class="mm-tit">'+tit+'</span><span class="mm-abrir">ver ›</span></summary><div>'+h+'</div></details>'; el.style.display='block';
 }
 // metas "zero" (chamados, cancelamentos, pedidos não confirmados): soma do mês
 function mmZero(el, nome, acumOntem, real){
@@ -3587,6 +3628,7 @@ function validarFaturamento(){
 
 window._tsInicioPlacar=Date.now();
 function verificarBotaoRegistrar(){
+  try{ setTimeout(cxAtualizar,0); }catch(e){}
   try{ alpcEstado(); }catch(e){}
   const btn=document.getElementById('saveBtn');
   const lista=document.getElementById('pendenciasList');
@@ -3594,25 +3636,25 @@ function verificarBotaoRegistrar(){
 
   const faltando=[];
 
+  // 26/11/2026: na ordem da página (abertura → serviço → números do caixa → fechamento da loja)
+  const _bebFalta=ALPC_ATIVO&&bebLista().map(b=>b[1]).some(id=>!filled(id));
   if(!chkAberturaFeita) faltando.push('📋 Checklist de Abertura');
+  if(!startDinaSalvo) faltando.push(SD&&SD.hoje?'⭐ Start Dina do fim da noite (abre às '+SD.abre.replace(':00','h')+')':'⭐ Start Dina');
+  if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
+  if(temLoja(unidadeAtual)){
+    if(!motoboySalvo) faltando.push('🛵 Motoboys');
+    if(!temposResolvidos()) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
+  }
+  if(!faltaStatus) faltando.push('📦 Falta de Produto');
+  if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
   if(!filled('fat')) faltando.push('💰 Faturamento');
+  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
+  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
+  if(_bebFalta) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão');
   if(!filled('google')) faltando.push('⭐ Google');
   if(!filled('ifood')) faltando.push('📱 iFood');
   if(!filled('chamados')) faltando.push('📞 Chamados');
   if(!filled('cancel')) faltando.push('❌ Cancelamentos');
-  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
-  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
-  if(ALPC_ATIVO){ if(bebLista().map(b=>b[1]).some(id=>!filled(id))) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão'); else if(!ALPC) faltando.push('🔌 Conferir com o Alpha'); }
-  if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
-  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HF.compra.semCompra && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
-  if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
-  if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
-  if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
-  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
-  if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
-    const piv=ival('pedidosIfood');
-    if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos Pedidos Não Confirmados');
-  }
   // Vendas canceladas — se preencheu valor > 0, motivo é obrigatório e válido
   if(filled('vendasCanceladas') && ival('vendasCanceladas') > 0){
     const motivo = document.getElementById('vendasCanceladasMotivo').value.trim();
@@ -3623,13 +3665,16 @@ function verificarBotaoRegistrar(){
     }
   }
   if(!filled('vendasCanceladas')) faltando.push('💳 Itens cancelados (TOTAL CANCELAMENTO)');
-  if(!startDinaSalvo) faltando.push(SD&&SD.hoje?'⭐ Start Dina do fim da noite (abre às '+SD.abre.replace(':00','h')+')':'⭐ Start Dina');
-  if(!faltaStatus) faltando.push('📦 Falta de Produto');
-  if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
-  if(temLoja(unidadeAtual)){
-    if(!motoboySalvo) faltando.push('👥 Motoboys');
-    if(!temposResolvidos()) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
+  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
+  if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
+    const piv=ival('pedidosIfood');
+    if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos Pedidos Não Confirmados');
   }
+  if(ALPC_ATIVO&&!_bebFalta&&!ALPC) faltando.push('🔌 Conferir com o Alpha'); // o Alpha é o último dos números
+  if(HF_ATIVO && HF && HF.precisaPrazo) faltando.push('📅 Prazo dos fornecedores de hortifrúti');
+  if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
+  if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HF.compra.semCompra && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
+  if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
   if(!chkFechamentoFeito) faltando.push('🌙 Checklist de Fechamento (último passo)');
 
   if(faltando.length>0){
@@ -3656,10 +3701,47 @@ function verificarBotaoRegistrar(){
 }
 
 // leva até o card do item que falta e faz ele piscar
+// ═══ Cartões que abrem e fecham (26/11/2026, pedido do Robson) ═══
+// Os grandes (Hortifrúti, Missão, Equipe e Call center) começam fechados: só o título e um resumo de 1 linha; toque no título abre.
+// Qualquer um destes que fica concluído fecha sozinho com ✅ (uma vez); o gerente pode abrir de novo.
+const CX_TODOS=['cardStartDina','cardEquipe','cardMotoboys','cardMissao','cardBufMont','cardTempo','cardFaltaProduto','cardPV','cardAlpha','cardHF'];
+const CX_INICIO_FECHADO=['cardHF','cardMissao','cardEquipe']; // o call center fecha sozinho quando não há nada pendente
+const CX_AUTO={};
+function cxFeito(id){ try{ switch(id){
+  case 'cardStartDina': return !!startDinaSalvo;
+  case 'cardEquipe': return !!eqSalvo;
+  case 'cardMotoboys': return !!motoboySalvo;
+  case 'cardBufMont': return !!(BUF_M&&BUF_M.estado==='feito');
+  case 'cardTempo': return !!temposResolvidos();
+  case 'cardFaltaProduto': return !!faltaStatus;
+  case 'cardAlpha': return !!ALPC;
+  case 'cardMissao': return !!(window._missao&&window._missao.lida);
+  case 'cardHF': return !!HF_SALVO&&!(HF&&HF.precisaPrazo)&&!(HF&&HF.compraAtrasada)&&!(HF&&HF.compra&&!HF.compra.feita&&!HF.compra.pendente&&!HF.compra.semCompra&&!HFC_DIA_PEND);
+  case 'cardPV': return !(PV_DATA&&((PV_DATA.pendentes||[]).length||(PV_DATA.chamados||[]).some(c=>c.situacao==='aberto'||c.situacao==='visto')));
+} }catch(e){} return false; }
+function cxResumo(id,feito){
+  const F={cardStartDina:'✅ Start Dina salvo',cardEquipe:'✅ Equipe do dia salva',cardMotoboys:'✅ Motoboys salvos',cardBufMont:'✅ Foto do buffet montado feita',cardTempo:'✅ Tempos de entrega resolvidos',cardFaltaProduto:'✅ Falta de produto informada',cardAlpha:'✅ Conferido com o Alpha',cardMissao:'✅ Missão lida',cardHF:'✅ Hortifrúti em dia',cardPV:'✅ Nada pendente do call center'};
+  const P={cardStartDina:'Falta salvar o Start Dina',cardEquipe:'Falta informar quem está trabalhando hoje',cardMotoboys:'Falta salvar os motoboys',cardBufMont:'Foto do buffet montado no horário',cardTempo:'Tempos de entrega da noite',cardFaltaProduto:'Falta informar se faltou produto',cardAlpha:'Confira depois de preencher todos os números',cardMissao:'Toque para ver o que a loja precisa vender hoje',cardHF:'Falta a contagem e a lista de compras',cardPV:'Tem chamado ou reclamação para responder'};
+  return (feito?F[id]:P[id]||'')+' · toque para '+'abrir';
+}
+// Testes automáticos (navigator.webdriver) ficam com os cartões sempre abertos; o teste teste_placar_cx liga de propósito.
+function cxPreparar(){ if(navigator.webdriver&&!window.CX_TESTE) return; CX_TODOS.forEach(id=>{ const el=document.getElementById(id); if(!el||el.classList.contains('cx')) return;
+  const lab=el.querySelector(':scope > .card-label'); if(!lab) return;
+  el.classList.add('cx'); lab.classList.add('cx-lab');
+  const r=document.createElement('div'); r.className='cx-resumo'; lab.after(r);
+  lab.addEventListener('click',()=>cxAlternar(id)); r.addEventListener('click',()=>cxAbrir(id));
+  if(CX_INICIO_FECHADO.includes(id)) el.classList.add('cx-fechado'); }); }
+function cxAbrir(id){ const el=document.getElementById(id); if(el) el.classList.remove('cx-fechado'); }
+function cxAlternar(id){ const el=document.getElementById(id); if(el) el.classList.toggle('cx-fechado'); }
+function cxAtualizar(){ cxPreparar(); CX_TODOS.forEach(id=>{ const el=document.getElementById(id); if(!el||!el.classList.contains('cx')) return;
+  const f=cxFeito(id), r=el.querySelector(':scope > .cx-resumo'); if(r){ r.textContent=cxResumo(id,f); r.className='cx-resumo '+(f?'ok':'falta'); }
+  if(f&&!CX_AUTO[id]){ CX_AUTO[id]=true; if(!el.contains(document.activeElement)) el.classList.add('cx-fechado'); } }); }
+
 function irParaFalta(txt){
   const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Itens cancelados','cardVendasCanceladas'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
   const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
+  if(el.classList.contains('cx-fechado')) cxAbrir(m[1]);
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
   window.scrollTo({top:Math.max(0,el.getBoundingClientRect().top+window.scrollY-topo),behavior:'smooth'});
   el.classList.remove('falta-pisca'); void el.offsetWidth; el.classList.add('falta-pisca');
@@ -3828,7 +3910,7 @@ async function manBotao(){
   try{ const rc=await chkRecursos(); if(!rc.includes('manutencao')) return; }catch(e){ return; }
   b.style.display='';
   if(MODO_TESTE){ b.href='manutencao.html?daloja=1&teste=1&loja='+encodeURIComponent(unidadeAtual); b.onclick=()=>{ if(confirm('🧪 Atenção: a Manutenção NÃO fica dentro do modo teste.\n\nO que você anotar lá vai DE VERDADE para o Sidinei (e o 🔴 vai na hora).\n\nAbrir mesmo assim? (abre em outra aba; o placar continua aqui)')) window.open(b.href,'_blank'); return false; }; return; } // 18/11: no teste, mostra com aviso, em aba nova
-  const contar=async()=>{ try{ const r=await chkJsonp({action:'manutLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok&&r.pedidos){ n.textContent=r.confirmar+' para confirmar'; n.style.display=r.confirmar?'':'none'; } }catch(e){} };
+  const contar=async()=>{ try{ const r=await chkJsonp({action:'manutLoja',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok&&r.pedidos){ n.textContent=r.confirmar; n.title=r.confirmar+' para confirmar'; n.style.display=r.confirmar?'':'none'; } }catch(e){} };
   contar(); _manTimer=setInterval(()=>{ if(document.visibilityState==='visible') contar(); },600000);
 }
 // Botão 📦 Recebimento (19/11/2026, Recebimento.gs, recurso recebimento): abre recebimento.html?daloja=1 (página própria, como a Manutenção); não trava nada.
@@ -3883,7 +3965,7 @@ async function pvVi(id,btn){
 function pvRender(){
   const d=PV_DATA, card=document.getElementById('cardPV'); if(!d) return;
   const chs=(d.chamados||[]), pend=(d.pendentes||[]), rec=(d.recentes||[]);
-  if(!chs.length&&!pend.length&&!rec.length&&!d.ranking){ card.style.display='none'; return; }
+  if(!chs.length&&!pend.length){ card.style.display='none'; return; } // 26/11/2026: só com chamado ou reclamação (sem nada, o card não ocupa espaço)
   card.style.display='block';
   const ofs=Object.keys(d.ofertas||{}).map(k=>'<option value="'+k+'">'+pvEsc(d.ofertas[k])+'</option>').join('');
   let h='';
