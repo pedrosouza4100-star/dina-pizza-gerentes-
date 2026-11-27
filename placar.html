@@ -210,6 +210,8 @@
   .hdr-n{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:.7rem;line-height:20px}
   footer .sair-link{display:block;margin:0 auto 8px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--muted);font:700 .8rem Inter,Arial,sans-serif;padding:9px 16px;cursor:pointer}
   .rs{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer;border-bottom:1px dashed var(--muted);white-space:nowrap}.rs.ver{border-bottom-color:transparent}
+  /* lado a lado; loja sem entrega (sem o card do iFood) = itens cancelados na largura toda */
+  #cardVendasCanceladas:has(+ #cardPedidosIfood[style*="none"]),#cardVendasCanceladas:has(+ * + #cardPedidosIfood[style*="none"]){grid-column:1/-1}
   .sub-etapa{grid-column:1/-1;font-size:.74rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 2px -2px}
   /* cartões que abrem e fecham: fechado = só o título e um resumo */
   .card.cx>.cx-lab{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -757,9 +759,9 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div class="meta-mes mini" id="mm_cancel"></div>
       </div>
       <!-- Vendas Canceladas no Caixa -->
-      <div class="card card-full" id="cardVendasCanceladas">
+      <div class="card" id="cardVendasCanceladas">
         <div class="card-label">💳 Itens cancelados</div>
-        <div class="card-meta muted">Copie o <b>TOTAL CANCELAMENTO</b> do relatório de fechamento (quantidade). Meta: zero — se houver, descreva o motivo</div>
+        <div class="card-meta muted">Quantidade do <b>TOTAL CANCELAMENTO</b> do relatório. Meta: zero</div>
         <div class="input-wrap"><input class="val" id="vendasCanceladas" type="number" inputmode="numeric" placeholder="0" oninput="onVendasCanceladasInput()"><span class="suffix">itens</span></div>
         <div id="vendasCanceladasMotivoArea" style="display:none;margin-top:8px">
           <div class="card-label" style="margin-bottom:6px;color:var(--danger)">⚠️ Descreva o motivo do(s) cancelamento(s):</div>
@@ -769,8 +771,8 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <span class="tag" id="vendasCanceladasTag"></span>
       </div>
       <!-- Pedidos Não Confirmados iFood (só lojas com entrega própria) -->
-      <div class="card card-full" id="cardPedidosIfood" style="display:none">
-        <div class="card-label">📱 Pedidos não confirmados iFood</div>
+      <div class="card" id="cardPedidosIfood" style="display:none">
+        <div class="card-label">📱 Não confirmados iFood</div>
         <div class="card-meta muted">Meta: zero</div>
         <div class="input-wrap"><input class="val" id="pedidosIfood" type="number" inputmode="numeric" placeholder="0" oninput="onPedidosIfoodInput()"><span class="suffix">ped.</span></div>
         <span class="tag" id="pedidosIfoodTag"></span>
@@ -3699,6 +3701,7 @@ function cxResumo(id,feito){
 // Testes automáticos (navigator.webdriver) ficam com os cartões sempre abertos; o teste teste_placar_cx liga de propósito.
 function cxPreparar(){ if(navigator.webdriver&&!window.CX_TESTE) return; CX_TODOS.forEach(id=>{ const el=document.getElementById(id); if(!el||el.classList.contains('cx')) return;
   const lab=el.querySelector(':scope > .card-label'); if(!lab) return;
+  if(lab.classList.contains('cx-lab')){ el.classList.add('cx'); return; } // já preparado (o className do cartão foi trocado)
   el.classList.add('cx'); lab.classList.add('cx-lab');
   const r=document.createElement('div'); r.className='cx-resumo'; lab.after(r);
   lab.addEventListener('click',()=>cxAlternar(id)); r.addEventListener('click',()=>cxAbrir(id));
@@ -4974,10 +4977,10 @@ function limpar(){
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood','cardVendasCanceladas'].forEach(id=>{
     const el=document.getElementById(id);
-    el.className='card'+(['cardFat','cardGoogle','cardIfood','cardPedidosIfood','cardVendasCanceladas'].includes(id)?' card-full':'');
+    el.className='card'+(['cardFat','cardGoogle','cardIfood'].includes(id)?' card-full':''); // 26/11/2026: chamados/cancelamentos e itens cancelados/iFood lado a lado
   });
   const cardMb=document.getElementById('cardMotoboys');
-  if(cardMb.style.display!=='none')cardMb.className='card card-full';
+  if(cardMb.style.display!=='none'){ cardMb.classList.remove('ok','warn','bad'); } // mantém as classes dos cartões que abrem e fecham
   if(temLoja(unidadeAtual))renderTempoRegistros();
   ['fatTag','googleTag','ifoodTag','chamadosTag','cancelTag','pedidosIfoodTag','vendasCanceladasTag','motoboysTag','tempoTag'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.className='tag';}});
   const vcm=document.getElementById('vendasCanceladasMotivo');if(vcm)vcm.value='';
