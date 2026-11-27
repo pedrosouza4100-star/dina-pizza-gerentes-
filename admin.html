@@ -834,10 +834,10 @@
     }catch(e){}
     return _fetchOriginal(url,opt);
   };
-  function admJsonp(params){
+  function admJsonp(params,ms){
     return new Promise((ok,falha)=>{
       const cb='admCb_'+Date.now()+'_'+Math.floor(Math.random()*1e5), s=document.createElement('script');
-      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder. Toque em atualizar de novo.'));},45000);
+      const t=setTimeout(()=>{limpar();falha(new Error('O servidor demorou para responder. Toque em atualizar de novo.'));},ms||45000);
       function limpar(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
       window[cb]=r=>{limpar();ok(r);};
       s.onerror=()=>{limpar();falha(new Error('Sem conexão com o servidor'));};
@@ -867,12 +867,17 @@
     if(!(await admServidor())){ box.innerHTML='<div style="color:var(--yellow);font-size:0.85rem">⚠ O Apps Script publicado ainda não tem o painel "Hoje na rede". Cole a versão nova do código.</div>'; carregarProtecao(); return; }
     try{
       const f=fresco===true||ADM_HOJE_FRESCO; ADM_HOJE_FRESCO=false;
-      const r=await admJsonp(f?{action:'adminHoje',fresco:1}:{action:'adminHoje'});
+      // 26/11/2026: o cálculo na hora pode passar de 45 s; espera até 90 s e, se não vier, mostra a última cópia guardada
+      let r=null, demorou=false;
+      if(f){ try{ r=await admJsonp({action:'adminHoje',fresco:1},90000); }catch(e){ demorou=true; } }
+      if(!r) r=await admJsonp({action:'adminHoje'},90000);
       if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro ao carregar');
       renderHoje(r);
+      if(demorou){ const a=document.getElementById('hojeAtualizado'); if(a){ a.innerHTML='⚠️ O cálculo na hora demorou. Mostrando a última cópia guardada'+(r.guardado?' (de '+hojeIdade(r.guardado.idadeS)+' atrás)':'')+'. Tente “Atualizar agora” daqui a pouco.'; a.style.color='var(--yellow)'; } }
     }catch(e){ box.innerHTML='<div style="color:var(--danger);font-size:0.85rem">⚠ '+e.message+'</div>'; }
     clearTimeout(hojeTimer); hojeTimer=setTimeout(()=>{ if(document.getElementById('tab-hoje').classList.contains('active')) carregarHoje(); },120000);
   }
+  function hojeIdade(s){ s=Number(s)||0; return s<120?s+' s':(s<7200?Math.round(s/60)+' min':Math.round(s/3600)+' h'); }
   function renderHoje(r){
     try{ hfAdminRender(r.hf); }catch(e){}
     const brl=v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR');
@@ -949,7 +954,7 @@
     renderVagasHoje(r.vagas);
     renderCobranca(r);
     carregarProtecao();
-    document.getElementById('hojeAtualizado').textContent='Atualizado às '+r.atualizado+(r.guardado?' (guardado há '+r.guardado.idadeS+' s)':'')+' · atualiza sozinho a cada 2 min';
+    { const a=document.getElementById('hojeAtualizado'); a.textContent='Atualizado às '+r.atualizado+(r.guardado?' (guardado há '+hojeIdade(r.guardado.idadeS)+')':'')+' · atualiza sozinho a cada 2 min'+(r.guardado&&r.guardado.velho?' · ⚠️ cópia antiga: o robô está ligado?':''); a.style.color=r.guardado&&r.guardado.velho?'var(--yellow)':''; }
     try{ const tb=document.getElementById('hojeTempos'); if(tb&&r.tempos){ const s=ms=>(ms/1000).toFixed(1).replace('.',',')+' s'; const p=(r.tempos.partes||[]).slice(0,3).map(x=>x[0]+' '+s(x[1])).join(' · ');
       tb.textContent='⏱️ O servidor levou '+s(r.tempos.totalMs)+(r.guardado?' (no cálculo guardado)':'')+' — mais lentas: '+p; tb.style.color=r.tempos.totalMs>25000?'var(--danger)':r.tempos.totalMs>12000?'var(--yellow)':'var(--muted)'; } }catch(e){}
   }

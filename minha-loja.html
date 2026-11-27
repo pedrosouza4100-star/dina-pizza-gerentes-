@@ -226,6 +226,13 @@ async function npsCarregar(){
         +(j.nps.motivos.length?'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span class="rot">Por que deram nota baixa</span>'+j.nps.motivos.map(m=>'<div class="linha"><span>'+esc(m.dia)+' · '+esc(m.motivo)+'</span><b style="color:var(--red)">'+m.nota+'</b></div>').join('')+'</div>':'')
       :'<div class="sub" style="margin-top:6px">Ainda sem notas nesta semana.</div>')
       +'<p class="sub" style="margin-top:8px;font-size:.76rem">O call center pergunta: "De 0 a 10, quanto você recomendaria o delivery da Dina Pizza para um amigo?". NPS = % de notas 9–10 menos % de notas 0–6 (vai de −100 a 100).</p></div>';
+    // ranking do call center (26/11/2026, servidor 2026-11-26-c; saiu do placar): posição da loja na semana passada
+    const R=j.ranking, eu=R&&R.lojas&&R.lojas.find(x=>x.unidade===LOJA);
+    if(R&&R.lojas&&R.lojas.length) box.innerHTML+='<div class="card"><span class="rot">🏆 Atendimento ao call center — semana '+esc(R.semana||'passada')+'</span>'
+      +(eu?'<div class="big">'+eu.posicao+'º <span style="font-size:.5em;color:var(--muted)">de '+R.lojas.length+'</span></div><div class="sub">'+eu.reclamacoes+' reclamaç'+(eu.reclamacoes===1?'ão':'ões')+(eu.taxa!=null?' ('+String(eu.taxa).replace('.',',')+'% dos clientes)':'')
+        +(eu.tempoMedioMin!=null?' · respondeu os chamados em '+eu.tempoMedioMin+' min em média':'')+(eu.chamados?' · '+eu.chamados+' chamado'+(eu.chamados>1?'s':''):'')+(eu.elogios?' · 💬 '+eu.elogios+' elogio'+(eu.elogios>1?'s':''):'')+'</div>':'')
+      +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">'+R.lojas.map(x=>'<div class="linha"'+(x.unidade===LOJA?' style="font-weight:800;color:var(--gold)"':'')+'><span>'+x.posicao+'º '+esc(x.unidade)+'</span><span>'+x.reclamacoes+' recl.</span></div>').join('')+'</div>'
+      +'<p class="sub" style="margin-top:8px;font-size:.76rem">Menos reclamações por cliente e chamados respondidos mais rápido = posição melhor.</p></div>';
   }catch(e){}
 }
 if(MODO==='gerente') document.getElementById('voltarPlacar').style.display='inline-flex';
