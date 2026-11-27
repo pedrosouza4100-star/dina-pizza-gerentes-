@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="gestao-guard.js?v=4"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Números — Dina Pizza</title>
+<meta name="theme-color" content="#0B0D12">
+<script src="dina-tema.js?v=1"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Números (27/11/2026): um dashboard só — Painel da Diretoria (Alpha), Dashboard do placar e Ao vivo — no visual do Admin novo */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0B0D12;--card:#11151C;--inner:#161B24;--line:#1E232D;--line2:#2A3140;--text:#E8EAF0;--muted:#8A91A3;--red:#E3342F;--green:#22C55E;--gold:#F59E0B;--blue:#3B82F6;--track:rgba(138,145,163,.18);--dado:#E3342F;--dado2:#4B5468}
+[data-theme="light"]{--bg:#F4F5F8;--card:#FFFFFF;--inner:#F0F2F6;--line:#E3E6EC;--line2:#D3D8E0;--text:#151821;--muted:#5E6577;--track:rgba(94,101,119,.16);--dado2:#B9C0CC}
+body{background:var(--bg);color:var(--text);font:14px/1.45 Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+.num,.tit,.frase,.kpi>b{font-family:'Space Grotesk',Inter,sans-serif}
+.wrap{padding:18px 24px 48px;display:flex;flex-direction:column;gap:16px;max-width:1600px;margin:0 auto}
+.topo{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.topo h1{font-size:22px;font-weight:600}
+.topo small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.topo .dir{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+html.embed .topo h1{display:none}
+.abas{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:5}
+.abas button{padding:10px 14px;border:0;background:none;color:var(--muted);font:500 13.5px Inter,Arial;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.abas button.on{color:var(--text);border-color:var(--red)}
+select,.btn{height:36px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--text);font:600 13px Inter,Arial,sans-serif;padding:0 12px;cursor:pointer}
+.btn.prim{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--card);border:1px solid var(--line)}
+.seg button{padding:6px 11px;border-radius:7px;border:0;background:transparent;color:var(--muted);font:600 12.5px Inter,Arial;cursor:pointer}
+.seg .on{background:var(--inner);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.rot{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.frase{font-size:21px;font-weight:600;line-height:1.25;margin:6px 0}
+.sub{font-size:13px;color:var(--muted);line-height:1.45}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.kpi{display:flex;flex-direction:column;gap:6px}
+#conteudo{display:flex;flex-direction:column;gap:16px}
+.kpi>b{font-size:26px;font-weight:600;line-height:1.1}
+.barra{position:relative;height:6px;border-radius:99px;background:var(--track)}
+.barra>span{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.barra>i{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;background:var(--text)}
+.verde{color:var(--green)}.amarelo{color:var(--gold)}.vermelho{color:var(--red)}
+.tab{overflow-x:auto}
+table{width:100%;min-width:560px;border-collapse:collapse;font-size:13px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:9px 8px;font-weight:600;white-space:nowrap}
+td{padding:9px 8px;border-top:1px solid var(--line);vertical-align:middle}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.clic{cursor:pointer} tr.clic:hover td{background:var(--inner)}
+tr.tot td{font-weight:700}
+.alerta{display:flex;gap:11px;padding:10px 12px;border-radius:10px;background:var(--inner);margin-top:8px}
+.alerta i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.alerta b{display:block;font-size:13px;font-weight:600;line-height:1.35}
+.alerta small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.graf{display:flex;align-items:flex-end;gap:3px;height:170px;border-bottom:1px solid var(--line);margin-top:12px;position:relative}
+.graf .par{flex:1;display:flex;align-items:flex-end;gap:1px;height:100%;min-width:4px}
+.graf .par div{flex:1;border-radius:3px 3px 1px 1px}
+.graf .meta{position:absolute;left:0;right:0;border-top:1px dashed var(--gold)}
+.eixo{display:flex;gap:3px;font-size:10px;color:var(--muted);margin-top:4px}.eixo span{flex:1;text-align:center}
+.leg{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12px;color:var(--muted)}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.hbar{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px}
+.hbar span:first-child{width:130px;flex:none;color:var(--muted)}
+.hbar .t{flex:1;height:8px;border-radius:99px;background:var(--track);position:relative}
+.hbar .t b{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--dado)}
+.hbar span:last-child{width:150px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.duas{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+.breve{border-style:dashed;text-align:center;color:var(--muted)}
+#carregando{padding:60px 20px;text-align:center;color:var(--muted)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--inner);color:var(--muted)}
+.pcts{display:inline-flex;gap:3px}.pcts span{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#0B0D12}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+.cal div{height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.mini div{background:var(--inner);border-radius:8px;padding:8px 10px}.mini small{display:block;color:var(--muted);font-size:11.5px}.mini b{font-family:'Space Grotesk',Inter,sans-serif;font-size:18px}
+.linha-g{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.linha-g:first-of-type{border-top:0}
+.linha-g small{display:block;color:var(--muted);font-size:12px}
+.linha-g .v{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;font-weight:600;white-space:nowrap}
+.aviso{font-size:12.5px;color:var(--muted);padding:8px 12px;border:1px dashed var(--line2);border-radius:8px}
+@media(max-width:700px){.wrap{padding:10px 10px 40px}.frase{font-size:17px}.hbar span:first-child{width:90px}.hbar span:last-child{width:110px}.duas{grid-template-columns:1fr}.kpi>b{font-size:21px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo">
+    <div><h1>Números</h1><small id="subtitulo">Carregando…</small></div>
+    <div class="dir">
+      <select id="loja" aria-label="Loja" onchange="LOJA=this.value;desenhar()"><option value="__rede__">Rede inteira</option></select>
+      <select id="mesOp" aria-label="Mês" onchange="carregarOp()" style="display:none"></select>
+      <button type="button" class="btn" id="btnAtualizar" onclick="atualizarAgora()">Atualizar agora</button>
+    </div>
+  </div>
+  <div class="abas" role="tablist">
+    <button type="button" data-aba="geral" class="on" onclick="aba('geral')">Visão geral</button>
+    <button type="button" data-aba="aovivo" onclick="aba('aovivo')">Ao vivo</button>
+    <button type="button" data-aba="vendas" onclick="aba('vendas')">Vendas</button>
+    <button type="button" data-aba="produtos" onclick="aba('produtos')">Produtos</button>
+    <button type="button" data-aba="operacao" onclick="aba('operacao')">Operação e qualidade</button>
+    <button type="button" data-aba="metas" onclick="aba('metas')">Metas</button>
+    <button type="button" data-aba="financeiro" onclick="aba('financeiro')">Financeiro</button>
+  </div>
+  <div id="conteudo"><div id="carregando">Carregando os números…</div></div>
+</div>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
+if(/[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed');
+let D=null, DD=null, AV=null, ABA='geral', LOJA='__rede__', ERRO_D='', ERRO_DD='', ERRO_AV='';
+try{ const a=(location.hash||'').slice(1); if(a) ABA=a; }catch(e){}
+function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
+function jsonp(params,ms){ return new Promise((ok,falha)=>{ const cb='num'+Date.now()+Math.floor(Math.random()*1e4); const s=document.createElement('script');
+  const t=setTimeout(()=>{ delete window[cb]; s.remove(); falha(new Error('O servidor demorou para responder.')); }, ms||60000);
+  window[cb]=j=>{ clearTimeout(t); delete window[cb]; s.remove(); ok(j); };
+  s.onerror=()=>{ clearTimeout(t); delete window[cb]; falha(new Error('Sem conexão com o servidor.')); };
+  s.src=SCRIPT_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&')+'&callback='+cb; document.head.appendChild(s); }); }
+
+// ── Cálculos e partes do Painel da Diretoria (Alpha), iguais aos de lá ──
+const R=x=>'R$ '+Math.round(Number(x)||0).toLocaleString('pt-BR');
+const N=x=>(Math.round((Number(x)||0)*10)/10).toLocaleString('pt-BR');
+const P=x=>(Number(x)||0).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const nomeMes=m=>MESES[Number(m.slice(5,7))-1]+'/'+m.slice(0,4);
+const CANAIS={salao:'Salão',balcao:'Balcão/retirada',deliveryProprio:'Delivery próprio',ifood:'iFood'};
+function varia(a,b){ if(!b) return '<span class="sub">sem base</span>'; const v=(a-b)/b*100; return '<b class="'+(v>=0?'verde':'vermelho')+'">'+(v>=0?'▲ ':'▼ ')+P(Math.abs(v))+'</b>'; }
+function cor(p){ return p>=100?'var(--green)':p>=95?'var(--gold)':'var(--red)'; }
+function barra(valor,meta,marca){ const p=meta?Math.min(valor/meta*100,100):0; return '<div class="barra"><span style="width:'+p+'%;background:'+cor(meta?valor/meta*100:0)+'"></span>'+(marca?'<i style="left:'+Math.min(marca/meta*100,100)+'%"></i>':'')+'</div>'; }
+
+function geralAlpha(){
+  const X=atual(), meta=X.meta&&X.meta.meta, comp=X.mes.comp||{};
+  const pctMeta=meta?X.mes.projecao/meta*100:0, titulo=LOJA==='__rede__'?'A rede':LOJA;
+  let frase=meta?titulo+' deve fechar '+nomeMes(D.mes)+' com '+R(X.mes.projecao)+' — '+P(pctMeta)+' da meta.':titulo+' ainda não tem meta (falta histórico do Alpha).';
+  let h='<div class="card"><span class="rot">Resumo do mês</span><div class="frase" style="color:'+(meta?cor(pctMeta):'inherit')+'">'+esc(frase)+'</div>'
+    +'<div class="sub">Vendido até agora '+R(X.mes.liq)+(meta?' · meta '+R(meta)+' · desafio (+5%) '+R(X.meta.desafio):'')+(X.mes.precisaPorDia?' · precisa de '+R(X.mes.precisaPorDia)+' por dia nos '+X.mes.diasRestantes+' dias que faltam':'')+'</div>'
+    +(meta?'<div style="margin-top:12px">'+barra(X.mes.projecao,meta,X.meta.desafio)+'</div>':'')+'</div>';
+  h+='<div class="grid">'
+    +kpi('Hoje até agora',R(X.hoje.liq),X.hoje.meta?'meta do dia '+R(X.hoje.meta)+' · '+P(X.hoje.liq/X.hoje.meta*100):'',X.hoje.meta?barra(X.hoje.liq,X.hoje.meta):'')
+    +kpi('Vendas no mês',N(X.mes.v),'ticket médio '+R(X.mes.ticket))
+    +kpi('Até ontem × mês anterior',R(comp.liq),'mesmos dias de '+nomeMes(D.mesAnterior)+': '+R(X.ant.liq)+' '+varia(comp.liq,X.ant.liq))
+    +kpi('× mesmo período do ano passado',X.aa?R(X.aa.liq):'—',X.aa?varia(comp.liq,X.aa.liq):'ainda sem histórico do ano passado')
+    +kpi('Descontos + cortesias',P(X.mes.descPct),'do faturamento bruto do mês',X.mes.descPct>D.regras.limDesc*100?'<b class="vermelho">acima do limite de '+P(D.regras.limDesc*100)+'</b>':'')
+    +'</div>'+extrasCards(X);
+  if(LOJA==='__rede__') return h+'<div class="card"><span class="rot">Lojas — projeção × meta (toque numa loja para ver o detalhe)</span><div class="tab">'+tabelaLojas()+'</div></div>'
+    +'<div class="card"><span class="rot">Canais no mês</span>'+canais(X.mes.can,X.mes.liq)+'</div>';
+  return h+'<div class="duas"><div class="card"><span class="rot">Canais no mês</span>'+canais(X.mes.can,X.mes.liq)+'</div>'
+    +'<div class="card"><span class="rot">Alertas da loja</span>'+listaAlertas(D.alertas.filter(a=>a.loja===LOJA))+'</div></div>';
+}
+// Quantidades do dia e do mês com metas (buffets, fichas = meta do placar; chope, coquetéis = mês anterior +3%)
+function extrasCards(X){
+  const Q=X.qtd||[]; if(!Q.length) return '';
+  const f=(v,un)=>(Math.round((Number(v)||0)*10)/10).toLocaleString('pt-BR')+(un==='L'?' L':'');
+  const pc=(v,m)=>m?'<b style="color:'+cor(v/m*100)+'">'+P(v/m*100)+'</b>':'<span class="sub">sem meta</span>';
+  const cel=(v,m,un)=>'<td class="n"><b>'+f(v,un)+'</b>'+(m?'<span class="sub"> / '+f(m,un)+'</span><br>'+pc(v,m):'<br><span class="sub">sem meta</span>')+'</td>';
+  return '<div class="card"><span class="rot">Quantidades do dia e do mês — buffets, fichas, boliche, bebidas e sobremesas</span><div class="tab"><table><tr><th>Item</th><th class="n">Hoje</th><th class="n">Ontem</th><th class="n">No mês</th><th class="n">Ritmo do mês</th><th class="n">× mês anterior</th></tr>'
+    +Q.map(q=>'<tr><td><b>'+esc(q.nome)+'</b><br><span class="sub">meta: '+esc(q.origem==='placar'?'a do placar':q.origem)+'</span></td>'
+      +cel(q.hoje,q.metaDia,q.un)+cel(q.ontem,q.metaOntem,q.un)
+      +'<td class="n"><b>'+f(q.mes,q.un)+'</b>'+(q.metaMes?'<span class="sub"> / '+f(q.metaMes,q.un)+'</span>':'')+(q.desafio?'<br><span class="sub">desafio '+f(q.desafio,q.un)+'</span>':'')+'</td>'
+      +'<td class="n">'+(q.metaAteOntem?pc(q.comp,q.metaAteOntem)+'<br><span class="sub">até ontem</span>':'<span class="sub">—</span>')+'</td>'
+      +'<td class="n">'+varia(q.comp,q.ant)+'</td></tr>').join('')
+    +'</table></div><p class="sub" style="margin-top:8px;font-size:.76rem">Contagem igual ao "Conferir com o Alpha" (buffet inteiro ou meia = 1, pesagem por quilo = 1, ficha combo ou avulsa = 1). Ritmo = vendido até ontem ÷ meta até ontem. × mês anterior = até ontem × mesmos dias do mês anterior.</p></div>';
+}
+function kpi(t,v,s,extra){ return '<div class="card kpi"><span class="rot">'+t+'</span><b>'+v+'</b><span class="sub">'+(s||'')+'</span>'+(extra||'')+'</div>'; }
+function canais(can,tot){ const ks=Object.keys(CANAIS).filter(k=>can&&can[k]); if(!ks.length) return '<p class="sub" style="margin-top:8px">Sem vendas.</p>';
+  const max=Math.max(...ks.map(k=>can[k][1]));
+  return ks.sort((a,b)=>can[b][1]-can[a][1]).map(k=>'<div class="hbar"><span>'+CANAIS[k]+'</span><span class="t"><b style="width:'+(can[k][1]/max*100)+'%"></b></span><span>'+R(can[k][1])+' · '+P(tot?can[k][1]/tot*100:0)+'</span></div>').join('')
+    +'<p class="sub" style="margin-top:8px">'+ks.map(k=>CANAIS[k]+': '+N(can[k][0])+' pedidos, ticket '+R(can[k][1]/can[k][0])).join(' · ')+'</p>'; }
+function tabelaLojas(){ const ls=Object.keys(D.lojas).map(u=>[u,D.lojas[u]]).sort((a,b)=>((b[1].meta?b[1].mes.projecao/b[1].meta.meta:0)-(a[1].meta?a[1].mes.projecao/a[1].meta.meta:0)));
+  return '<table><tr><th>Loja</th><th class="n">Hoje</th><th class="n">No mês</th><th class="n">Projeção</th><th class="n">Meta</th><th class="n">%</th><th class="n">× mês ant.</th><th class="n">Missão</th></tr>'
+    +ls.map(([u,L])=>{ const p=L.meta?L.mes.projecao/L.meta.meta*100:0; return '<tr class="clic" onclick="LOJA=\''+u.replace(/'/g,"\\'")+'\';montarLojas();desenhar()"><td>'+esc(u)+'</td><td class="n">'+R(L.hoje.liq)+'</td><td class="n">'+R(L.mes.liq)+'</td><td class="n">'+R(L.mes.projecao)+'</td><td class="n">'+(L.meta?R(L.meta.meta)+(L.meta.aprovada?'':' <span class="pill">sugerida</span>'):'—')+'</td><td class="n" style="color:'+(L.meta?cor(p):'inherit')+';font-weight:700">'+(L.meta?P(p):'—')+'</td><td class="n">'+varia(L.mes.comp.liq,L.ant.liq)+'</td><td class="n">'+missaoCel(L)+'</td></tr>'; }).join('')+'</table>'; }
+function missaoCel(L){ const m=L.missao; if(!m||!m.itens||!m.itens.length) return '<span class="sub">—</span>'; const a=m.itens.filter(i=>i.atrasado).length; return (a?'<span class="vermelho">⚠️ '+a+'</span>':'<span class="verde">✅</span>')+' '+(m.lida?'<span class="sub">lida '+esc(m.lida)+'</span>':'<span class="sub">não lida</span>'); }
+
+// ── Vendas: dia a dia e por hora ──
+function vendas(){
+  let serie=[];
+  if(LOJA==='__rede__'){ const ls=Object.values(D.lojas); serie=ls[0]?ls[0].serie.map((s,i)=>[s[0],ls.reduce((t,L)=>L.serie[i][1]==null?t:(t||0)+L.serie[i][1],null),ls.reduce((t,L)=>L.serie[i][2]==null?t:(t||0)+L.serie[i][2],null)]):[]; }
+  else serie=D.lojas[LOJA].serie;
+  const max=Math.max(1,...serie.map(s=>Math.max(s[1]||0,s[2]||0)));
+  let h='<div class="card"><span class="rot">Faturamento dia a dia — '+nomeMes(D.mes)+' × '+nomeMes(D.mesAnterior)+'</span><div class="graf">'
+    +serie.map(s=>'<div class="par" title="Dia '+s[0]+': '+R(s[1])+' (mês anterior '+R(s[2])+')"><div style="height:'+((s[2]||0)/max*100)+'%;background:var(--track)"></div><div style="height:'+((s[1]||0)/max*100)+'%;background:var(--red)"></div></div>').join('')
+    +'</div><div class="eixo">'+serie.map(s=>'<span>'+(s[0]%5===1||s[0]===serie.length?s[0]:'')+'</span>').join('')+'</div>'
+    +'<div class="leg"><span><i style="background:var(--red)"></i>'+nomeMes(D.mes)+'</span><span><i style="background:var(--track)"></i>'+nomeMes(D.mesAnterior)+'</span></div></div>';
+  const X=atual(), hs=X.mes.h||{}, horas=Object.keys(hs).sort((a,b)=>((+a+20)%24)-((+b+20)%24)), mh=Math.max(1,...horas.map(k=>hs[k][1]));
+  h+='<div class="duas"><div class="card"><span class="rot">Vendas por hora no mês (horário do pedido)</span>'
+    +(horas.length?horas.map(k=>'<div class="hbar"><span>'+k+'h</span><span class="t"><b style="width:'+(hs[k][1]/mh*100)+'%"></b></span><span>'+N(hs[k][0])+' ped · '+R(hs[k][1])+'</span></div>').join(''):'<p class="sub">Sem dados.</p>')+'</div>';
+  h+='<div class="card"><span class="rot">Canais: até ontem × mesmos dias do mês anterior</span><div class="tab"><table><tr><th>Canal</th><th class="n">Agora</th><th class="n">Mês ant.</th><th class="n">Variação</th></tr>'
+    +Object.keys(CANAIS).map(k=>{ const a=X.mes.comp&&X.mes.comp.can&&X.mes.comp.can[k]?X.mes.comp.can[k][1]:0, b=X.ant.can&&X.ant.can[k]?X.ant.can[k][1]:0; return (a||b)?'<tr><td>'+CANAIS[k]+'</td><td class="n">'+R(a)+'</td><td class="n">'+R(b)+'</td><td class="n">'+varia(a,b)+'</td></tr>':''; }).join('')+'</table></div></div></div>';
+  return h;
+}
+
+// ── Produtos ──
+function produtos(){
+  const PR=atual().produtos, quem=LOJA==='__rede__'?'na rede':'em '+LOJA;
+  const tab=(tit,l,cols)=>'<div class="card"><span class="rot">'+tit+'</span><div class="tab"><table><tr><th>Produto</th>'+cols.map(c=>'<th class="n">'+c[0]+'</th>').join('')+'</tr>'
+    +(l.length?l.map(p=>'<tr><td>'+esc(p.n)+' <span class="pill">'+esc(p.g||'')+'</span></td>'+cols.map(c=>'<td class="n">'+c[1](p)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="9" class="sub">Nada aqui.</td></tr>')+'</table></div></div>';
+  const qv=[['Qtd',p=>N(p.q)],['Valor',p=>R(p.v)],['30 dias antes',p=>N(p.q0)]];
+  return '<div class="card"><span class="rot">Últimos '+D.regras.paradoDias+' dias '+quem+'</span><div class="sub" style="margin-top:6px">'+PR.total+' produtos com venda. Comparação com os '+D.regras.paradoDias+' dias anteriores. Produtos vendidos só a R$ 0 (itens de combo) e sachês ficam de fora.</div></div>'
+    +'<div class="duas">'+tab('Mais vendidos',PR.mais,qv)+tab('Menos vendidos (com venda)',PR.menos,qv)+'</div>'
+    +'<div class="duas">'+tab('Maiores altas',PR.altas,[['Qtd',p=>N(p.q)],['Antes',p=>N(p.q0)],['Variação',p=>'<b class="verde">+'+P(p.pct)+'</b>']])
+    +tab('Maiores quedas',PR.quedas,[['Qtd',p=>N(p.q)],['Antes',p=>N(p.q0)],['Variação',p=>'<b class="vermelho">'+P(p.pct)+'</b>']])+'</div>'
+    +tab('Sem venda há '+D.regras.paradoDias+' dias ou mais — avaliar tirar do cardápio',PR.parados,[['Última venda',p=>nomeMes(p.ultimo)]]);
+}
+
+// ── Metas ──
+function metas(){
+  const ls=Object.keys(D.lojas);
+  let h='<div class="card"><span class="rot">Como a meta é sugerida</span><p class="sub" style="margin-top:6px">Base = média de cada dia da semana no <b>mesmo mês do ano passado</b> (ou no mês anterior, se não houver) × quantos desses dias o mês tem. Meta = base + '+P(D.regras.meta*100)+'. Desafio da premiação = base + '+P(D.regras.desafio*100)+'. A meta só vale como oficial depois que a diretoria aprova.</p></div>';
+  h+='<div class="card"><span class="rot">Metas de '+nomeMes(D.mes)+'</span><div class="tab"><table><tr><th>Loja</th><th>Base usada</th><th class="n">Base</th><th class="n">Meta sugerida</th><th class="n">Desafio</th><th>Situação</th><th></th></tr>'
+    +ls.map(u=>{ const L=D.lojas[u], s=L.sugerida, m=L.meta; if(!s&&!m) return '<tr><td>'+esc(u)+'</td><td colspan="6" class="sub">Sem histórico suficiente no Alpha.</td></tr>';
+      const id='m_'+u.replace(/\W/g,'');
+      return '<tr><td>'+esc(u)+'</td><td class="sub">'+esc(s?s.origem+' ('+nomeMes(s.mesBase)+')':m.origem)+'</td><td class="n">'+R(s?s.base:m.base)+'</td><td class="n">'+(s?R(s.meta):'—')+'</td><td class="n">'+(s?R(s.desafio):'—')+'</td>'
+       +'<td>'+(m&&m.aprovada?'<b class="verde">✔ aprovada '+R(m.meta)+'</b><br><span class="sub">'+esc(m.aprovadoEm)+'</span>':'<span class="pill">sugerida</span>')+'</td>'
+       +'<td style="white-space:nowrap"><input id="'+id+'" type="number" step="100" value="'+Math.round(m&&m.aprovada?m.meta:s.meta)+'" style="width:110px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--inner);color:var(--text);padding:0 8px"> '
+       +'<button class="btn prim" onclick="aprovar(\''+u.replace(/'/g,"\\'")+'\',\''+id+'\')">Aprovar</button>'+(m&&m.aprovada?' <button class="btn" onclick="aprovar(\''+u.replace(/'/g,"\\'")+'\',\''+id+'\',1)">Desfazer</button>':'')+'</td></tr>'; }).join('')
+    +'</table></div><p class="sub" style="margin-top:10px">Pode ajustar o valor antes de aprovar. O desafio acompanha a meta aprovada. A meta diária respeita o peso de cada dia da semana.</p></div>';
+  if(D.regras.missaoPct!=null) h+='<div class="card"><span class="rot">Missão de hoje — metas dos produtos, balcão e iFood</span><p class="sub" style="margin-top:6px">Meta de cada loja = média do <b>mesmo dia da semana nas últimas 4 semanas</b> + o % abaixo, arredondada para cima (mínimo '+D.regras.missaoMin+'). Vale para a rede toda, sem aprovar loja por loja. Buffets e fichas usam a meta oficial do placar.</p>'
+    +'<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>Aumento sobre a média:</span><input id="missaoPct" type="number" min="0" max="50" step="1" value="'+D.regras.missaoPct+'" style="width:80px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--inner);color:var(--text);padding:0 8px"> % <button class="btn prim" onclick="salvarMissaoPct()">Salvar</button></div></div>';
+  return h;
+}
+async function aprovar(u,id,desfazer){ const L=D.lojas[u], s=L.sugerida||L.meta, v=Number(document.getElementById(id).value);
+  if(!desfazer && !(v>0)) return alert('Digite o valor da meta.');
+  if(!confirm((desfazer?'Desfazer a meta aprovada de ':'Aprovar a meta de ')+u+(desfazer?'':' em '+R(v))+'?')) return;
+  try{ const j=await jsonp({action:'pnlMetaAprovar',chave:chave(),mes:D.mes,unidade:u,meta:desfazer?1:v,base:s.base,origem:s.origem||'',desfazer:desfazer?1:0},120000);
+    if(!j.ok) return alert(j.erro); await carregar(); aba('metas'); }catch(e){ alert(e.message); } }
+
+async function salvarMissaoPct(){ const v=Number(document.getElementById('missaoPct').value);
+  if(!(v>=0&&v<=50)) return alert('Digite um número de 0 a 50.');
+  if(!confirm('Metas da Missão de hoje = média de 4 semanas + '+v+'%?')) return;
+  try{ const j=await jsonp({action:'pnlMissaoPct',chave:chave(),pct:v},120000); if(!j.ok) return alert(j.erro); await carregar(); aba('metas'); }catch(e){ alert(e.message); } }
+// ── Alertas ──
+function listaAlertas(l){ const cores={alto:'var(--red)',medio:'var(--gold)',baixo:'var(--blue)',bom:'var(--green)'};
+  return l.length?l.map(a=>'<div class="alerta"><i style="background:'+cores[a.nivel]+'"></i><div><b>'+esc(a.txt)+'</b><small>'+esc(a.loja)+'</small></div></div>').join(''):'<p class="sub" style="margin-top:8px">Nenhum alerta. 👏</p>'; }
+function alertas(){ const ordem={alto:0,medio:1,bom:2,baixo:3}; const l=D.alertas.filter(a=>LOJA==='__rede__'||a.loja===LOJA).sort((a,b)=>ordem[a.nivel]-ordem[b.nivel]);
+  return '<div class="card"><span class="rot">Alertas e sugestões automáticas</span><p class="sub" style="margin-top:6px">🔴 meta em risco · 🟡 atenção (descontos, canal em queda, iFood alto) · 🟢 candidata à premiação · 🔵 produtos parados</p>'+listaAlertas(l)+'</div>'
+    +'<div class="card breve"><span class="rot">Sugestões de mercado do mês</span><p class="sub" style="margin-top:6px">Texto com análise do mercado e das grandes redes, atualizado todo mês. Em preparo.</p></div>'; }
+function hojeCal(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date()); }
+function financeiro(){
+  const F=D.fin; if(!F) return '<div class="card breve"><span class="rot">Financeiro</span><div class="frase">💰 Ainda sem dados do financeiro</div><p class="sub">'+esc(D.finErro||'O financeiro é importado do Alpha de hora em hora, das 8h às 20h. Clique em "Atualizar agora" ou espere a próxima hora.')+'</p></div>';
+  const k=LOJA==='__rede__'?null:(/^Isaac/.test(LOJA)?'Isaac':LOJA), X=k?F.lojas[k]:F.rede;
+  if(!X) return '<div class="card">Sem contas no Alpha para '+esc(LOJA)+'.</div>';
+  const nome=k?(k==='Isaac'?'Isaac (Manhã + Noite, mesma empresa no Alpha)':k):'a rede', c=X.cmv;
+  const bk=(o,b)=>o[b]||[0,0];
+  let h='';
+  if(c) h+='<div class="card"><span class="rot">Limite de compra — '+esc(nome)+'</span><div class="frase" style="color:'+(c.limiteDia>0?'var(--green)':'var(--red)')+'">Pode comprar hoje até '+R(c.limiteDia)+'</div>'
+    +'<div class="sub">No mês ainda cabem '+R(c.limiteMes)+' em compras para ficar dentro do CMV de '+P(F.cmvMeta*100)+' ('+P(F.cmvMeta*100)+' de '+R(c.projecao)+' previstos − '+R(c.compras)+' já comprados). Dividido pelos '+c.diasRestantes+' dias que faltam e limitado pelo caixa previsto da semana ('+R(c.fluxo7)+' = a receber + vendas previstas − a pagar e vencidas, 7 dias).</div>'
+    +'<div style="margin-top:12px"><div class="barra"><span style="width:'+Math.min(c.pct/(F.cmvMeta*100)*100,100)+'%;background:'+(c.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'"></span></div></div><div class="sub" style="margin-top:6px">CMV do mês até agora: <b style="color:'+(c.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'">'+P(c.pct)+'</b> ('+R(c.compras)+' em compras ÷ '+R(c.faturamento)+' vendidos). Compras: '+esc(F.origemCompras)+'.</div></div>';
+  h+='<div class="grid">'
+    +kpi('A pagar vencidas',R(bk(X.aPagar,'vencidas')[1]),N(bk(X.aPagar,'vencidas')[0])+' contas em aberto',bk(X.aPagar,'vencidas')[1]?'<b class="vermelho">pagar ou dar baixa no Alpha</b>':'')
+    +kpi('A pagar hoje',R(bk(X.aPagar,'hoje')[1]),N(bk(X.aPagar,'hoje')[0])+' contas')
+    +kpi('A pagar em 7 dias',R(bk(X.aPagar,'d7')[1]),'30 dias: '+R(bk(X.aPagar,'d7')[1]+bk(X.aPagar,'d30')[1]+bk(X.aPagar,'hoje')[1]))
+    +kpi('A receber em 7 dias',R(bk(X.aReceber,'hoje')[1]+bk(X.aReceber,'d7')[1]),'cartões, iFood e vales · 30 dias: '+R(bk(X.aReceber,'hoje')[1]+bk(X.aReceber,'d7')[1]+bk(X.aReceber,'d30')[1]))
+    +kpi('Pagas hoje',R(X.pagas.hoje[1]),N(X.pagas.hoje[0])+' baixas hoje · no mês '+R(X.pagas.mes[1]))
+    +'</div>';
+  const fx=X.fluxo, mx=Math.max(1,...fx.map(f=>Math.max(f[1],f[2])));
+  h+='<div class="card"><span class="rot">Próximos 14 dias — a receber × a pagar (em aberto no Alpha)</span><div class="graf">'
+    +fx.map(f=>'<div class="par" title="'+f[0].split('-').reverse().join('/')+': receber '+R(f[1])+', pagar '+R(f[2])+'"><div style="height:'+(f[1]/mx*100)+'%;background:var(--green)"></div><div style="height:'+(f[2]/mx*100)+'%;background:var(--red)"></div></div>').join('')
+    +'</div><div class="eixo">'+fx.map(f=>'<span>'+f[0].slice(8)+'</span>').join('')+'</div><div class="leg"><span><i style="background:var(--green)"></i>a receber</span><span><i style="background:var(--red)"></i>a pagar</span></div></div>';
+  h+='<div class="duas"><div class="card"><span class="rot">Contas a pagar — vencidas e próximas</span><div class="tab"><table><tr><th>Vence</th>'+(k?'':'<th>Empresa</th>')+'<th>Descrição</th><th class="n">Valor</th></tr>'
+    +(X.proximas.length?X.proximas.map(p=>'<tr><td style="white-space:nowrap;'+(p.v<hojeCal()?'color:var(--red);font-weight:700':'')+'">'+p.v.split('-').reverse().slice(0,2).join('/')+'</td>'+(k?'':'<td>'+esc(p.k)+'</td>')+'<td>'+esc(p.d||p.p)+'<br><span class="sub">'+esc(p.p)+'</span></td><td class="n">'+R(p.val)+'</td></tr>').join(''):'<tr><td colspan="4" class="sub">Nenhuma conta em aberto nos próximos 30 dias. 👏</td></tr>')
+    +'</table></div><p class="sub" style="margin-top:8px">Conta paga e baixada no Alpha sai desta lista na próxima atualização.</p></div>';
+  h+='<div class="card"><span class="rot">Despesas por plano de contas — '+nomeMes(D.mes)+' × '+nomeMes(D.mesAnterior)+' (pelo vencimento)</span><div class="tab"><table><tr><th>Plano</th><th class="n">Este mês</th><th class="n">Mês ant.</th></tr>'
+    +X.planos.map(p=>'<tr><td>'+esc(p.p)+'</td><td class="n">'+R(p.v)+'</td><td class="n">'+R(p.v0)+'</td></tr>').join('')+'</table></div></div></div>';
+  if(!k){
+    const ls=Object.keys(F.lojas);
+    h+='<div class="card"><span class="rot">Por empresa</span><div class="tab"><table><tr><th>Empresa</th><th class="n">Vencidas</th><th class="n">A pagar 7 dias</th><th class="n">A receber 7 dias</th><th class="n">CMV</th><th class="n">Pode comprar hoje</th></tr>'
+      +ls.map(n=>{ const L=F.lojas[n]; return '<tr><td>'+esc(n==='Central'?'Central (compras da rede)':n)+'</td><td class="n" style="'+(L.aPagar.vencidas[1]?'color:var(--red);font-weight:700':'')+'">'+R(L.aPagar.vencidas[1])+'</td><td class="n">'+R(L.aPagar.hoje[1]+L.aPagar.d7[1])+'</td><td class="n">'+R(L.aReceber.hoje[1]+L.aReceber.d7[1])+'</td><td class="n">'+(L.cmv?'<b style="color:'+(L.cmv.pct<=F.cmvMeta*100?'var(--green)':'var(--red)')+'">'+P(L.cmv.pct)+'</b>':'—')+'</td><td class="n">'+(L.cmv?R(L.cmv.limiteDia):'—')+'</td></tr>'; }).join('')+'</table></div></div>';
+    const S=F.socios;
+    h+='<div class="card"><span class="rot">Sócios e patrimônio (fora do resultado das lojas)</span><div class="sub" style="margin-top:6px">Retiradas, consórcios, IPTU e terrenos. A pagar em 30 dias: <b>'+R(S.aPagar.hoje[1]+S.aPagar.d7[1]+S.aPagar.d30[1])+'</b>'+(S.aPagar.vencidas[1]?' · vencidas <b class="vermelho">'+R(S.aPagar.vencidas[1])+'</b>':'')+' · pagos no mês '+R(S.pagas.mes[1])+'</div><div class="tab"><table><tr><th>Vence</th><th>Descrição</th><th class="n">Valor</th></tr>'
+      +(S.proximas.length?S.proximas.slice(0,10).map(p=>'<tr><td>'+p.v.split('-').reverse().slice(0,2).join('/')+'</td><td>'+esc(p.d||p.p)+'<br><span class="sub">'+esc(p.p)+'</span></td><td class="n">'+R(p.val)+'</td></tr>').join(''):'<tr><td colspan="3" class="sub">Nada em aberto.</td></tr>')+'</table></div></div>';
+  }
+  return h+'<p class="sub">Financeiro atualizado em '+esc(F.atualizadoEm)+' (de hora em hora, 8h–20h). Contas da agenda do Alpha; R S de Pontes fica fora.</p>';
+}
+
+// ── Carregar: Alpha (pnlDados), placar do mês (dashboardDados) e ao vivo (aoVivoDados, só quando a aba abre) ──
+const NOMES_M=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+(function(){ const sel=document.getElementById('mesOp'), h=new Date(); for(let i=0;i<12;i++){ const d=new Date(h.getFullYear(),h.getMonth()-i,1); const o=document.createElement('option'); o.value=d.getMonth()+'|'+d.getFullYear(); o.textContent=NOMES_M[d.getMonth()]+' '+d.getFullYear(); sel.appendChild(o); } })();
+async function carregarAlpha(){ try{ const j=await jsonp({action:'pnlDados',chave:chave()},90000); if(j&&j.ok){ D=j; ERRO_D=''; } else ERRO_D=(j&&j.erro)||'Não foi possível carregar os números do Alpha.'; }catch(e){ ERRO_D=e.message; } }
+async function carregarOp(redesenhar){ const [m,a]=document.getElementById('mesOp').value.split('|');
+  if(redesenhar!==false&&ABA==='operacao') document.getElementById('conteudo').innerHTML='<div id="carregando">Carregando o mês…</div>';
+  try{ const j=await jsonp({action:'dashboardDados',mes:m,ano:a,chave:chave()},90000); if(j&&j.ok){ DD=j; ERRO_DD=''; } else ERRO_DD=(j&&j.erro)||'Não foi possível carregar os números do placar.'; }catch(e){ ERRO_DD=e.message; }
+  if(redesenhar!==false) desenhar(); }
+let _avTimer=null;
+async function carregarAV(fresco){ try{ const j=await jsonp(Object.assign({action:'aoVivoDados',chave:chave()},fresco?{fresco:1}:{}),90000); if(j&&j.ok!==false){ AV=j; ERRO_AV=''; } else ERRO_AV=(j&&j.erro)||'Não foi possível carregar o ao vivo.'; }catch(e){ ERRO_AV=e.message; }
+  if(ABA==='aovivo') desenhar(); clearTimeout(_avTimer); _avTimer=setTimeout(()=>{ if(ABA==='aovivo'&&document.visibilityState==='visible') carregarAV(); },5*60000); }
+async function carregar(){ await Promise.all([carregarAlpha(),carregarOp(false)]); montarLojas(); desenhar(); if(ABA==='aovivo') carregarAV(); }
+async function atualizarAgora(){ const b=document.getElementById('btnAtualizar'); b.disabled=true; b.textContent='Atualizando…';
+  try{ if(ABA==='aovivo') await carregarAV(true);
+    else if(ABA==='operacao') await carregarOp();
+    else { const j=await jsonp({action:'pnlAtualizar',chave:chave()},300000); if(j&&j.ok){ D=j; montarLojas(); desenhar(); if(j.aviso) aviso(j.aviso); } else aviso((j&&j.erro)||'Falhou'); } }
+  catch(e){ aviso(e.message); } b.disabled=false; b.textContent='Atualizar agora'; }
+function aviso(t){ alert(t); }
+function todasLojas(){ const s=new Set(); if(D) Object.keys(D.lojas).forEach(u=>s.add(u)); if(DD) DD.unidades.forEach(u=>s.add(u.unidade)); const ord=["Isaac Manhã","Isaac Noite","Água Verde","Uberaba","Campo Largo","Capão Raso","São José dos Pinhais","Expressa","Fazenda Rio Grande","Colombo","Araucária"]; return [...s].sort((a,b)=>(ord.indexOf(a)+99)%99-(ord.indexOf(b)+99)%99); }
+function montarLojas(){ const s=document.getElementById('loja'), ls=todasLojas();
+  s.innerHTML='<option value="__rede__">Rede inteira</option>'+ls.map(u=>'<option'+(u===LOJA?' selected':'')+'>'+esc(u)+'</option>').join(''); s.value=LOJA; }
+function aba(a){ ABA=a; document.querySelectorAll('[data-aba]').forEach(b=>b.classList.toggle('on',b.dataset.aba===a)); try{ history.replaceState(null,'','#'+a); }catch(e){}
+  if(a==='aovivo'&&!AV) { document.getElementById('conteudo').innerHTML='<div id="carregando">Buscando as vendas de agora no Alpha…</div>'; carregarAV(); desenharTopo(); return; }
+  desenhar(); window.scrollTo(0,0); }
+function atual(){ return LOJA==='__rede__'?D.rede:D.lojas[LOJA]; }
+function desenharTopo(){
+  document.getElementById('mesOp').style.display=ABA==='operacao'?'':'none';
+  document.querySelectorAll('[data-aba]').forEach(b=>b.classList.toggle('on',b.dataset.aba===ABA));
+  const st=document.getElementById('subtitulo');
+  if(ABA==='aovivo') st.textContent=AV?'Ao vivo · atualizado às '+(AV.hora||'')+' · relê sozinho a cada 5 min':'Ao vivo';
+  else if(ABA==='operacao') st.textContent=DD?'Placar de '+DD.nomeMesAtual+' '+DD.ano+(DD.ehMesAtual?' · até o dia '+DD.corteRede:' · mês fechado'):'Placar';
+  else st.textContent=D?'Alpha atualizado em '+D.atualizadoEm+' · dia de operação '+D.hoje.split('-').reverse().join('/'):'Alpha';
+}
+const SEM_ALPHA=()=>'<div class="card"><span class="rot">Números do Alpha</span><div class="frase">Ainda não carregou</div><div class="sub">'+esc(ERRO_D||'Carregando…')+'</div><div style="margin-top:10px"><button class="btn" onclick="carregar()">Tentar de novo</button></div></div>';
+function desenhar(){
+  desenharTopo();
+  const f={geral:geralNovo,aovivo:aoVivo,vendas:()=>D?vendas():SEM_ALPHA(),produtos:()=>D?produtos():SEM_ALPHA(),operacao,metas:()=>D?metas():SEM_ALPHA(),financeiro:()=>D?financeiro():SEM_ALPHA()}[ABA]||geralNovo;
+  let h=''; try{ h=f(); }catch(e){ h='<div class="card">Não consegui montar esta parte: '+esc(e.message)+'</div>'; }
+  document.getElementById('conteudo').innerHTML=h;
+}
+
+// ── Visão geral: o resumo do Alpha + o placar do mês + o que precisa de atenção ──
+function discDe(u){ return (DD&&DD.disciplina&&DD.disciplina.lojas&&DD.disciplina.lojas[u])||{}; }
+function qualDe(u){ return (DD&&DD.qualidade&&DD.qualidade[u])||{}; }
+function unDD(u){ return DD?DD.unidades.find(x=>x.unidade===u):null; }
+function corDisc(p){ return p==null?'var(--line2)':p>=95?'var(--green)':p>=80?'var(--gold)':'var(--red)'; }
+function pctsCel(u){ const d=discDe(u); if(!DD) return '<span class="sub">—</span>';
+  return '<span class="pcts"><span style="background:'+corDisc(d.placar)+'" title="Placar enviado: '+(d.placar==null?'—':d.placar+'%')+'">P</span><span style="background:'+corDisc(d.temChecklist===false?null:d.checklist)+'" title="Checklist completo: '+(d.checklist==null?'—':d.checklist+'%')+'">C</span><span style="background:'+corDisc(d.temTempos===false?null:d.tempos)+'" title="Tempos completos: '+(d.tempos==null?'—':d.tempos+'%')+'">T</span></span>'; }
+function geralNovo(){
+  if(!D) return SEM_ALPHA()+(DD?resumoPlacar():'');
+  let h=geralAlpha();
+  // tira o "Alertas da loja" do Alpha (vai no "Precisa de atenção" junto com o placar)
+  h=h.replace(/<div class="card"><span class="rot">Alertas da loja<\/span>[\s\S]*?<\/div><\/div>$/,'');
+  return h+(DD?resumoPlacar():'')+'<div class="card"><span class="rot">Precisa de atenção</span><div class="sub" style="margin-top:4px">Meta em risco, descontos, canais, produtos parados e o que saiu do combinado no placar.</div>'+atencao()+'</div>';
+}
+// tabela das lojas: Alpha (hoje, mês, projeção, meta) + placar (disciplina P · C · T, avaliações Google) + nutricionista
+function tabelaLojas(){ const ls=Object.keys(D.lojas).map(u=>[u,D.lojas[u]]).sort((a,b)=>((b[1].meta?b[1].mes.projecao/b[1].meta.meta:0)-(a[1].meta?a[1].mes.projecao/a[1].meta.meta:0)));
+  return '<table><tr><th>Loja</th><th class="n">Hoje</th><th class="n">No mês</th><th class="n">Projeção</th><th class="n">Meta</th><th class="n">%</th><th class="n">× mês ant.</th><th>Placar</th><th class="n">Google</th><th class="n">Nutri</th><th class="n">Missão</th></tr>'
+    +ls.map(([u,L])=>{ const p=L.meta?L.mes.projecao/L.meta.meta*100:0, ud=unDD(u), nut=(qualDe(u).nutri||{}).nota;
+      return '<tr class="clic" onclick="LOJA=\''+u.replace(/'/g,"\\'")+'\';montarLojas();desenhar()"><td><b>'+esc(u)+'</b></td><td class="n">'+R(L.hoje.liq)+'</td><td class="n">'+R(L.mes.liq)+'</td><td class="n">'+R(L.mes.projecao)+'</td><td class="n">'+(L.meta?R(L.meta.meta):'—')+'</td><td class="n" style="color:'+(L.meta?cor(p):'var(--muted)')+';font-weight:700">'+(L.meta?P(p):'—')+'</td><td class="n">'+varia(L.mes.comp.liq,L.ant.liq)+'</td><td>'+pctsCel(u)+'</td><td class="n">'+(ud?N(ud.google):'—')+'</td><td class="n" style="color:'+(nut==null?'var(--muted)':nut>=85?'var(--green)':nut>=75?'var(--gold)':'var(--red)')+'">'+(nut==null?'—':Math.round(nut))+'</td><td class="n">'+missaoCel(L)+'</td></tr>'; }).join('')+'</table>'
+    +'<p class="sub" style="margin-top:8px;font-size:12px">Placar: P · C · T = % dos dias do mês com Placar enviado, Checklist completo e Tempos completos (verde 95%+, amarelo 80–94%, vermelho abaixo de 80%).</p>'; }
+function resumoPlacar(){
+  const U=LOJA==='__rede__'?null:unDD(LOJA); if(LOJA!=='__rede__'&&!U) return '';
+  const soma=k=>U?(Number(U[k])||0):DD.unidades.reduce((s,u)=>s+(Number(u[k])||0),0);
+  const d=U?discDe(LOJA):{placar:DD.disciplina&&DD.disciplina.rede}, rit=(v,m)=>m>0?'<span style="color:'+cor(v/m*100)+'">'+P(v/m*100)+' do ritmo</span>':'sem meta';
+  return '<div class="card"><span class="rot">Placar de '+esc(DD.nomeMesAtual)+' '+(U?'— '+esc(LOJA):'— rede')+'</span><div class="grid" style="margin-top:10px">'
+    +kpi('Avaliações Google',N(soma('google')),rit(soma('google'),soma(DD.ehMesAtual?'metaAteHojeGoogle':'metaMensalGoogle')))
+    +kpi('Avaliações iFood',N(soma('ifood')),rit(soma('ifood'),soma(DD.ehMesAtual?'metaAteHojeIfood':'metaMensalIfood')))
+    +kpi('Chamados · cancelamentos',N(soma('chamados'))+' · '+N(soma('cancelamentos')),'meta: zero')
+    +kpi(U?'Disciplina do placar':'Disciplina da rede',d.placar==null?'—':d.placar+'%','dias com placar, checklist e tempos no horário (meta 95%)')
+    +'</div><div style="margin-top:10px"><button class="btn" onclick="aba(\'operacao\')">Ver operação e qualidade</button></div></div>';
+}
+function atencao(){
+  const a=[], add=(r,t,s)=>a.push({r,t,s});
+  if(D) (D.alertas||[]).filter(x=>LOJA==='__rede__'||x.loja===LOJA).forEach(x=>{ if(x.nivel!=='bom') add(x.nivel==='alto'?2:x.nivel==='medio'?1:0,x.loja+': '+x.txt,''); });
+  if(DD) DD.unidades.forEach(u=>{ if(LOJA!=='__rede__'&&u.unidade!==LOJA) return; const n=u.unidade, d=discDe(n), q=qualDe(n);
+    if(d.atrasos>=2) add(d.atrasos>=3?2:1,n+': '+d.atrasos+' atrasos no checklist/Start Dina no mês',d.atrasos>=3?'O placar bloqueia a partir do 3º atraso.':'No próximo atraso o placar fica bloqueado.');
+    if(d.placar!=null&&d.placar<90) add(2,n+': placar enviado em só '+d.placar+'% dos dias','');
+    if(d.tempos!=null&&d.tempos<80) add(1,n+': tempos de entrega completos em '+d.tempos+'% dos dias','');
+    if(q.corrGdi&&q.corrGdi.paradas) add(1,n+': '+q.corrGdi.paradas+' correção(ões) do GDI parada(s)','O gerente justificou e falta o GDI confirmar.');
+    if(q.nutri&&q.nutri.nota<75) add(1,n+': nota da nutricionista '+Math.round(q.nutri.nota),'Última visita '+q.nutri.dia+'.'); });
+  if(!a.length) return '<div class="alerta"><i style="background:var(--green)"></i><div><b>Tudo em dia</b><small>Nada fora do combinado.</small></div></div>';
+  a.sort((x,y)=>y.r-x.r); const cores=['var(--blue)','var(--gold)','var(--red)'];
+  return a.slice(0,14).map(x=>'<div class="alerta"><i style="background:'+cores[x.r]+'"></i><div><b>'+esc(x.t)+'</b>'+(x.s?'<small>'+esc(x.s)+'</small>':'')+'</div></div>').join('')+(a.length>14?'<div class="sub" style="margin-top:8px">e mais '+(a.length-14)+'…</div>':''); }
+
+// ── Operação e qualidade (placar do mês escolhido) ──
+function metasDe(u){
+  const m=[['Faturamento informado','faturamento','metaAteHoje','metaMensal',R],['Avaliações Google','google','metaAteHojeGoogle','metaMensalGoogle',N],['Avaliações iFood','ifood','metaAteHojeIfood','metaMensalIfood',N]];
+  if(u.temFliperBuffet!==false) m.push(['Fichas de fliperama','fichas','metaAteHojeFichas','metaMensalFichas',N],['Buffets','buffets','metaAteHojeBuffet','metaMensalBuffet',N]);
+  return m.map(([nome,k,kh,km,f])=>{ const atual=Number(u[k])||0, ateHoje=DD.ehMesAtual?(Number(u[kh])||0):(Number(u[km])||0), mensal=Number(u[km])||0, rest=u.diasRestantes||0;
+    return {nome,f,atual,ateHoje,mensal,pct:ateHoje>0?atual/ateHoje*100:null,porDia:rest>0?Math.max(0,mensal-atual)/rest:0}; }); }
+function somaDD(){ const r={temFliperBuffet:true}; ['faturamento','google','ifood','fichas','buffets','metaAteHoje','metaMensal','metaAteHojeGoogle','metaMensalGoogle','metaAteHojeIfood','metaMensalIfood','metaAteHojeFichas','metaMensalFichas','metaAteHojeBuffet','metaMensalBuffet','chamados','cancelamentos','motoboys','startDina','pedidosConfirmadosIfood','faltaProdutoSim'].forEach(k=>r[k]=DD.unidades.reduce((s,u)=>s+(Number(u[k])||0),0)); r.diasRestantes=Math.max(0,...DD.unidades.map(u=>u.diasRestantes||0)); return r; }
+function cartaoMeta(m){ return '<div class="card kpi"><span class="rot">'+esc(m.nome)+'</span><b>'+m.f(m.atual)+'</b>'+(m.ateHoje?barra(m.atual,m.ateHoje):'')+'<span class="sub">'+(m.pct==null?'sem meta':(DD.ehMesAtual?'deveria estar em '+m.f(m.ateHoje)+' · ':'meta '+m.f(m.mensal)+' · ')+'<b style="color:'+cor(m.pct)+'">'+P(m.pct)+'</b>')+(DD.ehMesAtual&&m.porDia?'<br>precisa de '+m.f(m.porDia)+' por dia':'')+'</span></div>'; }
+function operacao(){
+  if(!DD) return '<div class="card"><span class="rot">Placar</span><div class="frase">Ainda não carregou</div><div class="sub">'+esc(ERRO_DD||'Carregando…')+'</div><div style="margin-top:10px"><button class="btn" onclick="carregarOp()">Tentar de novo</button></div></div>';
+  const U=LOJA==='__rede__'?null:unDD(LOJA);
+  if(LOJA!=='__rede__'&&!U) return '<div class="card">'+esc(LOJA)+' não tem placar neste mês.</div>';
+  const X=U||somaDD();
+  let h='<div class="grid">'+metasDe(X).map(cartaoMeta).join('')+'</div>';
+  h+='<div class="grid">'+kpi('Chamados',N(X.chamados),'meta: zero')+kpi('Cancelamentos',N(X.cancelamentos),'meta: zero')+kpi('Dias com falta de produto',N(X.faltaProdutoSim),'meta: zero')+kpi('Pedidos iFood não confirmados',N(X.pedidosConfirmadosIfood),'meta: zero')+kpi('Motoboys informados',N(X.motoboys),'soma dos dias')+'</div>';
+  if(U) h+=calendario(U)+qualidadeLoja(U);
+  else h+='<div class="card"><span class="rot">Lojas no mês</span><div class="tab"><table><tr><th>Loja</th><th>Placar</th><th class="n">Atrasos</th><th class="n">Fatur. × ritmo</th><th class="n">Google</th><th class="n">iFood</th><th class="n">Chamados</th><th class="n">Cancel.</th><th class="n">Falta (dias)</th><th class="n">Nutri</th><th class="n">Visitas GDI</th></tr>'
+    +DD.unidades.map(u=>{ const d=discDe(u.unidade), q=qualDe(u.unidade), m=metasDe(u)[0], v=((DD.checklistRegional||{}).visitas||{})[u.unidade]||{}, nut=(q.nutri||{}).nota;
+      return '<tr class="clic" onclick="LOJA=\''+u.unidade.replace(/'/g,"\\'")+'\';montarLojas();desenhar()"><td><b>'+esc(u.unidade)+'</b></td><td>'+pctsCel(u.unidade)+'</td><td class="n" style="color:'+(d.atrasos>=2?'var(--red)':'inherit')+'">'+(d.atrasos||0)+'</td><td class="n" style="color:'+(m.pct==null?'var(--muted)':cor(m.pct))+'">'+(m.pct==null?'—':P(m.pct))+'</td><td class="n">'+N(u.google)+'</td><td class="n">'+N(u.ifood)+'</td><td class="n">'+N(u.chamados)+'</td><td class="n">'+N(u.cancelamentos)+'</td><td class="n">'+N(u.faltaProdutoSim)+'</td><td class="n">'+(nut==null?'—':Math.round(nut))+'</td><td class="n">'+(v.count||0)+'</td></tr>'; }).join('')+'</table></div></div>';
+  h+=equipeBloco(U?U.unidade:null);
+  return h;
+}
+function calendario(u){
+  const d=discDe(u.unidade), nD=(DD.disciplina||{}).nDias||DD.diasNoMesAtual, s=d.dias||'', mesN=Number(DD.mes), anoN=Number(DD.anoNum);
+  const cr={v:'var(--green)',a:'var(--gold)',r:'var(--red)'}, dica={v:'Tudo no horário',a:'Algo atrasado ou faltando',r:'Placar não enviado',h:'Hoje (em andamento)',f:'Ainda não chegou'};
+  const pri=new Date(anoN,mesN,1).getDay(); let cal=['dom','seg','ter','qua','qui','sex','sáb'].map(x=>'<div style="height:auto;font-size:11px;color:var(--muted)">'+x+'</div>').join('');
+  for(let i=0;i<pri;i++) cal+='<div></div>';
+  for(let i=0;i<nD;i++){ const c=s[i]||'f'; cal+='<div title="'+(i+1)+': '+dica[c]+'" style="'+(cr[c]?'background:'+cr[c]+';color:#0B0D12':'border:1px dashed var(--line2);color:var(--muted)')+(c==='h'?';outline:2px solid var(--text)':'')+'">'+(i+1)+'</div>'; }
+  return '<div class="duas"><div class="card"><span class="rot">Disciplina do mês, dia a dia</span><div class="cal">'+cal+'</div><div class="leg"><span><i style="background:var(--green)"></i>Tudo no horário</span><span><i style="background:var(--gold)"></i>Algo atrasado ou faltando</span><span><i style="background:var(--red)"></i>Placar não enviado</span></div>'
+    +'<div class="mini"><div><small>Placar enviado</small><b style="color:'+corDisc(d.placar)+'">'+(d.placar==null?'—':d.placar+'%')+'</b></div><div><small>Checklist completo</small><b style="color:'+corDisc(d.checklist)+'">'+(d.checklist==null?'—':d.checklist+'%')+'</b></div><div><small>Tempos completos</small><b style="color:'+corDisc(d.tempos)+'">'+(d.tempos==null?'—':d.tempos+'%')+'</b></div><div><small>Atrasos no mês</small><b>'+(d.atrasos||0)+'</b></div></div></div>'; }
+function qualidadeLoja(u){ const q=qualDe(u.unidade), nut=q.nutri, cg=q.corrGdi||{}, cn=q.corrNutri||{}, rv=((DD.checklistRegional||{}).visitas||{})[u.unidade]||{};
+  return '<div class="card"><span class="rot">Qualidade e gestão</span>'
+    +'<div class="linha-g"><div><b>Nutricionista</b><small>'+(nut?'Última visita '+esc(nut.dia)+' · '+(nut.nc||0)+' item(ns) NÃO':'Sem visita registrada')+'</small></div><span class="v" style="color:'+(nut?(nut.nota>=85?'var(--green)':nut.nota>=75?'var(--gold)':'var(--red)'):'var(--muted)')+'">'+(nut?Math.round(nut.nota):'—')+'</span></div>'
+    +'<div class="linha-g"><div><b>Visita do GDI</b><small>'+(rv.ultimaData?'Última '+esc(rv.ultimaData)+' · '+(rv.count||0)+' no mês':'Sem visita no mês')+'</small></div><span class="v">'+((cg.abertas||0)+(cg.paradas||0))+'</span></div>'
+    +'<div class="linha-g"><div><b>Correções da nutricionista</b><small>abertas ou esperando confirmação</small></div><span class="v">'+((cn.abertas||0)+(cn.esperando||0))+'</span></div></div></div>'; }
+function equipeBloco(soU){ const E=DD.equipe; if(!E||!E.lojas) return ''; const ls=E.lojas.filter(x=>x.configurado&&(!soU||x.unidade===soU)); if(!ls.length) return '';
+  return '<div class="card"><span class="rot">Equipe do dia no mês</span><div class="sub" style="margin-top:4px">Quantas pessoas trabalharam contra o quadro da RH, faltas, vagas e se o informado bate com a escala.</div><div class="tab"><table><tr><th>Loja</th><th>Dias informados</th><th class="n">Equipe média</th><th class="n">Faltas</th><th class="n">Vagas</th><th class="n">Alertas</th><th>Escala</th></tr>'
+    +ls.map(x=>'<tr><td><b>'+esc(x.unidade)+'</b></td><td>'+x.diasInformados+' de '+Math.max(x.diasPlacar||0,x.diasInformados)+'</td><td class="n" style="color:'+(x.mediaPct==null?'var(--muted)':x.mediaPct>=90?'var(--green)':x.mediaPct>=70?'var(--gold)':'var(--red)')+'">'+(x.mediaPct==null?'—':x.mediaPct+'%')+'</td><td class="n">'+(x.faltas||0)+'</td><td class="n">'+(x.vagas||0)+'</td><td class="n">'+(x.alertas||0)+'</td><td>'+(!x.diasComEscala?'<span class="sub">sem escala</span>':(x.naoBate||[]).length?'<span class="vermelho">não bate em '+x.naoBate.length+' dia(s)</span>':'<span class="verde">bate</span>')+'</td></tr>').join('')+'</table></div></div>'; }
+
+// ── Ao vivo: vendas de hoje até agora × o mesmo dia da semana passada, até a mesma hora ──
+const AV_TAM=[['broto','Broto'],['media','Média'],['grande','Grande'],['gigante','Gigante'],['big','Big'],['outro','Sem tamanho']];
+const AV_CAN=[['salao','Salão'],['balcao','Balcão'],['delivery','Delivery'],['ifood','iFood']];
+function pctTxt(p){ return p==null?'<span class="sub">—</span>':'<b class="'+(p>=0?'verde':'vermelho')+'">'+(p>0?'+':'')+String(p).replace('.',',')+'%</b>'; }
+function aoVivo(){
+  if(!AV) return '<div class="card"><span class="rot">Ao vivo</span><div class="frase">Ainda não carregou</div><div class="sub">'+esc(ERRO_AV||'Buscando…')+'</div><div style="margin-top:10px"><button class="btn" onclick="carregarAV(true)">Tentar de novo</button></div></div>';
+  const ls=(AV.lojas||[]).filter(l=>LOJA==='__rede__'||l.unidade===LOJA), r=LOJA==='__rede__'?AV.rede:null;
+  const tot=(k)=>ls.reduce((s,l)=>s+(Number(l[k])||0),0), sp=k=>ls.reduce((s,l)=>s+(Number(l['semanaPassada'+k])||0),0);
+  const vs=(a,b)=>AV.baseOk&&b?pctTxt(Math.round((a/b-1)*1000)/10)+' <span class="sub">vs semana passada até esta hora ('+(typeof b==='number'&&b>999?R(b):N(b))+')</span>':'<span class="sub">sem base da semana passada</span>';
+  const fat=tot('fat'), del=ls.reduce((s,l)=>s+(l.delTotal||0),0), pr=ls.reduce((s,l)=>s+((l.del||{}).proprio||0),0), ifd=ls.reduce((s,l)=>s+((l.del||{}).ifood||0),0);
+  let h='<div class="grid">'+kpi('Faturamento hoje',R(fat),vs(fat,sp('F')))+kpi('Pizzas hoje',N(tot('pizzas')),vs(tot('pizzas'),sp('P')))+kpi('Buffets hoje',N(tot('buffets')),vs(tot('buffets'),sp('B')))
+    +kpi('Pedidos de delivery',N(del),'próprio '+N(pr)+' · iFood '+N(ifd)+(r&&r.ritmoDel!=null?' · '+N(r.ritmoDel)+' na última hora':''))+'</div>';
+  const ord=[...ls].sort((a,b)=>(b.fat||0)-(a.fat||0));
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><span class="rot">Lojas agora</span><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="ao-vivo.html" target="_blank">Modo TV (corrida das lojas)</a></div><div class="tab"><table><tr><th>Loja</th><th class="n">Faturamento</th><th class="n">vs sem. pas.</th><th class="n">Pizzas</th><th class="n">vs sem. pas.</th><th class="n">Buffets</th><th class="n">Delivery</th><th class="n">Ticket próprio · iFood</th><th class="n">Última hora</th><th class="n">Último tempo</th></tr>'
+    +ord.map(l=>{ const tm=l.tempo, alto=tm&&(tm.app>40||tm.ifood>40); return '<tr><td><b>'+esc(l.unidade)+'</b></td><td class="n">'+R(l.fat)+'</td><td class="n">'+pctTxt(l.pctF)+'</td><td class="n">'+N(l.pizzas)+'</td><td class="n">'+pctTxt(l.pctP)+'</td><td class="n">'+(l.temBuffet?N(l.buffets):'—')+'</td><td class="n">'+(l.temDelivery?N(l.delTotal)+' <span class="sub">('+N((l.del||{}).proprio)+' + '+N((l.del||{}).ifood)+')</span>':'—')+'</td><td class="n">'+(l.ticket&&l.ticket.proprio?R(l.ticket.proprio):'—')+' · '+(l.ticket&&l.ticket.ifood?R(l.ticket.ifood):'—')+'</td><td class="n">'+(l.temDelivery?N(l.ritmoDel):'—')+'</td><td class="n"'+(alto?' style="color:var(--red);font-weight:700"':'')+'>'+(tm?tm.app+' / '+tm.ifood+' min <span class="sub">'+esc(tm.hora)+'</span>':'—')+'</td></tr>'; }).join('')+'</table></div></div>';
+  h+='<div class="card"><span class="rot">Pizzas por tamanho e canal</span><div class="tab"><table><tr><th>Loja</th><th class="n">Pizzas</th>'+AV_TAM.map(t=>'<th class="n">'+t[1]+'</th>').join('')+AV_CAN.map(c=>'<th class="n">'+c[1]+'</th>').join('')+'</tr>'
+    +[...ls].sort((a,b)=>b.pizzas-a.pizzas).map(l=>'<tr><td>'+esc(l.unidade)+'</td><td class="n"><b>'+N(l.pizzas)+'</b></td>'+AV_TAM.map(t=>'<td class="n">'+N((l.tam||{})[t[0]])+'</td>').join('')+AV_CAN.map(c=>'<td class="n">'+N((l.canais||{})[c[0]])+'</td>').join('')+'</tr>').join('')
+    +(r?'<tr class="tot"><td>Rede</td><td class="n">'+N(r.pizzas)+'</td>'+AV_TAM.map(t=>'<td class="n">'+N((r.tam||{})[t[0]])+'</td>').join('')+AV_CAN.map(c=>'<td class="n">'+N((r.canais||{})[c[0]])+'</td>').join('')+'</tr>':'')+'</table></div></div>';
+  return h;
+}
+
+// começa quando a senha da gestão (ou do Admin) for confirmada
+const espera=setInterval(()=>{ if(!document.getElementById('gGuard') && !document.getElementById('gGuardCss') && chave()){ clearInterval(espera); carregar(); } },300);
+setInterval(()=>{ if(document.visibilityState==='visible' && D && ABA!=='aovivo') carregarAlpha().then(()=>{ if(ABA!=='operacao'&&ABA!=='metas') desenhar(); }); }, 15*60000);
+</script>
+</body>
+</html>

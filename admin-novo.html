@@ -301,7 +301,7 @@ function sair(){ try{ sessionStorage.removeItem('dina_adm_hash'); sessionStorage
 const ADM=v=>'admin.html?embed=1#'+v;
 const SECOES={
   inicio:{t:'Início',g:'',ic:'home'},
-  numeros:{t:'Números',g:'',ic:'chart',dir:1,abas:[['Dashboard','dashboard-v2.html'],['Ao vivo','ao-vivo.html'],['Mês','dashboard.html'],['Diretoria','painel-diretoria.html'],['Minha loja (visão do gerente)','minha-loja.html?gdi=1',1]],nota:'Etapa 2: estes painéis viram um dashboard só.'},
+  numeros:{t:'Números',g:'',ic:'chart',dir:1,abas:[['Números da rede','numeros.html?embed=1'],['Visão do gerente (Minha loja)','minha-loja.html?gdi=1',1]]},
   lojas:{t:'Lojas',g:'',ic:'store'},
   checklists:{t:'Checklists',g:'Operação',ic:'check',abas:[['Checklist da loja',ADM('checklist')],['Checklist do GDI',ADM('regional')],['Checklist da nutricionista',ADM('nutri')]]},
   visitas:{t:'Visitas',g:'Operação',ic:'pin',abas:[['Visita do GDI','regional.html'],['Visita da nutricionista','nutricionista.html']]},
