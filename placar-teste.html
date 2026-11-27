@@ -593,6 +593,11 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <span class="tag" id="eqTag"></span>
     </div>
 
+    <!-- Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) -->
+    <div class="card card-full" id="cardPV" style="display:none">
+      <div class="card-label">📞 Call center — chamados e pós-venda</div>
+      <div id="pvCorpo"></div>
+    </div>
     <!-- Motoboys (só lojas com entrega própria) -->
     <div class="card card-full" id="cardMotoboys" style="display:none">
       <div class="card-label">🛵 Motoboys em serviço</div>
@@ -618,13 +623,21 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div class="card-label">🎯 Missão de hoje</div>
       <div id="missaoCorpo"></div>
     </div>
-
-    <!-- Equipe do dia: quantas pessoas trabalham hoje em cada setor e por que falta alguém (vaga aberta avisa a RH) -->
-    <div class="card card-full" id="cardBufMont" style="display:none">
-      <div class="card-label">🍽️ Buffet montado</div>
-      <div id="bufMontBox"></div>
+    <!-- Falta de Produto -->
+    <div class="card card-full" id="cardFaltaProduto">
+      <div class="card-label">📦 Falta de Produto</div>
+      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
+      <div class="falta-wrap" id="faltaWrap">
+        <div class="falta-btns">
+          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
+          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
+        </div>
+        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
+        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
+      </div>
+      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
+      <span class="tag" id="faltaTag"></span>
     </div>
-
     <!-- Tempo de Entrega (só lojas com entrega própria) -->
     <div class="card card-full" id="cardTempo" style="display:none">
       <div class="card-label">🕐 Tempo de Entrega</div>
@@ -669,32 +682,20 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div id="statusTempo" style="font-size:0.75rem;color:var(--muted);text-align:center;padding:8px;display:none"></div>
       <span class="tag" id="tempoTag"></span>
     </div>
-
-    <!-- Falta de Produto -->
-    <div class="card card-full" id="cardFaltaProduto">
-      <div class="card-label">📦 Falta de Produto</div>
-      <div class="card-meta" id="faltaHorarioInfo">Disponível nas janelas de horário definidas</div>
-      <div class="falta-wrap" id="faltaWrap">
-        <div class="falta-btns">
-          <button class="falta-btn" id="faltaBtnNao" onclick="registrarFalta('nao')">✅ Sem falta</button>
-          <button class="falta-btn" id="faltaBtnSim" onclick="registrarFalta('sim')">⚠️ Faltou produto</button>
-        </div>
-        <textarea class="falta-produto-input" id="faltaProdutoDesc" placeholder="Qual(is) produto(s) faltou?" style="display:none"></textarea>
-        <button class="falta-btn sim" id="faltaBtnConfirmar" onclick="confirmarFaltaSim()" style="display:none;margin-top:8px">✓ Confirmar falta</button>
-      </div>
-      <div id="faltaRegistrada" style="display:none;font-size:0.82rem;padding:8px;border-radius:6px;margin-top:4px"></div>
-      <span class="tag" id="faltaTag"></span>
+    <!-- Equipe do dia: quantas pessoas trabalham hoje em cada setor e por que falta alguém (vaga aberta avisa a RH) -->
+    <div class="card card-full" id="cardBufMont" style="display:none">
+      <div class="card-label">🍽️ Buffet montado</div>
+      <div id="bufMontBox"></div>
     </div>
 
-    <!-- Chamados e pós-venda do call center (14/11/2026, servidor 2026-11-14-d, recurso posVenda) -->
-    <div class="card card-full" id="cardPV" style="display:none">
-      <div class="card-label">📞 Call center — chamados e pós-venda</div>
-      <div id="pvCorpo"></div>
-    </div>
+
+
+
 
     <!-- Etapa 3: números do caixa, no fim da noite -->
     <div class="etapa-titulo"><b>3</b> Números do caixa — no fim da noite</div>
     <div class="cards-grid">
+      <div class="sub-etapa">🛒 Vendas do dia</div>
       <div class="card card-full" id="cardBuffets" style="display:none">
         <div class="card-label">🍽️ Buffets Vendidos</div>
         <div class="atencao-campo">⚠️ Some <b>todos</b> os buffets: <b>inteiro ou meia, cada um conta 1.</b> Buffet por quilo: <b>cada prato pesado na balança conta 1.</b></div>
@@ -726,8 +727,9 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
           <label>Sucos no balcão<div class="input-wrap"><input class="val" id="bebSucosBalcao" type="number" inputmode="numeric" min="0" placeholder="0" oninput="alpcMudou()"><span class="suffix">un.</span></div></label>
         </div>
       </div>
+      <div class="sub-etapa">⭐ Avaliações do dia</div>
       <!-- Google -->
-      <div class="card card-full" id="cardGoogle">
+      <div class="card" id="cardGoogle">
         <div class="card-label">⭐ Avaliações Google</div>
         <div class="card-meta" id="metaGoogleDisplay"></div>
         <div class="input-wrap"><input class="val" id="google" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
@@ -736,7 +738,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
         <div class="meta-mes" id="mm_google"></div>
       </div>
       <!-- iFood -->
-      <div class="card card-full" id="cardIfood">
+      <div class="card" id="cardIfood">
         <div class="card-label">📱 Avaliações iFood</div>
         <div class="card-meta" id="metaIfoodDisplay"></div>
         <div class="input-wrap"><input class="val" id="ifood" type="number" inputmode="numeric" placeholder="0"><span class="suffix">av.</span></div>
@@ -2050,9 +2052,10 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
   const dif = feito - esperado;
   const cls = esperado===0 ? 'av' : pct>=100 ? 'ok' : pct>=90 ? 'av' : 'err';
   let h='', tit='';
-  if(esperado===0) tit=`🎯 Meta do mês: ${mmFmt(metaMes,tipo)}`;
-  else if(dif>=0) tit=`📈 Acima da meta do mês (+${mmFmt(dif,tipo)})`;
-  else tit=`${pct<90?'🚨':'📉'} Abaixo da meta do mês (−${mmFmt(-dif,tipo)})`;
+  const _cc=el.closest('.card'), curto=_cc&&!_cc.classList.contains('card-full'); // cartão estreito (lado a lado)
+  if(esperado===0) tit=curto?`🎯 Mês: ${mmFmt(metaMes,tipo)}`:`🎯 Meta do mês: ${mmFmt(metaMes,tipo)}`;
+  else if(dif>=0) tit=curto?`📈 +${mmFmt(dif,tipo)} no mês`:`📈 Acima da meta do mês (+${mmFmt(dif,tipo)})`;
+  else tit=curto?`${pct<90?'🚨':'📉'} −${mmFmt(-dif,tipo)} no mês`:`${pct<90?'🚨':'📉'} Abaixo da meta do mês (−${mmFmt(-dif,tipo)})`;
   if(temHoje) h+=`Hoje: <b>${mmFmt(real,tipo)}</b> — ${real>=metaHoje?'<span style="color:var(--green)">bateu a meta do dia</span>':'<span style="color:#ff6b6b">abaixo da meta do dia</span>'} (${mmFmt(metaHoje,tipo)}${real<metaHoje?', faltaram '+mmFmt(metaHoje-real,tipo):''}).<br>`;
   if(esperado>0) h+=`No mês${temHoje?' (com hoje)':' até ontem'}: <b>${mmFmt(feito,tipo)}</b> de ${mmFmt(esperado,tipo)} ${(tipo==='R$'||tipo==='buffets')?'esperados':'esperadas'} (${Math.round(pct)}%).<br>`;
   if(falta<=0) h+=`<div class="mm-dia" style="color:var(--green)">🏆 Meta do mês (${mmFmt(metaMes,tipo)}) já batida!</div>`;
@@ -2077,7 +2080,7 @@ function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
 function mmZero(el, nome, acumOntem, real){
   const tot=acumOntem+(real||0);
   el.className='meta-mes mini '+(tot>0?'err':'ok');
-  el.innerHTML = tot>0 ? `No mês: <b>${tot}</b> ${nome} (meta: zero)` : `No mês: nenhum (meta: zero) ✓`;
+  el.innerHTML = tot>0 ? `No mês: <b>${tot}</b> (meta: zero)` : `✓ No mês: nenhum`; // 26/11/2026: 1 linha, mesmo padrão
   el.style.display='block';
 }
 function renderMetaMes(){
@@ -3652,17 +3655,15 @@ function verificarBotaoRegistrar(){
 
   // 26/11/2026: na ordem da página (abertura → serviço → números do caixa → fechamento da loja)
   const _bebFalta=ALPC_ATIVO&&bebLista().map(b=>b[1]).some(id=>!filled(id));
-  if(!chkAberturaFeita) faltando.push('📋 Checklist de Abertura');
+  if(!chkAberturaFeita) faltando.push('📋 Checklist de abertura');
   if(!startDinaSalvo) faltando.push(SD&&SD.hoje?'⭐ Start Dina do fim da noite (abre às '+SD.abre.replace(':00','h')+')':'⭐ Start Dina');
   if(EQ && EQ.setores && EQ.setores.length && !eqSalvo) faltando.push('👥 Equipe do dia');
-  if(temLoja(unidadeAtual)){
-    if(!motoboySalvo) faltando.push('🛵 Motoboys');
-    if(!temposResolvidos()) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
-  }
-  if(!faltaStatus) faltando.push('📦 Falta de Produto');
   if(PV_DATA && (PV_DATA.pendentes||[]).length) faltando.push('📞 Responder reclamação do pós-venda ('+PV_DATA.pendentes.length+')');
-  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets Vendidos');
-  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de Fliperama');
+  if(temLoja(unidadeAtual)&&!motoboySalvo) faltando.push('🛵 Motoboys');
+  if(!faltaStatus) faltando.push('📦 Falta de produto');
+  if(temLoja(unidadeAtual)&&!temposResolvidos()) faltando.push(`🕐 Tempos de entrega (${tempoRegistros.length}/3)`);
+  if(temFliperBuffet(unidadeAtual)&&!filled('buffets')) faltando.push('🍽️ Buffets vendidos');
+  if(temFliperBuffet(unidadeAtual)&&!filled('fichas')) faltando.push('🕹️ Fichas de fliperama');
   if(_bebFalta) faltando.push(temFliperBuffet(unidadeAtual)?'🍹 Bebidas vendidas':'🍰 Sobremesas e bebidas do balcão');
   if(!filled('google')) faltando.push('⭐ Google');
   if(!filled('ifood')) faltando.push('📱 iFood');
@@ -3674,14 +3675,14 @@ function verificarBotaoRegistrar(){
     const apenasRepetido = motivo.length > 0 && /^(.)\1+$/.test(motivo);
     const soCars = motivo.length > 0 && /^[^a-zA-ZÀ-ú0-9\s]+$/.test(motivo);
     if(!motivo || motivo.length < 10 || apenasRepetido || soCars){
-      faltando.push('💳 Motivo dos Itens cancelados');
+      faltando.push('💳 Motivo dos itens cancelados');
     }
   }
   if(!filled('vendasCanceladas')) faltando.push('💳 Itens cancelados (TOTAL CANCELAMENTO)');
-  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Pedidos Não Confirmados iFood');
+  if(temLoja(unidadeAtual)&&!filled('pedidosIfood')) faltando.push('📱 Não confirmados iFood');
   if(temLoja(unidadeAtual)&&filled('pedidosIfood')){
     const piv=ival('pedidosIfood');
-    if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos Pedidos Não Confirmados');
+    if(piv>=1&&piv<=3&&!document.getElementById('pedidosIfoodDetalhe').value.trim()) faltando.push('📋 Número dos pedidos não confirmados');
   }
   if(!filled('fat')) faltando.push('💰 Faturamento');
   if(ALPC_ATIVO&&!_bebFalta&&!ALPC) faltando.push('🔌 Conferir com o Alpha'); // o Alpha é o último dos números
@@ -3689,7 +3690,7 @@ function verificarBotaoRegistrar(){
   if(HF_ATIVO && !HF_SALVO) faltando.push('🥬 Lista de compras (hortifrúti)');
   if(HF_ATIVO && HF && HF.compra && !HF.compra.feita && !HF.compra.pendente && !HF.compra.semCompra && !HFC_DIA_PEND) faltando.push('🧾 Foto da compra de hortifrúti');
   if(HF_ATIVO && HF && HF.compraAtrasada) faltando.push('🧾 Compra de hortifrúti de '+HF.compraAtrasada.diaBr+' (pendente)');
-  if(!chkFechamentoFeito) faltando.push('🌙 Checklist de Fechamento (último passo)');
+  if(!chkFechamentoFeito) faltando.push('🌙 Checklist de fechamento (último passo)');
 
   if(faltando.length>0){
     const _chaveTrav=faltando.join(',');
@@ -3735,7 +3736,7 @@ function cxFeito(id){ try{ switch(id){
 } }catch(e){} return false; }
 function cxResumo(id,feito){
   const F={cardStartDina:'✅ Start Dina salvo',cardEquipe:'✅ Equipe do dia salva',cardMotoboys:'✅ Motoboys salvos',cardBufMont:'✅ Foto do buffet montado feita',cardTempo:'✅ Tempos de entrega resolvidos',cardFaltaProduto:'✅ Falta de produto informada',cardAlpha:'✅ Conferido com o Alpha',cardMissao:'✅ Missão lida',cardHF:'✅ Hortifrúti em dia',cardPV:'✅ Nada pendente do call center'};
-  const P={cardStartDina:'Falta salvar o Start Dina',cardEquipe:'Falta informar quem está trabalhando hoje',cardMotoboys:'Falta salvar os motoboys',cardBufMont:'Foto do buffet montado no horário',cardTempo:'Tempos de entrega da noite',cardFaltaProduto:'Falta informar se faltou produto',cardAlpha:'Confira depois de preencher todos os números',cardMissao:'Toque para ver o que a loja precisa vender hoje',cardHF:'Falta a contagem e a lista de compras',cardPV:'Tem chamado ou reclamação para responder'};
+  const P={cardStartDina:'Falta salvar o Start Dina',cardEquipe:'Falta informar quem está trabalhando hoje',cardMotoboys:'Falta salvar os motoboys',cardBufMont:'Foto do buffet montado no horário',cardTempo:'Tempos de entrega da noite',cardFaltaProduto:'Falta informar se faltou produto',cardAlpha:'Confira depois de preencher todos os números',cardMissao:'O que a loja precisa vender hoje',cardHF:'Falta a contagem e a lista de compras',cardPV:'Tem chamado ou reclamação para responder'};
   return (feito?F[id]:P[id]||'')+' · toque para '+'abrir';
 }
 // Testes automáticos (navigator.webdriver) ficam com os cartões sempre abertos; o teste teste_placar_cx liga de propósito.
@@ -3753,8 +3754,8 @@ function cxAtualizar(){ cxPreparar(); CX_TODOS.forEach(id=>{ const el=document.g
   if(f&&!CX_AUTO[id]){ CX_AUTO[id]=true; if(!el.contains(document.activeElement)) el.classList.add('cx-fechado'); } }); }
 
 function irParaFalta(txt){
-  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Itens cancelados','cardVendasCanceladas'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
-  const m=mapa.find(([k])=>String(txt||'').indexOf(k)>=0); if(!m) return;
+  const mapa=[['Responder reclamação','cardPV'],['Sobremesas e bebidas do balcão','cardBebidas'],['Prazo dos fornecedores','cardHF'],['Foto da compra','cardHF'],['Lista de compras','cardHF'],['Bebidas vendidas','cardBebidas'],['Conferir com o Alpha','cardAlpha'],['Checklist de Abertura','chkStatusWrap'],['Número dos Pedidos','cardPedidosIfood'],['Pedidos Não Confirmados','cardPedidosIfood'],['Não confirmados iFood','cardPedidosIfood'],['Faturamento','cardFat'],['Google','cardGoogle'],['iFood','cardIfood'],['Chamados','cardChamados'],['Cancelamentos','cardCancel'],['Fichas','cardFichas'],['Buffets','cardBuffets'],['Itens cancelados','cardVendasCanceladas'],['Vendas Canceladas','cardVendasCanceladas'],['Start Dina','cardStartDina'],['Falta de Produto','cardFaltaProduto'],['Equipe do dia','cardEquipe'],['Motoboys','cardMotoboys'],['Tempos de entrega','cardTempo'],['Checklist de Fechamento','cardChkFechamento']];
+  const tl=String(txt||'').toLowerCase(); const m=mapa.find(([k])=>tl.indexOf(k.toLowerCase())>=0); if(!m) return;
   const el=document.getElementById(m[1]); if(!el||el.offsetParent===null) return;
   if(el.classList.contains('cx-fechado')) cxAbrir(m[1]);
   const hdr=document.querySelector('header'); const topo=(hdr?hdr.getBoundingClientRect().height:0)+14;
@@ -5017,7 +5018,7 @@ function limpar(){
   const startTag=document.getElementById('startDinaTag');startTag.textContent='';startTag.className='tag';
   ['cardFat','cardGoogle','cardIfood','cardChamados','cardCancel','cardPedidosIfood','cardVendasCanceladas'].forEach(id=>{
     const el=document.getElementById(id);
-    el.className='card'+(['cardFat','cardGoogle','cardIfood'].includes(id)?' card-full':''); // 26/11/2026: chamados/cancelamentos e itens cancelados/iFood lado a lado
+    el.className='card'+(['cardFat'].includes(id)?' card-full':''); // 26/11/2026: chamados/cancelamentos e itens cancelados/iFood lado a lado
   });
   const cardMb=document.getElementById('cardMotoboys');
   if(cardMb.style.display!=='none'){ cardMb.classList.remove('ok','warn','bad'); } // mantém as classes dos cartões que abrem e fecham
