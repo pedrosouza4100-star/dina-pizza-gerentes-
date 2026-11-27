@@ -271,6 +271,12 @@
 .hf-e.falta{border-color:var(--danger);background:rgba(255,77,77,.08)}
 #hfPerdaBox{margin:8px 0;border:1px dashed var(--border);border-radius:10px;padding:6px 10px}
 #hfPerdaBox summary{cursor:pointer;font-weight:700;font-size:.9rem}
+/* hortifrúti pelo QR da equipe (servidor 2026-11-26-b) */
+.hfeq{border-radius:12px;padding:10px 12px;margin:8px 0;font-size:.86rem;line-height:1.4;border:1px solid var(--border);background:var(--surface)}
+.hfeq.esp{border-color:#3aa0ff}.hfeq.env{border-color:var(--d-green,#2ecc71)}
+.hfeq button{font-size:12px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;margin:6px 6px 0 0;font-weight:700}
+.hf-mud input{border-color:var(--d-gold,#ffd000)!important;box-shadow:0 0 0 1px var(--d-gold,#ffd000) inset}
+.hf-mudtxt{font-size:.72rem;color:var(--d-gold,#ffd000);font-weight:700}
 .hf-c{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.88rem}
 .hf-c .hf-cl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .hf-c select,.hf-c input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:.92rem;font-family:inherit}
@@ -825,6 +831,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
       <div id="hfPendBox" style="display:none"></div>
       <div id="hfCompraBox" style="display:none"></div>
       <div id="hfAvisoForn"></div>
+      <div id="hfEqBox" style="display:none"></div>
       <div class="hf-grid" id="hfItens"></div>
       <label class="hf-nada" id="hfNadaLbl"><input type="checkbox" id="hfNada" onchange="hfNadaMudou()"> ✅ Conferi o estoque, não falta nada</label>
       <input class="hf-txt" id="hfOutros" maxlength="200" placeholder="Outros (ex.: alho, limão) — opcional" oninput="hfMudou()">
@@ -4013,7 +4020,101 @@ async function hfPreparar(){
   document.getElementById('hfOutros').value=(r.listaHoje&&r.listaHoje.outros)||'';
   document.getElementById('hfMsg').innerHTML=r.listaHoje?'<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva às '+escR(r.listaHoje.hora)+'. Mudou algo? Marque e salve de novo.</span>':'';
   HFC_DIA_PEND=''; HFC_MANUAL=false; hfRenderForn(); hfRenderCompra(); hfPendRender();
+  hfEqIniciar();
   verificarBotaoRegistrar();
+}
+// ── Hortifrúti pelo QR Code da equipe (26/11/2026, servidor 2026-11-26-b, recurso hfEquipe) ──
+// O gerente passa a contagem e a lista para alguém da equipe (normalmente o chefe de cozinha). A pessoa abre
+// equipe-hortifruti.html pelo QR, conta e envia; o placar preenche o card com o que ela mandou, marca em amarelo o
+// que o gerente mudar e, no Salvar, manda o delId (o servidor guarda o que a pessoa mandou × o que o gerente mudou).
+let HFEQ=null, HFEQ_ON=false, _hfEqTimer=null;
+async function hfEqIniciar(){
+  clearTimeout(_hfEqTimer); HFEQ=null; HFEQ_ON=false;
+  try{ const rc=await chkRecursos(); HFEQ_ON=rc.includes('hfEquipe')&&!!(HF&&HF.catalogo); }catch(e){ HFEQ_ON=false; }
+  if(HFEQ_ON&&!MODO_TESTE) await hfEqCarregar(); else hfEqRender();
+}
+async function hfEqCarregar(){
+  clearTimeout(_hfEqTimer);
+  try{ const r=await chkJsonp({action:'chkDelLoja',unidade:unidadeAtual,senha:pvSenha()},15000);
+    if(r&&r.ok){ const x=(r.lista||[]).filter(y=>y.turno==='hortifruti').pop()||null;
+      if(x){ const velho=HFEQ&&HFEQ.id===x.id?HFEQ:null; HFEQ=Object.assign(x,{aplicado:velho?velho.aplicado:false,orig:velho?velho.orig:null}); } else HFEQ=null; } }catch(e){}
+  hfEqRender();
+}
+function hfEqNum(v){ return v===undefined||v===null||v===''?'':String(Math.round(Number(v)*100)/100).replace('.',','); }
+function hfEqAplicar(){ // coloca no card o que a pessoa mandou
+  const R=HFEQ.respostas||{}, set=(sel,map)=>document.querySelectorAll(sel).forEach(e=>{ const k=e.dataset.hfe||e.dataset.hfq||e.dataset.hfp; e.value=hfEqNum((map||{})[k]); delete e.dataset.auto; });
+  set('#hfItens input[data-hfe]',R.estoque); set('#hfItens input[data-hfq]',R.qtd); set('#hfPerdaBox input[data-hfp]',R.perda);
+  document.querySelectorAll('#hfItens input[data-hfq]').forEach(e=>{ const row=e.closest('.hf-q')||e.parentElement; row.classList.toggle('on',hfNumL(e.value)>0); const sg=row.querySelector('.hf-sug'); if(sg) sg.remove(); });
+  if(R.perda&&Object.keys(R.perda).length){ const pb=document.getElementById('hfPerdaBox'); if(pb) pb.open=true; }
+  document.getElementById('hfNada').checked=!!R.nadaFalta; document.getElementById('hfOutros').value=R.outros||'';
+  document.querySelectorAll('#hfItens .hf-e').forEach(row=>{ const ie=row.querySelector('[data-hfe]'), iq=row.querySelector('[data-hfq]'), q=iq.value; hfeDica(row); iq.value=q; });
+  HFEQ.aplicado=true; HFEQ.orig={estoque:R.estoque||{},qtd:R.qtd||{},perda:R.perda||{}};
+  document.querySelectorAll('#hfItens input,#hfPerdaBox input').forEach(e=>{ if(!e._hfeq){ e._hfeq=1; e.addEventListener('input',hfEqMarcar); } });
+  HF_SALVO=false; document.getElementById('hfMsg').innerHTML=''; hfEqMarcar(); verificarBotaoRegistrar();
+}
+function hfEqMudancas(){
+  if(!HFEQ||!HFEQ.orig) return [];
+  const o=HFEQ.orig, out=[], chk=(sel,attr,map,campo)=>document.querySelectorAll(sel).forEach(e=>{ const k=e.dataset[attr], a=Number(map[k]||0), b=hfNumL(e.value)||0; const lab=e.closest('label')||e.closest('.hf-q');
+    const m=Math.abs(a-b)>0.0001; if(lab) lab.classList.toggle('hf-mud',m); if(m) out.push({k,campo,a,b,el:e}); });
+  chk('#hfItens input[data-hfe]','hfe',o.estoque,'tem'); chk('#hfItens input[data-hfq]','hfq',o.qtd,'pedir'); chk('#hfPerdaBox input[data-hfp]','hfp',o.perda,'jogou');
+  return out;
+}
+function hfEqMarcar(){ if(!HFEQ||!HFEQ.aplicado||HFEQ.situacao!=='enviada') return; const m=hfEqMudancas(), t=document.getElementById('hfEqMud');
+  if(t) t.innerHTML=m.length?'✏️ Você mudou '+m.length+' número'+(m.length>1?'s':'')+' (em amarelo). O Sidinei vê o que '+escR(HFEQ.pessoa.split(' ')[0])+' mandou e o que você mudou.':''; }
+function hfEqRender(){
+  const box=document.getElementById('hfEqBox'); if(!box) return;
+  if(!HFEQ_ON){ box.style.display='none'; return; }
+  box.style.display='block'; const x=HFEQ, nome=x?escR(x.pessoa):'', pn=x?escR(x.pessoa.split(' ')[0]):'';
+  const eqL=HF&&HF.listaHoje&&HF.listaHoje.equipe;
+  if(!x||x.situacao==='cancelada'){ box.innerHTML='<div class="hfeq">'+(eqL?'✅ Contagem de hoje feita por <b>'+escR(eqL.pessoa)+'</b> e conferida por você'+((eqL.mudou||[]).length?' (você mudou '+eqL.mudou.length+')':'')+'.<br>':'')
+      +'<button type="button" onclick="hfEqPassar()">👥 Passar a contagem para alguém da equipe (QR Code)</button><div style="font-size:.76rem;color:var(--muted);margin-top:4px">Opcional: a pessoa (ex.: o chefe de cozinha) conta e faz a lista no celular dela, dentro da loja. Você confere e salva.</div></div>'; return; }
+  if(x.situacao==='aberta'){ box.innerHTML='<div class="hfeq esp">⏳ <b>Com '+nome+'</b> desde '+escR(x.hora||'')+' — esperando enviar a contagem.<br><button type="button" onclick="hfEqQR()">📱 Mostrar o QR Code</button><button type="button" onclick="hfEqCancelar()">✖ Cancelar (faço eu)</button>'+(MODO_TESTE?'<button type="button" onclick="hfEqSimular()">🧪 Simular que enviou</button>':'')+'</div>';
+    clearTimeout(_hfEqTimer); if(!MODO_TESTE) _hfEqTimer=setTimeout(hfEqCarregar,15000); return; }
+  if(x.situacao==='enviada'){ if(!x.aplicado) hfEqAplicar();
+    box.innerHTML='<div class="hfeq env">📩 <b>'+nome+' enviou às '+escR(x.enviadoHora||'')+'</b>. Os números já estão abaixo: confira, mude o que precisar e toque em <b>💾 Salvar lista de compras</b>.<div id="hfEqMud" class="hf-mudtxt" style="margin-top:4px"></div><button type="button" onclick="hfEqCancelar()">✖ Não aceitar (faço eu)</button></div>'; hfEqMarcar(); return; }
+  const nm=x.mudou!==undefined?x.mudou:((eqL&&eqL.mudou)||[]).length;
+  box.innerHTML='<div class="hfeq">✅ Contagem feita por <b>'+nome+'</b> às '+escR(x.enviadoHora||'')+' · conferida por você'+(nm?' (você mudou '+nm+')':'')+'.</div>';
+}
+async function hfEqPassar(){
+  chkDelModal('<div style="font-weight:900;font-size:16px">👥 Passar a contagem do hortifrúti</div><div style="font-size:13px;color:var(--muted);margin:6px 0 10px">Quem vai contar? A pessoa abre no celular dela pelo QR Code, conta dentro da loja e devolve para você conferir.</div><div id="chkDelLista" style="font-size:13px;color:var(--muted)">Carregando a equipe de hoje…</div>'+
+    '<div style="margin-top:12px;font-size:12px;color:var(--muted)">Não está na lista?</div><div style="display:flex;gap:8px;margin-top:4px"><input id="chkDelOutro" placeholder="Nome da pessoa" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)"><button type="button" onclick="hfEqEscolher(document.getElementById(\'chkDelOutro\').value)" style="padding:10px 14px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">OK</button></div>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)">Voltar</button>');
+  let r=null; try{ r=await chkJsonp({action:'chkDelPessoas',unidade:unidadeAtual,senha:pvSenha()},15000); }catch(e){}
+  const el=document.getElementById('chkDelLista'); if(!el) return;
+  const ps=(r&&r.ok&&r.pessoas)||[]; window._chkDelPs=ps;
+  el.innerHTML=ps.length?ps.map((p,k)=>'<button type="button" onclick="hfEqEscolher(window._chkDelPs['+k+'].nome)" style="display:flex;justify-content:space-between;width:100%;text-align:left;padding:11px;margin-top:6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px"><b>'+escChk(p.nome)+'</b><span style="color:var(--muted);font-size:12px">'+escChk(p.setor||'')+(p.escalado?'':' · sem escala')+'</span></button>').join('')
+    :'Não encontrei a escala de hoje. Escreva o nome abaixo.';
+}
+async function hfEqEscolher(nome){
+  nome=String(nome||'').trim(); if(nome.length<2){ alert('Escolha ou escreva o nome de quem vai contar.'); return; }
+  let r=null; try{ const x=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCriar',unidade:unidadeAtual,senha:pvSenha(),turno:'hortifruti',secao:'Hortifrúti',pessoa:nome})}); r=JSON.parse(await x.text()); }catch(e){ r=null; }
+  if(!(r&&r.ok)){ alert('Não consegui passar a contagem: '+((r&&r.erro)||'sem conexão')); return; }
+  const agora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}), base=location.href.replace(/[^/]*$/,'');
+  HFEQ=r.teste?{id:'teste'+Date.now(),turno:'hortifruti',secao:'Hortifrúti',pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:base+'equipe-hortifruti.html?teste=1&'+new URLSearchParams({loja:unidadeAtual,pessoa:nome}).toString()}
+    :{id:r.id,turno:'hortifruti',secao:'Hortifrúti',pessoa:nome,situacao:'aberta',hora:agora,respostas:{},link:r.link};
+  logProva('HF_EQUIPE_PASSADA',nome); hfEqRender(); hfEqQR();
+}
+function hfEqQR(){
+  const x=HFEQ; if(!x) return;
+  let svg=''; try{ const q=qrcode(0,'M'); q.addData(x.link); q.make(); svg=q.createSvgTag(6,2); }catch(e){ svg='<div style="color:#ff4d4d">Não consegui desenhar o QR. Mande o link pelo WhatsApp.</div>'; }
+  const zap='https://wa.me/?text='+encodeURIComponent('Hortifrúti da Dina — contagem e lista de compras. Abra este link no seu celular, dentro da loja: '+x.link);
+  chkDelModal('<div style="font-weight:900;font-size:16px;text-align:center">📱 '+escChk(x.pessoa)+', aponte a câmera</div><div style="font-size:13px;color:var(--muted);text-align:center;margin:4px 0 10px">Contagem do <b>hortifrúti</b> · vale só hoje e só dentro da loja'+(MODO_TESTE?'<br>🧪 No teste o QR abre a tela como a pessoa vê, sem gravar.':'')+'</div>'+
+    '<div style="background:#fff;border-radius:12px;padding:10px;display:flex;justify-content:center">'+svg+'</div>'+
+    '<a href="'+zap+'" target="_blank" style="display:block;text-align:center;margin-top:12px;padding:11px;border-radius:10px;background:#25D366;color:#06110b;font-weight:800;text-decoration:none">📲 Mandar o link pelo WhatsApp</a>'+
+    '<button type="button" onclick="chkDelFechar()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:none;background:var(--d-red,#e63946);color:#fff;font-weight:800">Pronto — continuar o placar</button>');
+}
+async function hfEqCancelar(){
+  if(!HFEQ) return; if(!confirm('Cancelar a contagem com '+HFEQ.pessoa+'? Você mesmo vai fazer a lista.')) return;
+  if(!MODO_TESTE){ try{ await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'chkDelCancelar',unidade:unidadeAtual,senha:pvSenha(),id:HFEQ.id})}); }catch(e){} }
+  if(HFEQ.aplicado) document.querySelectorAll('#hfItens .hf-mud,#hfPerdaBox .hf-mud').forEach(e=>e.classList.remove('hf-mud'));
+  HFEQ=null; clearTimeout(_hfEqTimer); hfEqRender();
+}
+function hfEqSimular(){ // só no modo teste: mostra ao Robson o que acontece quando a pessoa envia
+  if(!HFEQ) return; const est={}, qtd={};
+  Object.values(HF_EST||{}).forEach((e,i)=>{ est[e.nome]=i%3===0?0:(i%3===1?2:1.5); });
+  (HF.catalogo||[]).slice(0,3).forEach((it,i)=>{ qtd[it.nome]=i+1; });
+  HFEQ.respostas={estoque:Object.keys(est).length?est:null,qtd,perda:null,nadaFalta:false,outros:''}; HFEQ.situacao='enviada';
+  HFEQ.enviadoHora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}); hfEqRender();
 }
 // Lista com quantidades (13/11/2026, servidor 2026-11-13-d, recurso hortifrutiQtd): cada item com a unidade da loja (Isaac em caixas)
 function hfNumL(v){ let t=String(v||'').trim(); if(!t) return 0; if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.'); const n=Number(t); return isNaN(n)?NaN:n; }
@@ -4059,7 +4160,7 @@ function hfeDica(row){
   if(c<=0) h='✅ Não gastou nos últimos dias.';
   else {
     const dias=E/c, falta=Math.max(0,c*(1+M)-E), fat=e.fator;
-    let ped=0; if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:(x>0?Math.max(1,Math.ceil(x-0.25)):0); if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
+    let ped=0; if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:e.unCompra==='caixa'?(x>0?Math.max(E<c?1:0,Math.floor(x+0.3)) /* caixa (Isaac, 26/11): só com a falta ≥ 70% da caixa, ou se acaba antes do fim de amanhã */:0):(x>0?Math.max(1,Math.ceil(x-0.25)):0); if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
     h=(ped>0?'🛒':'✅')+' Usa <b>'+hfFmt(c)+' '+escR(e.un)+'/dia</b>. O que tem dá para <b>'+hfFmt(dias)+' dia'+(dias>=1.05&&dias<1.95?'':'s')+'</b>. '
       +(fat?(ped>0?'Sugerido pedir <b>'+hfFmt(ped)+' '+escR(e.unCompra)+'</b>.':'Não precisa pedir.'):'');
     const nadaOn=(document.getElementById('hfNada')||{}).checked;
@@ -4101,12 +4202,14 @@ async function hfSalvar(confirmado){
       corpo.perda=[...document.querySelectorAll('#hfPerdaBox input[data-hfp]')].filter(e=>hfNumL(e.value)>0).map(e=>({nome:e.dataset.hfp,qtd:hfNumL(e.value)}));
     }
   }
+  if(HFEQ&&HFEQ.situacao==='enviada'&&HFEQ.aplicado) corpo.delId=HFEQ.id; // contagem feita pela equipe (QR)
   bt.disabled=true; msg.textContent='Salvando…';
   try{
     const resp=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(corpo)});
     const r=await resp.json();
     if(r&&r.confirmar){ msg.innerHTML='<div class="hf-aviso">⚠️ <b>Pedido bem acima do normal:</b><br>'+(r.acima||[]).map(a=>'• '+escR(a.nome)+': '+escR(String(a.qtd).replace('.',','))+' '+escR(a.un)+' (a média da loja é '+escR(String(a.media).replace('.',','))+')').join('<br>')+'<br>Confira o estoque. Se estiver certo, confirme.<br><button type="button" class="alp-btn" style="margin-top:8px" onclick="hfSalvar(true)">✅ Está certo, salvar assim</button></div>'; logProva('HF_ACIMA_DO_NORMAL',(r.acima||[]).map(a=>a.nome+' '+a.qtd).join(', ')); return; }
     if(!r||r.ok!==true){ msg.innerHTML='<span style="color:var(--danger)">⚠ '+escR((r&&r.erro)||'Não salvou')+'</span>'; if(r&&r.bloqueado){ HF.bloqueado=true; hfRenderForn(); } return; }
+    if(corpo.delId){ HFEQ.situacao='confirmada'; HFEQ.mudou=r.equipe?(r.equipe.mudou||[]).length:hfEqMudancas().length; logProva('HF_EQUIPE_CONFIRMADA',HFEQ.pessoa+' · mudou '+HFEQ.mudou); hfEqRender(); }
     HF_SALVO=true; msg.innerHTML='<span style="color:var(--d-t-ok,#22c55e)">✓ Lista salva'+(r.hora?' às '+escR(r.hora):'')+'. '+(HF.precisaFornec===false?'Vai para o Sidinei amanhã às 9h.':'Chega no seu WhatsApp amanhã às 15h.')+'</span>';
     logProva('HF_LISTA_SALVA',nada?'nada falta':(corpo.pedidos?corpo.pedidos.map(p=>p.nome+' '+p.qtd).join(', '):itens.join(', '))+(outros?' + '+outros:''));
     if(HF&&corpo.pedidos){ HF.listaHoje={itens:corpo.pedidos.map(p=>p.nome),qtd:Object.fromEntries(corpo.pedidos.map(p=>[p.nome,p.qtd])),nadaFalta:nada,outros:outros,hora:r.hora||'',
