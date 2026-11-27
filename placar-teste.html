@@ -2028,9 +2028,12 @@ async function carregarMetaMes(){
   }catch(e){ MES_ATE_ONTEM=null; }
   renderMetaMes();
 }
-function mmFmt(v,tipo){ return tipo==='R$' ? 'R$ '+Math.round(v).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')+' '+tipo; }
+function mmFmtTxt(v,tipo){ return tipo==='R$' ? 'R$ '+Math.round(v).toLocaleString('pt-BR') : Math.round(v).toLocaleString('pt-BR')+' '+tipo; }
+function mmFmt(v,tipo){ return mmFmtTxt(v,tipo); }
 // metaDoDia(date) → meta daquele dia; real = valor de hoje digitado (null se vazio)
 function mmBloco(el, nome, tipo, metaDoDia, acumOntem, real, divisao){
+  // 26/11/2026: valores do faturamento (R$) só com o dedo em cima, como na Missão e no Minha loja
+  const mmFmt=(v,t)=>t==='R$'?rsMask(mmFmtTxt(v,t)):mmFmtTxt(v,t);
   const {d,dia,total,mes,ano}=diasDoMesTurno();
   const md=k=>metaDoDia(new Date(ano,mes,k));
   let metaMes=0, espOntem=0; for(let k=1;k<=total;k++){ metaMes+=md(k); if(k<dia) espOntem+=md(k); }
@@ -3228,7 +3231,7 @@ function atualizarMetas(){
   const fat=metaFat(unidadeAtual);
   const ma=METAS_AVAL[unidadeAtual]||AVAL_DEF[unidadeAtual]||{};
   const periodo=isFds()?'Sex / Sáb / Dom':'Seg a Qui';
-  document.getElementById('metaFatDisplay').textContent=fat?`Meta: R$ ${fat.toLocaleString('pt-BR')}`:'' ;
+  document.getElementById('metaFatDisplay').innerHTML=fat?'Meta: '+rsMask('R$ '+fat.toLocaleString('pt-BR')):''; // 26/11/2026: valor só com o dedo em cima
   document.getElementById('periodoDisplay').textContent=`Período: ${periodo}`;
   document.getElementById('metaGoogleDisplay').textContent=ma.google?`Meta: ${ma.google}/dia`:'';
   document.getElementById('metaIfoodDisplay').textContent=ma.ifood?`Meta: ${ma.ifood}/dia`:'';
