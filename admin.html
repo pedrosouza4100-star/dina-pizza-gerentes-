@@ -203,7 +203,7 @@
     .lado-adm .tabs{order:2;flex-direction:column;gap:2px;padding:6px 12px 10px;border:0;background:transparent;overflow:visible}
     .lado-adm .tab{white-space:normal;padding:10px 12px;font-size:0.86rem}
     .lado-adm .atalhos{order:3;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:6px;padding:14px 12px 22px;margin-top:auto;border-top:1px solid var(--border)}
-    .lado-adm .atalhos::before{content:"Abrir em outra aba";font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:0 4px 2px}
+    .lado-adm .atalhos::before{content:"";display:none;font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:0 4px 2px}
     .lado-adm .atalhos a{text-align:left;padding:8px 12px}
     .lado-adm .atalhos .tema-btn{align-self:flex-start;margin-top:6px}
     .lado-adm .atalhos .logout-btn{padding:4px 4px 0}
@@ -214,6 +214,37 @@
     .hdr-marca .logo-dina{width:52px}
     .tabs{padding:8px 10px}
     .tab{padding:9px 12px;font-size:0.8rem}
+  }
+
+  /* Admin numa aba só (27/11/2026): menu em grupos, páginas abertas dentro do Admin, abas abertas no topo e ← Voltar */
+  .tab-grupo{font-size:0.66rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+  .tab-grupo .tg-seta{transition:transform .2s}
+  .tab-grupo.fechado .tg-seta{transform:rotate(-90deg)}
+  .tab-grupo.fechado + .tab-gr{display:none}
+  .tab-gr{display:flex;flex-direction:column;gap:2px}
+  .tab.tab-ext::after{content:"";}
+  .abertas-bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--dark);border-bottom:1px solid var(--border)}
+  .ab-voltar,.ab-menu{flex:none;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:10px;padding:7px 12px;font-weight:700;font-size:0.8rem;cursor:pointer}
+  .ab-voltar:disabled{opacity:.4;cursor:default}
+  .ab-menu{display:none;font-size:1rem;padding:5px 11px}
+  .ab-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+  .ab-chips::-webkit-scrollbar{display:none}
+  .ab-chip{flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 6px 6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .ab-chip.on{color:var(--gold);border-color:var(--gold)}
+  .ab-chip .x{border:0;background:transparent;color:inherit;font-size:0.9rem;cursor:pointer;padding:0 4px;opacity:.7;line-height:1}
+  .ab-chip .x:hover{opacity:1}
+  #vistasFrames{display:none;flex:1}
+  #vistasFrames.on{display:block}
+  .vista-frame{display:none;width:100%;height:calc(100vh - 52px);border:0;background:var(--bg)}
+  .vista-frame.on{display:block}
+  .vista-carregando{padding:30px;color:var(--muted)}
+  body.vista-ext footer{display:none}
+  @media(max-width:1099px){
+    .ab-menu{display:block}
+    .lado-adm .tabs{display:none}
+    body.menu-aberto .lado-adm .tabs{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:280px;max-width:85vw;z-index:2000;overflow-y:auto;background:var(--dark);border-right:1px solid var(--border);padding:16px 12px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+    body.menu-aberto .lado-adm .tab{white-space:normal;padding:11px 12px;border-bottom:0;text-transform:none;letter-spacing:0;font-size:0.9rem}
+    .vista-frame{height:calc(100vh - 52px)}
   }
 </style>
 </head>
@@ -235,24 +266,58 @@
   <aside class="lado-adm dina-aneis">
   <header>
     <div class="hdr-marca"><span class="logo-dina"><img src="logo-emblema.png" alt="Dina Pizza Gastronomia" width="64" height="63"></span><span class="hdr-tit"><b>Administração</b><small>Sistema de gestão das lojas</small></span></div>
-    <div class="atalhos"><a href="ao-vivo" target="_blank">🏆 Ao vivo</a><a href="placar.html" target="_blank">Placar</a><a href="dashboard-v2" target="_blank">Dashboard</a><a href="dashboard" target="_blank">Dashboard mensal</a><a href="painel_escalas.html" target="_blank">Escalas</a><a href="regional" target="_blank">Checklist do GDI</a><a href="nutricionista" target="_blank">Nutricionista</a><a href="agenda" target="_blank">Agenda</a><a href="recebimento" target="_blank">Recebimento</a><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Mudar entre tema escuro e claro" title="Tema escuro / claro"><svg class="sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><div class="logout-btn" onclick="sairAdmin()" style="margin-left:6px">Sair</div></div>
+    <div class="atalhos"><button type="button" class="tema-btn" onclick="temaAlternar()" aria-label="Mudar entre tema escuro e claro" title="Tema escuro / claro"><svg class="sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><div class="logout-btn" onclick="sairAdmin()" style="margin-left:6px">Sair</div></div>
   </header>
-  <div class="tabs">
-    <div class="tab active" onclick="mudarTab(event,'hoje')">Hoje na rede</div>
-    <div class="tab" onclick="mudarTab(event,'senhas')">Senhas</div>
-    <div class="tab" onclick="mudarTab(event,'gerentes')">Gerentes e mensagens</div>
-    <div class="tab" onclick="mudarTab(event,'metas')">Metas por Loja</div>
-    <div class="tab" onclick="mudarTab(event,'premiacao')">Premiação</div>
-    <div class="tab" onclick="mudarTab(event,'checklist')">Checklist</div>
-    <div class="tab" onclick="mudarTab(event,'regional')">Checklist do GDI</div>
-    <div class="tab" onclick="mudarTab(event,'nutri')">Checklist nutricionista</div>
-    <div class="tab" onclick="mudarTab(event,'lojas')">Lojas e celulares</div>
-    <div class="tab" onclick="mudarTab(event,'equipe')">Equipe e feriados</div>
-    <div class="tab" onclick="mudarTab(event,'log')">Registro</div>
+  <div class="tabs" id="admMenu">
+    <div class="tab-grupo" onclick="grupoAlternar(this)">Hoje<span class="tg-seta">▾</span></div>
+    <div class="tab-gr">
+      <div class="tab active" data-v="hoje" onclick="abrirVista('hoje')">Hoje na rede</div>
+      <div class="tab tab-ext" data-v="aovivo" data-url="ao-vivo.html" onclick="abrirVista('aovivo')">🏆 Ao vivo</div>
+      <div class="tab tab-ext" data-v="placar" data-url="placar-teste.html" onclick="abrirVista('placar')">Placar (modo teste)</div>
+    </div>
+    <div class="tab-grupo" onclick="grupoAlternar(this)">Lojas e pessoas<span class="tg-seta">▾</span></div>
+    <div class="tab-gr">
+      <div class="tab" data-v="senhas" onclick="abrirVista('senhas')">Senhas</div>
+      <div class="tab" data-v="gerentes" onclick="abrirVista('gerentes')">Gerentes e mensagens</div>
+      <div class="tab" data-v="lojas" onclick="abrirVista('lojas')">Lojas e celulares</div>
+      <div class="tab" data-v="equipe" onclick="abrirVista('equipe')">Equipe e feriados</div>
+      <div class="tab tab-ext" data-v="escalas" data-url="painel_escalas.html" onclick="abrirVista('escalas')">Escalas</div>
+      <div class="tab tab-ext" data-v="vagas" data-url="vagas.html" onclick="abrirVista('vagas')">Vagas e folgas (RH)</div>
+    </div>
+    <div class="tab-grupo" onclick="grupoAlternar(this)">Checklists<span class="tg-seta">▾</span></div>
+    <div class="tab-gr">
+      <div class="tab" data-v="checklist" onclick="abrirVista('checklist')">Checklist da loja</div>
+      <div class="tab" data-v="regional" onclick="abrirVista('regional')">Checklist do GDI</div>
+      <div class="tab" data-v="nutri" onclick="abrirVista('nutri')">Checklist nutricionista</div>
+      <div class="tab tab-ext" data-v="visitagdi" data-url="regional.html" onclick="abrirVista('visitagdi')">Visita do GDI</div>
+      <div class="tab tab-ext" data-v="visitanutri" data-url="nutricionista.html" onclick="abrirVista('visitanutri')">Visita da nutricionista</div>
+    </div>
+    <div class="tab-grupo" onclick="grupoAlternar(this)">Números<span class="tg-seta">▾</span></div>
+    <div class="tab-gr">
+      <div class="tab" data-v="metas" onclick="abrirVista('metas')">Metas por Loja</div>
+      <div class="tab" data-v="premiacao" onclick="abrirVista('premiacao')">Premiação</div>
+      <div class="tab tab-ext" data-v="dash" data-url="dashboard-v2.html" onclick="abrirVista('dash')">Dashboard</div>
+      <div class="tab tab-ext" data-v="dashmes" data-url="dashboard.html" onclick="abrirVista('dashmes')">Dashboard mensal</div>
+      <div class="tab tab-ext" data-v="diretoria" data-url="painel-diretoria.html" onclick="abrirVista('diretoria')">Painel da Diretoria</div>
+      <div class="tab tab-ext" data-v="minhaloja" data-url="minha-loja.html?gdi=1" onclick="abrirVista('minhaloja')">Minha loja (visão do gerente)</div>
+    </div>
+    <div class="tab-grupo" onclick="grupoAlternar(this)">Áreas<span class="tg-seta">▾</span></div>
+    <div class="tab-gr">
+      <div class="tab tab-ext" data-v="agenda" data-url="agenda.html" onclick="abrirVista('agenda')">Agenda</div>
+      <div class="tab tab-ext" data-v="recebimento" data-url="recebimento.html" onclick="abrirVista('recebimento')">Recebimento</div>
+      <div class="tab tab-ext" data-v="manutencao" data-url="manutencao.html" onclick="abrirVista('manutencao')">Manutenção</div>
+      <div class="tab tab-ext" data-v="posvenda" data-url="posvenda.html" onclick="abrirVista('posvenda')">Pós-venda e chamados</div>
+      <div class="tab tab-ext" data-v="central" data-url="central-apoio.html" onclick="abrirVista('central')">Central de Apoio</div>
+    </div>
+    <div class="tab-gr">
+      <div class="tab" data-v="log" onclick="abrirVista('log')">Registro</div>
+    </div>
   </div>
   </aside>
   <div class="adm-corpo">
-  <main>
+  <div class="abertas-bar" id="abertasBar"><button type="button" class="ab-menu" onclick="menuAlternar()" aria-label="Menu">☰</button><button type="button" class="ab-voltar" id="abVoltar" onclick="vistaVoltar()" disabled>← Voltar</button><div class="ab-chips" id="abChips"></div></div>
+  <div id="vistasFrames"></div>
+  <main id="admMain">
 
     <!-- SENHAS -->
     <!-- HOJE NA REDE -->
@@ -862,7 +927,7 @@
   // ── Hoje na rede ──
   let hojeTimer=null, ADM_HOJE_FRESCO=false;
   // 22/11/2026: abre com o "Hoje na rede" guardado pelo servidor (até 2 min, o robô atualiza); "↻ Atualizar agora" e depois de mudar algo = na hora
-  async function carregarHoje(fresco){
+  async function carregarHoje(fresco){ (window._tabMs=window._tabMs||{}).hoje=Date.now(); // 27/11/2026
     const box=document.getElementById('hojeLojas');
     if(!(await admServidor())){ box.innerHTML='<div style="color:var(--yellow);font-size:0.85rem">⚠ O Apps Script publicado ainda não tem o painel "Hoje na rede". Cole a versão nova do código.</div>'; carregarProtecao(); return; }
     try{
@@ -1816,14 +1881,15 @@
 
   function sairAdmin(){ADM.hash=null;try{sessionStorage.removeItem('dina_adm_hash');}catch(e){}document.getElementById('loginWrap').style.display='flex';document.getElementById('adminWrap').style.display='none';document.getElementById('adminSenhaInput').value='';document.getElementById('adminErro').textContent='';}
 
-  function mudarTab(e,nome){
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-    e.target.classList.add('active');
-    document.getElementById('tab-'+nome).classList.add('active');
+  function mudarTab(e,nome){ abrirVista(nome); } // compatível com chamadas antigas
+  function carregarTab(nome){
     if(nome==='checklist' && !chkAdmCarregado) carregarChkAdm();
     if(nome==='regional' && !regAdmCarregado) carregarRegAdm();
     if(nome==='nutri' && !nutAdmCarregado) carregarNutAdm();
+    // 27/11/2026: voltar para uma aba já aberta não recarrega tudo de novo (o Hoje na rede se atualiza sozinho a cada 2 min)
+    const agora=Date.now(), ult=(window._tabMs=window._tabMs||{})[nome]||0, fresca=agora-ult<(nome==='hoje'?110000:60000);
+    if(fresca && ['gerentes','hoje','log','senhas','lojas','equipe'].indexOf(nome)>=0) return;
+    window._tabMs[nome]=agora;
     if(nome==='gerentes') carregarGerentes();
     if(nome==='hoje') carregarHoje();
     if(nome==='log') carregarLogServidor();
@@ -1831,6 +1897,68 @@
     if(nome==='lojas') carregarLojas();
     if(nome==='equipe') eqAdmCarregar();
   }
+
+  // ── Admin numa aba só (27/11/2026) ──
+  // Tudo abre aqui dentro: as abas do Admin e as outras páginas (num quadro que fica aberto por trás, sem recarregar).
+  // Fileira no topo com o que foi aberto (× fecha), ← Voltar e o voltar do celular (history).
+  let VISTA_ATUAL='hoje', VISTA_PILHA=[], VISTA_ABERTAS=['hoje'];
+  function vistaInfo(v){ const el=document.querySelector('#admMenu .tab[data-v="'+v+'"]'); return el?{v, titulo:el.textContent.trim(), url:el.dataset.url||'', el}:null; }
+  function abrirVista(v, op){
+    op=op||{}; const inf=vistaInfo(v); if(!inf) return;
+    if(v!==VISTA_ATUAL && !op.voltando) VISTA_PILHA.push(VISTA_ATUAL);
+    if(VISTA_ABERTAS.indexOf(v)<0) VISTA_ABERTAS.push(v);
+    VISTA_ATUAL=v;
+    document.querySelectorAll('#admMenu .tab').forEach(t=>t.classList.toggle('active',t.dataset.v===v));
+    const main=document.getElementById('admMain'), fr=document.getElementById('vistasFrames');
+    if(inf.url){
+      let f=document.getElementById('vf_'+v);
+      if(!f) vistaEntrarSozinho(v);
+      if(!f){ f=document.createElement('iframe'); f.id='vf_'+v; f.className='vista-frame'; f.title=inf.titulo; f.setAttribute('allow','geolocation; camera; clipboard-write; fullscreen'); f.src=inf.url; fr.appendChild(f); }
+      fr.querySelectorAll('.vista-frame').forEach(x=>x.classList.toggle('on',x===f));
+      fr.classList.add('on'); main.style.display='none'; document.body.classList.add('vista-ext');
+    } else {
+      fr.classList.remove('on'); fr.querySelectorAll('.vista-frame').forEach(x=>x.classList.remove('on'));
+      main.style.display=''; document.body.classList.remove('vista-ext');
+      document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('active',t.id==='tab-'+v));
+      carregarTab(v);
+    }
+    const g=inf.el.parentElement&&inf.el.parentElement.previousElementSibling; if(g&&g.classList.contains('tab-grupo')) g.classList.remove('fechado');
+    document.body.classList.remove('menu-aberto');
+    if(!op.semHist){ try{ history.pushState({v},'','#'+v); }catch(e){} }
+    vistaChips(); window.scrollTo(0,0);
+  }
+  // As páginas das áreas aceitam a senha do Admin: já entra com ela (só se a página ainda não tiver outra senha guardada neste aparelho)
+  const VISTA_CHAVES={manutencao:['man_chave'],recebimento:['rcb_chave'],posvenda:['pv_chave'],agenda:['dina_agenda_hash'],visitanutri:['dina_nutri_hash'],central:['apo_chave'],vagas:['vg_chave']};
+  function vistaEntrarSozinho(v){ const h=ADM.hash||(()=>{try{return sessionStorage.getItem('dina_adm_hash');}catch(e){return '';}})(); if(!h) return;
+    (VISTA_CHAVES[v]||[]).forEach(k=>{ try{ if(!localStorage.getItem(k)) localStorage.setItem(k,h); }catch(e){} });
+    if(v==='posvenda'){ try{ if(!localStorage.getItem('cc_atendente')) localStorage.setItem('cc_atendente','Robson'); }catch(e){} } }
+  function vistaChips(){
+    const box=document.getElementById('abChips'); if(!box) return;
+    box.innerHTML=VISTA_ABERTAS.map(v=>{ const i=vistaInfo(v); if(!i) return '';
+      return '<div class="ab-chip'+(v===VISTA_ATUAL?' on':'')+'" onclick="abrirVista(\''+v+'\')">'+escH(i.titulo)+(v==='hoje'?'':'<button type="button" class="x" title="Fechar" onclick="event.stopPropagation();vistaFechar(\''+v+'\')">×</button>')+'</div>'; }).join('');
+    const on=box.querySelector('.ab-chip.on'); if(on) on.scrollIntoView({block:'nearest',inline:'nearest'});
+    document.getElementById('abVoltar').disabled=!VISTA_PILHA.length;
+  }
+  function vistaFechar(v){
+    VISTA_ABERTAS=VISTA_ABERTAS.filter(x=>x!==v); VISTA_PILHA=VISTA_PILHA.filter(x=>x!==v);
+    const f=document.getElementById('vf_'+v); if(f) f.remove();
+    if(VISTA_ATUAL===v){ const ant=VISTA_PILHA.pop()||'hoje'; abrirVista(ant,{voltando:true}); } else vistaChips();
+  }
+  function vistaVoltar(){ if(!VISTA_PILHA.length) return; try{ history.back(); }catch(e){ abrirVista(VISTA_PILHA.pop(),{voltando:true,semHist:true}); } }
+  window.addEventListener('popstate',e=>{ const v=(e.state&&e.state.v)||(location.hash||'').slice(1)||'hoje'; if(!vistaInfo(v)) return;
+    if(VISTA_PILHA.length&&VISTA_PILHA[VISTA_PILHA.length-1]===v) VISTA_PILHA.pop();
+    abrirVista(v,{voltando:true,semHist:true}); });
+  function grupoAlternar(el){ el.classList.toggle('fechado'); try{ const f=[...document.querySelectorAll('#admMenu .tab-grupo.fechado')].map(x=>x.textContent.replace('▾','').trim()); localStorage.setItem('adm_grupos_fechados',JSON.stringify(f)); }catch(e){} }
+  function menuAlternar(){ document.body.classList.toggle('menu-aberto'); }
+  document.addEventListener('click',e=>{ if(document.body.classList.contains('menu-aberto')&&!e.target.closest('#admMenu')&&!e.target.closest('.ab-menu')){ e.preventDefault(); e.stopPropagation(); document.body.classList.remove('menu-aberto'); } },true); // toque fora fecha o menu (e não aciona o que está atrás)
+  // links do Admin que abriam outra aba (agenda, pós-venda, manutenção, vagas, GDI, nutricionista…) abrem aqui dentro
+  document.addEventListener('click',e=>{ const a=e.target.closest('a[target="_blank"]'); if(!a||a.closest('.vista-frame')) return;
+    const href=(a.getAttribute('href')||'').replace(/^\.?\//,'').split('#')[0];
+    const base=href.split('?')[0].replace(/\.html$/,'');
+    const tab=[...document.querySelectorAll('#admMenu .tab[data-url]')].find(t=>t.dataset.url.split('?')[0].replace(/\.html$/,'')===base);
+    if(!tab) return; e.preventDefault(); abrirVista(tab.dataset.v); });
+  (function(){ try{ const f=JSON.parse(localStorage.getItem('adm_grupos_fechados')||'[]'); document.querySelectorAll('#admMenu .tab-grupo').forEach(g=>{ if(f.indexOf(g.textContent.replace('▾','').trim())>=0) g.classList.add('fechado'); }); }catch(e){} })();
+  try{ history.replaceState({v:'hoje'},'','#hoje'); }catch(e){}
 
   // ── Senhas ──
   async function renderTabela(){
