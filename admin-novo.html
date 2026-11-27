@@ -108,10 +108,13 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
 .it.err .lin{background:var(--err)} .it.av .lin{background:var(--av)} .it.mu .lin{background:var(--mu2)}
 .it .cx{flex:1;min-width:0}
 .it .tt{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.it .tt .pill{font-weight:500}
 .it .tt .lj{color:var(--mu);font-weight:500}
 .it .ds{color:var(--mu);font-size:13px;margin-top:3px;word-wrap:break-word}
 .it .ac{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .it.alvo{background:var(--s3)}
+.grp{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu2);padding:12px 16px 4px;border-top:1px solid var(--line)}
+.grp:first-child{border-top:0}
 .vazio{padding:28px 16px;text-align:center;color:var(--mu)}
 .vazio b{display:block;color:var(--tx);font-size:15px;margin-bottom:4px}
 /* lojas */
@@ -210,7 +213,7 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
         <div style="display:flex;gap:8px;align-items:center"><span id="atuTxt" style="color:var(--mu);font-size:12.5px"></span><button class="btn" id="bAtu" onclick="atualizarAgora()">Atualizar agora</button></div></div>
       <div class="kpis" id="kpis"></div>
       <div class="grade">
-        <div class="cart" id="caixaCart"><div class="cart-h"><h3>Precisa de você agora <span class="pill err" id="caixaN" style="display:none"></span></h3><small>O que só você resolve fica em cima</small></div><div id="caixa"><div class="vazio">Carregando…</div></div></div>
+        <div class="cart" id="caixaCart"><div class="cart-h"><h3>Precisa de você agora <span class="pill err" id="caixaN" style="display:none"></span></h3><small>Em cima o que é só seu; embaixo o que a equipe resolve</small></div><div id="caixa"><div class="vazio">Carregando…</div></div></div>
         <div style="display:flex;flex-direction:column;gap:16px">
           <div class="cart"><div class="cart-h"><h3>Lojas agora</h3><button class="btn sm" onclick="abrir('lojas')">Ver todas</button></div><div class="lojas" id="lojasMini" style="grid-template-columns:1fr 1fr"></div></div>
           <div class="cart prot"><div class="cart-h"><h3>Sistema</h3><small id="protResumo"></small></div><div id="prot" style="padding:4px 16px 10px"></div></div>
@@ -444,29 +447,29 @@ function itensCaixa(r){
   const I=[], add=(o)=>I.push(o);
   // sistema
   const p=S.ping;
-  if(S.pingFalhou) add({n:'err',t:'O servidor não está respondendo',d:'As lojas podem não estar conseguindo salvar. Abra o Apps Script e confira a última implantação.'});
+  if(S.pingFalhou) add({n:'err',q:'Você',t:'O servidor não está respondendo',d:'As lojas podem não estar conseguindo salvar. Abra o Apps Script e confira a última implantação.'});
   else if(p){
-    if(S.oficial&&p.versao&&p.versao!==S.oficial) add({n:'err',t:'Código do servidor diferente da versão oficial',d:'Publicado: '+p.versao+' · oficial: '+S.oficial+'. Cole o código mais recente e publique em Nova versão.'});
-    if(p.faltando&&p.faltando.length) add({n:'err',t:'Faltam partes no código publicado',d:p.faltando.join(', ')});
-    if(p.robo&&p.robo.minutos!=null&&p.robo.minutos>30) add({n:'err',t:'Robô de cobrança parado',d:'Desde '+p.robo.ultimo+'. Ninguém está sendo cobrado: confira o computador e abra o INICIAR_ROBO.'});
+    if(S.oficial&&p.versao&&p.versao!==S.oficial) add({n:'err',q:'Você',t:'Código do servidor diferente da versão oficial',d:'Publicado: '+p.versao+' · oficial: '+S.oficial+'. Cole o código mais recente e publique em Nova versão.'});
+    if(p.faltando&&p.faltando.length) add({n:'err',q:'Você',t:'Faltam partes no código publicado',d:p.faltando.join(', ')});
+    if(p.robo&&p.robo.minutos!=null&&p.robo.minutos>30) add({n:'err',q:'Você',t:'Robô de cobrança parado',d:'Desde '+p.robo.ultimo+'. Ninguém está sendo cobrado: confira o computador e abra o INICIAR_ROBO.'});
   }
   // decisões
-  (r.lojas||[]).forEach(l=>{ const b=l.chkHorario&&l.chkHorario.bloqueio; if(b) add({n:'err',dec:1,lj:l.unidade,t:'Placar bloqueado',d:(b.oque||'Checklist de abertura')+' fora do horário em '+b.dia+' às '+b.hora+' ('+b.n+'º atraso no mês)'+(b.pedido?'. A loja pediu desbloqueio.':'.'),ac:[['Liberar placar','pri',"liberarPlacar('"+jsq(l.unidade)+"')"]]}); });
-  (S.desb||[]).forEach(d=>add({n:'err',dec:1,lj:d.unidade,t:d.tipo==='falta'?'Pedido de desbloqueio (falta de produto)':'Pedido de desbloqueio do placar',d:'Pediu em '+(function(){ try{ const x=new Date(d.data); return isNaN(x)?d.data:x.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return d.data; } })(),ac:[['Liberar','pri',"desbloquear('"+jsq(d.unidade)+"','"+jsq(d.tipo)+"')"]]}));
+  (r.lojas||[]).forEach(l=>{ const b=l.chkHorario&&l.chkHorario.bloqueio; if(b) add({n:'err',dec:1,lj:l.unidade,q:'Você',t:'Placar bloqueado',d:(b.oque||'Checklist de abertura')+' fora do horário em '+b.dia+' às '+b.hora+' ('+b.n+'º atraso no mês)'+(b.pedido?'. A loja pediu desbloqueio.':'.'),ac:[['Liberar placar','pri',"liberarPlacar('"+jsq(l.unidade)+"')"]]}); });
+  (S.desb||[]).forEach(d=>add({n:'err',dec:1,lj:d.unidade,q:'Você',t:d.tipo==='falta'?'Pedido de desbloqueio (falta de produto)':'Pedido de desbloqueio do placar',d:'Pediu em '+(function(){ try{ const x=new Date(d.data); return isNaN(x)?d.data:x.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return d.data; } })(),ac:[['Liberar','pri',"desbloquear('"+jsq(d.unidade)+"','"+jsq(d.tipo)+"')"]]}));
   (r.aparelhosPendentes||[]).forEach(a=>{ const ac=a.temOutro&&a.autorizados?[['Mesmo celular (manter os dois)','pri',"aparelho("+a.linha+",'adicionar')"],['Celular novo (trocar)','',"aparelho("+a.linha+",'autorizar')"]]:[['Autorizar','pri',"aparelho("+a.linha+",'autorizar')"]];
     ac.push(['Recusar','',"aparelho("+a.linha+",'recusar')"]);
-    add({n:'av',dec:1,lj:a.unidade,t:'Celular novo do '+(a.papel==='assistente'?'assistente':'gerente'),d:(a.info||'celular')+(a.temOutro?' · já autorizado: '+(a.autorizados||[]).join(' | '):'')+(a.mesmoModelo?' · parece o MESMO celular em outro navegador':'')+'. Confira o código com a pessoa antes.',ac}); });
-  (r.excecoes||[]).filter(x=>x.situacao==='pendente').forEach(x=>add({n:'err',dec:1,lj:x.unidade,t:'Placar fora da loja: pede autorização',d:x.motivo+' · pediu às '+x.pedidoEm+(x.distancia?' · a '+(x.distancia>=1000?(x.distancia/1000).toFixed(1).replace('.',',')+' km':x.distancia+' m')+' da loja':''),ac:[['Autorizar 2 h','pri',"excecao('"+jsq(x.id)+"','aprovar','2')"],['Até fechar','',"excecao('"+jsq(x.id)+"','aprovar','dia')"],['Não autorizar','',"excecao('"+jsq(x.id)+"','recusar')"]]}));
-  ((r.hf&&r.hf.fora)||[]).filter(x=>x.situacao==='pendente').forEach(x=>add({n:'av',dec:1,lj:x.unidade,id:'hf_'+x.id,t:'Compra de hortifrúti em mercado grande',d:x.motivo+(x.valor?' · R$ '+String(x.valor).replace('.',','):'')+(/^https/.test(x.foto)?' · <a href="'+escH(x.foto)+'" target="_blank">ver cupom</a>':''),html:1,ac:[['Autorizar','pri',"hfFora('"+jsq(x.id)+"','aprovar')"],['Não autorizar','',"hfFora('"+jsq(x.id)+"','recusar')"]]}));
+    add({n:'av',dec:1,lj:a.unidade,q:'Você',t:'Celular novo do '+(a.papel==='assistente'?'assistente':'gerente'),d:(a.info||'celular')+(a.temOutro?' · já autorizado: '+(a.autorizados||[]).join(' | '):'')+(a.mesmoModelo?' · parece o MESMO celular em outro navegador':'')+'. Confira o código com a pessoa antes.',ac}); });
+  (r.excecoes||[]).filter(x=>x.situacao==='pendente').forEach(x=>add({n:'err',dec:1,lj:x.unidade,q:'GDI (você pode responder)',t:'Placar fora da loja: pede autorização',d:x.motivo+' · pediu às '+x.pedidoEm+(x.distancia?' · a '+(x.distancia>=1000?(x.distancia/1000).toFixed(1).replace('.',',')+' km':x.distancia+' m')+' da loja':''),ac:[['Autorizar 2 h','pri',"excecao('"+jsq(x.id)+"','aprovar','2')"],['Até fechar','',"excecao('"+jsq(x.id)+"','aprovar','dia')"],['Não autorizar','',"excecao('"+jsq(x.id)+"','recusar')"]]}));
+  ((r.hf&&r.hf.fora)||[]).filter(x=>x.situacao==='pendente').forEach(x=>add({n:'av',dec:1,lj:x.unidade,id:'hf_'+x.id,q:'Você',t:'Compra de hortifrúti em mercado grande',d:x.motivo+(x.valor?' · R$ '+String(x.valor).replace('.',','):'')+(/^https/.test(x.foto)?' · <a href="'+escH(x.foto)+'" target="_blank">ver cupom</a>':''),html:1,ac:[['Autorizar','pri',"hfFora('"+jsq(x.id)+"','aprovar')"],['Não autorizar','',"hfFora('"+jsq(x.id)+"','recusar')"]]}));
   // atenção
-  (r.equipeAlertas||[]).filter(a=>a.situacao==='aberto').forEach(a=>add({n:'err',lj:a.unidade,t:'Equipe muito incompleta hoje',d:a.presentes+' de '+a.ideal+' pessoas ('+a.pct+'%)'+((a.zeradas||[]).length?' · sem '+a.zeradas.join(', '):'')+'. O GDI foi acionado.'}));
-  ((r.manutencao&&r.manutencao.vermelhosAtrasados)||[]).forEach(x=>add({n:'err',lj:x.unidade,t:'Manutenção vermelha há mais de 20 h',d:[x.categoriaNome||x.categoria,x.onde,x.descricao||x.oque].filter(Boolean).join(' · '),ac:[['Abrir manutenção','',"abrir('manutencao')"]]}));
-  (r.gasAcabando||[]).forEach(g=>add({n:'err',lj:g.unidade,t:'Gás acabando',d:'Ponteiro no vermelho no checklist de '+(g.turno||'abertura')+' ('+g.hora+'). O Sidinei e o GDI foram avisados.'}));
+  (r.equipeAlertas||[]).filter(a=>a.situacao==='aberto').forEach(a=>add({n:'err',lj:a.unidade,q:'GDI e RH',t:'Equipe muito incompleta hoje',d:a.presentes+' de '+a.ideal+' pessoas ('+a.pct+'%)'+((a.zeradas||[]).length?' · sem '+a.zeradas.join(', '):'')+'. O GDI foi acionado.'}));
+  ((r.manutencao&&r.manutencao.vermelhosAtrasados)||[]).forEach(x=>add({n:'err',lj:x.unidade,q:'Sidinei',t:'Manutenção vermelha há mais de 20 h',d:[x.categoriaNome||x.categoria,x.onde,x.descricao||x.oque].filter(Boolean).join(' · '),ac:[['Abrir manutenção','',"abrir('manutencao')"]]}));
+  (r.gasAcabando||[]).forEach(g=>add({n:'err',lj:g.unidade,q:'Sidinei e GDI',t:'Gás acabando',d:'Ponteiro no vermelho no checklist de '+(g.turno||'abertura')+' ('+g.hora+'). O Sidinei e o GDI foram avisados.'}));
   const atras=(r.regPendencias||[]).filter(x=>x.atrasada);
-  if(atras.length) add({n:'av',t:atras.length+' correção(ões) esperando confirmação há mais de 18 h',d:atras.slice(0,4).map(x=>x.unidade+': '+x.itemLabel).join(' · ')+(atras.length>4?' …':''),ac:[['Abrir visitas','',"abrir('visitas')"]]});
+  if(atras.length) add({n:'av',q:'GDI e nutricionista',t:atras.length+' correção(ões) esperando confirmação há mais de 18 h',d:atras.slice(0,4).map(x=>x.unidade+': '+x.itemLabel).join(' · ')+(atras.length>4?' …':''),ac:[['Abrir visitas','',"abrir('visitas')"]]});
   const vg=(r.vagas||[]).filter(v=>v.situacao==='aberta'&&(v.atrasada||v.naoConsigo));
-  if(vg.length) add({n:'av',t:vg.length+' vaga(s) com o prazo vencido ou sem previsão',d:vg.slice(0,4).map(v=>v.unidade+': '+v.setorNome).join(' · '),ac:[['Abrir vagas','',"abrir('equipe');subAba('equipe',2)"]]});
-  if(p&&p.backup&&p.backup.dias!=null&&p.backup.dias>8) add({n:'av',t:'Backup automático parado',d:'Último em '+p.backup.ultimo+'. No editor do Apps Script, rode de novo instalarBackup.',ac:[['Fazer backup agora','',"backupAgora(this)"]]});
+  if(vg.length) add({n:'av',q:'RH',t:vg.length+' vaga(s) com o prazo vencido ou sem previsão',d:vg.slice(0,4).map(v=>v.unidade+': '+v.setorNome).join(' · '),ac:[['Abrir vagas','',"abrir('equipe');subAba('equipe',2)"]]});
+  if(p&&p.backup&&p.backup.dias!=null&&p.backup.dias>8) add({n:'av',q:'Você',t:'Backup automático parado',d:'Último em '+p.backup.ultimo+'. No editor do Apps Script, rode de novo instalarBackup.',ac:[['Fazer backup agora','',"backupAgora(this)"]]});
   return I;
 }
 function desenharInicio(){
@@ -482,11 +485,12 @@ function desenharInicio(){
     kpi('Faturamento informado',brl(fat),meta?Math.round(fat/meta*100)+'% da meta das '+enviados.length+' lojas':'Só das lojas que já enviaram',meta?fat/meta*100:null,meta&&fat>=meta?'var(--ok)':'var(--av)')+
     kpi('Abertura completa',abert+'<span style="color:var(--mu);font-size:16px">/'+n+'</span>',n-abert?(n-abert)+' sem o checklist completo':'Todas abriram certo',n?abert/n*100:0,abert===n?'var(--ok)':'var(--av)')+
     kpi('Lojas em vermelho',String(vermelhas),vermelhas?'Toque na loja para ver o motivo':'Nenhuma loja com problema',null);
-  const I=itensCaixa(r), dec=I.filter(x=>x.dec), at=I.filter(x=>!x.dec);
-  const nDec=dec.length+at.filter(x=>x.n==='err').length;
+  const I=itensCaixa(r), meu=I.filter(x=>x.q==='Você'), eq=I.filter(x=>x.q!=='Você');
+  const nDec=meu.length;
   ['caixaN','navBd','peBd'].forEach(id=>{ const e=document.getElementById(id); if(!e) return; e.textContent=nDec; e.style.display=nDec?'':'none'; });
-  const it=(x,i)=>'<div class="it '+x.n+'"'+(x.id?' id="'+x.id+'"':'')+'><span class="lin"></span><div class="cx"><div class="tt">'+escH(x.t)+(x.lj?'<span class="lj">· '+escH(x.lj)+'</span>':'')+'</div><div class="ds">'+(x.html?x.d:escH(x.d))+'</div>'+((x.ac||[]).length||x.lj?'<div class="ac">'+(x.ac||[]).map(a=>'<button class="btn sm '+a[1]+'" onclick="'+escH(a[2])+'">'+escH(a[0])+'</button>').join('')+(x.lj?'<button class="btn sm" onclick="abrirLoja(\''+escH(jsq(x.lj))+'\')">Ver loja</button>':'')+'</div>':'')+'</div></div>';
-  document.getElementById('caixa').innerHTML=I.length?dec.concat(at).map(it).join(''):'<div class="vazio"><b>Nada esperando por você</b>As lojas estão em dia. A página se atualiza sozinha a cada 2 minutos.</div>';
+  const it=(x,i)=>'<div class="it '+x.n+'"'+(x.id?' id="'+x.id+'"':'')+'><span class="lin"></span><div class="cx"><div class="tt">'+escH(x.t)+(x.lj?'<span class="lj">· '+escH(x.lj)+'</span>':'')+(x.q&&x.q!=='Você'?'<span class="pill mu">'+escH(x.q)+'</span>':'')+'</div><div class="ds">'+(x.html?x.d:escH(x.d))+'</div>'+((x.ac||[]).length||x.lj?'<div class="ac">'+(x.ac||[]).map(a=>'<button class="btn sm '+a[1]+'" onclick="'+escH(a[2])+'">'+escH(a[0])+'</button>').join('')+(x.lj?'<button class="btn sm" onclick="abrirLoja(\''+escH(jsq(x.lj))+'\')">Ver loja</button>':'')+'</div>':'')+'</div></div>';
+  const grupo=(t,l)=>l.length?'<div class="grp">'+t+'</div>'+l.map(it).join(''):'';
+  document.getElementById('caixa').innerHTML=I.length?(meu.length?grupo('Só você resolve',meu):'<div class="grp">Só você resolve</div><div class="vazio" style="padding:14px">Nada esperando por você.</div>')+grupo('Da equipe: acompanhe',eq):'<div class="vazio"><b>Nada esperando por você</b>As lojas estão em dia. A página se atualiza sozinha a cada 2 minutos.</div>';
   const alvo=new URLSearchParams(location.search).get('hfFora'); if(alvo){ const e=document.getElementById('hf_'+alvo); if(e){ e.classList.add('alvo'); e.scrollIntoView({block:'center'}); } }
   const ordem=L.slice().sort((a,b)=>PESO[piorDe(b.L)]-PESO[piorDe(a.L)]);
   document.getElementById('lojasMini').innerHTML=ordem.map(x=>cartLoja(x.l,x.L,true)).join('');
