@@ -242,6 +242,7 @@
   @media(max-width:1099px){
     .ab-menu{display:block}
     .lado-adm .tabs{display:none}
+    body.menu-aberto .lado-adm{position:relative;z-index:3000}
     body.menu-aberto .lado-adm .tabs{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:280px;max-width:85vw;z-index:2000;overflow-y:auto;background:var(--dark);border-right:1px solid var(--border);padding:16px 12px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
     body.menu-aberto .lado-adm .tab{white-space:normal;padding:11px 12px;border-bottom:0;text-transform:none;letter-spacing:0;font-size:0.9rem}
     .vista-frame{height:calc(100vh - 52px)}
