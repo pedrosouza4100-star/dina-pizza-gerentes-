@@ -142,10 +142,15 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
 .lh .v.err{color:var(--err)} .lh .v.av{color:var(--av)}
 .sub{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu2);margin:18px 0 6px}
 .tl{display:flex;gap:10px;padding:6px 0;font-size:13px}
-.tl .h{font-family:'Space Grotesk';color:var(--mu);width:48px;flex:none}
+.tl .h{font-family:'Space Grotesk',Inter,sans-serif;color:var(--mu);width:48px;flex:none}
 .tl.err .x{color:var(--err)}
 .rod{color:var(--mu);font-size:12px;margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .prot .lh .r{width:22px}
+
+.ficha-cab{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ficha-cab h1{font-size:22px;font-weight:600}
+.ficha-ger{color:var(--mu);font-size:13px;margin-left:auto}
+.ficha-frame{width:100%;height:calc(100vh - 210px);min-height:520px;border:0;border-radius:12px;background:var(--bg)}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--s3);border:1px solid var(--line2);padding:10px 16px;border-radius:9px;transition:.2s;z-index:60;max-width:90vw}
 #toast.on{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--err)}
@@ -221,9 +226,12 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
       </div>
     </section>
 
+    <!-- FICHA DA LOJA -->
+    <section class="sec" id="s-loja"></section>
+
     <!-- LOJAS -->
     <section class="sec" id="s-lojas">
-      <div class="cab"><div><h1>Lojas</h1><p>Toque numa loja para ver tudo dela hoje. A ficha completa (números, equipe, visitas) chega na etapa 3.</p></div></div>
+      <div class="cab"><div><h1>Lojas</h1><p>Toque numa loja para abrir a ficha dela.</p></div></div>
       <div class="cart"><div class="lojas" id="lojasTodas"></div></div>
     </section>
   </main>
@@ -237,7 +245,6 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
   </nav>
 </div>
 
-<div id="gaveta"><div class="fundo" onclick="fecharLoja()"></div><div class="pn"><div class="pn-h"><span class="dot" id="gDot"></span><h3 id="gTit"></h3><button class="ico-btn" onclick="fecharLoja()" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="pn-b" id="gCorpo"></div></div></div>
 <div id="toast"></div>
 
 <script>
@@ -290,8 +297,8 @@ function iniciar(h,papel){
   document.getElementById('quemPapel').textContent=papel==='admin'?'Administrador':'Diretoria · só leitura';
   montarMenu();
   const q=new URLSearchParams(location.search), alvo=(location.hash||'').slice(1);
-  if(papel!=='admin'){ abrir(SECOES[alvo]&&SECOES[alvo].dir?alvo:'numeros',{semHist:true}); return; }
-  abrir(SECOES[alvo]?alvo:'inicio',{semHist:true});
+  if(papel!=='admin'){ abrir(SECOES[alvo]&&SECOES[alvo].dir&&alvo!=='loja'?alvo:'numeros',{semHist:true}); carregarLojasDir(); return; }
+  if(/^loja=/.test(alvo)){ const lu=decodeURIComponent(alvo.slice(5)); if(UNIDADES.indexOf(lu)>=0){ abrir('inicio',{semHist:true}); abrirLoja(lu,{semHist:true}); } else abrir('inicio',{semHist:true}); } else abrir(SECOES[alvo]?alvo:'inicio',{semHist:true});
   carregarHoje(); carregarSistema();
 }
 function sair(){ try{ sessionStorage.removeItem('dina_adm_hash'); sessionStorage.removeItem('an_papel'); }catch(e){} location.href=location.pathname; }
@@ -302,7 +309,8 @@ const ADM=v=>'admin.html?embed=1#'+v;
 const SECOES={
   inicio:{t:'Início',g:'',ic:'home'},
   numeros:{t:'Números',g:'',ic:'chart',dir:1,abas:[['Números da rede','numeros.html?embed=1'],['Visão do gerente (Minha loja)','minha-loja.html?gdi=1',1]]},
-  lojas:{t:'Lojas',g:'',ic:'store'},
+  lojas:{t:'Lojas',g:'',ic:'store',dir:1},
+  loja:{t:'Loja',g:'-',ic:'store',dir:1},
   checklists:{t:'Checklists',g:'Operação',ic:'check',abas:[['Checklist da loja',ADM('checklist')],['Checklist do GDI',ADM('regional')],['Checklist da nutricionista',ADM('nutri')]]},
   visitas:{t:'Visitas',g:'Operação',ic:'pin',abas:[['Visita do GDI','regional.html'],['Visita da nutricionista','nutricionista.html']]},
   manutencao:{t:'Manutenção',g:'Operação',ic:'tool',abas:[['Manutenção','manutencao.html']]},
@@ -324,7 +332,7 @@ function montarMenu(){
     h+='<button class="ni" data-s="'+k+'" onclick="abrir(\''+k+'\')"><svg viewBox="0 0 24 24">'+(ICO[s.ic]||'')+'</svg>'+escH(s.t)+(k==='inicio'?'<span class="bd" id="navBd" style="display:none"></span>':'')+'</button>';
   });
   document.getElementById('nav').innerHTML=h;
-  if(S.papel!=='admin'){ document.querySelectorAll('#peNav button[data-s="inicio"],#peNav button[data-s="lojas"]').forEach(b=>b.style.display='none'); document.querySelector('.lado-pe .ni').style.display='none'; }
+  if(S.papel!=='admin'){ document.querySelectorAll('#peNav button[data-s="inicio"]').forEach(b=>b.style.display='none'); document.querySelector('.lado-pe .ni').style.display='none'; }
 }
 // páginas que aceitam a senha do Admin entram sozinhas (só se o aparelho ainda não tiver outra senha guardada)
 const CHAVES={'manutencao.html':['man_chave'],'recebimento.html':['rcb_chave'],'posvenda.html':['pv_chave'],'agenda.html':['dina_agenda_hash'],'nutricionista.html':['dina_nutri_hash'],'central-apoio.html':['apo_chave'],'vagas.html':['vg_chave']};
@@ -337,7 +345,7 @@ function abrir(k,op){
   if(k!==S.sec&&!op.voltando) S.pilha.push(S.sec);
   S.sec=k;
   document.querySelectorAll('.ni[data-s],.pe-nav button[data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===k));
-  document.getElementById('tituloSec').textContent=SECOES[k].t;
+  document.getElementById('tituloSec').textContent=k==='loja'?(S.lojaAberta||'Loja'):SECOES[k].t;
   document.querySelectorAll('.sec').forEach(x=>x.classList.remove('on'));
   if(SECOES[k].abas){
     let el=document.getElementById('s-'+k);
@@ -349,10 +357,10 @@ function abrir(k,op){
     if(el._i==null) subAba(k,op.aba||0);
   } else {
     document.querySelector('main').style.display=''; document.getElementById('s-'+k).classList.add('on');
-    if(k==='lojas') desenharLojas();
+    if(k==='lojas') desenharLojas(); if(k==='loja') desenharFicha();
   }
   document.body.classList.remove('menu');
-  if(!op.semHist){ try{ history.pushState({s:k},'','#'+k); }catch(e){} }
+  if(!op.semHist){ try{ history.pushState(k==='loja'?{s:k,loja:S.lojaAberta}:{s:k},'','#'+(k==='loja'?'loja='+encodeURIComponent(S.lojaAberta):k)); }catch(e){} }
   window.scrollTo(0,0);
 }
 function subAba(k,i){
@@ -362,7 +370,7 @@ function subAba(k,i){
   if(!f){ semearChave(a[1]); f=document.createElement('iframe'); f.dataset.i=i; f.title=a[0]; f.setAttribute('allow','geolocation; camera; clipboard-write; fullscreen'); f.src=a[1]; fr.appendChild(f); }
   fr.querySelectorAll('iframe').forEach(x=>x.classList.toggle('on',x===f));
 }
-window.addEventListener('popstate',e=>{ const k=(e.state&&e.state.s)||(location.hash||'').slice(1)||'inicio'; if(!SECOES[k]) return; fecharLoja(true); abrir(k,{voltando:true,semHist:true}); });
+window.addEventListener('popstate',e=>{ const hs=(location.hash||'').slice(1); if(e.state&&e.state.loja){ abrirLoja(e.state.loja,{semHist:true,voltando:true}); return; } const k=(e.state&&e.state.s)||hs||'inicio'; if(!SECOES[k]||k==='loja') return; abrir(k,{voltando:true,semHist:true}); });
 // links das páginas de dentro (admin.html embutido) que abririam outra aba: abrem aqui
 window.addEventListener('message',e=>{ if(e.origin!==location.origin) return; const d=e.data||{}; if(d.tipo!=='anAbrir') return;
   const base=String(d.url||'').replace(/^\.?\//,'').split('#')[0].split('?')[0].replace(/\.html$/,'');
@@ -377,7 +385,7 @@ const semAc=t=>String(t).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function buscar(){
   const q=semAc(document.getElementById('busca').value.trim()); if(!q){busRes.style.display='none';return;}
   const r=[];
-  if(S.papel==='admin') UNIDADES.forEach(u=>{ if(semAc(u).includes(q)) r.push({t:u,d:'Loja',f:()=>abrirLoja(u)}); });
+  UNIDADES.forEach(u=>{ if(semAc(u).includes(q)) r.push({t:u,d:'Loja',f:()=>abrirLoja(u)}); });
   Object.keys(SECOES).forEach(k=>{ const s=SECOES[k]; if(S.papel!=='admin'&&!s.dir) return;
     if(semAc(s.t).includes(q)) r.push({t:s.t,d:'Área',f:()=>abrir(k)});
     (s.abas||[]).forEach((a,i)=>{ if(a[0]!==s.t&&semAc(a[0]).includes(q)&&(!a[2]||S.papel==='admin')) r.push({t:a[0],d:s.t,f:()=>{abrir(k);subAba(k,i);}}); }); });
@@ -495,38 +503,110 @@ function desenharInicio(){
   const ordem=L.slice().sort((a,b)=>PESO[piorDe(b.L)]-PESO[piorDe(a.L)]);
   document.getElementById('lojasMini').innerHTML=ordem.map(x=>cartLoja(x.l,x.L,true)).join('');
   if(S.sec==='lojas') desenharLojas();
-  if(document.getElementById('gaveta').classList.contains('on')&&S.lojaAberta) abrirLoja(S.lojaAberta,true);
+  if(S.sec==='loja'&&S.fichaAba!=='numeros') desenharFicha();
 }
 function cartLoja(l,L,mini){
   const p=piorDe(L), ab=L.find(x=>x.r==='Abertura'), fe=L.find(x=>x.r==='Fechamento'), pl=L.find(x=>x.r==='Placar'), eq=L.find(x=>x.r==='Equipe');
   const chip=(x,t)=>x?'<span class="ch '+x.n+'">'+t+'</span>':'';
   return '<button class="lj-c" onclick="abrirLoja(\''+escH(jsq(l.unidade))+'\')"><span class="t"><span class="dot '+p+'"></span>'+escH(l.unidade)+'</span><span class="m">'+escH(motivo(L))+'</span>'+(mini?'':'<span class="chips">'+chip(pl,'Placar')+chip(ab,'Abertura')+chip(fe,'Fechamento')+chip(eq,'Equipe')+'</span>')+'</button>';
 }
-function desenharLojas(){ const r=S.hoje; const el=document.getElementById('lojasTodas'); if(!r){ el.innerHTML='<div class="vazio">Carregando…</div>'; return; }
+// diretoria: a lista das lojas vem dos números do Alpha (a situação do dia exige a senha do Admin)
+async function carregarLojasDir(){ try{ const j=await jsonp({action:'pnlDados',chave:S.hash},90000); if(j&&j.ok){ S.pnl=j; if(S.sec==='lojas') desenharLojas(); } }catch(e){} }
+function desenharLojas(){ if(S.papel!=='admin'){ const el=document.getElementById('lojasTodas'), P=S.pnl; if(!P){ el.innerHTML='<div class="vazio">Carregando…</div>'; return; }
+    el.innerHTML=UNIDADES.filter(u=>P.lojas[u]).map(u=>{ const L=P.lojas[u], pc=L.meta&&L.meta.meta?L.mes.projecao/L.meta.meta*100:null, n=pc==null?'mu':pc>=100?'ok':pc>=95?'av':'err';
+      return '<button class="lj-c" onclick="abrirLoja(\''+escH(jsq(u))+'\')"><span class="t"><span class="dot '+n+'"></span>'+escH(u)+'</span><span class="m">Hoje '+brl(L.hoje.liq)+' · mês '+brl(L.mes.liq)+'</span><span class="chips"><span class="ch '+n+'">'+(pc==null?'sem meta':'projeção '+Math.round(pc)+'% da meta')+'</span></span></button>'; }).join(''); return; }
+  const r=S.hoje; const el=document.getElementById('lojasTodas'); if(!r){ el.innerHTML='<div class="vazio">Carregando…</div>'; return; }
   el.innerHTML=(r.lojas||[]).map(l=>cartLoja(l,linhasLoja(l))).join(''); }
 
-// detalhe da loja (gaveta): tudo de hoje + linha do tempo do dia
-async function abrirLoja(u,soAtualizar){
-  const r=S.hoje; if(!r) return; const l=(r.lojas||[]).find(x=>x.unidade===u); if(!l) return;
-  S.lojaAberta=u; const L=linhasLoja(l), g=document.getElementById('gaveta');
-  document.getElementById('gTit').textContent=u; document.getElementById('gDot').className='dot '+piorDe(L);
-  const c=l.contato||{}, n=String(c.whats||'').replace(/\D/g,''), wa=n?'https://wa.me/'+(n.length<=11?'55'+n:n):'';
-  const pend=itensCaixa(r).filter(x=>x.lj===u);
-  let h='<div class="sub">Hoje</div>'+L.map(x=>'<div class="lh"><span class="r">'+escH(x.r)+'</span><span class="v '+x.n+'">'+escH(x.v)+'</span></div>').join('');
-  if(pend.length) h+='<div class="sub">Esperando você</div>'+pend.map(x=>'<div class="lh"><span class="r">'+(x.n==='err'?'Urgente':'Atenção')+'</span><span class="v '+x.n+'">'+escH(x.t)+(x.ac&&x.ac.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+x.ac.map(a=>'<button class="btn sm '+a[1]+'" onclick="'+escH(a[2])+'">'+escH(a[0])+'</button>').join('')+'</div>':'')+'</span></div>').join('');
-  h+='<div class="sub">Gerente</div><div class="lh"><span class="r">Nome</span><span class="v">'+escH(c.gerente||'Não cadastrado')+(wa?' · <a href="'+wa+'" target="_blank" style="color:var(--ok)">WhatsApp</a>':'')+'</span></div>';
-  h+='<div class="sub">Linha do tempo de hoje</div><div id="gTl" style="color:var(--mu);font-size:13px">'+(soAtualizar&&S._tl&&S._tl.u===u?S._tl.h:'Buscando…')+'</div>';
-  document.getElementById('gCorpo').innerHTML=h;
-  if(!g.classList.contains('on')){ g.classList.add('on'); try{ history.pushState({s:S.sec,loja:u},'','#'+S.sec); }catch(e){} }
-  if(soAtualizar&&S._tl&&S._tl.u===u) return;
+// ── Ficha da loja (etapa 3): tudo de uma loja num lugar só, em abas ──
+// Admin: Hoje, Números, Equipe, Manutenção, Compras, Acessos. Diretoria: só Números (os outros dados exigem a senha do Admin no servidor).
+const FICHA_ABAS=[['hoje','Hoje',1],['numeros','Números',0],['equipe','Equipe',1],['manut','Manutenção',1],['compras','Compras',1],['acessos','Acessos',1]];
+function abrirLoja(u,op){ op=op||{}; if(UNIDADES.indexOf(u)<0) return; S.lojaAberta=u; S.fichaAba=op.aba||(S.papel==='admin'?'hoje':'numeros');
+  abrir('loja',{semHist:op.semHist,voltando:op.voltando}); if(!op.semHist){ try{ history.replaceState({s:'loja',loja:u},'','#loja='+encodeURIComponent(u)); }catch(e){} } }
+function fecharLoja(){}
+function fichaAba(a){ S.fichaAba=a; desenharFicha(); }
+function desenharFicha(){
+  const u=S.lojaAberta, el=document.getElementById('s-loja'); if(!u||!el) return;
+  document.getElementById('tituloSec').textContent=u;
+  const abas=FICHA_ABAS.filter(a=>!a[2]||S.papel==='admin'); if(!abas.some(a=>a[0]===S.fichaAba)) S.fichaAba=abas[0][0];
+  const r=S.hoje, l=r&&(r.lojas||[]).find(x=>x.unidade===u), L=l?linhasLoja(l):null, c=(l&&l.contato)||{}, n=String(c.whats||'').replace(/\D/g,''), wa=n?'https://wa.me/'+(n.length<=11?'55'+n:n):'';
+  const outras=UNIDADES.map(x=>'<option'+(x===u?' selected':'')+'>'+escH(x)+'</option>').join('');
+  let h='<div class="ficha-cab"><button class="btn sm" onclick="abrir(\'lojas\')">← Lojas</button><span class="dot '+(L?piorDe(L):'mu')+'" style="width:10px;height:10px"></span><h1>'+escH(u)+'</h1>'
+    +'<select class="inp" style="width:auto;padding:6px 10px" onchange="abrirLoja(this.value,{aba:S.fichaAba})">'+outras+'</select>'
+    +(S.papel==='admin'?'<span class="ficha-ger">'+(c.gerente?'Gerente: '+escH(c.gerente):'Gerente não cadastrado')+(wa?' · <a href="'+wa+'" target="_blank" style="color:var(--ok)">WhatsApp</a>':'')+'</span>':'')+'</div>'
+    +'<div class="subtabs" style="padding:0;background:none;margin-bottom:16px">'+abas.map(a=>'<button class="'+(a[0]===S.fichaAba?'on':'')+'" onclick="fichaAba(\''+a[0]+'\')">'+a[1]+'</button>').join('')+'</div>';
+  const corpo={hoje:fichaHoje,numeros:fichaNumeros,equipe:fichaEquipe,manut:fichaManut,compras:fichaCompras,acessos:fichaAcessos}[S.fichaAba];
+  // o quadro do Números fica guardado (não recarrega ao trocar de aba)
+  let fr=document.getElementById('fichaNum');
+  if(S.fichaAba==='numeros'){
+    el.innerHTML=h; const src='numeros.html?embed=1&loja='+encodeURIComponent(u);
+    if(!fr||fr.dataset.src!==src){ if(fr) fr.remove(); fr=document.createElement('iframe'); fr.id='fichaNum'; fr.dataset.src=src; fr.src=src; fr.title='Números de '+u; }
+    fr.className='ficha-frame'; el.appendChild(fr); return; }
+  el.innerHTML=h+(r||S.papel!=='admin'?corpo(u,l,L):'<div class="vazio">Carregando…</div>');
+  if(S.fichaAba==='hoje') fichaLinhaTempo(u);
+}
+const lh=(r,v,n)=>'<div class="lh"><span class="r">'+escH(r)+'</span><span class="v '+(n||'')+'">'+v+'</span></div>';
+const cartao=(t,corpo,acao)=>'<div class="cart" style="margin-bottom:16px"><div class="cart-h"><h3>'+t+'</h3>'+(acao||'')+'</div><div style="padding:4px 16px 12px">'+corpo+'</div></div>';
+function fichaHoje(u,l,L){
+  if(!l) return '<div class="vazio">Sem dados da loja hoje.</div>';
+  const pend=itensCaixa(S.hoje).filter(x=>x.lj===u);
+  return '<div class="grade"><div>'+cartao('Hoje',L.map(x=>lh(x.r,escH(x.v),x.n)).join(''))
+    +(pend.length?cartao('Esperando alguém',pend.map(x=>lh(x.q==='Você'?'Você':x.q,escH(x.t)+'<div class="ds" style="color:var(--mu);font-size:12.5px">'+escH(x.html?String(x.d).replace(/<[^>]+>/g,''):x.d)+'</div>'+(x.ac&&x.ac.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+x.ac.map(a=>'<button class="btn sm '+a[1]+'" onclick="'+escH(a[2])+'">'+escH(a[0])+'</button>').join('')+'</div>':''),x.n)).join('')):'')+'</div>'
+    +'<div>'+cartao('Linha do tempo de hoje','<div id="gTl" style="color:var(--mu);font-size:13px">'+(S._tl&&S._tl.u===u?S._tl.h:'Buscando…')+'</div>')+'</div></div>'; }
+async function fichaLinhaTempo(u){
+  if(S._tl&&S._tl.u===u&&Date.now()-S._tl.ms<120000) return;
   const a=new Date(); if(a.getHours()<4) a.setDate(a.getDate()-1);
   const dia=String(a.getDate()).padStart(2,'0')+'/'+String(a.getMonth()+1).padStart(2,'0')+'/'+a.getFullYear();
-  try{ const t=await jsonp({action:'auditoriaLoja',unidade:u,dia},45000); if(S.lojaAberta!==u) return;
+  try{ const t=await jsonp({action:'auditoriaLoja',unidade:u,dia},45000);
     const th=t&&t.ok&&t.eventos&&t.eventos.length?t.eventos.map(e=>'<div class="tl '+(e.nivel==='err'?'err':'')+'"><span class="h">'+escH(e.hora||'—')+'</span><span class="x">'+escH(e.txt)+'</span></div>').join(''):'Nada registrado ainda hoje.';
-    S._tl={u,h:th}; const el=document.getElementById('gTl'); if(el) el.innerHTML=th;
-  }catch(e){ const el=document.getElementById('gTl'); if(el) el.textContent='Não consegui buscar: '+e.message; }
-}
-function fecharLoja(semVoltar){ const g=document.getElementById('gaveta'); if(!g.classList.contains('on')) return; g.classList.remove('on'); S.lojaAberta=null; if(!semVoltar&&history.state&&history.state.loja){ try{ history.back(); }catch(e){} } }
+    S._tl={u,h:th,ms:Date.now()}; const el=document.getElementById('gTl'); if(el&&S.lojaAberta===u) el.innerHTML=th;
+  }catch(e){ const el=document.getElementById('gTl'); if(el) el.textContent='Não consegui buscar: '+e.message; } }
+function fichaNumeros(){ return ''; }
+function fichaEquipe(u,l){
+  const r=S.hoje, eq=(l&&l.equipe)||{}, mt=eq.motivos||{}, fg=((r.folgas||{}).lojas||{})[u]||null;
+  let h='';
+  h+=cartao('Equipe de hoje',!eq.configurado?lh('Quadro','Quadro ideal ainda não configurado','av'):
+    lh('Trabalhando',eq.feito?'<b>'+eq.presentes+'</b> de '+eq.ideal+' do quadro':'Não informada ainda (ideal '+eq.ideal+')',eq.feito?(eq.presentes<eq.ideal?'av':''):'av')
+    +[['folga','De folga'],['ferias','De férias'],['atestado','Atestado'],['falta','Faltaram'],['vaga','Vagas abertas']].filter(([k])=>mt[k]).map(([k,t])=>lh(t,String(mt[k]),k==='falta'||k==='vaga'?'err':'')).join('')
+    +(eq.feriadoHoje?lh('Feriado','Hoje: '+escH(eq.feriadoHoje)):'')+(eq.feriadoAmanha?lh('Feriado','Amanhã: '+escH(eq.feriadoAmanha),'av'):''),
+    '<button class="btn sm" onclick="abrir(\'equipe\')">Equipe, escalas e folgas</button>');
+  h+=cartao('Escala e folgas',lh('Escala',l&&l.escala?(l.escala.erros?l.escala.erros+' problema(s) nas regras':l.escala.vazios?'Incompleta ('+l.escala.vazios+' dias)':'Semana salva e dentro das regras'):'Semana não salva',l&&l.escala?(l.escala.erros?'err':l.escala.vazios?'av':''):'av')
+    +(fg?lh('Folga hoje',fg.folga?'<b>Gerente de folga</b>'+(fg.assistente&&fg.assistente.nome?' · responde o(a) assistente '+escH(fg.assistente.nome):''):'Gerente trabalhando'):''));
+  const vg=(r.vagas||[]).filter(v=>v.unidade===u&&v.situacao==='aberta');
+  h+=cartao('Vagas abertas',vg.length?vg.map(v=>lh(escH(v.setorNome),v.qtd+' vaga(s) · '+(v.atrasada?'<b>prazo vencido</b>':'prazo '+escH(String(v.prazo||'').slice(0,5))),v.atrasada?'err':'')).join(''):'<div class="ds" style="padding:8px 0;color:var(--mu)">Nenhuma vaga aberta.</div>');
+  const al=(r.equipeAlertas||[]).filter(a=>a.unidade===u);
+  if(al.length) h+=cartao('Alertas de equipe',al.map(a=>lh(escH(a.em||''),a.presentes+' de '+a.ideal+' ('+a.pct+'%) · '+escH(a.situacao),a.situacao==='aberto'?'err':'')).join(''));
+  return h; }
+function fichaManut(u){
+  const m=S.hoje.manutencao||{}, f=x=>x.unidade===u, it=(x,extra)=>lh(escH(x.categoria||''),escH([x.local,x.descricao].filter(Boolean).join(' · '))+(extra?'<div style="color:var(--mu);font-size:12.5px">'+extra+'</div>':''),x.cor==='vermelho'?'err':'');
+  const v=(m.vermelhosAtrasados||[]).filter(f), nf=(m.naoFeito||[]).filter(f), ag=(m.aguardandoLoja||[]).filter(f), rp=(m.reposicao||[]).filter(f), rel=(m.relatorios||[]).filter(f);
+  let h='';
+  if(v.length) h+=cartao('Vermelho há mais de 20 h sem conserto',v.map(x=>it(x)).join(''));
+  if(nf.length) h+=cartao('A loja disse que não foi feito',nf.map(x=>it(x,'Não feito '+x.n+' vez(es)'+(x.obs?': '+escH(x.obs):''))).join(''));
+  if(ag.length) h+=cartao('Feito pelo Sidinei, a loja ainda não confirmou',ag.map(x=>it(x,'Concluído em '+escH(x.concluidoEm)+' · '+x.dias+' dia(s)')).join(''));
+  if(rp.length) h+=cartao('Reposição pedida',rp.map(x=>lh(escH(x.item),x.qtd+' · '+escH(x.quando))).join(''));
+  if(rel.length) h+=cartao('Últimos relatórios ao Sidinei',rel.map(x=>lh(escH(x.quando||''),x.qtd+' item(ns) · '+escH(x.motivoTxt||x.motivo)+(x.url?' · <a href="'+escH(x.url)+'" target="_blank">abrir PDF</a>':''))).join(''));
+  return (h||cartao('Manutenção','<div class="ds" style="padding:8px 0;color:var(--mu)">Nada pendente desta loja.</div>'))+'<button class="btn" onclick="abrir(\'manutencao\')">Abrir a Manutenção</button>'; }
+function fichaCompras(u){
+  const hf=S.hoje.hf||{}, li=(hf.listas||[]).find(x=>x.unidade===u), fora=(hf.fora||[]).filter(x=>x.unidade===u), cp=(hf.compras||[]).filter(x=>x.unidade===u);
+  let h='';
+  h+=cartao('Lista de hortifrúti (fechamento de ontem)',!li?'<div class="ds" style="padding:8px 0;color:var(--mu)">Esta loja não faz a lista de hortifrúti.</div>':
+    lh('Situação',li.feita?'Feita'+(li.hora?' às '+escH(li.hora):''):'<b>Não fez</b>',li.feita?'':'err')
+    +(li.feita?lh('Pedido',li.nadaFalta?'Não falta nada':escH((li.itens||[]).concat(li.outros?[li.outros]:[]).join(', '))):'')
+    +(li.equipe&&li.equipe.pessoa?lh('Contou',escH(li.equipe.pessoa)+' (QR da equipe)'+((li.equipe.mudou||[]).length?' · o gerente mudou '+li.equipe.mudou.length+' item(ns)':'')):''));
+  if(fora.length) h+=cartao('Compra em mercado grande',fora.map(x=>lh(escH(x.situacao),escH(x.motivo)+(x.valor?' · R$ '+String(x.valor).replace('.',','):''),x.situacao==='pendente'?'av':'')).join(''));
+  if(cp.length) h+=cartao('Compras recentes',cp.slice(0,8).map(x=>lh(escH(x.dia||x.quando||''),(x.total!=null?'R$ '+Number(x.total).toLocaleString('pt-BR',{minimumFractionDigits:2}):'')+(x.fornecedor?' · '+escH(x.fornecedor):'')+(x.nota?' · nota '+x.nota:''))).join(''));
+  return h+'<button class="btn" onclick="abrir(\'compras\')">Abrir Recebimento e hortifrúti</button>'; }
+function fichaAcessos(u,l){
+  const ap=(l&&l.aparelhos)||{}, lista=ap.lista||[], pz=(S.hoje.pausas||[]).filter(p=>p.unidade===u);
+  let h=cartao('Senhas e celulares',lh('Senha do gerente',l&&l.senha==='ativa'?'Ativa':'<b>Sem senha</b>',l&&l.senha==='ativa'?'':'av')
+    +(lista.length?lista.map(a=>lh(a.papel==='assistente'?'Assistente':'Gerente',escH(a.info||'celular autorizado')+(a.desde?' · desde '+escH(String(a.desde).slice(0,10)):''))).join(''):lh('Celulares','Nenhum celular autorizado','av'))
+    +(ap.pendentes?lh('Pendente','<b>'+ap.pendentes+' celular(es) esperando você</b> (veja no Início)','err'):''),
+    '<button class="btn sm" onclick="abrir(\'pessoas\')">Pessoas e acessos</button>');
+  h+=cartao('Contato',lh('Gerente',escH((l&&l.contato&&l.contato.gerente)||'Não cadastrado'))+lh('WhatsApp',escH((l&&l.contato&&l.contato.whats)||'—'))+lh('Cobrança',escH(((l&&l.contato)||{}).hora||'')+' até '+escH(((l&&l.contato)||{}).limite||'')));
+  if(pz.length) h+=cartao('Acesso pausado',pz.map(p=>lh(p.papel==='assistente'?'Assistente':'Gerente','Pausado até '+escH(p.ate||'')+(p.motivo?' · '+escH(p.motivo):''),'av')).join(''));
+  if(l&&l.geo!==undefined) h+=cartao('Localização',lh('Loja',l.geo?'Cadastrada'+(l.geo.foraHoje?' · '+l.geo.foraHoje+' tentativa(s) fora hoje':''):'<b>Não cadastrada</b>',l.geo?(l.geo.foraHoje?'err':''):'av'));
+  return h; }
 
 // ── ações (as mesmas do painel antigo) ──
 async function acao(fn,okMsg){ try{ await fn(); toast(okMsg); frescoDepois=true; carregarHoje(); }catch(e){ toast('Não salvou: '+e.message,true); } }

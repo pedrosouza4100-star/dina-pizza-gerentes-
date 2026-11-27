@@ -22,6 +22,7 @@ body{background:var(--bg);color:var(--text);font:14px/1.45 Inter,Arial,sans-seri
 .topo small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .topo .dir{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 html.embed .topo h1{display:none}
+html.fixa #loja{display:none}
 .abas{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:5}
 .abas button{padding:10px 14px;border:0;background:none;color:var(--muted);font:500 13.5px Inter,Arial;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
 .abas button.on{color:var(--text);border-color:var(--red)}
@@ -107,7 +108,8 @@ tr.tot td{font-weight:700}
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 if(/[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed');
-let D=null, DD=null, AV=null, ABA='geral', LOJA='__rede__', ERRO_D='', ERRO_DD='', ERRO_AV='';
+if(/[?&]loja=/.test(location.search)) document.documentElement.classList.add('fixa'); // ficha da loja: a loja não muda aqui
+let D=null, DD=null, AV=null, ABA='geral', LOJA=(new URLSearchParams(location.search)).get('loja')||'__rede__', ERRO_D='', ERRO_DD='', ERRO_AV='';
 try{ const a=(location.hash||'').slice(1); if(a) ABA=a; }catch(e){}
 function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
 function jsonp(params,ms){ return new Promise((ok,falha)=>{ const cb='num'+Date.now()+Math.floor(Math.random()*1e4); const s=document.createElement('script');
