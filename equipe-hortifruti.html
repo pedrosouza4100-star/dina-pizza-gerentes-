@@ -95,7 +95,7 @@ function dica(nome){ // igual ao placar: usa X/dia, dá para Y dias, sugerido pe
   if(c===null||c===undefined) return '📊 O sistema ainda está aprendendo o consumo da loja.';
   if(c<=0) return '✅ Não gastou nos últimos dias.';
   const dias=E/c, falta=Math.max(0,c*(1+M)-E), fat=e.fator; let ped=0;
-  if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:e.unCompra==='caixa'?(x>0?Math.max(E<c?1:0,Math.floor(x+0.3)):0):(x>0?Math.max(1,Math.ceil(x-0.25)):0); // caixa (Isaac, 26/11): só com a falta ≥ 70% da caixa, ou se acaba antes do fim de amanhã if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
+  if(fat){ const x=falta/fat; ped=e.unCompra==='kg'?Math.round(x*2)/2:e.unCompra==='caixa'?(x>0?Math.max(E<c?1:0,Math.floor(x+0.3)) /* caixa (Isaac, 26/11): só com a falta ≥ 70% da caixa, ou se acaba antes do fim de amanhã */:0):(x>0?Math.max(1,Math.ceil(x-0.25)):0); if(e.unCompra==='kg'&&x>0&&ped===0) ped=0.5; }
   if(fat&&!NADA&&(vazio(PED[nome])||AUTO[nome])){ PED[nome]=ped>0?fmt(ped):''; AUTO[nome]=1; }
   let h=(ped>0?'🛒':'✅')+' Usa <b>'+fmt(c)+' '+esc(e.un)+'/dia</b>. O que tem dá para <b>'+fmt(dias)+' dia'+(dias>=1.05&&dias<1.95?'':'s')+'</b>. '+(fat?(ped>0?'Sugerido pedir <b>'+fmt(ped)+' '+esc(e.unCompra)+'</b>.':'Não precisa pedir.'):'');
   const P=num(PED[nome])||0, dur=(E+(fat?P*fat:0))/c;
