@@ -8,5 +8,17 @@
       if(n&&n.nodeType===3&&RE.test(n.nodeValue)){ var t=n.nodeValue, k=0; while(RE.test(t)&&k++<4) t=t.replace(RE,''); if(t.trim()) n.nodeValue=t; } }); }catch(e){} }
   var pend=false;
   function agendar(){ if(pend) return; pend=true; requestAnimationFrame(function(){ pend=false; limpar(document); }); }
-  document.addEventListener('DOMContentLoaded',function(){ limpar(document); try{ new MutationObserver(agendar).observe(document.body,{childList:true,subtree:true}); }catch(e){} });
+  // tela estreita (feita para o celular) aberta dentro do painel: botão "Estender a tela" / "Ver como no celular"; a escolha fica no aparelho
+  function largura(){ try{
+    var h=document.documentElement; if(!h.classList.contains('an-embed')||document.querySelector('.an-larg-btn')) return;
+    var c=document.querySelector('body>.wrap')||document.querySelector('body>main'); if(!c) return;
+    var mw=parseFloat(getComputedStyle(c).maxWidth); if(!(mw>0&&mw<1000)) return;
+    var k='an_largo_'+location.pathname.replace(/\W/g,''), b=document.createElement('button');
+    b.type='button'; b.className='an-larg-btn';
+    function pinta(){ var on=h.classList.contains('an-largo'); b.textContent=on?'Ver como no celular':'Estender a tela'; }
+    try{ if(localStorage.getItem(k)==='1') h.classList.add('an-largo'); }catch(e){}
+    b.onclick=function(){ var on=h.classList.toggle('an-largo'); try{ localStorage.setItem(k,on?'1':'0'); }catch(e){} pinta(); };
+    pinta(); document.body.appendChild(b);
+  }catch(e){} }
+  document.addEventListener('DOMContentLoaded',function(){ largura(); limpar(document); try{ new MutationObserver(agendar).observe(document.body,{childList:true,subtree:true}); }catch(e){} });
 })();

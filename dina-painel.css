@@ -123,7 +123,7 @@ html body .barra .enche{border-radius:8px;background:rgba(227,52,47,.72)}
 html body .linha.p1 .enche{background:#C9A24A} html body .linha.p2 .enche{background:#9AA4B5} html body .linha.p3 .enche{background:#A87650}
 html body .pos{font-weight:600}
 html body h1 .ao{font-weight:600}
-html.an-embed .wrap{max-width:none!important;padding:16px 20px 40px!important}
+html.an-embed .wrap:has(>header){max-width:none!important;padding:16px 20px 40px!important}
 html.an-embed .wrap>header .logo-dina{display:none}
 html.an-embed .wrap>header h1{font-size:17px;font-weight:600}
 /* Admin antigo: restos (27/11/2026) */
@@ -138,3 +138,10 @@ html body .premio-input{font-family:'Space Grotesk',Inter,sans-serif;font-size:1
 html body .premio-input:focus{border-color:var(--d-muted)}
 html body .modal,html body .log-box,html body .prot-box{border-radius:12px}
 html body .auth-input,html body .modal-input,html body .cont-in{border-radius:8px}
+/* Tela estreita (feita para o celular) dentro do painel: botão para ver como no celular ou estender (27/11/2026) */
+.an-larg-btn{position:fixed;top:10px;right:14px;z-index:900;background:var(--d-card-2);color:var(--d-text);border:1px solid var(--d-line);border-radius:8px;padding:7px 12px;font:600 12.5px Inter,Arial,sans-serif;cursor:pointer}
+.an-larg-btn:hover{border-color:var(--d-muted)}
+html.an-largo .wrap,html.an-largo main{max-width:none!important}
+html.an-largo #conteudo{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px;align-items:start}
+html.an-largo #conteudo>*{margin:0!important}
+html.an-embed .wrap>.topo .logo-dina{display:none}
