@@ -126,3 +126,15 @@ html body h1 .ao{font-weight:600}
 html.an-embed .wrap{max-width:none!important;padding:16px 20px 40px!important}
 html.an-embed .wrap>header .logo-dina{display:none}
 html.an-embed .wrap>header h1{font-size:17px;font-weight:600}
+/* Admin antigo: restos (27/11/2026) */
+html.an-embed #adminWrap footer{display:none!important}
+html body #gmBody tr,html body #contBody tr{background:transparent!important}
+html body .chk-adm-secao{color:var(--d-muted);font:600 11.5px Inter,Arial,sans-serif;letter-spacing:.06em}
+html body .chk-adm-item{border-radius:10px;border-color:var(--d-line)}
+html body .chk-adm-tag{text-transform:none;font:600 11px Inter,Arial,sans-serif;border-radius:20px}
+html body .chk-adm-tag.ab{background:rgba(245,158,11,.12);color:var(--d-yellow)}
+html body .premio-card{border-radius:12px;border-color:var(--d-line);padding:20px 22px}
+html body .premio-input{font-family:'Space Grotesk',Inter,sans-serif;font-size:1.4rem;border-radius:8px}
+html body .premio-input:focus{border-color:var(--d-muted)}
+html body .modal,html body .log-box,html body .prot-box{border-radius:12px}
+html body .auth-input,html body .modal-input,html body .cont-in{border-radius:8px}
