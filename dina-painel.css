@@ -1,0 +1,33 @@
+/* Padrão visual único das telas da gestão (27/11/2026) — o mesmo do painel novo (admin-novo.html).
+   Carregar DEPOIS do dina-tema.css. Muda só a aparência: cores sóbrias (cor só para situação), letras, cartões, tabelas e botões.
+   Dentro do painel novo a página recebe a classe html.an-embed: some o cabeçalho próprio e o conteúdo usa a largura toda.
+   Não vale para o placar e a escala dos gerentes (eles não carregam este arquivo). */
+:root{
+  --d-bg:#0B0D12; --d-surface:#0F1218; --d-card:#11151C; --d-card-2:#161B24; --d-line:#1E232D;
+  --d-text:#E8EAF0; --d-muted:#8A91A3; --d-text2:#C9CDD6;
+  --d-red:#E3342F; --d-red-hover:#C92A26; --d-red-vivo:#EF4444; --d-red-soft:rgba(239,68,68,.12);
+  --d-gold:#D4A84B; --d-yellow:#F59E0B; --d-green:#22C55E; --d-danger:#EF4444; --d-blue:#3B82F6;
+  --d-glow:none; --d-on-cor:#0B0D12;
+  --d-t-err:#FCA5A5; --d-t-ok:#86EFAC; --d-t-info:#FCD34D;
+  --d-halo:none; --d-aneis:none;
+}
+[data-theme="light"]{
+  --d-bg:#F4F5F8; --d-surface:#FFFFFF; --d-card:#FFFFFF; --d-card-2:#F0F2F6; --d-line:#E3E6EC;
+  --d-text:#151821; --d-muted:#5E6577; --d-text2:#2B3240;
+  --d-red:#D92D20; --d-red-hover:#B42318; --d-red-vivo:#D92D20; --d-red-soft:#FDEEEC;
+  --d-gold:#8A6A1F; --d-yellow:#B45309; --d-green:#15803D; --d-danger:#C62828; --d-blue:#1F64C8;
+  --d-glow:none; --d-on-cor:#FFFFFF; --d-halo:none; --d-aneis:none;
+}
+html,body{-webkit-font-smoothing:antialiased}
+body{font-family:Inter,Arial,sans-serif!important;letter-spacing:0}
+/* sem anéis, halos e brilho: visual sóbrio */
+.dina-aneis::before,.logo-dina::before{display:none!important}
+*{text-shadow:none!important}
+body>header{background:var(--d-surface)!important;border-bottom:1px solid var(--d-line)!important;box-shadow:none!important}
+
+/* ── dentro do painel novo: um corpo só ── */
+html.an-embed body>header,html.an-embed body>footer,html.an-embed .rodape-pg{display:none!important}
+html.an-embed body{background:var(--d-bg)!important}
+html.an-embed main{max-width:none!important;padding:20px 24px 48px!important;margin:0!important}
+html.an-embed .tema-btn{display:none!important}
+@media (max-width:820px){html.an-embed main{padding:12px 12px 40px!important}}
