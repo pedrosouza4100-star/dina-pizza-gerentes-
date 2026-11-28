@@ -5,7 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Escalas — Dina Pizza</title>
 <link rel="stylesheet" href="escala.css?v=3">
+<link rel="stylesheet" href="dina-tema.css?v=2">
+<link rel="stylesheet" href="dina-painel.css?v=2">
+<script src="dina-tema.js?v=1"></script>
+<script>try{ if(window.top!==window.self) document.documentElement.classList.add('an-embed'); }catch(e){}</script>
+<script src="dina-painel.js?v=2"></script>
 <style>
+  /* padrão visual único (27/11/2026): as cores do escala.css passam a ser as do painel (só nesta tela) */
+  :root,[data-theme="light"]{--red:var(--d-red);--red-dark:var(--d-red-hover);--gold:var(--d-gold);--dark:var(--d-bg);--bg:var(--d-bg);--surface:var(--d-surface);--card:var(--d-card);--s2:var(--d-card-2);--border:var(--d-line);--text:var(--d-text);--muted:var(--d-muted);--green:var(--d-green);--danger:var(--d-danger);--warn:var(--d-yellow);--blue:var(--d-blue)}
+  header.top{background:var(--d-surface)!important;border-bottom:1px solid var(--d-line)!important;box-shadow:none!important}
+  html.an-embed header.top{display:none}
+  html.an-embed main{max-width:none!important}
   body{padding-bottom:30px}
   .lojas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
   .loja{background:var(--card);border:1px solid var(--border);border-left:5px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
@@ -100,8 +110,9 @@ function lerSS(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null
 function gravarSS(k,v){ try{ v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v); }catch(e){} }
 
 window.addEventListener('DOMContentLoaded',()=>{
-  const s=lerSS('esc_painel');
-  if(s){ document.getElementById('senha').value=s; entrar(); }
+  // 27/11/2026: dentro do painel (ou com a senha do Admin/gestão neste aparelho) entra direto
+  let s=lerSS('esc_painel'); if(!s){ try{ s=sessionStorage.getItem('dina_adm_hash')||localStorage.getItem('dina_gestao_hash')||''; }catch(e){} }
+  if(s){ window._auto=!lerSS('esc_painel'); document.getElementById('senha').value=s; entrar(); }
 });
 
 async function entrar(){
@@ -110,7 +121,7 @@ async function entrar(){
   err.textContent='Conferindo...';
   try{
     const r=await eJsonp({action:'escalaResumo',semana,senha});
-    if(!r.ok){ err.textContent=r.erro||'Erro'; gravarSS('esc_painel',null); return; }
+    if(!r.ok){ if(window._auto){ window._auto=false; document.getElementById('senha').value=''; err.textContent=''; return; } err.textContent=r.erro||'Erro'; gravarSS('esc_painel',null); return; }
     gravarSS('esc_painel',senha);
     document.getElementById('telaLogin').style.display='none';
     document.getElementById('app').style.display='block';
