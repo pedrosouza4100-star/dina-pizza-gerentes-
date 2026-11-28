@@ -156,6 +156,44 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
 .ficha-cab h1{font-size:22px;font-weight:600}
 .ficha-ger{color:var(--mu);font-size:13px;margin-left:auto}
 .ficha-frame{width:100%;height:calc(100vh - 210px);min-height:520px;border:0;border-radius:12px;background:var(--bg)}
+
+/* Pessoas e acessos */
+.pes-top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.pes-f{display:flex;gap:4px;flex-wrap:wrap}
+.pes-f button{padding:6px 11px;border-radius:20px;border:1px solid var(--line);color:var(--mu);font-size:12.5px;font-weight:500}
+.pes-f button span{color:var(--mu2);margin-left:3px}
+.pes-f button.on{background:var(--s3);color:var(--tx);border-color:var(--line2)}
+.tab-x{overflow-x:auto}
+table.pes{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+table.pes th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);text-align:left;font-weight:600;padding:10px 16px}
+table.pes td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:middle}
+table.pes td small{display:block;color:var(--mu);font-size:12px}
+table.pes tr:not(:first-child){cursor:pointer} table.pes tr:not(:first-child):hover td{background:var(--s3)}
+.mu{color:var(--mu)}
+#pesGaveta{position:fixed;inset:0;z-index:40;display:none}
+#pesGaveta.on{display:block}
+#pesGaveta .fundo{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+#pesGaveta .pn{position:absolute;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--s1);border-left:1px solid var(--line);display:flex;flex-direction:column}
+#pesGaveta .pn-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+#pesGaveta .pn-h h3{font-size:17px;flex:1}
+#pesGaveta .pn-h h3 small{display:block;color:var(--mu);font-size:12.5px;font-weight:500;margin-top:2px}
+#pesGaveta .pn-b{flex:1;overflow:auto;padding:4px 18px 24px}
+.ac-l{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px}
+.pz-f{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
+.pz-f label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu)}
+.pz-f input,.pz-f select{background:var(--s2);border:1px solid var(--line2);border-radius:8px;padding:7px 9px;color:var(--tx);font:inherit}
+.pz-f #pzObsN{flex:1;min-width:180px}
+@media (max-width:820px){
+ table.pes{min-width:0}
+ table.pes tr:first-child{display:none}
+ table.pes tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}
+ table.pes td{display:block;padding:0;border:0;font-size:12.5px}
+ table.pes td:nth-child(1){grid-column:1/2}
+ table.pes td:nth-child(2){grid-column:2/3;text-align:right;color:var(--mu)}
+ table.pes td:nth-child(3),table.pes td:nth-child(6){grid-column:span 1}
+ table.pes td:nth-child(4),table.pes td:nth-child(5){grid-column:1/3;color:var(--mu)}
+ .pes-top input{max-width:none!important}
+}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--s3);border:1px solid var(--line2);padding:10px 16px;border-radius:9px;transition:.2s;z-index:60;max-width:90vw}
 #toast.on{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--err)}
@@ -231,6 +269,14 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
         </div>
       </div>
     </section>
+
+    <!-- PESSOAS E ACESSOS -->
+    <section class="sec" id="s-pessoas">
+      <div class="cab"><div><h1>Pessoas e acessos</h1><p>Todo mundo que entra no sistema: senha, WhatsApp, celular autorizado e pausa. Toque numa pessoa.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="abrir('contatos')">Nomes e WhatsApp</button><button class="btn" onclick="abrir('local')">Localização das lojas</button><button class="btn" onclick="abrir('senhasAntigo')">Mais opções de senha</button></div></div>
+      <div class="cart"><div class="pes-top"><div class="pes-f" id="pesFiltros"></div><input class="inp" id="pesBusca" placeholder="Buscar pessoa, função ou loja…" oninput="desenharPessoas()" style="max-width:280px"></div><div class="tab-x" id="pesLista"><div class="vazio">Carregando…</div></div></div>
+    </section>
+    <div id="pesGaveta"><div class="fundo" onclick="fecharPessoa()"></div><div class="pn" id="pesPainel"></div></div>
 
     <!-- FICHA DA LOJA -->
     <section class="sec" id="s-loja"></section>
@@ -322,7 +368,10 @@ const SECOES={
   manutencao:{t:'Manutenção',g:'Operação',ic:'tool',abas:[['Manutenção','manutencao.html']]},
   compras:{t:'Recebimento e hortifrúti',g:'Operação',ic:'box',abas:[['Recebimento','recebimento.html'],['Central de Apoio','central-apoio.html']]},
   posvenda:{t:'Pós-venda e chamados',g:'Operação',ic:'phone',abas:[['Pós-venda e chamados','posvenda.html'],['Tempos de entrega','callcenter.html']]},
-  pessoas:{t:'Pessoas e acessos',g:'Pessoas',ic:'users',abas:[['Senhas',ADM('senhas')],['Gerentes e contatos',ADM('gerentes')],['Lojas e celulares',ADM('lojas')]]},
+  pessoas:{t:'Pessoas e acessos',g:'Pessoas',ic:'users'},
+  contatos:{t:'Nomes e WhatsApp',g:'-',ic:'users',abas:[['Nomes, WhatsApp e horários de cobrança',ADM('gerentes')]]},
+  local:{t:'Localização das lojas',g:'-',ic:'users',abas:[['Localização e celulares',ADM('lojas')]]},
+  senhasAntigo:{t:'Mais opções de senha',g:'-',ic:'users',abas:[['Senhas (gerar para todos, gestão, call center)',ADM('senhas')]]},
   equipe:{t:'Equipe, escalas e folgas',g:'Pessoas',ic:'cal',abas:[['Equipe e feriados',ADM('equipe')],['Escalas','painel_escalas.html'],['Vagas e folgas (RH)','vagas.html']]},
   agenda:{t:'Agenda',g:'Pessoas',ic:'clock',abas:[['Agenda','agenda.html']]},
   metas:{t:'Metas e premiação',g:'Ajustes',ic:'target',abas:[['Metas por loja',ADM('metas')],['Premiação',ADM('premiacao')]]},
@@ -363,7 +412,7 @@ function abrir(k,op){
     if(el._i==null) subAba(k,op.aba||0);
   } else {
     document.querySelector('main').style.display=''; document.getElementById('s-'+k).classList.add('on');
-    if(k==='lojas') desenharLojas(); if(k==='loja') desenharFicha();
+    if(k==='lojas') desenharLojas(); if(k==='loja') desenharFicha(); if(k==='pessoas') carregarPessoas();
   }
   document.body.classList.remove('menu');
   if(!op.semHist){ try{ history.pushState(k==='loja'?{s:k,loja:S.lojaAberta}:{s:k},'','#'+(k==='loja'?'loja='+encodeURIComponent(S.lojaAberta):k)); }catch(e){} }
@@ -634,6 +683,86 @@ function desenharResumoLado(){ const el=document.getElementById('ladoRes'); if(S
   el.innerHTML='<div class="lt">Agora na rede</div>'+li(meu?'err':'ok','Esperando você',meu==null?'—':meu,"abrir('inicio')")+li(ver?'err':'ok','Lojas em vermelho',ver==null?'—':ver,"abrir('lojas')")
     +li(rob==='ligado'?'ok':rob==='parado'?'err':'av','Robô',rob)+li(srv==='ok'?'ok':srv==='—'?'mu':'err','Servidor',srv);
   el.style.display=''; }
+// ── Pessoas e acessos (etapa 4): todo mundo que entra no sistema numa lista só — senha, WhatsApp, celulares e pausa ──
+// Gerar ou escolher senha, pausar/retomar e remover celular são feitos aqui (as mesmas ações do painel antigo).
+// Nome e WhatsApp continuam sendo editados na tela de contatos (o servidor grava a lista inteira de uma vez).
+S.pesFiltro='todos';
+async function carregarPessoas(){
+  const el=document.getElementById('pesLista'); if(!S.status) el.innerHTML='<div class="vazio">Carregando…</div>';
+  try{ const r=await jsonp({action:'authStatus'},45000); if(!r||r.ok!==true) throw new Error((r&&r.erro)||'Erro'); S.status=r; }catch(e){ el.innerHTML='<div class="vazio"><b>Não consegui carregar</b>'+escH(e.message)+'</div>'; return; }
+  if(!S.hoje){ try{ await carregarHoje(); }catch(e){} }
+  desenharPessoas();
+}
+function pessoasLista(){
+  const st=S.status||{}, H=S.hoje||{}, L=[], dt=v=>{ const d=new Date(v); return v&&!isNaN(d)&&!/^\d{2}\/\d{2}\/\d{4}/.test(v)?d.toLocaleDateString('pt-BR'):(String(v||'').slice(0,10)); };
+  const pz=(u,p)=>(H.pausas||[]).find(x=>x.unidade===u&&x.papel===p)||null;
+  (st.lojas||[]).forEach(s=>{ const l=(H.lojas||[]).find(x=>x.unidade===s.unidade)||{}, c=l.contato||{}, ap=(l.aparelhos||{}).lista||[], fg=((H.folgas||{}).lojas||{})[s.unidade]||{}, as=fg.assistente||{};
+    L.push({id:s.unidade+'|gerente',grupo:'gerente',nome:c.gerente||'',funcao:'Gerente',loja:s.unidade,senha:s.situacao==='ativa',desde:dt(s.em),whats:c.whats||'',cel:ap.filter(a=>a.papel==='gerente'),pausa:pz(s.unidade,'gerente'),tipo:'loja',papel:'gerente'});
+    const sa=s.assistente||{};
+    L.push({id:s.unidade+'|assistente',grupo:'assistente',nome:as.nome||'',funcao:'Assistente',loja:s.unidade,senha:sa.situacao==='ativa',desde:dt(sa.em),whats:as.whats||'',cel:ap.filter(a=>a.papel==='assistente'),pausa:pz(s.unidade,'assistente'),tipo:'loja',papel:'assistente'}); });
+  const g=(id,nome,funcao,senha,desde,whats,tipo,extra)=>L.push(Object.assign({id,grupo:'gestao',nome:nome||'',funcao,loja:'',senha,desde:desde||'',whats:whats||'',cel:null,pausa:null,tipo},extra||{}));
+  const ag=st.agenda||{};
+  g('regional',(H.regional||{}).nome,'GDI',!!(ag.regional&&ag.regional.ativa),dt(ag.regional&&ag.regional.em),(H.regional||{}).whats,'agenda',{pessoa:'regional'});
+  g('rh',(H.agendaRh||{}).nome,'Gestora de RH',!!(ag.rh&&ag.rh.ativa),dt(ag.rh&&ag.rh.em),(H.agendaRh||{}).whats,'agenda',{pessoa:'rh'});
+  g('nutri',(H.agendaNutri||{}).nome,'Nutricionista',!!(ag.nutri&&ag.nutri.ativa),dt(ag.nutri&&ag.nutri.em),(H.agendaNutri||{}).whats,'agenda',{pessoa:'nutri'});
+  g('rosi',(H.supRh||{}).nome,'Responsável pelo RH',st.rosi===true,'',(H.supRh||{}).whats,'rosi');
+  g('sidinei',(H.supQualidade||{}).nome,'Qualidade, compras e manutenção',st.manutencao===true,'',(H.supQualidade||{}).whats,'man');
+  g('estoque',((H.manutencao||{}).estoqueCentral||{}).nome,'Estoque central',st.estoque===true,'',((H.manutencao||{}).estoqueCentral||{}).whats,'est');
+  g('callcenter','','Call center',st.callcenter===true,'','','cc');
+  g('gestao','','Diretoria (Números e Lojas)',st.gestao===true,dt(st.gestaoEm),'','gestao');
+  Object.keys(st.treino||{}).forEach(k=>{ const t=st.treino[k]; g('treino_'+k,t.nome,'Senha de treino (modo teste)',!!t.ativa,dt(t.em),'','treino',{quem:k}); });
+  g('robson',(H.robson||{}).nome||'Robson','Administrador',true,'',(H.robson||{}).whats,'admin');
+  return L;
+}
+const PES_FILTROS=[['todos','Todos'],['gerente','Gerentes'],['assistente','Assistentes'],['gestao','Gestão'],['semsenha','Sem senha'],['semcel','Sem celular'],['pausados','Pausados']];
+function pesPassa(p,f){ return f==='todos'||p.grupo===f||(f==='semsenha'&&!p.senha)||(f==='semcel'&&p.cel&&!p.cel.length)||(f==='pausados'&&p.pausa); }
+function desenharPessoas(){
+  const el=document.getElementById('pesLista'); if(!S.status) return;
+  const todos=pessoasLista(), q=semAc(document.getElementById('pesBusca').value||'').trim();
+  document.getElementById('pesFiltros').innerHTML=PES_FILTROS.map(([k,t])=>{ const n=todos.filter(p=>pesPassa(p,k)).length; return '<button class="'+(S.pesFiltro===k?'on':'')+'" onclick="S.pesFiltro=\''+k+'\';desenharPessoas()">'+t+' <span>'+n+'</span></button>'; }).join('');
+  const L=todos.filter(p=>pesPassa(p,S.pesFiltro)&&(!q||semAc(p.nome+' '+p.funcao+' '+p.loja).includes(q)));
+  const cel=p=>p.cel===null?'<span class="mu">—</span>':p.cel.length?escH(p.cel.map(a=>a.info||'celular').join(' · ')):'<span class="pill av">Sem celular</span>';
+  el.innerHTML=L.length?'<table class="pes"><tr><th>Pessoa</th><th>Loja</th><th>Senha</th><th>WhatsApp</th><th>Celular autorizado</th><th>Situação</th></tr>'+L.map(p=>'<tr onclick="abrirPessoa(\''+escH(jsq(p.id))+'\')"><td><b>'+escH(p.nome||'(sem nome)')+'</b><small>'+escH(p.funcao)+'</small></td><td>'+escH(p.loja||'—')+'</td><td>'+(p.senha?'<span class="pill ok">Ativa</span>'+(p.desde?' <small class="mu">desde '+escH(p.desde)+'</small>':''):'<span class="pill err">Sem senha</span>')+'</td><td>'+(p.whats?escH(p.whats):'<span class="mu">—</span>')+'</td><td>'+cel(p)+'</td><td>'+(p.pausa?'<span class="pill av">Pausado até '+escH(p.pausa.ateTxt||p.pausa.ate||'')+'</span>':'<span class="pill ok">Ativo</span>')+'</td></tr>').join('')+'</table>':'<div class="vazio">Ninguém nesse filtro.</div>';
+}
+function abrirPessoa(id){
+  const p=pessoasLista().find(x=>x.id===id); if(!p) return; S.pessoa=id;
+  const pn=document.getElementById('pesPainel');
+  let h='<div class="pn-h"><h3>'+escH(p.nome||p.funcao)+'<small>'+escH(p.funcao+(p.loja?' · '+p.loja:''))+'</small></h3><button class="ico-btn" onclick="fecharPessoa()" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="pn-b">';
+  h+='<div class="sub">Senha</div>'+lhP('Situação',p.senha?'Ativa'+(p.desde?' desde '+escH(p.desde):''):'<b>Sem senha</b>',p.senha?'':'err');
+  if(p.tipo!=='admin') h+='<div class="ac-l"><button class="btn sm pri" onclick="pesSenha(\''+escH(jsq(p.id))+'\',1)">Gerar senha nova</button><button class="btn sm" onclick="pesSenha(\''+escH(jsq(p.id))+'\',0)">Escolher a senha</button></div><div class="ds mu">A senha anterior deixa de valer na hora. Você recebe a senha nova para mandar à pessoa.</div>';
+  else h+='<div class="ds mu">A sua senha é trocada no painel antigo (Senhas › Trocar senha do admin).</div>';
+  h+='<div class="sub">Contato</div>'+lhP('Nome',escH(p.nome||'—'))+lhP('WhatsApp',escH(p.whats||'—'))+'<div class="ac-l"><button class="btn sm" onclick="abrir(\'contatos\')">Editar nome e WhatsApp</button></div>';
+  if(p.cel!==null){ h+='<div class="sub">Celular autorizado</div>'+(p.cel.length?p.cel.map(a=>lhP(escH(a.info||'celular'),'desde '+escH(String(a.desde||'').slice(0,10))+' <button class="btn sm" style="margin-left:8px" onclick="pesRemoverCel('+Number(a.linha)+')">Remover</button>')).join(''):lhP('Celular','Nenhum autorizado. Quando a pessoa abrir o placar, o pedido aparece no Início para você autorizar.','av')); }
+  if(p.tipo==='loja'){ h+='<div class="sub">Acesso</div>'+(p.pausa?lhP('Pausado','Até '+escH(p.pausa.ateTxt||p.pausa.ate||'')+' · '+escH(p.pausa.motivo||'')+(p.pausa.obs?': '+escH(p.pausa.obs):''),'av')+'<div class="ac-l"><button class="btn sm" onclick="pesRetomar(\''+escH(jsq(p.id))+'\')">Retomar o acesso agora</button></div>'
+      :lhP('Situação','Ativo')+'<div class="pz-f"><label>Pausar até<input type="date" id="pzAteN"></label><label>Motivo<select id="pzMotN"><option value="férias">Férias</option><option value="afastamento">Afastamento</option><option value="atestado">Atestado</option><option value="outro">Outro</option></select></label><input id="pzObsN" maxlength="120" placeholder="Observação (obrigatória em Outro)"><button class="btn sm" onclick="pesPausar(\''+escH(jsq(p.id))+'\')">Pausar</button></div><div class="ds mu">Pausado, a senha não abre o placar e as mensagens do robô vão para '+(p.papel==='gerente'?'o assistente':'o gerente')+' (sem esse contato, para o GDI).</div>'); }
+  pn.innerHTML=h+'</div>'; if(S.ultSenha&&S.ultSenha.id===id) pn.querySelector('.pn-b').insertAdjacentHTML('afterbegin',S.ultSenha.html); document.getElementById('pesGaveta').classList.add('on');
+}
+const lhP=(r,v,n)=>'<div class="lh"><span class="r">'+escH(r)+'</span><span class="v '+(n||'')+'">'+v+'</span></div>';
+function fecharPessoa(){ document.getElementById('pesGaveta').classList.remove('on'); S.pessoa=null; S.ultSenha=null; }
+function senhaAleatoria(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return String(100000+(a[0]%900000)); }
+const PES_LINK={loja:'gerentes.dinapizza.com.br/placar',agenda:'gerentes.dinapizza.com.br/agenda',rosi:'gerentes.dinapizza.com.br/vagas',man:'gerentes.dinapizza.com.br/manutencao',est:'gerentes.dinapizza.com.br/manutencao',cc:'gerentes.dinapizza.com.br/posvenda',gestao:'gerentes.dinapizza.com.br/admin-novo',treino:'gerentes.dinapizza.com.br/placar-teste'};
+async function pesSenha(id,gerar){
+  const p=pessoasLista().find(x=>x.id===id); if(!p) return; let sn;
+  if(gerar){ if(!confirm('Gerar senha nova para '+(p.nome||p.funcao)+(p.loja?' ('+p.loja+')':'')+'? A senha atual deixa de valer.')) return; sn=senhaAleatoria(); }
+  else { sn=prompt('Nova senha para '+(p.nome||p.funcao)+' (mínimo 4 caracteres):'); if(sn==null) return; if(sn.length<4){ toast('Mínimo 4 caracteres.',true); return; } }
+  const h=hash(sn), corpo={loja:{action:'authDefinirSenhaLoja',unidade:p.loja,papel:p.papel,hash:h},agenda:{action:'authDefinirSenhaAgenda',pessoa:p.pessoa,hash:h},rosi:{action:'authDefinirSenhaRosi',hash:h},man:{action:'authDefinirSenhaMan',hash:h},est:{action:'authDefinirSenhaEst',hash:h},cc:{action:'authDefinirSenhaCC',hash:h},gestao:{action:'authDefinirGestao',hash:h},treino:{action:'authDefinirSenhaTreino',quem:p.quem,hash:h}}[p.tipo];
+  if(!corpo) return;
+  try{ await post(corpo); }catch(e){ toast('Não salvou: '+e.message,true); return; }
+  const txt='Sua senha nova do sistema Dina Pizza: '+sn+'\nEntre em: '+(PES_LINK[p.tipo]||'gerentes.dinapizza.com.br');
+  S.ultSenha={id,html:'<div class="cart" style="padding:12px 14px;margin:10px 0;border-left:3px solid var(--ok)"><b>Senha salva: '+escH(sn)+'</b><div class="ds mu" style="margin:4px 0 8px">Mande para a pessoa (copiar e colar):</div><textarea class="inp" rows="3" readonly onclick="this.select()">'+escH(txt)+'</textarea><div class="ac-l"><button class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.parentNode.previousElementSibling.value);toast(\'Copiado.\')">Copiar</button></div></div>'};
+  abrirPessoa(id);
+  toast('Senha salva.'); carregarPessoasSilencioso();
+}
+async function carregarPessoasSilencioso(){ try{ const r=await jsonp({action:'authStatus'},45000); if(r&&r.ok) { S.status=r; desenharPessoas(); if(S.pessoa) abrirPessoa(S.pessoa); } }catch(e){} }
+async function pesRemoverCel(linha){ if(!confirm('Remover este celular? Ele para de abrir o placar na hora.')) return;
+  try{ await post({action:'authAparelhoDecidir',linha,decisao:'remover'}); toast('Celular removido.'); frescoDepois=true; await carregarHoje(); desenharPessoas(); if(S.pessoa) abrirPessoa(S.pessoa); }catch(e){ toast('Não removeu: '+e.message,true); } }
+async function pesPausar(id){
+  const p=pessoasLista().find(x=>x.id===id); if(!p) return; const ate=document.getElementById('pzAteN').value, motivo=document.getElementById('pzMotN').value, obs=document.getElementById('pzObsN').value.trim();
+  if(!ate){ toast('Escolha até quando fica pausado.',true); return; } if(motivo==='outro'&&obs.length<3){ toast('Escreva o motivo.',true); return; }
+  try{ const r=await post({action:'authPausaSalvar',unidade:p.loja,papel:p.papel,ate,motivo,obs,quem:'Admin'}); toast('Pausado.'); frescoDepois=true; await carregarHoje(); desenharPessoas(); abrirPessoa(id); }catch(e){ toast('Não pausou: '+e.message,true); } }
+async function pesRetomar(id){ const p=pessoasLista().find(x=>x.id===id); if(!p||!confirm('Retomar o acesso de '+(p.nome||p.funcao)+' agora?')) return;
+  try{ await post({action:'authPausaSalvar',unidade:p.loja,papel:p.papel,ate:''}); toast('Acesso retomado.'); frescoDepois=true; await carregarHoje(); desenharPessoas(); abrirPessoa(id); }catch(e){ toast('Não retomou: '+e.message,true); } }
+
 // ── Sistema: versão do servidor, robô e backup ──
 async function carregarSistema(){
   S.pingFalhou=false;
