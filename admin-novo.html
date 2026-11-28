@@ -724,10 +724,10 @@ function abrirPessoa(id){
   if(p.cel!==null){ h+='<div class="sub">Celular autorizado</div>'+(p.cel.length?p.cel.map(a=>lhP(escH(a.info||'celular'),'desde '+escH(String(a.desde||'').slice(0,10))+' <button class="btn sm" style="margin-left:8px" onclick="pesRemoverCel('+Number(a.linha)+')">Remover</button>')).join(''):lhP('Celular','Nenhum autorizado. Quando a pessoa abrir o placar, o pedido aparece no Início para você autorizar.','av')); }
   if(p.tipo==='loja'){ h+='<div class="sub">Acesso</div>'+(p.pausa?lhP('Pausado','Até '+escH(p.pausa.ateTxt||p.pausa.ate||'')+' · '+escH(p.pausa.motivo||'')+(p.pausa.obs?': '+escH(p.pausa.obs):''),'av')+'<div class="ac-l"><button class="btn sm" onclick="pesRetomar(\''+escH(jsq(p.id))+'\')">Retomar o acesso agora</button></div>'
       :lhP('Situação','Ativo')+'<div class="pz-f"><label>Pausar até<input type="date" id="pzAteN"></label><label>Motivo<select id="pzMotN"><option value="férias">Férias</option><option value="afastamento">Afastamento</option><option value="atestado">Atestado</option><option value="outro">Outro</option></select></label><input id="pzObsN" maxlength="120" placeholder="Observação (obrigatória em Outro)"><button class="btn sm" onclick="pesPausar(\''+escH(jsq(p.id))+'\')">Pausar</button></div><div class="ds mu">Pausado, a senha não abre o placar e as mensagens do robô vão para '+(p.papel==='gerente'?'o assistente':'o gerente')+' (sem esse contato, para o GDI).</div>'); }
-  pn.innerHTML=h+'</div>'; document.getElementById('pesGaveta').classList.add('on');
+  pn.innerHTML=h+'</div>'; if(S.ultSenha&&S.ultSenha.id===id) pn.querySelector('.pn-b').insertAdjacentHTML('afterbegin',S.ultSenha.html); document.getElementById('pesGaveta').classList.add('on');
 }
 const lhP=(r,v,n)=>'<div class="lh"><span class="r">'+escH(r)+'</span><span class="v '+(n||'')+'">'+v+'</span></div>';
-function fecharPessoa(){ document.getElementById('pesGaveta').classList.remove('on'); S.pessoa=null; }
+function fecharPessoa(){ document.getElementById('pesGaveta').classList.remove('on'); S.pessoa=null; S.ultSenha=null; }
 function senhaAleatoria(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return String(100000+(a[0]%900000)); }
 const PES_LINK={loja:'gerentes.dinapizza.com.br/placar',agenda:'gerentes.dinapizza.com.br/agenda',rosi:'gerentes.dinapizza.com.br/vagas',man:'gerentes.dinapizza.com.br/manutencao',est:'gerentes.dinapizza.com.br/manutencao',cc:'gerentes.dinapizza.com.br/posvenda',gestao:'gerentes.dinapizza.com.br/admin-novo',treino:'gerentes.dinapizza.com.br/placar-teste'};
 async function pesSenha(id,gerar){
@@ -738,10 +738,11 @@ async function pesSenha(id,gerar){
   if(!corpo) return;
   try{ await post(corpo); }catch(e){ toast('Não salvou: '+e.message,true); return; }
   const txt='Sua senha nova do sistema Dina Pizza: '+sn+'\nEntre em: '+(PES_LINK[p.tipo]||'gerentes.dinapizza.com.br');
-  document.getElementById('pesPainel').querySelector('.pn-b').insertAdjacentHTML('afterbegin','<div class="cart" style="padding:12px 14px;margin:10px 0;border-left:3px solid var(--ok)"><b>Senha salva: '+escH(sn)+'</b><div class="ds mu" style="margin:4px 0 8px">Mande para a pessoa (copiar e colar):</div><textarea class="inp" rows="3" readonly onclick="this.select()">'+escH(txt)+'</textarea><div class="ac-l"><button class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.parentNode.previousElementSibling.value);toast(\'Copiado.\')">Copiar</button></div></div>');
-  toast('Senha salva.'); S.status=null; carregarPessoasSilencioso();
+  S.ultSenha={id,html:'<div class="cart" style="padding:12px 14px;margin:10px 0;border-left:3px solid var(--ok)"><b>Senha salva: '+escH(sn)+'</b><div class="ds mu" style="margin:4px 0 8px">Mande para a pessoa (copiar e colar):</div><textarea class="inp" rows="3" readonly onclick="this.select()">'+escH(txt)+'</textarea><div class="ac-l"><button class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.parentNode.previousElementSibling.value);toast(\'Copiado.\')">Copiar</button></div></div>'};
+  abrirPessoa(id);
+  toast('Senha salva.'); carregarPessoasSilencioso();
 }
-async function carregarPessoasSilencioso(){ try{ const r=await jsonp({action:'authStatus'},45000); if(r&&r.ok) { S.status=r; desenharPessoas(); } }catch(e){} }
+async function carregarPessoasSilencioso(){ try{ const r=await jsonp({action:'authStatus'},45000); if(r&&r.ok) { S.status=r; desenharPessoas(); if(S.pessoa) abrirPessoa(S.pessoa); } }catch(e){} }
 async function pesRemoverCel(linha){ if(!confirm('Remover este celular? Ele para de abrir o placar na hora.')) return;
   try{ await post({action:'authAparelhoDecidir',linha,decisao:'remover'}); toast('Celular removido.'); frescoDepois=true; await carregarHoje(); desenharPessoas(); if(S.pessoa) abrirPessoa(S.pessoa); }catch(e){ toast('Não removeu: '+e.message,true); } }
 async function pesPausar(id){
