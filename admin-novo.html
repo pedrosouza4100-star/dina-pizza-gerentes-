@@ -44,7 +44,12 @@ a{color:inherit}
 .marca img{width:34px;height:33px}
 .marca b{display:block;font-family:'Space Grotesk';font-size:15px}
 .marca small{color:var(--mu);font-size:11.5px}
-nav{flex:1;overflow:auto;padding:10px 8px}
+nav{flex:1 1 auto;overflow:auto;padding:10px 8px;min-height:0}
+.lado-res{flex:none;margin:6px 12px 10px;display:flex;flex-direction:column;gap:4px}
+@media (max-height:1020px){.lado-res{display:none!important}}
+.lado-res .lr{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:12.5px;color:var(--mu);background:var(--s1);border:1px solid var(--line)}
+.lado-res .lr b{margin-left:auto;color:var(--tx);font-weight:600}
+.lado-res .lt{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu2);padding:0 4px 4px}
 .ng{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu2);padding:14px 10px 6px}
 .ni{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border-radius:7px;color:var(--mu);font-weight:500;font-size:13.5px}
 .ni:hover{background:var(--s3);color:var(--tx)}
@@ -198,6 +203,7 @@ main{margin-left:248px;padding:76px 24px 32px;min-height:100%}
   <aside class="lado">
     <div class="marca"><img src="logo-emblema.png" alt=""><div><b>Dina Pizza</b><small>Painel da rede</small></div></div>
     <nav id="nav"></nav>
+    <div class="lado-res" id="ladoRes" style="display:none"></div>
     <div class="lado-pe">
       <button class="ni" onclick="abrir('placar')"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>Placar (modo teste)</button>
       <a class="ni" href="admin.html" id="lkAntigo" style="text-decoration:none"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Ver painel antigo</a>
@@ -482,6 +488,7 @@ function itensCaixa(r){
 }
 function desenharInicio(){
   const r=S.hoje; if(!r) return;
+  try{ desenharResumoLado(); }catch(e){}
   const h=new Date().getHours(); document.getElementById('saud').textContent=(h<5||h>=18?'Boa noite':h<12?'Bom dia':'Boa tarde')+', Robson';
   const lojas=r.lojas||[], n=lojas.length, L=lojas.map(l=>({l,L:linhasLoja(l)}));
   const enviados=lojas.filter(l=>l.placar&&l.placar.quando==='hoje'), abert=lojas.filter(l=>l.abertura&&l.abertura.total&&l.abertura.feitos>=l.abertura.total).length;
@@ -619,6 +626,14 @@ function excecao(id,decisao,horas){ let motivo=''; if(decisao==='recusar'){ moti
 function hfFora(id,decisao){ const motivo=decisao==='recusar'?(prompt('Motivo (opcional)')||''):''; acao(()=>post({action:'hfForaDecidir',id,decisao,motivo,quem:'Robson'}),decisao==='aprovar'?'Compra autorizada.':'Compra não autorizada.'); }
 async function backupAgora(b){ b.disabled=true; b.textContent='Fazendo backup…'; try{ const r=await post({action:'authBackupAgora'}); toast('Backup feito às '+r.quando+'.'); }catch(e){ toast(e.message,true); } carregarSistema(); }
 
+// resumo fixo no menu lateral (27/11/2026): lojas em vermelho, o que espera você, robô e servidor
+function desenharResumoLado(){ const el=document.getElementById('ladoRes'); if(S.papel!=='admin'||!el) return;
+  const r=S.hoje, p=S.ping, ver=r?(r.lojas||[]).filter(l=>piorDe(linhasLoja(l))==='err').length:null, meu=r?itensCaixa(r).filter(x=>x.q==='Você').length:null;
+  const rm=p&&p.robo?p.robo.minutos:null, rob=!p?'—':rm==null?'sem sinal':rm<=6?'ligado':'parado', srv=S.pingFalhou?'fora do ar':!p?'—':(S.oficial&&p.versao!==S.oficial?'versão diferente':'ok');
+  const li=(n,t,v,f)=>'<div class="lr"'+(f?' style="cursor:pointer" onclick="'+f+'"':'')+'><span class="dot '+n+'"></span>'+t+'<b>'+v+'</b></div>';
+  el.innerHTML='<div class="lt">Agora na rede</div>'+li(meu?'err':'ok','Esperando você',meu==null?'—':meu,"abrir('inicio')")+li(ver?'err':'ok','Lojas em vermelho',ver==null?'—':ver,"abrir('lojas')")
+    +li(rob==='ligado'?'ok':rob==='parado'?'err':'av','Robô',rob)+li(srv==='ok'?'ok':srv==='—'?'mu':'err','Servidor',srv);
+  el.style.display=''; }
 // ── Sistema: versão do servidor, robô e backup ──
 async function carregarSistema(){
   S.pingFalhou=false;
@@ -631,7 +646,7 @@ async function carregarSistema(){
     if(p.robo){ const m=p.robo.minutos; add(m==null?'av':m<=6?'ok':m>30?'err':'av',m==null?'Robô ainda não deu sinal':m<=6?'Robô ligado · '+escH(String(p.robo.ultimo||'').slice(11)):'Robô parado há '+(m>=120?Math.floor(m/60)+' h':m+' min')); }
     const b=p.backup||{}; add(b.erro?'err':!b.ultimo?'av':b.dias>8?'err':'ok',b.erro?'Backup com erro':!b.ultimo?'Backup automático não instalado':'Último backup '+escH(b.ultimo));
   }
-  document.getElementById('prot').innerHTML=L.join('');
+  document.getElementById('prot').innerHTML=L.join(''); try{ desenharResumoLado(); }catch(e){}
   if(S.hoje) desenharInicio();
 }
 
