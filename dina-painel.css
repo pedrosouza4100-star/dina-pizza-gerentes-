@@ -110,3 +110,19 @@ html body .box.ruim{border-color:var(--d-line);border-top:2px solid var(--d-dang
 html body .box.aviso{border-color:var(--d-line);border-top:2px solid var(--d-yellow);color:var(--d-yellow)}
 html body .bloco-sep{font:600 15px Inter,Arial,sans-serif}
 html body .rot{font:600 11px Inter,Arial,sans-serif;letter-spacing:.06em}
+/* Ao vivo (corrida das lojas) */
+html body .tot{border-radius:12px;border-color:var(--d-line)}
+html body .tot .r{font:600 11.5px Inter,Arial,sans-serif;letter-spacing:.06em;color:var(--d-muted)}
+html body .tot .n{font-family:'Space Grotesk',Inter,sans-serif;font-weight:600;font-size:28px;letter-spacing:0}
+html body .seg button{font:600 12.5px Inter,Arial,sans-serif}
+html body .seg button.on{background:var(--d-card);color:var(--d-text);box-shadow:inset 0 -2px 0 var(--d-red)}
+html body .corrida{border-radius:12px;border-color:var(--d-line)}
+html body .corrida h2{font:600 15px Inter,Arial,sans-serif}
+html body .barra{border-radius:8px}
+html body .barra .enche{border-radius:8px;background:rgba(227,52,47,.72)}
+html body .linha.p1 .enche{background:#C9A24A} html body .linha.p2 .enche{background:#9AA4B5} html body .linha.p3 .enche{background:#A87650}
+html body .pos{font-weight:600}
+html body h1 .ao{font-weight:600}
+html.an-embed .wrap{max-width:none!important;padding:16px 20px 40px!important}
+html.an-embed .wrap>header .logo-dina{display:none}
+html.an-embed .wrap>header h1{font-size:17px;font-weight:600}

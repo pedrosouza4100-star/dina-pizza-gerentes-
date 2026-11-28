@@ -1,7 +1,7 @@
 /* Padrão visual único (27/11/2026): tira o emoji do começo dos títulos, abas e botões das telas da gestão.
    Só o primeiro emoji; ✅ ❌ e afins no meio do texto (situação) ficam. */
 (function(){
-  var SEL='.tit,.sec-t,.bloco-sep,.categoria-titulo,.aba,.abas button,h1,h2,h3,.section-title,.cart-h h3,.btn,.rot';
+  var SEL='.tit,.sec-t,.bloco-sep,.tot .r,.categoria-titulo,.aba,.abas button,h1,h2,h3,.section-title,.cart-h h3,.btn,.rot';
   var RE=/^[\s‍️]*(?:[☀-➿⬀-⯿⌀-⏿]|\ud83c[\udc00-\udfff]|\ud83d[\udc00-\udfff]|\ud83e[\udc00-\udfff])[‍️🏻-\udfff\s]*/;
   function limpar(raiz){ try{ (raiz.querySelectorAll?raiz:document).querySelectorAll(SEL).forEach(function(el){
       var n=el.firstChild; while(n&&n.nodeType===3&&!n.nodeValue.trim()) n=n.nextSibling;

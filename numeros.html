@@ -110,6 +110,7 @@ tr.tot td{font-weight:700}
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby-MpaSNNJ_hb4Vw6X139dBGR_PmBFD8gXJwSfxgbuis9ulOEuN6Rcdg4_D6BbBwuFc/exec';
 if(/[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed');
 if(/[?&]loja=/.test(location.search)) document.documentElement.classList.add('fixa'); // ficha da loja: a loja não muda aqui
+let AVMODO='tabela'; try{ AVMODO=localStorage.getItem('num_av_modo')||'tabela'; }catch(e){}
 let D=null, DD=null, AV=null, ABA='geral', LOJA=(new URLSearchParams(location.search)).get('loja')||'__rede__', ERRO_D='', ERRO_DD='', ERRO_AV='';
 try{ const a=(location.hash||'').slice(1); if(a) ABA=a; }catch(e){}
 function chave(){ try{ return localStorage.getItem('dina_gestao_hash')||''; }catch(e){ return ''; } }
@@ -285,7 +286,7 @@ async function carregarOp(redesenhar){ const [m,a]=document.getElementById('mesO
   if(redesenhar!==false) desenhar(); }
 let _avTimer=null;
 async function carregarAV(fresco){ try{ const j=await jsonp(Object.assign({action:'aoVivoDados',chave:chave()},fresco?{fresco:1}:{}),90000); if(j&&j.ok!==false){ AV=j; ERRO_AV=''; } else ERRO_AV=(j&&j.erro)||'Não foi possível carregar o ao vivo.'; }catch(e){ ERRO_AV=e.message; }
-  if(ABA==='aovivo') desenhar(); clearTimeout(_avTimer); _avTimer=setTimeout(()=>{ if(ABA==='aovivo'&&document.visibilityState==='visible') carregarAV(); },5*60000); }
+  if(ABA==='aovivo'&&AVMODO!=='corrida') desenhar(); clearTimeout(_avTimer); _avTimer=setTimeout(()=>{ if(ABA==='aovivo'&&document.visibilityState==='visible') carregarAV(); },5*60000); }
 async function carregar(){ await Promise.all([carregarAlpha(),carregarOp(false)]); montarLojas(); desenhar(); if(ABA==='aovivo') carregarAV(); }
 async function atualizarAgora(){ const b=document.getElementById('btnAtualizar'); b.disabled=true; b.textContent='Atualizando…';
   try{ if(ABA==='aovivo') await carregarAV(true);
@@ -403,16 +404,21 @@ function equipeBloco(soU){ const E=DD.equipe; if(!E||!E.lojas) return ''; const 
 const AV_TAM=[['broto','Broto'],['media','Média'],['grande','Grande'],['gigante','Gigante'],['big','Big'],['outro','Sem tamanho']];
 const AV_CAN=[['salao','Salão'],['balcao','Balcão'],['delivery','Delivery'],['ifood','iFood']];
 function pctTxt(p){ return p==null?'<span class="sub">—</span>':'<b class="'+(p>=0?'verde':'vermelho')+'">'+(p>0?'+':'')+String(p).replace('.',',')+'%</b>'; }
+function avModo(m){ AVMODO=m; try{ localStorage.setItem('num_av_modo',m); }catch(e){} desenhar(); }
+function avChave(){ return '<div class="seg" style="align-self:flex-start"><button class="'+(AVMODO==='tabela'?'on':'')+'" onclick="avModo(\'tabela\')">Tabela</button><button class="'+(AVMODO==='corrida'?'on':'')+'" onclick="avModo(\'corrida\')">Corrida das lojas</button></div>'; }
+function avCorrida(){ return avChave()+'<iframe id="avCorrida" src="ao-vivo.html" title="Corrida das lojas" style="width:100%;height:1400px;border:0;border-radius:12px;background:var(--bg)" onload="avAltura(this)"></iframe>'; }
+function avAltura(f){ const aj=()=>{ try{ const h=f.contentDocument.documentElement.scrollHeight; if(h>200) f.style.height=h+'px'; }catch(e){} }; aj(); clearInterval(f._t); f._t=setInterval(aj,2000); }
 function aoVivo(){
+  if(AVMODO==='corrida') return avCorrida();
   if(!AV) return '<div class="card"><span class="rot">Ao vivo</span><div class="frase">Ainda não carregou</div><div class="sub">'+esc(ERRO_AV||'Buscando…')+'</div><div style="margin-top:10px"><button class="btn" onclick="carregarAV(true)">Tentar de novo</button></div></div>';
   const ls=(AV.lojas||[]).filter(l=>LOJA==='__rede__'||l.unidade===LOJA), r=LOJA==='__rede__'?AV.rede:null;
   const tot=(k)=>ls.reduce((s,l)=>s+(Number(l[k])||0),0), sp=k=>ls.reduce((s,l)=>s+(Number(l['semanaPassada'+k])||0),0);
   const vs=(a,b)=>AV.baseOk&&b?pctTxt(Math.round((a/b-1)*1000)/10)+' <span class="sub">vs semana passada até esta hora ('+(typeof b==='number'&&b>999?R(b):N(b))+')</span>':'<span class="sub">sem base da semana passada</span>';
   const fat=tot('fat'), del=ls.reduce((s,l)=>s+(l.delTotal||0),0), pr=ls.reduce((s,l)=>s+((l.del||{}).proprio||0),0), ifd=ls.reduce((s,l)=>s+((l.del||{}).ifood||0),0);
-  let h='<div class="grid">'+kpi('Faturamento hoje',R(fat),vs(fat,sp('F')))+kpi('Pizzas hoje',N(tot('pizzas')),vs(tot('pizzas'),sp('P')))+kpi('Buffets hoje',N(tot('buffets')),vs(tot('buffets'),sp('B')))
+  let h=avChave()+'<div class="grid">'+kpi('Faturamento hoje',R(fat),vs(fat,sp('F')))+kpi('Pizzas hoje',N(tot('pizzas')),vs(tot('pizzas'),sp('P')))+kpi('Buffets hoje',N(tot('buffets')),vs(tot('buffets'),sp('B')))
     +kpi('Pedidos de delivery',N(del),'próprio '+N(pr)+' · iFood '+N(ifd)+(r&&r.ritmoDel!=null?' · '+N(r.ritmoDel)+' na última hora':''))+'</div>';
   const ord=[...ls].sort((a,b)=>(b.fat||0)-(a.fat||0));
-  h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><span class="rot">Lojas agora</span><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="ao-vivo.html" target="_blank">Modo TV (corrida das lojas)</a></div><div class="tab"><table><tr><th>Loja</th><th class="n">Faturamento</th><th class="n">vs sem. pas.</th><th class="n">Pizzas</th><th class="n">vs sem. pas.</th><th class="n">Buffets</th><th class="n">Delivery</th><th class="n">Ticket próprio · iFood</th><th class="n">Última hora</th><th class="n">Último tempo</th></tr>'
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><span class="rot">Lojas agora</span><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="ao-vivo.html" target="_blank">Modo TV (tela cheia)</a></div><div class="tab"><table><tr><th>Loja</th><th class="n">Faturamento</th><th class="n">vs sem. pas.</th><th class="n">Pizzas</th><th class="n">vs sem. pas.</th><th class="n">Buffets</th><th class="n">Delivery</th><th class="n">Ticket próprio · iFood</th><th class="n">Última hora</th><th class="n">Último tempo</th></tr>'
     +ord.map(l=>{ const tm=l.tempo, alto=tm&&(tm.app>40||tm.ifood>40); return '<tr><td><b>'+esc(l.unidade)+'</b></td><td class="n">'+R(l.fat)+'</td><td class="n">'+pctTxt(l.pctF)+'</td><td class="n">'+N(l.pizzas)+'</td><td class="n">'+pctTxt(l.pctP)+'</td><td class="n">'+(l.temBuffet?N(l.buffets):'—')+'</td><td class="n">'+(l.temDelivery?N(l.delTotal)+' <span class="sub">('+N((l.del||{}).proprio)+' + '+N((l.del||{}).ifood)+')</span>':'—')+'</td><td class="n">'+(l.ticket&&l.ticket.proprio?R(l.ticket.proprio):'—')+' · '+(l.ticket&&l.ticket.ifood?R(l.ticket.ifood):'—')+'</td><td class="n">'+(l.temDelivery?N(l.ritmoDel):'—')+'</td><td class="n"'+(alto?' style="color:var(--red);font-weight:700"':'')+'>'+(tm?tm.app+' / '+tm.ifood+' min <span class="sub">'+esc(tm.hora)+'</span>':'—')+'</td></tr>'; }).join('')+'</table></div></div>';
   h+='<div class="card"><span class="rot">Pizzas por tamanho e canal</span><div class="tab"><table><tr><th>Loja</th><th class="n">Pizzas</th>'+AV_TAM.map(t=>'<th class="n">'+t[1]+'</th>').join('')+AV_CAN.map(c=>'<th class="n">'+c[1]+'</th>').join('')+'</tr>'
     +[...ls].sort((a,b)=>b.pizzas-a.pizzas).map(l=>'<tr><td>'+esc(l.unidade)+'</td><td class="n"><b>'+N(l.pizzas)+'</b></td>'+AV_TAM.map(t=>'<td class="n">'+N((l.tam||{})[t[0]])+'</td>').join('')+AV_CAN.map(c=>'<td class="n">'+N((l.canais||{})[c[0]])+'</td>').join('')+'</tr>').join('')
