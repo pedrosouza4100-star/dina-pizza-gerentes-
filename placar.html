@@ -536,6 +536,7 @@ input.alp-travado{opacity:.85;border-color:var(--d-blue,#3aa0ff)!important}
 
   <main>
     <!-- Pendências do Checklist do GDI -->
+    <div id="gdiNotaWrap" style="display:none;margin-bottom:16px"></div>
     <div id="regRespWrap" style="display:none;margin-bottom:16px"></div>
     <div id="checklistPendenciasWrap" style="display:none;margin-bottom:20px">
       <div style="background:rgba(255,59,59,0.1);border:2px solid var(--danger);border-radius:14px;padding:16px 18px">
@@ -1906,8 +1907,31 @@ async function carregarRegPend(){
     if(u!==unidadeAtual||!r||!r.ok) return;
     REG_PEND=r.abertas||[];
     renderRegResp(r.respostas||[]);
+    gdiNotaCarregar(u);
   }catch(e){ return; }
   renderRegPend();
+}
+// nota da última visita do GDI (28/11/2026, recurso gdiNota): aparece por 7 dias depois da visita
+async function gdiNotaCarregar(u){
+  const w=document.getElementById('gdiNotaWrap'); if(!w) return;
+  try{
+    if(!(await chkRecursos()).includes('gdiNota')) return;
+    let r=await chkJsonp({action:'chkLjRegNota',unidade:u,senha:pvSenha()},15000);
+    if(u!==unidadeAtual||!r||!r.ok) return;
+    const recente=x=>{ if(!x||!x.ultima) return false; const p=String(x.ultima.dia).split('/'), dt=new Date(Number(p[2]),Number(p[1])-1,Number(p[0])), dias=Math.floor((Date.now()-dt.getTime())/86400000); return dias>=0&&dias<=7; };
+    let exemplo=false;
+    if(!recente(r)){ if(!MODO_TESTE){ w.style.display='none'; return; } // modo teste: mostra um exemplo para o Robson ver como o gerente vê
+      exemplo=true; r={ultima:{dia:new Date().toLocaleDateString('pt-BR'),nota:82.5,nc:3,criticos:''},anterior:{nota:76},teto:50}; }
+    const n=r.ultima.nota, cor=n>=85?'var(--green)':n>=70?'var(--gold)':'var(--danger)', f=x=>String(x).replace('.',',');
+    const e=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const dif=r.anterior?Math.round((n-r.anterior.nota)*10)/10:null;
+    w.innerHTML='<div style="background:var(--card);border:1px solid '+cor+';border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:14px">'+
+      '<div style="font-size:2rem;font-weight:800;color:'+cor+';line-height:1;min-width:64px;text-align:center">'+f(n)+'<div style="font-size:0.62rem;color:var(--muted);font-weight:700">de 100</div></div>'+
+      '<div style="flex:1"><div style="font-weight:800;font-size:0.9rem">📋 Nota da visita do GDI · '+e(r.ultima.dia)+(exemplo?' <span style="color:#b48cff">(🧪 exemplo do modo teste)</span>':'')+'</div>'+
+      '<div style="font-size:0.78rem;color:var(--muted);margin-top:3px">'+(r.ultima.nc?r.ultima.nc+' item(ns) fora do padrão — corrija as pendências.':'Tudo dentro do padrão. Parabéns!')+(dif?' '+(dif>0?'▲ subiu '+f(dif):'▼ caiu '+f(-dif))+' em relação à visita anterior ('+f(r.anterior.nota)+').':'')+'</div>'+
+      (r.ultima.criticos?'<div style="font-size:0.78rem;color:var(--danger);font-weight:700;margin-top:4px">🚨 Item crítico fora do padrão: '+e(r.ultima.criticos)+'. Com item crítico, a nota fica no máximo '+(r.teto||50)+'.</div>':'')+'</div></div>';
+    w.style.display='block';
+  }catch(e){}
 }
 // o que o GDI já confirmou (últimos 3 dias) — o gerente vê que a correção foi aceita
 function renderRegResp(lista){

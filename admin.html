@@ -852,6 +852,10 @@
     <div class="chk-adm-opts" id="regItemTipo" style="grid-template-columns:1fr 1fr">
       <button type="button" data-v="checklist">✅ Conforme / Não conforme / N/A</button><button type="button" data-v="numero">🔢 Número</button>
     </div></div>
+  <div id="regItemPesoBox" style="display:none"><div class="modal-label">Peso na nota da visita</div>
+    <div class="chk-adm-opts" id="regItemPeso" style="grid-template-columns:repeat(5,1fr)"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button></div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">1 = detalhe · 3 = importante · 5 = muito importante.</div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:0.85rem;cursor:pointer"><input type="checkbox" id="regItemCritico"> 🚨 Item crítico: se der NÃO conforme, a nota da visita fica no máximo 50</label></div>
   <div><div class="modal-label">Lojas onde este item aparece</div>
     <div class="chk-adm-lojas" id="regItemLojas"></div>
     <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">Desmarque as lojas que não têm isso (ex.: loja sem buffet ou sem fliperama).</div></div>
@@ -2375,7 +2379,7 @@
     let sec=null;
     lista.forEach(it=>{
       if(it.secao!==sec){ sec=it.secao; h+='<div class="chk-adm-secao">'+chkEsc(sec)+'</div>'; }
-      const tipoTag=it.tipo==='numero'?'<span class="chk-adm-tag fe">Número</span>':'<span class="chk-adm-tag">Conforme / Não conforme</span>';
+      const tipoTag=(it.tipo==='numero'?'<span class="chk-adm-tag fe">Número</span>':'<span class="chk-adm-tag">Conforme / Não conforme</span>')+(it.tipo!=='numero'&&it.peso?'<span class="chk-adm-tag">Peso '+it.peso+'</span>':'')+(it.critico?'<span class="chk-adm-tag off">🚨 Crítico</span>':'');
       h+=`<div class="chk-adm-item${it.ativo?'':' off'}"><div class="chk-adm-txt"><b>${chkEsc(it.item)}</b><div class="chk-adm-tags">${tipoTag}${it.ativo?'':'<span class="chk-adm-tag off">Tirado</span>'}${it.lojasExcluidas.length?'<span class="chk-adm-tag">Não aparece em: '+chkEsc(it.lojasExcluidas.join(', '))+'</span>':'<span class="chk-adm-tag">Todas as lojas</span>'}</div></div>
         <div class="chk-adm-acoes"><button title="Subir" onclick="moverRegItem('${it.id}',-1)">↑</button><button title="Descer" onclick="moverRegItem('${it.id}',1)">↓</button><button onclick="abrirRegItem('${it.id}')">Editar</button>${it.ativo?`<button class="tirar" onclick="ativoRegItem('${it.id}',false)">Tirar</button>`:`<button class="voltar" onclick="ativoRegItem('${it.id}',true)">Voltar</button>`}</div></div>`;
     });
@@ -2384,7 +2388,10 @@
   }
   function abrirRegItem(id){
     const it=id?regAdmItens.find(x=>x.id===id):null;
-    regAdmEdit={id:it?it.id:null, tipo:it?it.tipo:'checklist'};
+    regAdmEdit={id:it?it.id:null, tipo:it?it.tipo:'checklist', peso:it&&it.peso?it.peso:3};
+    const temPeso=regAdmItens.some(x=>x.peso!=null); document.getElementById('regItemPesoBox').style.display=temPeso?'block':'none'; // servidor com nota (28/11/2026)
+    document.getElementById('regItemCritico').checked=!!(it&&it.critico);
+    document.querySelectorAll('#regItemPeso button').forEach(b=>{ b.classList.toggle('on',Number(b.dataset.v)===regAdmEdit.peso); b.onclick=()=>{ regAdmEdit.peso=Number(b.dataset.v); document.querySelectorAll('#regItemPeso button').forEach(x=>x.classList.toggle('on',x===b)); }; });
     document.getElementById('regItemTitulo').textContent=it?'Editar item':'Novo item';
     const secoes=[...new Set(regAdmItens.map(x=>x.secao))];
     const ss=document.getElementById('regItemSecao');
@@ -2412,7 +2419,8 @@
     const lojasExcluidas=marcadas.filter(c=>!c.checked).map(c=>c.value);
     const btn=document.getElementById('regItemSalvarBtn'); btn.disabled=true; btn.textContent='Salvando...';
     try{
-      await chkAdmPost({action:'chkAdminRegSalvar',id:regAdmEdit.id||'',secao,item,tipo:regAdmEdit.tipo,lojasExcluidas,ativo:atual?atual.ativo:true});
+      const extra=document.getElementById('regItemPesoBox').style.display!=='none'?{peso:regAdmEdit.peso,critico:document.getElementById('regItemCritico').checked}:{};
+      await chkAdmPost(Object.assign({action:'chkAdminRegSalvar',id:regAdmEdit.id||'',secao,item,tipo:regAdmEdit.tipo,lojasExcluidas,ativo:atual?atual.ativo:true},extra));
       fecharModal('modalRegItem'); showToast('Item salvo no checklist do GDI','ok');
       registrarLog('Checklist do GDI: item '+(regAdmEdit.id?'editado':'incluído')+' — '+item,'ok');
       await carregarRegAdm();

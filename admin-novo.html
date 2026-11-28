@@ -477,7 +477,8 @@ function itensCaixa(r){
   ((r.hf&&r.hf.fora)||[]).filter(x=>x.situacao==='pendente').forEach(x=>add({n:'av',dec:1,lj:x.unidade,id:'hf_'+x.id,q:'Você',t:'Compra de hortifrúti em mercado grande',d:x.motivo+(x.valor?' · R$ '+String(x.valor).replace('.',','):'')+(/^https/.test(x.foto)?' · <a href="'+escH(x.foto)+'" target="_blank">ver cupom</a>':''),html:1,ac:[['Autorizar','pri',"hfFora('"+jsq(x.id)+"','aprovar')"],['Não autorizar','',"hfFora('"+jsq(x.id)+"','recusar')"]]}));
   // checklist aprendendo com o gerente (27/11/2026): pedir para tirar item e sugestão de item novo — só o Robson decide
   const CL=r.chkLj||{};
-  (CL.tirar||[]).forEach(x=>add({n:'av',dec:1,q:'Você',lj:x.unidade,t:'Tirar item do checklist da loja',d:'"'+x.itemTexto+'" · motivo: '+x.motivo+' · pediu '+x.pedidoEm+' ('+(x.papel==='assistente'?'assistente':'gerente')+'). Enquanto você não decide, o item continua.',ac:[['Aprovar (tirar desta loja)','pri',"chlDecidir('tirar','"+jsq(x.id)+"','aprovar')"],['Manter o item','',"chlDecidir('tirar','"+jsq(x.id)+"','recusar')"]]}));
+  (CL.tirar||[]).forEach(x=>add({n:'av',dec:1,q:'Você',lj:x.unidade,t:x.origem==='gdi'?'GDI pede para tirar item do checklist da visita':'Tirar item do checklist da loja',d:'"'+x.itemTexto+'" · motivo: '+x.motivo+' · pediu '+x.pedidoEm+' ('+(x.origem==='gdi'?(x.papel||'GDI'):x.papel==='assistente'?'assistente':'gerente')+'). Enquanto você não decide, o item continua.',ac:[['Aprovar (tirar desta loja)','pri',"chlDecidir('tirar','"+jsq(x.id)+"','aprovar')"],['Manter o item','',"chlDecidir('tirar','"+jsq(x.id)+"','recusar')"]]}));
+  (CL.gdiSugestoes||[]).forEach(x=>add({n:'av',dec:1,q:'Você',lj:x.unidade,id:'gsug_'+x.id,t:'GDI sugere item para o checklist da visita (todas as lojas)',d:'"'+escH(x.texto)+'" · peso '+x.peso+' · '+escH(x.por||'GDI')+' em '+escH(x.criadoEm)+(/^https/.test(x.foto)?' · <a href="'+escH(x.foto)+'" target="_blank">ver foto</a>':''),html:1,ac:[['Aprovar para todas as lojas','pri',"chlAprovarSug('"+jsq(x.id)+"','gdi')"],['Recusar','',"chlDecidir('gdiSugestao','"+jsq(x.id)+"','recusar')"]]}));
   (CL.sugestoes||[]).forEach(x=>add({n:'av',dec:1,q:'Você',lj:x.unidade,id:'sug_'+x.id,t:'Sugestão de item para o checklist de todas as lojas',d:'"'+escH(x.texto)+'" · '+(x.turno==='fechamento'?'fechamento':'abertura')+(/^https/.test(x.foto)?' · <a href="'+escH(x.foto)+'" target="_blank">ver foto</a>':''),html:1,ac:[['Aprovar para todas as lojas','pri',"chlAprovarSug('"+jsq(x.id)+"')"],['Recusar','',"chlDecidir('sugestao','"+jsq(x.id)+"','recusar')"]]}));
   // atenção
   (r.equipeAlertas||[]).filter(a=>a.situacao==='aberto').forEach(a=>add({n:'err',lj:a.unidade,q:'GDI e RH',t:'Equipe muito incompleta hoje',d:a.presentes+' de '+a.ideal+' pessoas ('+a.pct+'%)'+((a.zeradas||[]).length?' · sem '+a.zeradas.join(', '):'')+'. O GDI foi acionado.'}));
@@ -629,14 +630,14 @@ function excecao(id,decisao,horas){ let motivo=''; if(decisao==='recusar'){ moti
   acao(()=>post({action:'excDecidir',id,decisao,horas:horas||'',motivo,quem:'Robson (Admin)',chave:S.hash}),decisao==='aprovar'?'Autorizado.':'Não autorizado.'); }
 function hfFora(id,decisao){ const motivo=decisao==='recusar'?(prompt('Motivo (opcional)')||''):''; acao(()=>post({action:'hfForaDecidir',id,decisao,motivo,quem:'Robson'}),decisao==='aprovar'?'Compra autorizada.':'Compra não autorizada.'); }
 async function chlDecidir(tipo,id,decisao,extra){ let resposta='';
-  if(decisao==='recusar'){ resposta=prompt(tipo==='tirar'?'Por que o item continua? (o gerente vê esta resposta)':'Por que não vai para todas as lojas? (o gerente vê)')||''; if(resposta.trim().length<5) return; }
+  if(decisao==='recusar'){ resposta=prompt(tipo==='tirar'?'Por que o item continua? (quem pediu vê esta resposta)':'Por que não vai para todas as lojas? (quem sugeriu vê)')||''; if(resposta.trim().length<5) return; }
   else if(tipo==='tirar'&&!confirm('Tirar este item do checklist desta loja?')) return;
   acao(()=>post(Object.assign({action:'chkLjDecidir',tipo,id,decisao,resposta},extra||{})),decisao==='aprovar'?(tipo==='tirar'?'Item tirado desta loja.':'Item incluído em todas as lojas.'):'Resposta enviada ao gerente.'); }
-function chlAprovarSug(id){ const secs=((S.hoje&&S.hoje.chkLj&&S.hoje.chkLj.secoes)||[]);
+function chlAprovarSug(id,orig){ const CLs=(S.hoje&&S.hoje.chkLj)||{}, secs=(orig==='gdi'?CLs.gdiSecoes:CLs.secoes)||[];
   const sec=prompt('Em qual seção do checklist o item entra?\n\n'+secs.map((x,i)=>(i+1)+') '+x).join('\n')+'\n\nDigite o número (ou o nome de uma seção nova):','');
   if(sec==null) return; const n=Number(sec), secao=n>=1&&n<=secs.length?secs[n-1]:sec.trim(); if(!secao) return;
-  if(!confirm('Incluir no checklist de TODAS as lojas, na seção "'+secao+'"? Vale a partir de amanhã.')) return;
-  acao(()=>post({action:'chkLjDecidir',tipo:'sugestao',id,decisao:'aprovar',secao}),'Item incluído em todas as lojas.'); }
+  if(!confirm('Incluir no checklist '+(orig==='gdi'?'da visita do GDI':'')+' de TODAS as lojas, na seção "'+secao+'"?'+(orig==='gdi'?'':' Vale a partir de amanhã.'))) return;
+  acao(()=>post({action:'chkLjDecidir',tipo:orig==='gdi'?'gdiSugestao':'sugestao',id,decisao:'aprovar',secao}),'Item incluído em todas as lojas.'); }
 async function backupAgora(b){ b.disabled=true; b.textContent='Fazendo backup…'; try{ const r=await post({action:'authBackupAgora'}); toast('Backup feito às '+r.quando+'.'); }catch(e){ toast(e.message,true); } carregarSistema(); }
 
 // resumo fixo no menu lateral (27/11/2026): lojas em vermelho, o que espera você, robô e servidor
