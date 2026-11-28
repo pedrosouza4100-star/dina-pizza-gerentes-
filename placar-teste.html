@@ -157,6 +157,7 @@
 .chk-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
 .chl-link{background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px 0}
 .chl-info{font-size:12px;color:var(--muted);background:var(--surface);border-radius:8px;padding:6px 9px;margin:4px 0}
+.chl-firme{background:var(--d-red-soft);border:1px solid var(--d-danger);color:var(--d-t-err);border-radius:10px;padding:10px 12px;font-size:.85rem;line-height:1.4;margin-bottom:8px}
 .chl-form{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin:6px 0;display:flex;flex-direction:column;gap:8px;font-size:13px}
 .chl-form textarea{width:100%;min-height:60px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font:inherit}
 .chl-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
@@ -2909,15 +2910,15 @@ async function chlCarregar(){ if(!CHL.on) return; try{ const r=await chkJsonp({a
 function chlTirarHtml(it){
   if(!CHL.on) return ''; const id=String(it.id); if(/^lj_/.test(id)) return '';
   const rec=CHL.est&&(CHL.est.pedidos||[]).find(p=>String(p.itemId)===id&&p.situacao==='recusado');
-  if(it.tirarPedido) return '<div class="chl-info">⏳ Você pediu para tirar este item da loja. Continue respondendo até o Robson aprovar.</div>';
-  if(CHL.tirar===id) return '<div class="chl-form"><b>Por que este item não faz parte da sua loja?</b><textarea id="chlMotivo" placeholder="Explique o motivo (mínimo 15 letras). O Robson decide."></textarea><div class="chl-acoes"><button type="button" class="chl-btn pri" onclick="chlEnviarTirar(\''+id+'\')">Enviar pedido</button><button type="button" class="chl-btn" onclick="CHL.tirar=null;renderItensChecklist()">Cancelar</button></div></div>';
+  if(it.tirarPedido) return '<div class="chl-info">⏳ Você pediu para tirar este item da loja. Ele está sendo analisado pela gestão. Continue respondendo até a aprovação.</div>';
+  if(CHL.tirar===id) return '<div class="chl-form"><div class="chl-firme">⚠️ <b>ATENÇÃO: este pedido vai ser analisado pela gestão.</b><br>Descreva com detalhes por que este item não faz parte da sua loja (o que a loja não tem ou por que não se aplica). Pedido sem motivo claro será recusado. Até a aprovação, o item continua obrigatório e continua sendo cobrado.</div><b>Motivo:</b><textarea id="chlMotivo" placeholder="Descreva o motivo com detalhes (mínimo 30 letras)."></textarea><div class="chl-acoes"><button type="button" class="chl-btn pri" onclick="chlEnviarTirar(\''+id+'\')">Enviar pedido</button><button type="button" class="chl-btn" onclick="CHL.tirar=null;renderItensChecklist()">Cancelar</button></div></div>';
   return (rec?'<div class="chl-info">✋ O Robson manteve este item: '+escChk(rec.resposta)+'</div>':'')+'<button type="button" class="chl-link" onclick="CHL.tirar=\''+id+'\';renderItensChecklist()">Não faz parte da minha loja</button>';
 }
 async function chlEnviarTirar(id){
-  const m=(document.getElementById('chlMotivo')||{}).value||''; if(m.trim().length<15){ alert('Explique o motivo (mínimo 15 letras).'); return; }
+  const m=(document.getElementById('chlMotivo')||{}).value||''; if(m.trim().length<30){ alert('Descreva o motivo com detalhes (mínimo 30 letras). O pedido vai ser analisado pela gestão.'); return; }
   try{ const r=await authPost({action:'chkLjTirar',unidade:unidadeAtual,senha:pvSenha(),papel:papelAtual(),itemId:id,motivo:m.trim()});
     const it=chkItensData.find(x=>String(x.id)===id); if(it) it.tirarPedido=true; CHL.tirar=null;
-    alert(r.teste?'🧪 Modo teste: o pedido não foi gravado.':'Pedido enviado ao Robson. O item continua no checklist até ele aprovar.'); }
+    alert(r.teste?'🧪 Modo teste: o pedido não foi gravado.':'Pedido enviado. Ele vai ser analisado pela gestão. Até a aprovação, o item continua obrigatório.'); }
   catch(e){ alert('Não enviou: '+e.message); }
   renderItensChecklist(); }
 function papelAtual(){ try{ return localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'; }catch(e){ return 'gerente'; } }
