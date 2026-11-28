@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<script>/* 27/11/2026: o painel novo é o principal — /admin abre o admin-novo (com os mesmos parâmetros, ex.: ?hfFora= do robô). O antigo fica 1 semana de reserva em admin.html?antigo=1; dentro do painel novo as abas abrem com ?embed=1. */
+try{ if(!/[?&](embed|antigo)=1/.test(location.search)) location.replace('admin-novo.html'+location.search.replace(/([?&])v=[^&]*&?/,'$1').replace(/[?&]$/,'')); }catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Administração — Dina Pizza</title>
 <meta name="theme-color" content="#07090E">
