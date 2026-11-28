@@ -155,6 +155,20 @@
 .chk-turno-btn.ativo{border-color:var(--gold);color:var(--gold);background:rgba(255,208,0,0.08);}
 .chk-secao-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid var(--border);}
 .chk-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.chl-link{background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px 0}
+.chl-info{font-size:12px;color:var(--muted);background:var(--surface);border-radius:8px;padding:6px 9px;margin:4px 0}
+.chl-form{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin:6px 0;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.chl-form textarea{width:100%;min-height:60px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font:inherit}
+.chl-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+.chl-btn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.chl-btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+.chl-bloco{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.chl-tit{font-weight:700;font-size:14px;display:flex;justify-content:space-between}
+.chl-tit span{color:var(--muted);font-weight:500;font-size:12px}
+.chl-sub{color:var(--muted);font-size:12px;margin:4px 0 6px}
+.chl-meu{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.chl-meu small{display:block;color:var(--muted);font-size:11.5px}
+
 .chk-item-txt{flex:1;font-size:13px;color:var(--text);line-height:1.35;}
 .chk-item-btns{display:flex;gap:6px;flex-shrink:0;}
 .chk-btn-ok{background:rgba(46,204,113,0.15);border:1.5px solid rgba(46,204,113,0.4);color:var(--green);border-radius:6px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;}
@@ -2838,6 +2852,7 @@ async function carregarItensChecklist(){
     chkItensData = itens;
     renderItensChecklist();
     chkDelLigado().then(on=>{ if(on&&turno===chkTurnoAtual) chkDelCarregar(); });
+    chlLigado().then(on=>{ if(on&&turno===chkTurnoAtual) chlCarregar(); });
     carregarChkAbertos().then(()=>{ if(turno===chkTurnoAtual) renderItensChecklist(); });
   }catch(e){
     body.innerHTML='<div style="color:#ff4444;text-align:center;padding:16px">Erro ao carregar itens. Verifique a internet e abra de novo.</div>';
@@ -2867,6 +2882,7 @@ function renderItensChecklist(){
         <button class="chk-btn-ok ${resp==='conforme'?'sel':''}" onclick="chkResponder('${id}','conforme')">✓</button>
         <button class="chk-btn-nok ${resp==='nao_conforme'?'sel':''}" onclick="chkResponder('${id}','nao_conforme')">✗</button>
       </div>
+      ${CHL.on?'<div style="flex-basis:100%;width:100%">'+chlTirarHtml(it)+'</div>':''}
       ${resp==='nao_conforme'?`<div class="chk-det">
         <textarea id="chkObs_${id}" class="${chkTentouSalvar&&(chkObs[id]||'').trim().length<CHK_MIN_DESC?'falta':''}" placeholder="Descreva o problema (obrigatório)" oninput="chkObs['${id}']=this.value;chkGuardarRascunho();atualizarBotaoSalvarChk()">${escChk(chkObs[id]||'')}</textarea>
         <div class="chk-det-linha">
@@ -2877,10 +2893,61 @@ function renderItensChecklist(){
       </div>`:''}
     </div>`;
   });
+  html+=chlBlocoHtml();
   body.innerHTML=html;
   if(pos!=null){ const ov=document.querySelector('.chk-modal-overlay'); if(ov) ov.scrollTop=pos; }
   atualizarBotaoSalvarChk();
 }
+
+
+// ── Checklist aprendendo com o gerente (27/11/2026, servidor 2026-11-27-c, recurso chkLojaAprende) ──
+// "Não faz parte da minha loja" em cada item (motivo; o item continua obrigatório até o Robson aprovar)
+// e o bloco "Itens da minha loja" no fim (até 5 itens extras com foto, valem a partir de amanhã; ⭐ sugerir para todas as lojas).
+let CHL={on:false,est:null,tirar:null,novo:null};
+async function chlLigado(){ try{ const rc=await chkRecursos(); CHL.on=rc.includes('chkLojaAprende'); }catch(e){ CHL.on=false; } return CHL.on; }
+async function chlCarregar(){ if(!CHL.on) return; try{ const r=await chkJsonp({action:'chkLjEstado',unidade:unidadeAtual,senha:pvSenha()},15000); if(r&&r.ok) CHL.est=r; }catch(e){} if(chkItensData.length) renderItensChecklist(); }
+function chlTirarHtml(it){
+  if(!CHL.on) return ''; const id=String(it.id); if(/^lj_/.test(id)) return '';
+  const rec=CHL.est&&(CHL.est.pedidos||[]).find(p=>String(p.itemId)===id&&p.situacao==='recusado');
+  if(it.tirarPedido) return '<div class="chl-info">⏳ Você pediu para tirar este item da loja. Continue respondendo até o Robson aprovar.</div>';
+  if(CHL.tirar===id) return '<div class="chl-form"><b>Por que este item não faz parte da sua loja?</b><textarea id="chlMotivo" placeholder="Explique o motivo (mínimo 15 letras). O Robson decide."></textarea><div class="chl-acoes"><button type="button" class="chl-btn pri" onclick="chlEnviarTirar(\''+id+'\')">Enviar pedido</button><button type="button" class="chl-btn" onclick="CHL.tirar=null;renderItensChecklist()">Cancelar</button></div></div>';
+  return (rec?'<div class="chl-info">✋ O Robson manteve este item: '+escChk(rec.resposta)+'</div>':'')+'<button type="button" class="chl-link" onclick="CHL.tirar=\''+id+'\';renderItensChecklist()">Não faz parte da minha loja</button>';
+}
+async function chlEnviarTirar(id){
+  const m=(document.getElementById('chlMotivo')||{}).value||''; if(m.trim().length<15){ alert('Explique o motivo (mínimo 15 letras).'); return; }
+  try{ const r=await authPost({action:'chkLjTirar',unidade:unidadeAtual,senha:pvSenha(),papel:papelAtual(),itemId:id,motivo:m.trim()});
+    const it=chkItensData.find(x=>String(x.id)===id); if(it) it.tirarPedido=true; CHL.tirar=null;
+    alert(r.teste?'🧪 Modo teste: o pedido não foi gravado.':'Pedido enviado ao Robson. O item continua no checklist até ele aprovar.'); }
+  catch(e){ alert('Não enviou: '+e.message); }
+  renderItensChecklist(); }
+function papelAtual(){ try{ return localStorage.getItem('dina_papel_'+unidadeAtual)||'gerente'; }catch(e){ return 'gerente'; } }
+function chlBlocoHtml(){
+  if(!CHL.on) return '';
+  const est=CHL.est||{itens:[],limite:5}, meus=(est.itens||[]).filter(x=>x.situacao==='ativo'), lim=est.limite||5;
+  let h='<div class="chl-bloco"><div class="chl-tit">📌 Itens da minha loja <span>'+meus.length+' de '+lim+'</span></div><div class="chl-sub">Algo que só a sua loja precisa conferir? Crie aqui. Entra no seu checklist a partir de amanhã. Com a ⭐ você sugere para o checklist de todas as lojas (o Robson decide).</div>';
+  meus.forEach(x=>{ h+='<div class="chl-meu"><div><b>'+escChk(x.texto)+'</b><small>'+(x.turno==='fechamento'?'Fechamento':'Abertura')+(x.valeAmanha?' · vale a partir de amanhã':'')+(x.sugerido==='pendente'?' · ⭐ sugerido, esperando o Robson':x.sugerido==='recusado'?' · ⭐ não aprovado para todas: '+escChk(x.decisao):'')+'</small></div><div class="chl-acoes">'+(x.sugerido?'':'<button type="button" class="chl-btn" onclick="chlSugerir(\''+x.id+'\')">⭐ Sugerir</button>')+'<button type="button" class="chl-btn" onclick="chlRemover(\''+x.id+'\')">Tirar</button></div></div>'; });
+  const virou=(est.itens||[]).filter(x=>x.situacao==='virou_fixo'); if(virou.length) h+='<div class="chl-info">🎉 Virou item de todas as lojas: '+virou.map(x=>escChk(x.texto)).join(' · ')+'</div>';
+  if(CHL.novo){ const n=CHL.novo;
+    h+='<div class="chl-form"><b>Novo item da minha loja</b><textarea id="chlTexto" placeholder="O que precisa ser conferido? (mínimo 10 letras)" oninput="CHL.novo.texto=this.value">'+escChk(n.texto||'')+'</textarea>'
+      +'<div class="chl-acoes"><label><input type="radio" name="chlTurno" value="abertura" '+(n.turno!=='fechamento'?'checked':'')+' onchange="CHL.novo.turno=this.value"> Abertura</label><label><input type="radio" name="chlTurno" value="fechamento" '+(n.turno==='fechamento'?'checked':'')+' onchange="CHL.novo.turno=this.value"> Fechamento</label></div>'
+      +'<div class="chl-acoes">'+(n.foto?'<img src="'+n.foto+'" alt="foto" style="height:60px;border-radius:6px">':'')+'<button type="button" class="chl-btn" onclick="chlFoto()">📷 '+(n.foto?'Tirar outra foto':'Tirar a foto (obrigatória)')+'</button></div>'
+      +'<label class="chl-acoes"><input type="checkbox" '+(n.sugerir?'checked':'')+' onchange="CHL.novo.sugerir=this.checked"> ⭐ Sugerir também para o checklist de todas as lojas</label>'
+      +'<div class="chl-acoes"><button type="button" class="chl-btn pri" onclick="chlCriar()">Salvar item</button><button type="button" class="chl-btn" onclick="CHL.novo=null;renderItensChecklist()">Cancelar</button></div></div>';
+  } else if(meus.length<lim) h+='<button type="button" class="chl-btn" style="margin-top:8px" onclick="CHL.novo={turno:chkTurnoAtual,texto:\'\',foto:\'\',sugerir:false};renderItensChecklist()">＋ Novo item da minha loja</button>';
+  else h+='<div class="chl-sub">Limite de '+lim+' itens. Tire um para criar outro.</div>';
+  return h+'</div>'; }
+function chlFoto(){ chkAbrirCamera('chl_novo',foto=>{ if(CHL.novo){ CHL.novo.foto=foto; renderItensChecklist(); } }); }
+async function chlCriar(){
+  const n=CHL.novo; if(!n) return; const t=String(n.texto||'').trim();
+  if(t.length<10){ alert('Escreva o que precisa ser conferido (mínimo 10 letras).'); return; }
+  if(!n.foto){ alert('Tire a foto do que vai ser conferido.'); return; }
+  try{ const r=await authPost({action:'chkLjCriar',unidade:unidadeAtual,senha:pvSenha(),papel:papelAtual(),turno:n.turno,texto:t,foto:{base64:String(n.foto),tipo:'image/jpeg'},sugerir:!!n.sugerir});
+    CHL.novo=null; alert(r.teste?'🧪 Modo teste: o item não foi gravado.':'Item salvo. Ele entra no seu checklist a partir de amanhã.'+(n.sugerir?' A sugestão foi para o Robson.':'')); await chlCarregar(); }
+  catch(e){ alert('Não salvou: '+e.message); } }
+async function chlSugerir(id){ if(!confirm('Sugerir este item para o checklist de todas as lojas? O Robson decide.')) return;
+  try{ const r=await authPost({action:'chkLjSugerir',unidade:unidadeAtual,senha:pvSenha(),papel:papelAtual(),id}); alert(r.teste?'🧪 Modo teste: não foi gravado.':'Sugestão enviada ao Robson.'); await chlCarregar(); }catch(e){ alert('Não enviou: '+e.message); } }
+async function chlRemover(id){ if(!confirm('Tirar este item da sua loja? Ele sai do seu checklist.')) return;
+  try{ const r=await authPost({action:'chkLjRemover',unidade:unidadeAtual,senha:pvSenha(),papel:papelAtual(),id}); if(r.teste) alert('🧪 Modo teste: não foi gravado.'); await chlCarregar(); }catch(e){ alert('Não tirou: '+e.message); } }
 
 // ── Checklist dividido com a equipe (20/11/2026, servidor 2026-11-20-a, recurso chkDividido; Robson 19/11) ──
 // O gerente toca "👥 Passar para alguém" numa seção, escolhe quem está na escala de hoje e mostra o QR Code.
